@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Refuses a commit that publishes something it should not, or that breaks a test.
+#
+# This repo is PUBLIC. Everything here is readable by anyone, for ever, and git
+# history does not forget a deletion. The scan runs BEFORE the commit rather
+# than after somebody notices, because after is too late by construction.
+#
+# It has already earned its place: on its first run it found a real client's
+# name sitting in a test fixture.
+#
+# Install with:  sh tools/install-hooks.sh
+# Skip once (do not make a habit of it):  git commit --no-verify
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+echo "pre-commit: searching for anything that should not be published..."
+node tools/leak-scan.mjs
+
+echo "pre-commit: running tests..."
+node --test test/*.test.mjs > /tmp/hd-site-tests.log 2>&1 || {
+    echo "COMMIT BLOCKED: tests failed."
+    tail -30 /tmp/hd-site-tests.log
+    exit 1
+}
+
+pass=$(sed -n 's/^# pass \([0-9]*\)/\1/p;s/^ℹ pass \([0-9]*\)/\1/p' /tmp/hd-site-tests.log | head -1)
+fail=$(sed -n 's/^# fail \([0-9]*\)/\1/p;s/^ℹ fail \([0-9]*\)/\1/p' /tmp/hd-site-tests.log | head -1)
+
+# A count that reads as zero is not a pass, it is a suite that stopped being
+# collected. That exact fault shrank another repo's count from 174 to 146 with a
+# green tick on it.
+if [ -z "$pass" ] || [ "$pass" -eq 0 ]; then
+    echo "COMMIT BLOCKED: no tests ran. Either nothing was collected, or the path moved."
+    exit 1
+fi
+if [ -n "$fail" ] && [ "$fail" -ne 0 ]; then
+    echo "COMMIT BLOCKED: $fail of $((pass + fail)) tests failed."
+    exit 1
+fi
+
+echo "pre-commit: clean, $pass tests passed."

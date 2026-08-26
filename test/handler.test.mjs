@@ -92,7 +92,9 @@ test("nothing but the named birth fields reaches the engine", async () => {
   const engine = fakeEngine();
   await handleChart({
     body: JSON.stringify({
-      birth: { ...BIRTH, name: "Anon Omous", email: "a@b.c", notes: "private", tier: 2 },
+      // Obviously-invented values. Test fixtures in a public repo are published
+      // text, and the first draft of this line used a real client's name.
+      birth: { ...BIRTH, name: "Example Person", email: "someone@example.invalid", notes: "x", tier: 2 },
       tier: 2,
     }),
     ip: "8.8.8.8", now: T0, store: fakeStore(), engine,

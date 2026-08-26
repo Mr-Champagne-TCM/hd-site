@@ -1,0 +1,45 @@
+# What did we just publish?
+#
+# The same scan the pre-commit hook runs, run again where nobody can skip it
+# with --no-verify, and run against the BUILT output as well as the source --
+# which matters more, because source can look clean while a bundler inlines
+# something from outside it.
+name: publish-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  nothing-hidden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Tests
+        run: node --test test/*.test.mjs
+
+      - name: Search the source
+        run: node tools/leak-scan.mjs .
+
+      - name: Build, if there is one yet
+        run: |
+          if [ -f package.json ] && grep -q '"build"' package.json; then
+            npm ci
+            npm run build
+          else
+            echo "no build step yet - source scan only"
+          fi
+
+      - name: Search the built output
+        run: |
+          if [ -d dist ]; then
+            node tools/leak-scan.mjs dist
+          else
+            echo "no dist yet"
+          fi

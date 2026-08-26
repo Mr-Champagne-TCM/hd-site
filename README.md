@@ -23,6 +23,35 @@ computed by a private service; nothing in this repository calculates one.
 - No key, token or secret. Anything shipped in a browser build is public by
   nature and is treated as such.
 
+## Every commit is searched before it lands
+
+This repo is public. Everything in it is readable by anyone, for ever, and git
+history does not forget a deletion — so `tools/leak-scan.mjs` runs on every
+commit and again in CI, where nobody can skip it.
+
+Pages hide things. A bundler inlines a config object, a source map republishes
+the whole original tree, a comment explains the thing it was meant to protect,
+a glob sweeps up a `.env`. None of that shows on the rendered page and all of it
+is one View Source away.
+
+It looks for keys and tokens, engine internals, the reading prompt, real
+people's names and phone numbers, source maps, stray `.env` files, notes to
+ourselves left in HTML comments, and localhost URLs in built output. It scans
+the **built output** as well as the source, because source can look clean while
+the build inlines something from outside it.
+
+It earned its place on its first run: it found a real client's name sitting in a
+test fixture.
+
+```
+sh tools/install-hooks.sh     # once, per clone
+node tools/leak-scan.mjs      # any time
+```
+
+A finding blocks. If something is a false positive, the fix is to narrow the
+rule — not to add a skip, because the next real one will match that skip too.
+
 ## Status
 
-Scaffolded 2026-08-26. The site itself is not built yet.
+Scaffolded 2026-08-26. The edge is built and tested; the site itself is not
+built yet.
