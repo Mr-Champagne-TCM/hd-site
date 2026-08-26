@@ -1,0 +1,12 @@
+# Netlify, not Cloudflare, for one reason: it attaches to a custom domain with a
+# single CNAME, while Cloudflare Workers wants the whole zone's nameservers.
+# thechampagnemethod.co stays on Porkbun DNS pointing at GitHub Pages, untouched,
+# and one record is added. Deleting that one record undoes everything.
+[build]
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
