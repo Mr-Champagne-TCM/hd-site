@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BirthDateField from "./BirthDateField";
 import PlaceField, { type Place } from "./PlaceField";
+import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
 import { ENTRY, PRIVACY_NOTE, SITE } from "../copy";
 import { humanDate } from "./birthDate";
@@ -30,12 +31,14 @@ export default function EntryForm() {
   const [time, setTime] = useState("");
   const [state, setState] = useState<State>({ at: "asking" });
 
-  const timeLooksRight = /^\d{1,2}:\d{2}(:\d{2})?$/.test(time.trim());
+  // TimeField hands back a complete 24-hour "HH:MM" or an empty string, so
+  // there is nothing to re-validate here -- a second opinion about the same
+  // string is how the two come to disagree.
+  const timeReady = /^\d{2}:\d{2}$/.test(time);
   const ready =
     !!date &&
     !!place &&
-    timeKnown !== null &&
-    (timeKnown === false || timeLooksRight) &&
+    (timeKnown === false || timeReady) &&
     state.at !== "working";
 
   async function submit(e: React.FormEvent) {
@@ -50,8 +53,8 @@ export default function EntryForm() {
           birth: {
             date,
             zone: place.zone,
-            timeKnown,
-            ...(timeKnown ? { time: time.trim() } : {}),
+            timeKnown: timeKnown !== false,
+            ...(timeKnown !== false ? { time } : {}),
           },
         }),
       });
@@ -130,43 +133,15 @@ export default function EntryForm() {
         <BirthDateField value={date} onChange={setDate} />
         <PlaceField chosen={place} onChoose={setPlace} />
 
-        <fieldset>
-          <legend className="mb-2 font-sans text-[15px] font-semibold text-brand-paper">
-            Time of birth
-          </legend>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-gold/25 bg-ground-top/40 px-4 py-3">
-            <input
-              type="checkbox"
-              checked={timeKnown === false}
-              onChange={(e) => setTimeKnown(e.target.checked ? false : null)}
-              className="mt-1 h-4 w-4 accent-[#3FE0C5]"
-            />
-            <span>
-              <span className="text-[16px] text-brand-paper">{ENTRY.timeUnknownLabel}</span>
-              <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
-                {ENTRY.timeUnknownHelp}
-              </span>
-            </span>
-          </label>
-
-          {timeKnown !== false && (
-            <label className="mt-3 block">
-              <span className="text-[14px] text-brand-muted">24-hour, as HH:MM</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="14:30"
-                value={time}
-                onChange={(e) => {
-                  setTime(e.target.value);
-                  setTimeKnown(e.target.value.trim() ? true : null);
-                }}
-                className={"mt-1 " + field}
-              />
-            </label>
-          )}
-        </fieldset>
+        <TimeField
+          value={time}
+          onChange={setTime}
+          unknown={timeKnown === false}
+          onUnknownChange={(u) => {
+            setTimeKnown(u ? false : null);
+            if (u) setTime("");
+          }}
+        />
 
         {state.at === "failed" && (
           <p className="rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">

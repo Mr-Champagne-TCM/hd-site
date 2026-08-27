@@ -128,7 +128,9 @@ export default function BirthDateField({
 
       <div className="mt-3">
         <label className="block">
-          <span className="text-[14px] text-brand-muted">Or type it — 09171983</span>
+          <span className="text-[14px] text-brand-muted">
+            Or type it straight in, if you know it by heart — 06251985 for 25 June 1985
+          </span>
           <input
             inputMode="numeric"
             autoComplete="bday"
