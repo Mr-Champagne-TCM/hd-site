@@ -35,20 +35,16 @@ import { useEffect, useRef, useState } from "react";
  *    hour moves the Moon, which moves the Profile. The risk is said out loud.
  */
 
-export type Place = { label: string; zone: string };
-
-/** States that span two time zones. A chart cast against one of these is a guess. */
-const SPLIT_ZONE_STATES = [
-  "Alaska", "Arizona", "Florida", "Idaho", "Indiana", "Kansas", "Kentucky",
-  "Michigan", "Nebraska", "Nevada", "North Dakota", "Oregon", "South Dakota",
-  "Tennessee", "Texas",
-];
-
-/** Does this look like a state rather than a town? */
-function looksLikeAState(label: string): boolean {
-  const head = label.split(",")[0].trim();
-  return SPLIT_ZONE_STATES.some((s) => s.toLowerCase() === head.toLowerCase());
-}
+/**
+ * `approximate` is set by the engine when the entry is a whole state rather
+ * than a town.
+ *
+ * It comes down the wire rather than being worked out here from the shape of
+ * the label, because that guess is wrong: "Texas City, Texas" is a real town of
+ * fifty thousand and begins with a state name. The engine knows which entries
+ * came from its state table; the page should not have to infer it.
+ */
+export type Place = { label: string; zone: string; approximate?: boolean };
 
 export default function PlaceField({
   chosen,
@@ -104,14 +100,47 @@ export default function PlaceField({
     if (!focused || results.length === 0) return;
     const el = wrapRef.current;
     if (!el) return;
-    // Wait a frame so the list has laid out and the page is tall enough.
-    const id = requestAnimationFrame(() => {
+    /**
+     * Nudge until it lands, rather than once and hope.
+     *
+     * A single attempt is not enough and measuring proved it: the spacer that
+     * makes room renders in the same commit as the list, so the first attempt
+     * runs against a document that has not finished growing and the browser
+     * caps the scroll. Measured on an 812px screen the field asked to move 778px
+     * and moved 440 — better than nothing, and still leaving the last answers
+     * behind the keyboard.
+     *
+     * So it checks its work. Each pass scrolls by whatever distance is left; if
+     * the page has grown since, the next pass gets further. It stops when the
+     * field is at the top, when a pass achieves nothing (genuinely capped), or
+     * after a handful of tries — never looping.
+     */
+    let tries = 0;
+    let timer: number | undefined;
+
+    const settle = () => {
+      tries += 1;
       const top = el.getBoundingClientRect().top;
-      // Leave the field just below the top edge, so the answers get the rest of
-      // whatever the keyboard has left.
-      window.scrollBy({ top: top - 12, behavior: "smooth" });
+      // An ABSOLUTE target, computed fresh each pass from the page offset. A
+      // relative scrollBy is a guess about where the page is when it lands.
+      if (top > 14) window.scrollTo({ top: window.scrollY + top - 12, behavior: "auto" });
+      if (tries < 7) timer = window.setTimeout(settle, 80);
+    };
+
+    // It keeps checking for about half a second rather than acting once, and
+    // that is not belt-and-braces. Measuring showed the field landing at 350
+    // when it had been asked for 12, while every scroll method moved it there
+    // instantly when called by hand -- so something puts it back afterwards.
+    // The browser's own scroll-the-focused-input-into-view runs late and does
+    // exactly that. Holding the position for a few passes outlasts it.
+    const first = requestAnimationFrame(() => {
+      timer = window.setTimeout(settle, 0);
     });
-    return () => cancelAnimationFrame(id);
+
+    return () => {
+      cancelAnimationFrame(first);
+      if (timer) clearTimeout(timer);
+    };
   }, [focused, results.length]);
 
   /** How much room the keyboard has left, when the browser will say. */
@@ -173,6 +202,11 @@ export default function PlaceField({
               >
                 {p.label}
                 <span className="ml-2 text-[13px] text-brand-muted">{p.zone}</span>
+                {p.approximate && (
+                  <span className="ml-2 text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
+                    whole state
+                  </span>
+                )}
               </button>
             </li>
           ))}
@@ -184,9 +218,23 @@ export default function PlaceField({
         </ul>
       )}
 
-      {/* Fault 1's other half. Without room to scroll INTO, the scroll above is
-          capped at zero and does nothing at all, silently. */}
-      {showList && <div aria-hidden style={{ height: viewportH ? viewportH * 0.5 : 320 }} />}
+      {/*
+        Fault 1's other half, and the size is not a guess.
+
+        A FULL viewport, not a fraction of one. The first version used half, and
+        measuring it on an 812px screen showed the field at 790px and STAYING
+        there: reaching the top needed ~778px of scroll and only 320px of room
+        existed, so the browser capped the scroll to nothing and the answers
+        rendered at 880px — off the bottom, exactly where a keyboard sits. The
+        effect above ran perfectly and achieved nothing, which is precisely the
+        way this bug hides.
+
+        Anything shorter than one screen means some starting position cannot
+        reach the top. One screen means every position can.
+      */}
+      {showList && (
+        <div aria-hidden style={{ height: Math.max(320, viewportH ?? window.innerHeight) }} />
+      )}
 
       {chosen && !showList && (
         <div className="mt-2 rounded-xl border border-brand-teal/30 bg-brand-teal/[0.06] px-4 py-3">
@@ -204,11 +252,11 @@ export default function PlaceField({
           >
             Somewhere else
           </button>
-          {looksLikeAState(chosen.label) && (
+          {chosen.approximate && (
             <p className="mt-2 text-[14px] leading-relaxed text-brand-gold">
-              That is a whole state, and this one spans two time zones. The chart will be roughly
-              right rather than exactly right — an hour moves the Moon, which moves the Profile. A
-              town name would pin it down.
+              That is a whole state rather than a town, so the chart will be roughly right rather
+              than exactly right. An hour moves the Moon, which moves the Profile — a town name
+              would pin it down, if one comes to mind.
             </p>
           )}
         </div>

@@ -45,7 +45,16 @@ export default async (request, context) => {
     });
   }
 
-  const cacheKey = `${raw.toLowerCase()}|${limit}`;
+  // The deploy id is part of the key, and that is not decoration.
+  //
+  // Without it a cached answer outlives the code that produced it: the state
+  // fallback shipped and "Texas" kept returning the old town-only list, because
+  // the cache had a seven-day TTL and no idea anything had changed. A stale
+  // answer that looks fresh is worse than no cache, and it is invisible — the
+  // only reason this was caught is that a never-typed query returned something
+  // different from a typed one.
+  const version = process.env.DEPLOY_ID || process.env.COMMIT_REF || "dev";
+  const cacheKey = `${version}|${raw.toLowerCase()}|${limit}`;
   const cache = getStore({ name: "places-cache", consistency: "eventual" });
 
   try {
