@@ -1,4 +1,4 @@
-import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER } from "./copy";
+import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE, RESOURCES } from "./copy";
 import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
 import ExampleSummary from "./ExampleSummary";
 
@@ -16,15 +16,29 @@ function Nav() {
   return (
     <nav className="border-b border-brand-gold/15">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-5 sm:px-8">
-        <span className="whitespace-nowrap font-display text-[20px] font-medium tracking-tight text-brand-paper sm:text-[26px]">
-          The <span className="text-brand-gold">Champagne</span> Method
-        </span>
+        {/* The brand is the way home, as it is on the main site. Two links on
+            the right and no more: at 390px a third one starts colliding with
+            the brand, which is the fault that had to be fixed on the library. */}
         <a
-          href="https://thechampagnemethod.co"
-          className="shrink-0 whitespace-nowrap font-sans text-[14px] text-brand-muted transition-colors hover:text-brand-teal sm:text-[15px]"
+          href={SITE.home}
+          className="whitespace-nowrap font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors hover:text-brand-gold sm:text-[26px]"
         >
-          {NAV.toCoaching}
+          The <span className="text-brand-gold">Champagne</span> Method
         </a>
+        <div className="flex shrink-0 items-center gap-5">
+          <a
+            href={SITE.library}
+            className="hidden whitespace-nowrap font-sans text-[15px] text-brand-muted transition-colors hover:text-brand-teal sm:inline"
+          >
+            {NAV.library}
+          </a>
+          <a
+            href={SITE.connect}
+            className="whitespace-nowrap font-sans text-[14px] text-brand-muted transition-colors hover:text-brand-teal sm:text-[15px]"
+          >
+            {NAV.toCoaching}
+          </a>
+        </div>
       </div>
     </nav>
   );
@@ -61,9 +75,23 @@ function Example() {
       <div className="mt-6 max-w-[46rem]">
         <ExampleSummary />
       </div>
-      <p className="mt-4 text-[15px] text-brand-muted/80">
+      <p className="mt-4 text-[15px] leading-relaxed text-brand-muted/80">
         That is the whole of the {money(SUMMARY.cents)} summary. Nothing is blurred out or held back
         within it.
+      </p>
+      {/* One quiet link at the point of confusion. Someone meeting
+          "Manifesting Generator" and "Sacral" for the first time wants a
+          glossary now, not at the bottom of the page -- and the fuller pair
+          still sits further down for anyone who reads to the end. */}
+      <p className="mt-2 text-[15px] leading-relaxed text-brand-muted">
+        Every word in it is explained in{" "}
+        <a
+          href={SITE.hd101}
+          className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+        >
+          Human Design, plainly
+        </a>
+        , free in the library.
       </p>
     </section>
   );
@@ -138,6 +166,36 @@ function Credibility() {
   );
 }
 
+function Resources() {
+  return (
+    <section className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
+      <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
+        {RESOURCES.title}
+      </h2>
+      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
+        {RESOURCES.body}
+      </p>
+      <div className="mt-7 grid gap-4 sm:grid-cols-2">
+        {RESOURCES.items.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className="group rounded-2xl border border-brand-gold/20 bg-white/[0.03] p-5 transition-colors hover:border-brand-teal/50"
+          >
+            <span className="inline-block rounded-full border border-brand-teal/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-teal">
+              {item.tag}
+            </span>
+            <h3 className="mt-3 font-display text-[1.25rem] font-medium text-brand-paper transition-colors group-hover:text-brand-teal">
+              {item.title}
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-brand-paper/80">{item.blurb}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="mt-24 border-t border-brand-gold/15 py-11">
@@ -145,15 +203,24 @@ function Footer() {
         <p className="max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
           {FOOTER.disclaimer}
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-brand-gold/10 pt-6">
-          <a
-            href="https://thechampagnemethod.co"
-            className="text-[15px] text-brand-muted transition-colors hover:text-brand-teal"
-          >
-            {FOOTER.coaching}
-          </a>
-          <span className="text-[13px] text-brand-muted/60">{FOOTER.attribution}</span>
+        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-brand-gold/10 pt-6">
+          {[
+            [SITE.home, "The Champagne Method"],
+            [SITE.library, "The Library"],
+            [SITE.hd101, "Human Design, plainly"],
+            [SITE.bodygraph, "Reading your bodygraph"],
+            [SITE.connect, "Start a conversation"],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="text-[15px] text-brand-muted transition-colors hover:text-brand-teal"
+            >
+              {label}
+            </a>
+          ))}
         </div>
+        <p className="mt-6 text-[13px] text-brand-muted/60">{FOOTER.attribution}</p>
       </div>
     </footer>
   );
@@ -168,6 +235,7 @@ export default function App() {
         <Example />
         <Tiers />
         <Credibility />
+        <Resources />
       </main>
       <Footer />
     </div>

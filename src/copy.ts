@@ -22,7 +22,58 @@
 
 export const NAV = {
   brand: "The Champagne Method",
+  library: "The Library",
   toCoaching: "Coaching",
+};
+
+/**
+ * Where the rest of the practice lives.
+ *
+ * The main site has an intuitive flow already and that is the baseline; this
+ * page joins it rather than starting a second one. So: a small number of links,
+ * each landing where it is genuinely wanted, and none of them duplicated in
+ * three places.
+ */
+export const SITE = {
+  home: "https://thechampagnemethod.co",
+  library: "https://thechampagnemethod.co/library/",
+  hd101: "https://thechampagnemethod.co/library/human-design/",
+  bodygraph: "https://thechampagnemethod.co/library/bodygraph/",
+  connect: "https://thechampagnemethod.co/#connect",
+};
+
+/**
+ * Reading matched to what someone is actually holding.
+ *
+ * Both pieces are already free and public in the library, so nothing is being
+ * withheld here -- the only question is placement, and each lands where it is
+ * wanted. From the app's own handoff: "the guide answers 'what am I looking at'
+ * for someone holding a paid reading, HD 101 answers 'what is this system' for
+ * a stranger. Different readers."
+ */
+export const RESOURCES = {
+  title: "Free reading, either way",
+  body:
+    "Two pieces in the library, written for exactly these two moments. Both are free and always " +
+    "will be, whether or not anything is bought here.",
+  items: [
+    {
+      href: "https://thechampagnemethod.co/library/human-design/",
+      tag: "Goes with the summary",
+      title: "Human Design, plainly",
+      blurb:
+        "What it is, what it is not, and the one thing it is actually useful for. Six minutes, " +
+        "no jargon you have to look up — and it explains every word in a summary.",
+    },
+    {
+      href: "https://thechampagnemethod.co/library/bodygraph/",
+      tag: "Goes with the chart",
+      title: "Reading your bodygraph",
+      blurb:
+        "The picture itself: what the shapes mean, why some are filled and some are not, and " +
+        "what to make of the difference. Written for someone holding their own chart.",
+    },
+  ],
 };
 
 export const HERO = {
@@ -50,17 +101,46 @@ export const CREDIBILITY = {
   title: "Where these charts come from",
   body:
     "The chart is computed here, by an engine written for this practice rather than licensed from " +
-    "anyone. That means it can be checked, and it has been.",
+    "anyone. That means it can be checked against other people’s, and it has been — most usefully " +
+    "on the cases where established calculators disagree with each other.",
+  /**
+   * Ordered by what a sceptic would actually find convincing, not by size.
+   *
+   * The first line is the one no competitor can print. Human Design engines do
+   * not all agree; there is a genuine doctrine split over motor-to-throat chain
+   * rules, and on every contested case two independent hosted engines came down
+   * on the side this one takes. That is a stronger claim than any count.
+   *
+   * The Genetic Matrix figure was leading this list and reading as a small
+   * sample. It is not a sample -- those charts were chosen BECAUSE they are the
+   * hard ones. It says so now, and it sits further down where it belongs.
+   */
   checks: [
-    ["16 of 16", "reference charts from Genetic Matrix, matched exactly"],
-    ["79 of 84", "targeted cases against Human Design Hub and Bodygraph, two independent engines"],
-    ["100,000", "charts swept against a third engine, agreeing on 99.89% of activations"],
-    ["0.46″", "average difference from JPL Horizons — about eleven seconds of clock time"],
+    [
+      "15 of 15",
+      "contested cases — where Human Design calculators genuinely disagree with one another, " +
+        "two independent engines both came down on the side this one takes",
+    ],
+    [
+      "100,000",
+      "charts checked against another engine end to end, agreeing on 99.89% of all activations",
+    ],
+    [
+      "0.46″",
+      "average difference from JPL Horizons, the astronomical reference — about eleven seconds " +
+        "of clock time, when birth times are recorded to the minute at best",
+    ],
+    [
+      "16 hard cases",
+      "reference charts from Genetic Matrix, picked for the doctrine, rare-authority and " +
+        "boundary cases that break engines — matched exactly, all sixteen",
+    ],
   ] as const,
   closing:
-    "The five cases that disagree are Sun-line profiles sitting within half an arcsecond of a " +
-    "boundary, roughly one chart in three thousand. That is written down here rather than left out, " +
-    "because a number you can check is worth more than a claim you cannot.",
+    "Across 84 targeted cases put through Human Design Hub and Bodygraph, 79 matched. The five " +
+    "that did not are Sun-line profiles sitting within half an arcsecond of a boundary — about one " +
+    "chart in three thousand. That is written here rather than left out, because a number you can " +
+    "check is worth more than a claim you cannot.",
 };
 
 export const EXAMPLE = {

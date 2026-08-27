@@ -26,7 +26,12 @@ const BANNED = [
   [/\b(intro(ductory)? price|launch price|was \$|normally \$|save \d+%)/i, "intro or slashed pricing"],
   [/\bcountdown\b/i, "countdown"],
   [/\bunlock your (true|real|best)\b/i, "brochure voice"],
-  [/\b(you should|you need to|you must|you have to) \b/i, "telling the reader what they should be"],
+  // Only at the start of a sentence. "You must enter a date" is us instructing
+  // the reader and is banned; "no jargon you have to look up" is a relative
+  // clause describing an article, and is Jeremy's own approved HD 101 standfirst.
+  // The first version of this rule flagged his published copy, which is the rule
+  // being wrong rather than the writing.
+  [/(^|[.!?]\s+)(you should|you need to|you must|you have to)\b/i, "telling the reader what they should be"],
 ];
 
 /** Imperative openings, reported for a human to judge. */
