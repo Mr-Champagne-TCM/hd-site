@@ -71,41 +71,69 @@ export default function TimeField({
         Time of birth
       </legend>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-gold/25 bg-ground-top/40 px-4 py-3">
-        <input
-          type="checkbox"
-          checked={unknown}
-          onChange={(e) => onUnknownChange(e.target.checked)}
-          className="mt-1 h-4 w-4 accent-[#3FE0C5]"
-        />
-        <span>
-          <span className="text-[16px] text-brand-paper">{ENTRY.timeUnknownLabel}</span>
-          <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
-            {ENTRY.timeUnknownHelp}
-          </span>
-        </span>
-      </label>
-
       {!unknown && (
-        <div className="mt-3">
+        <div>
           {native ? (
             <>
-              <label className="block">
-                <span className="text-[14px] text-brand-muted">
-                  Tap to open your usual clock
-                </span>
+              {/*
+                A clock BUTTON, not a labelled field.
+
+                The first version was a bare time input under the words "Tap to
+                open your usual clock" -- an instruction standing in for an
+                affordance, which is what an unclear control always needs. A
+                button with a clock face on it does not need explaining.
+
+                The native input is still the thing being tapped: it lies over
+                the button at zero opacity, filling it. That is deliberate
+                rather than calling showPicker() on a hidden input -- a tap
+                lands on the real control, so the operating system opens its own
+                picker the way it always does, and it keeps working on browsers
+                that have no showPicker at all.
+              */}
+              <div className="relative">
+                <div
+                  className={
+                    "flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 " +
+                    (value
+                      ? "border-brand-teal/60 bg-brand-teal/[0.07]"
+                      : "border-brand-gold/30 bg-ground-top/60")
+                  }
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className={
+                      "h-6 w-6 shrink-0 " + (value ? "text-brand-teal" : "text-brand-muted")
+                    }
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3.2 1.9" />
+                  </svg>
+                  <span
+                    className={
+                      "text-[17px] " + (value ? "text-brand-paper" : "text-brand-muted")
+                    }
+                  >
+                    {value ? displayTime(value, 12) : "Choose the time"}
+                  </span>
+                  <span className="ml-auto text-[14px] text-brand-teal">
+                    {value ? "Change" : "Open clock"}
+                  </span>
+                </div>
                 <input
                   type="time"
+                  aria-label="Time of birth"
                   value={value}
                   onChange={(e) => onChange(e.target.value)}
                   // A birth time to the minute. Seconds are noise nobody has.
                   step={60}
-                  className={
-                    field +
-                    " mt-1 border-brand-gold/30 focus:border-brand-teal focus:ring-brand-teal/40"
-                  }
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 />
-              </label>
+              </div>
               {value && (
                 <p className="mt-1.5 text-[14px] text-brand-muted">
                   {displayTime(value, 12)} &middot; {value} on a 24-hour clock
@@ -169,6 +197,35 @@ export default function TimeField({
           )}
         </div>
       )}
+
+      {/*
+        "I don't know" comes AFTER the clock, and the order is the argument.
+
+        Leading with it put the way out first and made the failure the default
+        reading of the field -- as Jeremy put it, it "implies you expect
+        failure and cover that first". Most people know their birth time. So
+        the clock is offered first, to somebody assumed to have an answer, and
+        the fallback waits underneath for the ones who do not.
+
+        It is also quieter than the clock now: smaller text, no panel of its
+        own, and the explanation only unfolds once it is actually chosen.
+      */}
+      <label className="mt-4 flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={unknown}
+          onChange={(e) => onUnknownChange(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-[#3FE0C5]"
+        />
+        <span>
+          <span className="text-[15px] text-brand-muted">{ENTRY.timeUnknownLabel}</span>
+          {unknown && (
+            <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
+              {ENTRY.timeUnknownHelp}
+            </span>
+          )}
+        </span>
+      </label>
     </fieldset>
   );
 }

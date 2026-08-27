@@ -18,6 +18,40 @@ import { humanDate } from "./birthDate";
  * their behalf.
  */
 
+/**
+ * A labelled rule, used to fence the questions top and bottom.
+ *
+ * The closing one takes `done` and answers the actual question being asked --
+ * "am I finished?" -- rather than only marking a boundary. Until every field is
+ * answered it stays quiet; once they are it turns teal and says so. That is the
+ * same information the submit button already carries in its enabled state, put
+ * where somebody scanning down the page will meet it first.
+ */
+function Rule({ label, done }: { label: string; done?: boolean }) {
+  return (
+    <div className="flex items-center gap-3" aria-hidden>
+      <span
+        className={
+          "h-px flex-1 " + (done ? "bg-brand-teal/40" : "bg-brand-gold/20")
+        }
+      />
+      <span
+        className={
+          "font-sans text-[12px] uppercase tracking-[0.18em] " +
+          (done ? "text-brand-teal" : "text-brand-muted/70")
+        }
+      >
+        {done ? "Ready" : label}
+      </span>
+      <span
+        className={
+          "h-px flex-1 " + (done ? "bg-brand-teal/40" : "bg-brand-gold/20")
+        }
+      />
+    </div>
+  );
+}
+
 type State =
   | { at: "asking" }
   | { at: "working" }
@@ -109,7 +143,7 @@ export default function EntryForm() {
           onClick={() => setState({ at: "asking" })}
           className="mt-6 text-[15px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
         >
-          Another chart
+          {ENTRY.restart}
         </button>
       </section>
     );
@@ -129,27 +163,42 @@ export default function EntryForm() {
         {ENTRY.body}
       </p>
 
-      <form onSubmit={submit} className="mt-8 max-w-[34rem] space-y-7">
-        <BirthDateField value={date} onChange={setDate} />
-        <PlaceField chosen={place} onChoose={setPlace} />
+      <form onSubmit={submit} className="mt-8 max-w-[34rem]">
+        {/*
+          A top and a bottom on the asking.
 
-        <TimeField
-          value={time}
-          onChange={setTime}
-          unknown={timeKnown === false}
-          onUnknownChange={(u) => {
-            setTimeKnown(u ? false : null);
-            if (u) setTime("");
-          }}
-        />
+          Three fields in a column have no edge: nothing marks where the
+          questions begin, and nothing marks where they stop, so somebody who
+          has answered all three still has to guess whether more is coming.
+          A labelled rule at each end draws that boundary, and the closing one
+          says so in words rather than leaving it to be inferred from whitespace.
+        */}
+        <Rule label={ENTRY.startRule} />
+
+        <div className="space-y-7 py-7">
+          <BirthDateField value={date} onChange={setDate} />
+          <PlaceField chosen={place} onChoose={setPlace} />
+
+          <TimeField
+            value={time}
+            onChange={setTime}
+            unknown={timeKnown === false}
+            onUnknownChange={(u) => {
+              setTimeKnown(u ? false : null);
+              if (u) setTime("");
+            }}
+          />
+        </div>
+
+        <Rule label={ENTRY.endRule} done={ready} />
 
         {state.at === "failed" && (
-          <p className="rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
+          <p className="mt-6 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
             {state.message}
           </p>
         )}
 
-        <div>
+        <div className="mt-7">
           <button
             type="submit"
             disabled={!ready}

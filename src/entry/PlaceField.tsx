@@ -46,6 +46,51 @@ import { useEffect, useRef, useState } from "react";
  */
 export type Place = { label: string; zone: string; approximate?: boolean };
 
+/**
+ * A per-session answer cache, and the reason the field felt slow.
+ *
+ * Measured against the live site: a lookup costs 340-1230ms warm, and even a
+ * server CACHE HIT costs 400-600ms, because the function still round-trips to
+ * Netlify Blobs before it can answer. A phone adds another 100-300ms on top of
+ * every one of those. Reported as "more than 2 seconds waited... I had to type
+ * more but it was just delay".
+ *
+ * Every one of those round trips was being paid again for a prefix already
+ * typed: backspace a single character and the answer that had arrived a moment
+ * earlier was fetched a second time.
+ *
+ * Held outside the component so it survives a remount. It is deliberately NOT
+ * persisted to storage -- the towns somebody types are their birth place, and
+ * those are not written to disk anywhere else either.
+ */
+const answers = new Map<string, Place[]>();
+
+/**
+ * An instant, provisional list built from what is already known.
+ *
+ * Adding a character can only ever REMOVE matches, never add them, so a cached
+ * shorter prefix already contains every answer still standing. Filtering it
+ * renders something under the finger immediately and the real answer replaces
+ * it a moment later.
+ *
+ * The guard that matters: a cached list was capped at `limit`, so it is not
+ * guaranteed complete. "w" returns eight towns and Wichita Falls need not be
+ * among them. An empty filter therefore means "I do not know", NOT "no such
+ * town" -- so nothing is shown in that case and the field keeps saying it is
+ * looking. This can only ever show fewer answers than the server, briefly. It
+ * cannot invent one and it cannot claim a town does not exist.
+ */
+function provisional(query: string): Place[] | null {
+  const lower = query.toLowerCase();
+  for (let cut = lower.length - 1; cut >= 1; cut -= 1) {
+    const cached = answers.get(lower.slice(0, cut));
+    if (!cached) continue;
+    const narrowed = cached.filter((p) => p.label.toLowerCase().includes(lower));
+    return narrowed.length > 0 ? narrowed : null;
+  }
+  return null;
+}
+
 export default function PlaceField({
   chosen,
   onChoose,
@@ -71,23 +116,65 @@ export default function PlaceField({
       setSearching(false);
       return;
     }
-    setSearching(true);
+
     const mine = ++seq.current;
+
+    // Already answered this exact query in this session: no request at all, no
+    // spinner, no wait. Backspacing through a town is now free, and that is the
+    // single biggest source of the lag -- it was re-fetching answers it had.
+    const exact = answers.get(q.toLowerCase());
+    if (exact) {
+      setResults(exact);
+      setSearching(false);
+      return;
+    }
+
+    // Nothing exact, so show what can be worked out from a shorter prefix while
+    // the real answer is on its way. `searching` stays true so the list still
+    // says it is looking rather than presenting a partial answer as final.
+    const guess = provisional(q);
+    if (guess) setResults(guess);
+    setSearching(true);
+
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/places?q=${encodeURIComponent(q)}&limit=8`);
         const body = await res.json();
         // An answer that arrived late must not overwrite a newer one.
         if (mine !== seq.current) return;
-        setResults(Array.isArray(body?.places) ? body.places : []);
+        const places = Array.isArray(body?.places) ? body.places : [];
+        answers.set(q.toLowerCase(), places);
+        setResults(places);
       } catch {
-        if (mine === seq.current) setResults([]);
+        // A failed request must not wipe a provisional list off the screen --
+        // an approximate answer beats an empty box.
+        if (mine === seq.current && !guess) setResults([]);
       } finally {
         if (mine === seq.current) setSearching(false);
       }
     }, 90);
     return () => clearTimeout(timer);
   }, [query]);
+
+  /**
+   * Wake the engine when the field is touched, not when the first answer is
+   * wanted.
+   *
+   * The engine scales to zero, so the first lookup after an idle spell pays a
+   * cold start -- that is the two-second wait, and it lands on the very first
+   * keystroke, which is the worst possible moment for it. Focusing the field
+   * happens a second or two before any character is typed, and one throwaway
+   * request there is enough to have the machine awake and the function warm by
+   * the time it matters.
+   *
+   * Once per session. It is a single tiny request, and it is not free.
+   */
+  const warmed = useRef(false);
+  const warm = () => {
+    if (warmed.current) return;
+    warmed.current = true;
+    fetch("/api/places?q=a&limit=1").catch(() => {});
+  };
 
   /**
    * Reposition on RESULT COUNT, not on focus.
@@ -167,7 +254,10 @@ export default function PlaceField({
           autoComplete="off"
           placeholder="Town, and the state or country"
           value={query}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            warm();
+          }}
           // A blur that fires before a tap registers would close the list under
           // the finger, so the close is deferred by a beat.
           onBlur={() => setTimeout(() => setFocused(false), 150)}

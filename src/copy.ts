@@ -172,6 +172,17 @@ export const ENTRY = {
     "Three things are needed: the date, the place, and the time if it is known. " +
     "An unknown time is welcome — the chart is cast at noon and says so plainly, " +
     "and the parts that depend on a time are marked as provisional rather than quietly guessed.",
+  /**
+   * Where the asking starts and where it stops.
+   *
+   * Reported as "it is hard to tell when you're done" -- three fields in a
+   * column give no edge, so there is no moment where somebody can see they have
+   * finished. Two labelled rules put a top and a bottom on it, and the closing
+   * one counts down rather than just sitting there.
+   */
+  startRule: "Three things, then you’re done",
+  endRule: "That’s everything",
+  restart: "Start a new chart",
   timeUnknownLabel: "I don’t know my birth time",
   timeUnknownHelp:
     "Most of a chart holds without one. The Moon is the fast mover, and it carries the Profile " +
