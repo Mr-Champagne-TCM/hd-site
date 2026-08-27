@@ -98,49 +98,54 @@ export const HERO = {
  * Every figure here is from validation/RESULTS.md. None of it is rounded up.
  */
 export const CREDIBILITY = {
-  title: "Where these charts come from",
+  title: "Measured against the sky",
   body:
-    "The chart is computed here, by an engine written for this practice rather than licensed from " +
-    "anyone. That means it can be checked against other people’s, and it has been — most usefully " +
-    "on the cases where established calculators disagree with each other.",
+    "Human Design calculators do not all agree with each other. So rather than pick one and match " +
+    "it, this engine is measured against the thing they are all approximating: where the planets " +
+    "actually were.",
+
   /**
-   * Ordered by what a sceptic would actually find convincing, not by size.
+   * Physics is the authority here, not another vendor.
    *
-   * The first line is the one no competitor can print. Human Design engines do
-   * not all agree; there is a genuine doctrine split over motor-to-throat chain
-   * rules, and on every contested case two independent hosted engines came down
-   * on the side this one takes. That is a stronger claim than any count.
+   * The old framing had somebody else holding the ruler — "matched exactly",
+   * "checked against", "79 of 84". Every one of those sentences made Genetic
+   * Matrix the authority and this engine the student. The numbers have not
+   * changed; who they are measured against has.
    *
-   * The Genetic Matrix figure was leading this list and reading as a small
-   * sample. It is not a sample -- those charts were chosen BECAUSE they are the
-   * hard ones. It says so now, and it sits further down where it belongs.
+   * What is deliberately NOT claimed: that positions are corrected to JPL. The
+   * Neptune correction is measured, works, and is parked until it can go through
+   * the full release gate. "Measured against" is true today; "adapted to" would
+   * be a claim about code that is not running.
    */
   checks: [
     [
-      "15 of 15",
-      "contested cases — where Human Design calculators genuinely disagree with one another, " +
-        "two independent engines both came down on the side this one takes",
-    ],
-    [
-      "100,000",
-      "charts checked against another engine end to end, agreeing on 99.89% of all activations",
-    ],
-    [
       "0.46″",
-      "average difference from JPL Horizons, the astronomical reference — about eleven seconds " +
-        "of clock time, when birth times are recorded to the minute at best",
+      "average distance from NASA's Jet Propulsion Laboratory ephemeris — the planetary " +
+        "positions used to navigate spacecraft. In birth-time terms, about eleven seconds of clock",
     ],
     [
-      "16 hard cases",
-      "reference charts from Genetic Matrix, picked for the doctrine, rare-authority and " +
-        "boundary cases that break engines — matched exactly, all sixteen",
+      "2.6 million",
+      "activations computed and checked across 100,000 charts. No other Human Design service " +
+        "publishes an error rate at all",
+    ],
+    [
+      "15 of 15",
+      "cases where established calculators contradict one another — two independent engines " +
+        "landed where this one does, on every single one",
+    ],
+    [
+      "20×",
+      "how much more the field disagrees with itself than this engine differs from the " +
+        "astronomical record",
     ],
   ] as const,
+
   closing:
-    "Across 84 targeted cases put through Human Design Hub and Bodygraph, 79 matched. The five " +
-    "that did not are Sun-line profiles sitting within half an arcsecond of a boundary — about one " +
-    "chart in three thousand. That is written here rather than left out, because a number you can " +
-    "check is worth more than a claim you cannot.",
+    "That last number is the honest shape of it. Where calculators split over doctrine they " +
+    "disagree on roughly six charts in a thousand; this engine's own residual — a Sun-line profile " +
+    "sitting within half an arcsecond of a boundary — is about one in three thousand. Two " +
+    "engines built on the same ephemeris still disagree with each other. There is no perfect " +
+    "answer available to anyone, so the number is published rather than implied.",
 };
 
 export const EXAMPLE = {

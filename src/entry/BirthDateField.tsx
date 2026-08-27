@@ -38,6 +38,7 @@ export default function BirthDateField({
   // steps.
   const [year, month, day] = splitDate(value, THIS_YEAR - 35);
 
+  const [typing, setTyping] = useState(false);
   const [typed, setTyped] = useState("");
   const [typedBad, setTypedBad] = useState(false);
 
@@ -62,6 +63,7 @@ export default function BirthDateField({
     if (iso) {
       onChange(iso);
       setTyped("");
+      setTyping(false);
       return;
     }
     // Eight digits that did not make a date is a mistake worth naming, rather
@@ -126,33 +128,61 @@ export default function BirthDateField({
         </label>
       </div>
 
-      <div className="mt-3">
-        <label className="block">
-          <span className="text-[14px] text-brand-muted">
-            Or type it straight in, if you know it by heart — 06251985 for 25 June 1985
-          </span>
-          <input
-            inputMode="numeric"
-            autoComplete="bday"
-            placeholder="MMDDYYYY"
-            value={typed}
-            onChange={(e) => onTyped(e.target.value)}
-            className={
-              "mt-1 w-full rounded-xl border bg-ground-top/60 px-3 py-2.5 text-[16px] " +
-              "text-brand-paper placeholder:text-brand-muted/50 focus:outline-none focus:ring-2 " +
-              (typedBad
-                ? "border-brand-gold focus:ring-brand-gold/40"
-                : "border-brand-gold/25 focus:border-brand-teal focus:ring-brand-teal/40")
-            }
-          />
-        </label>
-        {typedBad && (
-          <p className="mt-1.5 text-[14px] leading-snug text-brand-gold">
-            That is eight digits, but not a date that exists — month first, then day, then the
-            four-digit year.
-          </p>
-        )}
-      </div>
+      {/*
+        Typing is folded away rather than removed.
+        
+        The picker answers it for most people and a permanently visible second
+        way to say the same thing reads as clutter -- Jeremy asked why it was
+        even there. But the app's guidance is explicit that when somebody
+        rattles the numbers off, typing beats any picker, and that is truest on
+        a desktop keyboard. So it is one tap away and quiet until wanted.
+      */}
+      {!typing ? (
+        <button
+          type="button"
+          onClick={() => setTyping(true)}
+          className="mt-3 text-[14px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+        >
+          Type the date instead
+        </button>
+      ) : (
+        <div className="mt-3">
+          <label className="block">
+            <span className="text-[14px] text-brand-muted">
+              Month, day, then the four-digit year &mdash; 06251985 for 25 June 1985
+            </span>
+            <input
+              inputMode="numeric"
+              autoComplete="bday"
+              autoFocus
+              placeholder="MMDDYYYY"
+              value={typed}
+              onChange={(e) => onTyped(e.target.value)}
+              className={
+                "mt-1 w-full rounded-xl border bg-ground-top/60 px-3 py-2.5 text-[16px] " +
+                "text-brand-paper placeholder:text-brand-muted/50 focus:outline-none focus:ring-2 " +
+                (typedBad
+                  ? "border-brand-gold focus:ring-brand-gold/40"
+                  : "border-brand-gold/25 focus:border-brand-teal focus:ring-brand-teal/40")
+              }
+            />
+          </label>
+          {typedBad && (
+            <p className="mt-1.5 text-[14px] leading-snug text-brand-gold">
+              That is eight digits, but not a date that exists &mdash; month first, then day, then
+              the four-digit year.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => { setTyping(false); setTyped(""); setTypedBad(false); }}
+            className="mt-2 text-[14px] text-brand-muted underline decoration-brand-muted/40 underline-offset-4"
+          >
+            Use the pickers
+          </button>
+        </div>
+      )}
+
     </fieldset>
   );
 }
