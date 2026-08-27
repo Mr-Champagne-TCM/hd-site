@@ -1,6 +1,7 @@
 import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE, RESOURCES } from "./copy";
 import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
 import ExampleSummary from "./ExampleSummary";
+import EntryForm from "./entry/EntryForm";
 
 /**
  * The offer page.
@@ -134,6 +135,14 @@ function Tiers() {
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {LADDER_NOTE}
       </p>
+      {/* The cards used to be inert -- "I cannot tell how to get into the
+          reading" was exactly right, because there was nowhere to go. */}
+      <a
+        href="#yours"
+        className="mt-6 inline-block rounded-full bg-brand-teal px-6 py-3.5 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
+      >
+        Start with the summary &mdash; {money(SUMMARY.cents)}
+      </a>
     </section>
   );
 }
@@ -234,6 +243,7 @@ export default function App() {
         <Hero />
         <Example />
         <Tiers />
+        <EntryForm />
         <Credibility />
         <Resources />
       </main>
