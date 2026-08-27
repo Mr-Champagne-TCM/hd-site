@@ -1,0 +1,16 @@
+/* Fonts first. An @import after any other statement is dropped by the bundler
+   with a warning, and the page then falls back to system fonts while looking
+   like it built cleanly. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Outfit:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+body {
+  background: linear-gradient(170deg, theme(colors.ground.top), theme(colors.ground.mid) 55%, theme(colors.ground.bottom));
+  background-attachment: fixed;
+  min-height: 100vh;
+}

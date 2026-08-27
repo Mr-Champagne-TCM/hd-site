@@ -19,7 +19,7 @@ export const CHART = {
   sku: "hd_chart",
   cents: 1111,
   label: "The chart",
-  blurb: "Your bodygraph, drawn - a page you can share and a PDF you keep - with your channels and activated gates.",
+  blurb: "Your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates.",
 };
 
 export const READING = {

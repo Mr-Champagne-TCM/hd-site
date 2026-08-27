@@ -21,7 +21,25 @@ export default async (request, context) => {
   }
 
   const blobs = getStore({ name: "chart-rate", consistency: "strong" });
-  const salt = process.env.RATE_SALT || "";
+
+  // No silent fallback to an empty salt. An unsalted hash of an IPv4 address is
+  // reversible by anyone willing to hash four billion candidates, which is a
+  // few seconds -- so a missing salt turns the counter store into a readable
+  // record of who visited and when. Refusing is the honest failure: it says
+  // what is wrong, and it cannot be mistaken for working.
+  const salt = process.env.RATE_SALT;
+  if (!salt) {
+    console.log("POST /api/chart -> 503 (RATE_SALT is not set)");
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "misconfigured",
+          message: "Charts are briefly unavailable. Nothing was charged. Please try again shortly.",
+        },
+      }),
+      { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
+    );
+  }
 
   const store = {
     async keyFor(ip) {
