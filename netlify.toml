@@ -3,7 +3,11 @@
 # thechampagnemethod.co stays on Porkbun DNS pointing at GitHub Pages, untouched,
 # and one record is added. Deleting that one record undoes everything.
 [build]
-  publish = "dist"
+  # "public" until there is a real build. dist/ is gitignored, so publishing
+  # from there meant a fresh clone would deploy an empty site and nobody would
+  # notice until a visitor did. When Vite arrives it copies public/ into dist/
+  # and this flips back.
+  publish = "public"
   functions = "netlify/functions"
 
 [functions]
