@@ -10,6 +10,19 @@
 [functions]
   node_bundler = "esbuild"
 
+  # THE FONTS ARE READ AT RUNTIME, so the bundler has to be told to ship them.
+  # readingPdf.mjs opens them by path rather than importing them, which esbuild
+  # cannot see -- without this the PDF builds locally and 500s in production,
+  # which is the worst shape of failure: invisible until somebody who paid
+  # clicks Download.
+  included_files = ["netlify/lib/fonts/**"]
+
+  # pdfkit is left OUT of the bundle on purpose. It reads its own .afm metric
+  # files from disk at runtime for the standard fonts, and a bundled copy has
+  # no disk to read them from. Shipping it as a plain dependency keeps its own
+  # files beside it.
+  external_node_modules = ["pdfkit", "fontkit", "svg-to-pdfkit"]
+
 # The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
 
 # A delivered reading is served by the single-page app, so /r/<token> has to

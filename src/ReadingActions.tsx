@@ -23,10 +23,13 @@ export default function ReadingActions({
   token,
   upgrade,
   canResend,
+  tier = 0,
 }: {
   token: string;
   upgrade: Upgrade;
   canResend: boolean;
+  /** The PDF is the chart tier and above; the summary was never sold one. */
+  tier?: number;
 }) {
   return (
     <div className="mt-12 space-y-10 border-t border-brand-gold/15 pt-10">
@@ -73,6 +76,29 @@ export default function ReadingActions({
           >
             {upgrade.label}
           </button>
+        </section>
+      )}
+
+      {tier >= 1 && (
+        <section>
+          <h2 className="font-display text-[20px] font-medium text-brand-paper">
+            The one you keep
+          </h2>
+          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
+            Your chart and the values behind it, as a PDF — the same drawing, at
+            print size.
+          </p>
+          {/*
+            A plain link, not a fetch-and-blob. A browser downloads what it
+            navigates to; building the file in the page and handing it to a
+            synthetic anchor is more moving parts and it breaks on a phone.
+          */}
+          <a
+            href={`/api/pdf?t=${encodeURIComponent(token)}`}
+            className="mt-4 inline-block rounded-full border border-brand-gold/50 px-5 py-2.5 font-sans text-[15px] text-brand-gold transition-colors hover:bg-brand-gold/10"
+          >
+            Download the PDF
+          </a>
         </section>
       )}
 

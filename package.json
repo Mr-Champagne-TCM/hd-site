@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
+    "pdfkit": "^0.20.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "svg-to-pdfkit": "^0.1.8"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

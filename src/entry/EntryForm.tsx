@@ -250,7 +250,10 @@ export default function EntryForm({
       (place ? `, ${place.label}` : "");
 
     return (
-      <section id="yours" className="mx-auto max-w-3xl px-6 pb-28 pt-20 sm:px-8">
+      <section
+        id="yours"
+        className="mx-auto max-w-3xl px-6 pb-28 pt-20 sm:px-8"
+      >
         <h2 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
           {name ? `${name}’s Human Design` : "Your Human Design"}
         </h2>
@@ -295,6 +298,7 @@ export default function EntryForm({
             token={readingToken}
             upgrade={upgrade}
             canResend={canResend}
+            tier={tier}
           />
         ) : (
           <>
