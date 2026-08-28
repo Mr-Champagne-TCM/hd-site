@@ -26,6 +26,11 @@ import {
 
 export type Upgrade = { level: number; label: string } | null;
 
+/** "The reading" -> "the reading", so it can sit inside a sentence. */
+function lowerFirst(s: string): string {
+  return s ? s[0].toLowerCase() + s.slice(1) : s;
+}
+
 export default function ReadingActions({
   token,
   upgrade,
@@ -120,8 +125,13 @@ export default function ReadingActions({
 
       {upgrade && (
         <section>
+          {/*
+            NAMES THE TIER. "If you would like the rest of it" assumed the
+            reader knows what "it" is -- Jeremy: "we have been swimming in this
+            topic so we know all too well what 'it' is. Pretend they don't."
+          */}
           <h2 className="font-display text-[20px] font-medium text-brand-paper">
-            If you would like the rest of it
+            If you would like {lowerFirst(upgrade.label)}
           </h2>
           {/*
             WHAT IS ACTUALLY IN IT, not just its name. "The reading goes
@@ -137,8 +147,8 @@ export default function ReadingActions({
             {TIERS[upgrade.level]?.blurb}
           </p>
           <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
-            What you have already paid comes off what you pay next — every route
-            to the full reading costs the same in the end.
+            What you have already paid comes off what you pay next — nobody pays
+            twice for the same thing.
           </p>
           <button
             type="button"

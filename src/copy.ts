@@ -185,7 +185,8 @@ export const TIERS_INTRO = {
  */
 export const LADDER_NOTE =
   "Straight to the reading, or a step at a time — the total is identical either way. " +
-  "Nobody is charged twice for the same start.";
+  "What you have already paid goes towards whatever you choose next, so nobody pays twice " +
+  "for the same thing.";
 
 export const ENTRY = {
   /**

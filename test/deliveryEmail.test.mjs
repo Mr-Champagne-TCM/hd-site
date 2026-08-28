@@ -100,13 +100,22 @@ test("both library links are present, in both bodies", () => {
   }
 });
 
-test("the upgrade is offered below the top tier and NOT at it", () => {
-  for (const tier of [0, 1]) {
-    assert.match(build(tier, "J").text, /would like the rest/, `tier ${tier} lost its upgrade line`);
+test("the upgrade NAMES the tier and what is in it, never 'the rest of it'", () => {
+  // Jeremy: "'If you would like the rest of it' -- 'it'? Be clear. They aren't
+  // as familiar with what they are getting until they get it in hand. We have
+  // been swimming in this topic so we know all too well what 'it' is. Pretend
+  // they don't."
+  for (const [tier, next] of [[0, "The chart"], [1, "The reading"]]) {
+    const { text } = build(tier, "J");
+    assert.ok(text.includes(next), `tier ${tier} does not name the next tier`);
+    assert.doesNotMatch(text, /the rest of it/i, `tier ${tier} still says "the rest of it"`);
   }
+});
+
+test("no upgrade at the top tier, because there is nothing above it", () => {
   const top = build(2, "J");
-  assert.doesNotMatch(top.text, /would like the rest/, "the top tier was offered an upgrade");
-  assert.doesNotMatch(top.html, /would like the rest/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.text, /comes off what you pay next/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.html, /comes off what you pay next/, "the top tier was offered an upgrade");
 });
 
 test("the upgrade uses the SAME link, because there is only one", () => {
@@ -150,11 +159,25 @@ test("no imperatives: it offers, it does not instruct", () => {
   }
 });
 
-test("the six days are stated as a fact about the link, never as pressure", () => {
+test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL", () => {
+  // Jeremy: "shown in the context of the first email, it adds anxiety about
+  // what happens when 6 days passes. Do they lose their purchase?"
+  //
+  // It arrives seconds after a card is charged, before they hold anything, so
+  // it reads as a question about whether the purchase expires rather than as
+  // how to get something back.
+  for (const tier of [0, 1, 2]) {
+    const pendingMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: true });
+    assert.doesNotMatch(pendingMail.text, /six days/i, `tier ${tier} pending mentions six days`);
+    assert.doesNotMatch(pendingMail.html, /six days/i, `tier ${tier} pending mentions six days`);
+  }
+});
+
+test("and present once there is something to come back TO", () => {
   const { text } = build(1, "J");
   assert.match(text, /active for six days/);
-  // And immediately followed by the reassurance, so it cannot read as a threat.
-  assert.match(text, /sent again/);
+  // Immediately followed by the reassurance, so it cannot read as a threat.
+  assert.match(text, /sent to you again/);
   assert.match(text, /kept for a year/);
 });
 

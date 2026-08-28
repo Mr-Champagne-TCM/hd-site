@@ -22,6 +22,16 @@ import { TIERS } from "../../shared/pricing.mjs";
  *   pending   Create and view your Human Design chart
  *   filled    Access your Human Design chart
  *
+ * THE SIX DAYS ARE NOT MENTIONED IN THE FIRST EMAIL, and that is Jeremy's
+ * call. In the app the line urged people to act; here it arrives seconds after
+ * a card has been charged, before they have anything, and it reads as a
+ * question about whether their purchase expires. "It adds anxiety about what
+ * happens when 6 days passes. Do they lose their purchase?"
+ *
+ * So it appears only once there is something to come back TO, where it reads
+ * as how to get it again rather than as a countdown on something they have
+ * just bought.
+ *
  * THE VOICE RULES APPLY HERE TOO, and they are easy to forget in an email
  * because every transactional email ever written is full of imperatives. This
  * one asks and offers; it does not instruct. No urgency, no countdown, no
@@ -38,6 +48,10 @@ function tierWord(tier) {
   const label = TIERS[tier]?.label;
   if (!label) return "reading";
   return label.replace(/^The\s+/i, "").toLowerCase();
+}
+
+function lowerFirst(s) {
+  return typeof s === "string" && s ? s[0].toLowerCase() + s.slice(1) : "";
 }
 
 const esc = (s) =>
@@ -99,8 +113,9 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
 
   const upgradeLine = top
     ? null
-    : `If you would like the rest of it, the same link has your next step on it — and what you ` +
-      `have already paid comes off what you pay next.`;
+    : `${TIERS[tier + 1]?.label ?? "The next step"} adds ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
+      `The same link has it, and what you have already paid comes off what you pay next — ` +
+      `nobody pays twice for the same thing.`;
 
   const RESOURCES = [
     [
@@ -126,9 +141,13 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
     "Two pieces in the library, free, written for exactly this moment:",
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? [upgradeLine, ""] : []),
-    "This link is active for six days. After that it can be sent again — your",
-    "reading is kept for a year, and it stays yours whether or not the link does.",
-    "",
+    ...(pending
+      ? []
+      : [
+          "This link is active for six days, and can be sent to you again whenever you",
+          "need it. Your reading is kept for a year.",
+          "",
+        ]),
     "— The Champagne Method",
     links.home,
   ].join("\n");
@@ -162,10 +181,14 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
       : `<tr><td style="height:8px"></td></tr>`
   }
 
-  <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">
-    This link is active for six days. After that it can be sent again — your reading is kept for
-    a year, and it stays yours whether or not the link does.
-  </td></tr>
+  ${
+    pending
+      ? ""
+      : `<tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">
+    This link is active for six days, and can be sent to you again whenever you need it. Your
+    reading is kept for a year.
+  </td></tr>`
+  }
 
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
     <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>

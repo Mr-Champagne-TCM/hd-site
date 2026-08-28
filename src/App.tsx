@@ -326,6 +326,42 @@ function Footer() {
 }
 
 export default function App() {
+  /**
+   * SOMEBODY WHO HAS JUST PAID DOES NOT NEED THE PITCH.
+   *
+   * Reported after a real purchase: "returned me here after pay-success... wait
+   * I see the form now... so far down the page... then there is the payment
+   * received... also way down there. This needs to be more immediately shown."
+   *
+   * He is right, and scrolling to it is the wrong fix. The hero, the worked
+   * example, the credibility case and the three prices exist to answer "should
+   * I buy this". Someone arriving back from Stripe has answered it. Leaving
+   * them there and jumping the page would still make them scroll past their own
+   * purchase to find it again on a reload.
+   *
+   * So on the paid return, the pitch is NOT RENDERED. The form is the page.
+   *
+   * Detected from the `?paid=` parameter Stripe returns to, read before
+   * `claimIfReturning` strips it -- which is why this is captured once, at
+   * mount, rather than read live.
+   */
+  const [returningPaid] = useState(
+    () =>
+      typeof window !== "undefined" && new URL(window.location.href).searchParams.has("paid"),
+  );
+
+  if (returningPaid) {
+    return (
+      <div className="font-sans text-brand-paper">
+        <Nav />
+        <main>
+          <EntryForm />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="font-sans text-brand-paper">
       <Nav />

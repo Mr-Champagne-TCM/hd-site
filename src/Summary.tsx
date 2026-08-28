@@ -25,6 +25,7 @@ export type SummaryData = {
   timeKnown: boolean;
   note?: string;
   provisional?: string[];
+  channels?: string[];
   /**
    * Present from the chart tier upward, absent on the free summary. Typed
    * `unknown` rather than `string` on purpose: it arrives from the network, it
@@ -32,6 +33,7 @@ export type SummaryData = {
    * would let a caller skip the gate without the compiler minding.
    */
   bodygraphSvg?: unknown;
+  bodygraphPrintSvg?: unknown;
 };
 
 /** Display label, and the field it comes from. Order is the reading order. */
@@ -46,7 +48,13 @@ const ROWS: ReadonlyArray<readonly [string, keyof SummaryData]> = [
   ["Incarnation Cross", "incarnationCross"],
 ];
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid gap-1 px-5 py-3 sm:grid-cols-[13rem_1fr] sm:gap-4">
       <dt className="font-sans text-[14px] uppercase tracking-[0.12em] text-brand-muted/80">
@@ -77,6 +85,16 @@ export default function Summary({ data }: { data: SummaryData }) {
         ))}
         <Row label="Defined centres">{data.definedCenters.join(" · ")}</Row>
         <Row label="Open centres">{data.openCenters.join(" · ")}</Row>
+        {/*
+          THE CHANNELS, which the PDF had and this did not.
+          Jeremy: "why does the PDF have channels but the web view doesn't?"
+          No reason -- an oversight, not a boundary. They are chart-tier content
+          and the PDF is chart-tier, so the page showing less than the document
+          it hands over was simply wrong.
+        */}
+        {data.channels && data.channels.length > 0 && (
+          <Row label="Channels">{data.channels.join(" · ")}</Row>
+        )}
       </dl>
 
       {!data.timeKnown && data.note && (

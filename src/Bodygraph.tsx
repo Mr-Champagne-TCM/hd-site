@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { checkBodygraph } from "./bodygraphGate";
 import { ASPECT, MAX_SCALE, MIN_SCALE, clamp, clampScale } from "./zoomBounds";
 
@@ -144,10 +144,38 @@ function Zoom({
     };
   }, [onClose]);
 
-  const view = () => {
+  /**
+   * THE VIEWPORT, MEASURED AFTER IT EXISTS.
+   *
+   * This used to read `surface.current.clientWidth` DURING render, when the
+   * element has not been created yet, so the first pass sized the drawing to
+   * one pixel and nothing re-rendered to correct it. The viewer opened empty.
+   *
+   * Reported exactly as that behaves: empty on desktop, and on a phone "a
+   * pinch pops the graph into view" -- because a pointer event was the first
+   * thing to cause a second render, which finally had a real element to
+   * measure.
+   *
+   * Measured in a layout effect and kept in state, so the first PAINT already
+   * has the right numbers, and observed after that so a rotation or a resize
+   * does not strand it at the old size.
+   */
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
     const el = surface.current;
-    return { w: el?.clientWidth ?? 1, h: el?.clientHeight ?? 1 };
-  };
+    if (!el) return;
+    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const view = () => box;
 
   function centroid() {
     const pts = [...pointers.current.values()];
@@ -201,6 +229,7 @@ function Zoom({
   }
 
   const { w, h } = view();
+  const ready = w > 0 && h > 0;
   const drawW = w * scale;
   const drawH = drawW / ASPECT;
 
@@ -219,18 +248,20 @@ function Zoom({
           setOffset({ x: 0, y: 0 });
         }}
       >
-        <div
-          role="img"
-          aria-label={alt}
-          className="absolute [&>svg]:h-full [&>svg]:w-full"
-          style={{
-            width: drawW,
-            height: drawH,
-            left: (w - drawW) / 2 + offset.x,
-            top: (h - drawH) / 2 + offset.y,
-          }}
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        {ready && (
+          <div
+            role="img"
+            aria-label={alt}
+            className="absolute [&>svg]:h-full [&>svg]:w-full"
+            style={{
+              width: drawW,
+              height: drawH,
+              left: (w - drawW) / 2 + offset.x,
+              top: (h - drawH) / 2 + offset.y,
+            }}
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
+        )}
       </div>
 
       <p className="pointer-events-none absolute left-5 top-4 font-sans text-[12px] text-brand-muted">
