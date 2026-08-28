@@ -129,3 +129,22 @@ test("the tier label on the page comes from the pricing module", async () => {
   assert.ok(TIERS[1].label, "the pricing module lost its chart label");
   assert.ok(pdf.length > 0);
 });
+
+test("THE STANDARD FONT SET IS NEVER TOUCHED", async () => {
+  // A 500 in production that every local run passed:
+  //
+  //   Cannot find module '/var/task/node_modules/pdfkit/js/standard-fonts/Helvetica.cjs'
+  //
+  // PDFDocument loads a DEFAULT font in its constructor, before any of our
+  // code registers anything, and it does so by requiring a file the deployed
+  // bundle does not contain. Naming our own font at construction means the
+  // standard set is never loaded -- which is also what we wanted: nothing in
+  // this document should be in a font that is not Outfit.
+  //
+  // Asserted on the OUTPUT rather than on the option, because the option is
+  // the fix and the output is the promise.
+  const pdf = (await make()).toString("latin1");
+  for (const std of ["Helvetica", "Times-Roman", "Courier", "ZapfDingbats", "Symbol"]) {
+    assert.ok(!pdf.includes(std), `${std} reached the PDF, so a standard font was loaded`);
+  }
+});

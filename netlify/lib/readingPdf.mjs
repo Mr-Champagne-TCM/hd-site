@@ -58,6 +58,22 @@ export function readingPdf({ tier, name, output, generatedAt = new Date() }) {
     const doc = new PDFDocument({
       size: [PAGE.w, PAGE.h],
       margin: 0,
+      /**
+       * THE INITIAL FONT IS OURS, and this line is the whole fix for a 500 in
+       * production that every local run passed.
+       *
+       * PDFDocument loads a DEFAULT font in its constructor -- Helvetica --
+       * before any of our code registers anything. It does that by requiring
+       * `pdfkit/js/standard-fonts/Helvetica.cjs` at runtime, and the deployed
+       * bundle has no such file:
+       *
+       *   Cannot find module '/var/task/node_modules/pdfkit/js/standard-fonts/Helvetica.cjs'
+       *
+       * Naming our own font here means the standard set is never touched at
+       * all, which is both the fix and what we wanted anyway: nothing in this
+       * document should be rendered in a font that is not Outfit.
+       */
+      font: `${FONT_DIR}Outfit-400.ttf`,
       info: {
         Title: name ? `${name} — Human Design` : "Human Design",
         Author: "The Champagne Method",
