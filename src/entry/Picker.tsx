@@ -99,12 +99,14 @@ export default function Picker({
    * below at all. Both are measured after the panel exists and before it is
    * painted, so neither is ever briefly visible in the wrong place.
    */
-  const [place, setPlace] = useState({ above: false, right: false });
+  const [place, setPlace] = useState<{ above: boolean; left: number | null }>({
+    above: false,
+    left: null,
+  });
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const typed = useRef({ text: "", at: 0 });
-
 
   const index = options.findIndex((o) => o.value === value);
   const chosen = index >= 0 ? options[index] : null;
@@ -126,15 +128,40 @@ export default function Picker({
     setOverflows(!!box && box.scrollHeight > box.clientHeight + 2);
 
     const field = button.current?.getBoundingClientRect();
-    const panelEl = box?.parentElement?.parentElement;
+    const panelEl = box?.parentElement?.parentElement as
+      HTMLElement | undefined;
     if (field && panelEl) {
       const h = panelEl.offsetHeight;
       const w = panelEl.offsetWidth;
+
+      /**
+       * CENTRED ON ITS FIELD, THEN CLAMPED TO THE SCREEN.
+       *
+       * Anchoring to one side or the other was not enough. The day field sits
+       * in the MIDDLE of the row: a panel wider than it overflows whichever
+       * edge it is pinned to, and pinning right pushed the first column --
+       * 1, 7, 13, 19, 25, 31 -- clean off the left of the screen.
+       *
+       * So it is centred on the field it belongs to, which is where the eye
+       * expects it, and then slid back inside the viewport if that would hang
+       * it off either edge. Month lands flush left, year flush right, day
+       * centred, all from one rule.
+       */
+      const MARGIN = 8;
+      const wanted = field.left + field.width / 2 - w / 2;
+      const clamped = Math.max(
+        MARGIN,
+        Math.min(wanted, window.innerWidth - w - MARGIN),
+      );
       setPlace({
         // Flip up only when there is genuinely more room up there. A panel
         // that flips on a screen where neither side fits should stay put.
-        above: field.bottom + h + 8 > window.innerHeight && field.top - h - 8 > 0,
-        right: field.left + w > window.innerWidth - 8,
+        above:
+          field.bottom + h + MARGIN > window.innerHeight &&
+          field.top - h - MARGIN > 0,
+        // Stored relative to the wrapper, because that is what `left` on an
+        // absolutely positioned child is measured from.
+        left: clamped - field.left,
       });
     }
   }, [open, index, options.length]);
@@ -149,7 +176,6 @@ export default function Picker({
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
   }, [open]);
-
 
   function choose(i: number) {
     const opt = options[i];
@@ -236,7 +262,9 @@ export default function Picker({
     "absolute z-50 w-max min-w-full max-w-[min(22rem,88vw)] rounded-xl border-2 " +
     "border-brand-teal/70 bg-[#241a4e] p-3 shadow-2xl " +
     (place.above ? "bottom-[calc(100%+6px)] " : "top-[calc(100%+6px)] ") +
-    (place.right ? "right-0" : "left-0");
+    // Before the first measurement there is no offset to apply, so it opens
+    // flush with its field rather than jumping from an arbitrary guess.
+    (place.left === null ? "left-0" : "");
 
   return (
     <div ref={root} className="relative">
@@ -262,63 +290,67 @@ export default function Picker({
       </button>
 
       {open && (
-        <div className={panel} role="presentation">
-            {/*
+        <div
+          className={panel}
+          role="presentation"
+          style={place.left === null ? undefined : { left: place.left }}
+        >
+          {/*
               The fade anchors to the LIST, not to the panel. The panel is
               absolutely positioned already, and giving it `relative` as well
               let the CSS decide which won -- it chose relative, and the whole
               panel dropped into the page flow.
             */}
-            <div className="relative">
-              <div
-                ref={list}
-                role="listbox"
-                aria-label={label}
-                tabIndex={-1}
-                onKeyDown={onKeyDown}
-                className="grid max-h-[46vh] gap-2 overflow-y-auto overscroll-contain sm:max-h-80"
-                style={{
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                }}
-              >
-                {options.map((o, i) => {
-                  const isChosen = o.value === value;
-                  return (
-                    <button
-                      key={o.value}
-                      data-opt
-                      data-current={isChosen || undefined}
-                      type="button"
-                      role="option"
-                      aria-selected={isChosen}
-                      onClick={() => choose(i)}
-                      onPointerEnter={() => {
-                        setActive(i);
-                        setShowActive(true);
-                      }}
-                      className={
-                        // 44px minimum touch target, which is the number that
-                        // decides whether a phone user hits the month they meant.
-                        "min-h-[44px] rounded-lg border px-2 py-2 text-center text-[15px] transition-colors " +
-                        (isChosen
-                          ? "border-brand-teal bg-brand-teal font-semibold text-[#0d1b1a] "
-                          : showActive && i === active
-                            ? "border-brand-gold/40 bg-white/10 text-brand-paper "
-                            : "border-brand-gold/15 bg-white/[0.04] text-brand-paper ")
-                      }
-                    >
-                      {o.short ?? o.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {overflows && (
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#241a4e] via-[#241a4e] to-transparent"
-                />
-              )}
+          <div className="relative">
+            <div
+              ref={list}
+              role="listbox"
+              aria-label={label}
+              tabIndex={-1}
+              onKeyDown={onKeyDown}
+              className="grid max-h-[46vh] gap-2 overflow-y-auto overscroll-contain sm:max-h-80"
+              style={{
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              }}
+            >
+              {options.map((o, i) => {
+                const isChosen = o.value === value;
+                return (
+                  <button
+                    key={o.value}
+                    data-opt
+                    data-current={isChosen || undefined}
+                    type="button"
+                    role="option"
+                    aria-selected={isChosen}
+                    onClick={() => choose(i)}
+                    onPointerEnter={() => {
+                      setActive(i);
+                      setShowActive(true);
+                    }}
+                    className={
+                      // 44px minimum touch target, which is the number that
+                      // decides whether a phone user hits the month they meant.
+                      "min-h-[44px] rounded-lg border px-2 py-2 text-center text-[15px] transition-colors " +
+                      (isChosen
+                        ? "border-brand-teal bg-brand-teal font-semibold text-[#0d1b1a] "
+                        : showActive && i === active
+                          ? "border-brand-gold/40 bg-white/10 text-brand-paper "
+                          : "border-brand-gold/15 bg-white/[0.04] text-brand-paper ")
+                    }
+                  >
+                    {o.short ?? o.label}
+                  </button>
+                );
+              })}
             </div>
+            {overflows && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#241a4e] via-[#241a4e] to-transparent"
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
