@@ -67,6 +67,20 @@ export default function Picker({
    * somebody actually presses a key or moves a pointer over an option.
    */
   const [showActive, setShowActive] = useState(false);
+  /**
+   * WHETHER THE LIST IS TALLER THAN ITS BOX.
+   *
+   * A truncated list that looks complete is worse than a short one. The
+   * desktop panel capped at 16rem cut the day grid off after 30 with nothing
+   * on screen to say a 31st existed -- Jeremy went to Day first, saw five tidy
+   * rows, and reported the month was missing a day. It was not: it was below
+   * the fold of a scroll area with no scrollbar and no edge.
+   *
+   * So overflow is measured rather than guessed at, and a fade is drawn only
+   * when there is genuinely more below. A permanent fade would be decoration
+   * that lies on the lists which fit.
+   */
+  const [overflows, setOverflows] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -94,9 +108,13 @@ export default function Picker({
     if (!open) return;
     setActive(index >= 0 ? index : 0);
     setShowActive(false);
-    const el = list.current?.querySelector<HTMLElement>('[data-current="true"]');
+    const el = list.current?.querySelector<HTMLElement>(
+      '[data-current="true"]',
+    );
     el?.scrollIntoView({ block: "center" });
-  }, [open, index]);
+    const box = list.current;
+    setOverflows(!!box && box.scrollHeight > box.clientHeight + 2);
+  }, [open, index, options.length]);
 
   // Close on anything else. Pointerdown rather than click, so a press that
   // starts outside closes immediately rather than waiting for the release.
@@ -180,9 +198,13 @@ export default function Picker({
      */
     if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
       const now = Date.now();
-      const text = (now - typed.current.at < 1000 ? typed.current.text : "") + e.key.toLowerCase();
+      const text =
+        (now - typed.current.at < 1000 ? typed.current.text : "") +
+        e.key.toLowerCase();
       typed.current = { text, at: now };
-      const hit = options.findIndex((o) => o.label.toLowerCase().startsWith(text));
+      const hit = options.findIndex((o) =>
+        o.label.toLowerCase().startsWith(text),
+      );
       if (hit >= 0) move(hit);
     }
   }
@@ -222,7 +244,9 @@ export default function Picker({
         aria-label={label}
       >
         <span className="flex items-center justify-between gap-2">
-          <span className="truncate">{chosen ? chosen.label : placeholder}</span>
+          <span className="truncate">
+            {chosen ? chosen.label : placeholder}
+          </span>
           <span aria-hidden className="text-[11px] text-brand-muted">
             ▾
           </span>
@@ -246,51 +270,70 @@ export default function Picker({
           <div className={panel} role="presentation">
             {isMobile && (
               <>
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-brand-muted/40" aria-hidden />
+                <div
+                  className="mx-auto mb-3 h-1 w-10 rounded-full bg-brand-muted/40"
+                  aria-hidden
+                />
                 <p className="mb-3 text-center font-sans text-[12px] uppercase tracking-[0.16em] text-brand-gold">
                   {label}
                 </p>
               </>
             )}
-            <div
-              ref={list}
-              role="listbox"
-              aria-label={label}
-              tabIndex={-1}
-              onKeyDown={onKeyDown}
-              className="grid max-h-[46vh] gap-2 overflow-y-auto overscroll-contain sm:max-h-64"
-              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-            >
-              {options.map((o, i) => {
-                const isChosen = o.value === value;
-                return (
-                  <button
-                    key={o.value}
-                    data-opt
-                    data-current={isChosen || undefined}
-                    type="button"
-                    role="option"
-                    aria-selected={isChosen}
-                    onClick={() => choose(i)}
-                    onPointerEnter={() => {
-                      setActive(i);
-                      setShowActive(true);
-                    }}
-                    className={
-                      // 44px minimum touch target, which is the number that
-                      // decides whether a phone user hits the month they meant.
-                      "min-h-[44px] rounded-lg border px-2 py-2 text-center text-[15px] transition-colors " +
-                      (isChosen
-                        ? "border-brand-teal bg-brand-teal font-semibold text-[#0d1b1a] "
-                        : showActive && i === active
-                          ? "border-brand-gold/40 bg-white/10 text-brand-paper "
-                          : "border-brand-gold/15 bg-white/[0.04] text-brand-paper ")
-                    }
-                  >
-                    {o.short ?? o.label}
-                  </button>
-                );
-              })}
+            {/*
+              The fade anchors to the LIST, not to the panel. The panel is
+              absolutely positioned already, and giving it `relative` as well
+              let the CSS decide which won -- it chose relative, and the whole
+              panel dropped into the page flow.
+            */}
+            <div className="relative">
+              <div
+                ref={list}
+                role="listbox"
+                aria-label={label}
+                tabIndex={-1}
+                onKeyDown={onKeyDown}
+                className="grid max-h-[46vh] gap-2 overflow-y-auto overscroll-contain sm:max-h-80"
+                style={{
+                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                }}
+              >
+                {options.map((o, i) => {
+                  const isChosen = o.value === value;
+                  return (
+                    <button
+                      key={o.value}
+                      data-opt
+                      data-current={isChosen || undefined}
+                      type="button"
+                      role="option"
+                      aria-selected={isChosen}
+                      onClick={() => choose(i)}
+                      onPointerEnter={() => {
+                        setActive(i);
+                        setShowActive(true);
+                      }}
+                      className={
+                        // 44px minimum touch target, which is the number that
+                        // decides whether a phone user hits the month they meant.
+                        "min-h-[44px] rounded-lg border px-2 py-2 text-center text-[15px] transition-colors " +
+                        (isChosen
+                          ? "border-brand-teal bg-brand-teal font-semibold text-[#0d1b1a] "
+                          : showActive && i === active
+                            ? "border-brand-gold/40 bg-white/10 text-brand-paper "
+                            : "border-brand-gold/15 bg-white/[0.04] text-brand-paper ")
+                      }
+                    >
+                      {o.short ?? o.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {overflows && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#241a4e] via-[#241a4e] to-transparent"
+                />
+              )}
             </div>
           </div>
         </>
