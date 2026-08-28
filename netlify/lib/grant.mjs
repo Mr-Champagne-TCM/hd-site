@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { open as openSealed, seal } from "./sig.mjs";
 
 /**
  * Proof that something was paid for.
@@ -34,19 +34,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * this.
  */
 
-/** Base64url, because a grant travels in a URL and in a header. */
-function b64url(buf) {
-  return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function unb64url(s) {
-  return Buffer.from(String(s).replace(/-/g, "+").replace(/_/g, "/"), "base64");
-}
-
-function sign(body, secret) {
-  return b64url(createHmac("sha256", secret).update(body).digest());
-}
-
 /**
  * Mint a grant.
  *
@@ -59,8 +46,7 @@ export function mintGrant({ tier, sku, ttlSeconds = 3600, now = Date.now() }, se
   if (!secret) throw new Error("mintGrant: no secret");
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`mintGrant: bad tier ${tier}`);
   const payload = { t: tier, s: sku, x: Math.floor(now / 1000) + ttlSeconds };
-  const body = b64url(JSON.stringify(payload));
-  return `${body}.${sign(body, secret)}`;
+  return seal(payload, secret);
 }
 
 /**
@@ -71,30 +57,13 @@ export function mintGrant({ tier, sku, ttlSeconds = 3600, now = Date.now() }, se
  * to end in an answer rather than an exception.
  */
 export function readGrant(token, secret, now = Date.now()) {
-  if (!secret) return { ok: false, reason: "misconfigured" };
-  if (typeof token !== "string" || token.length === 0) return { ok: false, reason: "absent" };
-  // A cap, because everything here is cheap but nothing should be unbounded.
-  if (token.length > 512) return { ok: false, reason: "malformed" };
+  // The envelope -- length cap, constant-time MAC, an answer on every branch --
+  // is sig.mjs. What is left here is the only part that is about GRANTS: what
+  // the payload has to say for it to mean anything.
+  const opened = openSealed(token, secret);
+  if (!opened.ok) return { ok: false, reason: opened.reason };
 
-  const dot = token.indexOf(".");
-  if (dot < 1 || dot === token.length - 1) return { ok: false, reason: "malformed" };
-  const body = token.slice(0, dot);
-  const mac = token.slice(dot + 1);
-
-  const expected = sign(body, secret);
-  // Constant time, and length-checked first because timingSafeEqual throws on
-  // a length mismatch -- which would itself be a timing signal.
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, reason: "bad_signature" };
-
-  let payload;
-  try {
-    payload = JSON.parse(unb64url(body).toString("utf8"));
-  } catch {
-    return { ok: false, reason: "malformed" };
-  }
-
+  const payload = opened.payload;
   const tier = payload?.t;
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) return { ok: false, reason: "malformed" };
   if (typeof payload?.x !== "number" || payload.x * 1000 <= now) return { ok: false, reason: "expired" };
