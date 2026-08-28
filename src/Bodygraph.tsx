@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { checkBodygraph } from "./bodygraphGate";
+import { ASPECT, MAX_SCALE, MIN_SCALE, clamp, clampScale } from "./zoomBounds";
 
 /**
  * The drawing, on the page.
@@ -50,39 +51,37 @@ export default function Bodygraph({
 }
 
 /**
- * The chart, and a way to look at it closely.
+ * The chart, and the full-screen zoom behind a tap.
  *
- * Jeremy: "I want them to be able to zoom on the bg alone. Zooming the whole
- * page doesn't behave politely." He is right -- pinching the page moves the
- * nav, the headings and the summary table along with the drawing, and on a
- * phone it is easy to end up somewhere you cannot get back from.
+ * MIMICS THE APP, at Jeremy's instruction, because he has already had this
+ * argument with himself once and settled it there. The first web version used
+ * plus/minus buttons and browser scrolling -- safe, and not what he asked for.
  *
- * NO GESTURE CODE. The picker cost five rounds of tail-chasing to replace a
- * native behaviour, and the lesson recorded from it is that a custom control
- * replacing something that works is five rounds minimum. So this opens a
- * fullscreen panel, sets the drawing to a chosen width, and lets the BROWSER'S
- * OWN SCROLLING do the panning. Three zoom steps, two buttons, and nothing
- * that can be dropped, mis-tracked or fought with.
+ * What the app does, and therefore what this does:
+ *
+ *   tap the chart          full screen, on the panel navy
+ *   opens at scale 1       which FILLS THE WIDTH. Opening any smaller reads as
+ *                          nothing having happened -- the app's own note
+ *   pinch to zoom          1x to 8x
+ *   drag to move           clamped, so the chart always covers the viewport
+ *   Done, top right        in gold
+ *
+ * SCALE MEANS MULTIPLES OF THE VIEWPORT WIDTH, the app's meaning, so the drawing
+ * is sized and positioned rather than transformed. Its note on why: a
+ * canvas-transform version "measured 1.14x on screen while claiming 1.6x, and a
+ * zoom factor that does not mean what it says cannot be reasoned about."
+ *
+ * The clamp is a direct port in ./zoomBounds.ts, tested rather than eyeballed,
+ * because that is the part the app got wrong first: an unclamped drag "let a
+ * drag carry the chart clean out of view and leave the user staring at empty
+ * navy with no way back."
+ *
+ * Gesture handling is Pointer Events -- one API for touch, pen and mouse -- and
+ * `touch-action: none` on the surface so the browser does not take the pinch
+ * for itself and zoom the whole page, which is the behaviour being replaced.
  */
 function Viewer({ svg, alt }: { svg: string; alt: string }) {
   const [open, setOpen] = useState(false);
-  const [zoom, setZoom] = useState(2);
-
-  // Escape closes it, and the page behind must not scroll under a fullscreen
-  // panel -- the same rule the picker's sheet needed.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
 
   const drawing = (
     <div
@@ -97,86 +96,158 @@ function Viewer({ svg, alt }: { svg: string; alt: string }) {
     <figure className="m-0">
       <button
         type="button"
-        onClick={() => {
-          setZoom(2);
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
         className="block w-full cursor-zoom-in rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
         aria-label={`${alt} — open larger`}
       >
         {drawing}
       </button>
       <figcaption className="mt-2 text-center font-sans text-[13px] text-brand-muted">
-        Tap the chart to look closely
+        Tap the chart to zoom in
       </figcaption>
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#120a2e]">
-          <div className="flex items-center justify-between gap-3 border-b border-brand-gold/20 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <ZoomButton
-                label="Zoom out"
-                onClick={() => setZoom((z) => Math.max(1, z - 1))}
-                disabled={zoom <= 1}
-              >
-                −
-              </ZoomButton>
-              <span className="min-w-[3.5rem] text-center font-sans text-[14px] text-brand-muted">
-                {zoom}×
-              </span>
-              <ZoomButton
-                label="Zoom in"
-                onClick={() => setZoom((z) => Math.min(4, z + 1))}
-                disabled={zoom >= 4}
-              >
-                +
-              </ZoomButton>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-full border border-brand-teal/50 px-4 py-2 font-sans text-[15px] text-brand-teal"
-            >
-              Done
-            </button>
-          </div>
-          {/*
-            The panning. `overflow-auto` on the frame and a width larger than it
-            on the drawing is the whole mechanism -- a scroll the browser
-            already knows how to do, on every device, with momentum and edges
-            and everything else that would otherwise have to be written.
-          */}
-          <div className="flex-1 overflow-auto overscroll-contain p-3">
-            <div style={{ width: `${zoom * 100}%`, minWidth: "100%" }}>
-              {drawing}
-            </div>
-          </div>
-        </div>
-      )}
+      {open && <Zoom svg={svg} alt={alt} onClose={() => setOpen(false)} />}
     </figure>
   );
 }
 
-function ZoomButton({
-  children,
-  label,
-  onClick,
-  disabled,
+function Zoom({
+  svg,
+  alt,
+  onClose,
 }: {
-  children: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
+  svg: string;
+  alt: string;
+  onClose: () => void;
 }) {
+  const surface = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(MIN_SCALE);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+
+  /**
+   * Live pointers, in a ref rather than state. A gesture updates many times a
+   * second and none of those updates should cause a render on their own -- the
+   * render comes from the scale and offset they produce.
+   */
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{ dist: number; cx: number; cy: number } | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const view = () => {
+    const el = surface.current;
+    return { w: el?.clientWidth ?? 1, h: el?.clientHeight ?? 1 };
+  };
+
+  function centroid() {
+    const pts = [...pointers.current.values()];
+    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    const dist =
+      pts.length > 1 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) : 0;
+    return { cx, cy, dist };
+  }
+
+  function down(e: React.PointerEvent) {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    gesture.current = centroid();
+  }
+
+  function move(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = centroid();
+    const was = gesture.current;
+    if (!was) return;
+
+    // Pinch only when two fingers are down; one finger is a drag.
+    const next =
+      was.dist > 0 && now.dist > 0
+        ? clampScale(scale * (now.dist / was.dist))
+        : scale;
+
+    const { w, h } = view();
+    // RE-CLAMPED AGAINST THE NEW SCALE, not the old one. Zooming back out
+    // shrinks the pan limits, and an offset left over from a deeper zoom would
+    // strand the chart off-screen at the moment somebody was recovering it.
+    const moved = clamp(
+      offset.x + (now.cx - was.cx),
+      offset.y + (now.cy - was.cy),
+      next,
+      w,
+      h,
+      ASPECT,
+    );
+
+    gesture.current = now;
+    setScale(next);
+    setOffset(moved);
+  }
+
+  function up(e: React.PointerEvent) {
+    pointers.current.delete(e.pointerId);
+    gesture.current = pointers.current.size ? centroid() : null;
+  }
+
+  const { w, h } = view();
+  const drawW = w * scale;
+  const drawH = drawW / ASPECT;
+
   return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      className="h-11 w-11 rounded-full border border-brand-gold/40 font-sans text-[20px] leading-none text-brand-paper disabled:opacity-30"
-    >
-      {children}
-    </button>
+    <div className="fixed inset-0 z-50 bg-[#0E1A2B]">
+      <div
+        ref={surface}
+        className="absolute inset-0 touch-none overflow-hidden"
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onDoubleClick={() => {
+          // A way back for a mouse, which cannot pinch.
+          setScale(MIN_SCALE);
+          setOffset({ x: 0, y: 0 });
+        }}
+      >
+        <div
+          role="img"
+          aria-label={alt}
+          className="absolute [&>svg]:h-full [&>svg]:w-full"
+          style={{
+            width: drawW,
+            height: drawH,
+            left: (w - drawW) / 2 + offset.x,
+            top: (h - drawH) / 2 + offset.y,
+          }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      </div>
+
+      <p className="pointer-events-none absolute left-5 top-4 font-sans text-[12px] text-brand-muted">
+        Pinch to zoom, drag to move
+      </p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-3 top-2 rounded-full px-4 py-2 font-sans text-[16px] text-brand-gold"
+      >
+        Done
+      </button>
+      {scale > MIN_SCALE && (
+        <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 font-sans text-[12px] text-brand-muted">
+          {scale.toFixed(1)}× of {MAX_SCALE}×
+        </p>
+      )}
+    </div>
   );
 }

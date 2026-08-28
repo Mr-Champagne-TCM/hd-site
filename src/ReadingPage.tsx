@@ -221,6 +221,7 @@ export default function ReadingPage({ token }: { token: string }) {
         upgrade={reading.upgrade}
         canResend={reading.canResend}
         tier={reading.tier}
+        mechanics={reading.output}
       />
     </div>
   );

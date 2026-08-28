@@ -2,6 +2,12 @@ import { useState } from "react";
 import { SITE } from "./copy";
 import { startCheckout } from "./purchase";
 import { TIERS } from "../shared/pricing.mjs";
+import {
+  AUTHORITY_NOTES,
+  STRATEGY_NOTES,
+  TYPE_NOTES,
+  describe,
+} from "./mechanics";
 
 /**
  * What now — the block under a finished reading.
@@ -25,15 +31,66 @@ export default function ReadingActions({
   upgrade,
   canResend,
   tier = 0,
+  mechanics,
 }: {
   token: string;
   upgrade: Upgrade;
   canResend: boolean;
   /** The PDF is the chart tier and above; the summary was never sold one. */
   tier?: number;
+  /** Type, Strategy and Authority, for the sentences about each. */
+  mechanics?: { type?: string; strategy?: string; authority?: string } | null;
 }) {
+  /**
+   * A LINE ON WHAT EACH OF THE THREE ACTUALLY IS.
+   *
+   * Jeremy asked for it on the chart tier. Each stops at the MECHANISM -- what
+   * the thing is and how it works -- and none of them gives advice, because
+   * the interpretation is what the reading tier is, and this must not quietly
+   * become a free version of it.
+   *
+   * A value with no note renders nothing rather than something generic. A
+   * sentence that fits every Type is a sentence about nobody.
+   */
+  const notes = mechanics
+    ? (
+        [
+          ["Type", mechanics.type, describe(TYPE_NOTES, mechanics.type)],
+          [
+            "Strategy",
+            mechanics.strategy,
+            describe(STRATEGY_NOTES, mechanics.strategy),
+          ],
+          [
+            "Authority",
+            mechanics.authority,
+            describe(AUTHORITY_NOTES, mechanics.authority),
+          ],
+        ] as const
+      ).filter(([, value, note]) => value && note)
+    : [];
+
   return (
     <div className="mt-12 space-y-10 border-t border-brand-gold/15 pt-10">
+      {notes.length > 0 && (
+        <section>
+          <h2 className="font-display text-[20px] font-medium text-brand-paper">
+            What these three mean
+          </h2>
+          <div className="mt-4 space-y-5">
+            {notes.map(([label, value, note]) => (
+              <div key={label}>
+                <p className="font-sans text-[13px] uppercase tracking-[0.14em] text-brand-muted">
+                  {label} · <span className="text-brand-gold">{value}</span>
+                </p>
+                <p className="mt-1 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
+                  {note}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <section>
         <h2 className="font-display text-[20px] font-medium text-brand-paper">
           Making sense of it

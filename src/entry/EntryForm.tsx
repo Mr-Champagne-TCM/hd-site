@@ -299,6 +299,7 @@ export default function EntryForm({
             upgrade={upgrade}
             canResend={canResend}
             tier={tier}
+            mechanics={state.summary}
           />
         ) : (
           <>
