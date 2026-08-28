@@ -84,6 +84,47 @@ test("a real email is caught, an invented one is not", () => {
 });
 
 /**
+ * THE RULE WAS NARROWED to let our own sending domain through, so here is the
+ * boundary of that narrowing.
+ *
+ * `hd-readings@thechampagnemethod.co` is printed in the headers of every email
+ * the site sends -- it exists to be seen, and hiding it in an environment
+ * variable would protect nothing. A client's address is never at that domain,
+ * so the carve-out cannot swallow the case the rule was written for.
+ *
+ * The narrowing exists BECAUSE the rule did its job: the first draft of
+ * mail.mjs put Jeremy's personal Gmail in the Reply-To header and the scan
+ * refused the commit. The fix was to stop putting it there -- replies are
+ * forwarded at the registrar now -- not to widen the allowance to cover it.
+ */
+test("our own sending domain is allowed, because it is published anyway", () => {
+  const at = "@";
+  for (const path of ["netlify/lib/mail.mjs", "src/copy.ts", "test/x.test.mjs"]) {
+    const r = scan({ [path]: plant("const FROM = 'hd-readings", at, "thechampagnemethod.co';\n") });
+    assert.equal(r.blocked, false, path + " blocked our own sender: " + r.output);
+  }
+});
+
+test("a personal inbox is STILL caught, which is the whole point", () => {
+  const at = "@";
+  // The exact shape that was caught for real, and must stay caught.
+  const planted = plant("export const REPLY_TO = 'thechampagnemethod", at, "gmail.com';\n");
+  assert.equal(scan({ "netlify/lib/mail.mjs": planted }).blocked, true, "the caught case slipped through");
+});
+
+test("the carve-out is the domain, not any lookalike of it", () => {
+  const at = "@";
+  for (const domain of [
+    "thechampagnemethod.co.attacker.com",
+    "notthechampagnemethod.com",
+    "thechampagnemethod.com",
+  ]) {
+    const r = scan({ "src/a.js": plant("const e = 'someone", at, domain + "';\n") });
+    assert.equal(r.blocked, true, domain + " was let through by the carve-out");
+  }
+});
+
+/**
  * The planted values are assembled at runtime, never written as one string.
  *
  * A test file that spells out a live-key pattern is a file the scanner refuses,

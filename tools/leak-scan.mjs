@@ -96,7 +96,24 @@ const RULES = [
   {
     id: "real-email",
     why: "an email address that is not an obviously invented one",
-    re: /\b[A-Za-z0-9._%+-]+@(?!example\.(com|org|net)\b)[A-Za-z0-9.-]+\.(?!invalid\b)[A-Za-z]{2,}\b/,
+    // OUR OWN SENDING DOMAIN IS NOT A LEAK. `hd-readings@thechampagnemethod.co`
+    // is printed in the headers of every email the site sends. It exists to be
+    // seen, and hiding it in an environment variable would protect nothing
+    // while making the product's own voice settable per deploy.
+    //
+    // Narrowed to that domain and no further. A CLIENT's address is never at
+    // thechampagnemethod.co, so this carve-out cannot swallow the case the rule
+    // was written for. gmail.com is deliberately NOT included: a personal inbox
+    // in a public repo is exactly what this catches, it caught one, and the fix
+    // was to stop putting it there rather than to allow it.
+    //
+    // The carve-out ends with `(?![A-Za-z0-9.-])` and NOT with `\b`, which is
+    // the difference between allowing our domain and allowing anything that
+    // starts with it. `\b` matches at the dot in
+    // `someone@thechampagnemethod.co.attacker.com`, so the first version of
+    // this narrowing let an attacker-controlled domain through by prefix. Its
+    // own test caught it.
+    re: /\b[A-Za-z0-9._%+-]+@(?!example\.(com|org|net)\b|thechampagnemethod\.co(?![A-Za-z0-9.-]))[A-Za-z0-9.-]+\.(?!invalid\b)[A-Za-z]{2,}\b/,
   },
   {
     id: "birth-data",
