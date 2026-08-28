@@ -61,9 +61,15 @@ export default function BirthDateField({
    * means "March, no day, no year".
    */
   const parsed = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  const [year, setYear] = useState<number | null>(parsed ? Number(parsed[1]) : null);
-  const [month, setMonth] = useState<number | null>(parsed ? Number(parsed[2]) : null);
-  const [day, setDay] = useState<number | null>(parsed ? Number(parsed[3]) : null);
+  const [year, setYear] = useState<number | null>(
+    parsed ? Number(parsed[1]) : null,
+  );
+  const [month, setMonth] = useState<number | null>(
+    parsed ? Number(parsed[2]) : null,
+  );
+  const [day, setDay] = useState<number | null>(
+    parsed ? Number(parsed[3]) : null,
+  );
 
   const [typing, setTyping] = useState(false);
   const [typed, setTyped] = useState("");
@@ -82,7 +88,11 @@ export default function BirthDateField({
    * assembled, which is the same rule that handles 31 January to February.
    */
   const days = useMemo(
-    () => Array.from({ length: daysInMonth(year ?? 2000, month ?? 1) }, (_, i) => i + 1),
+    () =>
+      Array.from(
+        { length: daysInMonth(year ?? 2000, month ?? 1) },
+        (_, i) => i + 1,
+      ),
     [year, month],
   );
 
@@ -138,6 +148,7 @@ export default function BirthDateField({
       <div className="grid grid-cols-[1.4fr_0.8fr_1fr] gap-2">
         <Picker
           label="Month"
+          align="left"
           placeholder="—"
           value={month === null ? "" : String(month)}
           options={MONTHS.map((name, i) => ({
@@ -156,6 +167,7 @@ export default function BirthDateField({
 
         <Picker
           label="Day"
+          align="center"
           placeholder="—"
           value={day === null ? "" : String(day)}
           options={days.map((d) => ({ value: String(d), label: String(d) }))}
@@ -168,6 +180,7 @@ export default function BirthDateField({
 
         <Picker
           label="Year"
+          align="right"
           placeholder="————"
           value={year === null ? "" : String(year)}
           options={years.map((y) => ({ value: String(y), label: String(y) }))}
@@ -200,7 +213,8 @@ export default function BirthDateField({
         <div className="mt-3">
           <label className="block">
             <span className="text-[14px] text-brand-muted">
-              Month, day, then the four-digit year &mdash; 06251985 for 25 June 1985
+              Month, day, then the four-digit year &mdash; 06251985 for 25 June
+              1985
             </span>
             <input
               inputMode="numeric"
@@ -220,20 +234,23 @@ export default function BirthDateField({
           </label>
           {typedBad && (
             <p className="mt-1.5 text-[14px] leading-snug text-brand-gold">
-              That is eight digits, but not a date that exists &mdash; month first, then day, then
-              the four-digit year.
+              That is eight digits, but not a date that exists &mdash; month
+              first, then day, then the four-digit year.
             </p>
           )}
           <button
             type="button"
-            onClick={() => { setTyping(false); setTyped(""); setTypedBad(false); }}
+            onClick={() => {
+              setTyping(false);
+              setTyped("");
+              setTypedBad(false);
+            }}
             className="mt-2 text-[14px] text-brand-muted underline decoration-brand-muted/40 underline-offset-4"
           >
             Use the pickers
           </button>
         </div>
       )}
-
     </fieldset>
   );
 }

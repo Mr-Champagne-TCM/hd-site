@@ -50,6 +50,7 @@ export default function Picker({
   placeholder,
   onChange,
   columns = 3,
+  align = "left",
   disabled = false,
 }: {
   label: string;
@@ -59,6 +60,20 @@ export default function Picker({
   onChange: (value: string) => void;
   /** Months want three across; days and years want more. */
   columns?: number;
+  /**
+   * WHICH EDGE THE PANEL HANGS FROM. Jeremy's rule, and it is simply told
+   * rather than worked out: month left, day centred, year right.
+   *
+   * An earlier version measured the field and clamped the panel into the
+   * viewport. It was wrong twice on a real phone -- once pushing the day
+   * panel's first column off the left, once letting the year panel's last
+   * column off the right -- because the numbers a browser reports for "how
+   * wide is the screen" are not the same number on a phone as on a desktop.
+   *
+   * Three fields in a fixed row have three known answers. Being told them is
+   * shorter, and it cannot be wrong on a device I have not got.
+   */
+  align?: "left" | "center" | "right";
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -99,10 +114,7 @@ export default function Picker({
    * below at all. Both are measured after the panel exists and before it is
    * painted, so neither is ever briefly visible in the wrong place.
    */
-  const [place, setPlace] = useState<{ above: boolean; left: number | null }>({
-    above: false,
-    left: null,
-  });
+  const [above, setAbove] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -127,42 +139,21 @@ export default function Picker({
     const box = list.current;
     setOverflows(!!box && box.scrollHeight > box.clientHeight + 2);
 
+    /**
+     * The one thing still worth measuring: whether there is room BELOW. A
+     * panel that opens downward off the bottom of a short screen is unusable,
+     * and unlike the horizontal question this one has no fixed answer -- it
+     * depends where the form has been scrolled to.
+     */
     const field = button.current?.getBoundingClientRect();
     const panelEl = box?.parentElement?.parentElement as
       HTMLElement | undefined;
     if (field && panelEl) {
       const h = panelEl.offsetHeight;
-      const w = panelEl.offsetWidth;
-
-      /**
-       * CENTRED ON ITS FIELD, THEN CLAMPED TO THE SCREEN.
-       *
-       * Anchoring to one side or the other was not enough. The day field sits
-       * in the MIDDLE of the row: a panel wider than it overflows whichever
-       * edge it is pinned to, and pinning right pushed the first column --
-       * 1, 7, 13, 19, 25, 31 -- clean off the left of the screen.
-       *
-       * So it is centred on the field it belongs to, which is where the eye
-       * expects it, and then slid back inside the viewport if that would hang
-       * it off either edge. Month lands flush left, year flush right, day
-       * centred, all from one rule.
-       */
-      const MARGIN = 8;
-      const wanted = field.left + field.width / 2 - w / 2;
-      const clamped = Math.max(
-        MARGIN,
-        Math.min(wanted, window.innerWidth - w - MARGIN),
-      );
-      setPlace({
-        // Flip up only when there is genuinely more room up there. A panel
-        // that flips on a screen where neither side fits should stay put.
-        above:
-          field.bottom + h + MARGIN > window.innerHeight &&
-          field.top - h - MARGIN > 0,
-        // Stored relative to the wrapper, because that is what `left` on an
-        // absolutely positioned child is measured from.
-        left: clamped - field.left,
-      });
+      const viewH =
+        window.visualViewport?.height ?? document.documentElement.clientHeight;
+      // Flip up only when there is genuinely more room up there.
+      setAbove(field.bottom + h + 8 > viewH && field.top - h - 8 > 0);
     }
   }, [open, index, options.length]);
 
@@ -261,10 +252,12 @@ export default function Picker({
   const panel =
     "absolute z-50 w-max min-w-full max-w-[min(22rem,88vw)] rounded-xl border-2 " +
     "border-brand-teal/70 bg-[#241a4e] p-3 shadow-2xl " +
-    (place.above ? "bottom-[calc(100%+6px)] " : "top-[calc(100%+6px)] ") +
-    // Before the first measurement there is no offset to apply, so it opens
-    // flush with its field rather than jumping from an arbitrary guess.
-    (place.left === null ? "left-0" : "");
+    (above ? "bottom-[calc(100%+6px)] " : "top-[calc(100%+6px)] ") +
+    (align === "right"
+      ? "right-0"
+      : align === "center"
+        ? "left-1/2 -translate-x-1/2"
+        : "left-0");
 
   return (
     <div ref={root} className="relative">
@@ -290,11 +283,7 @@ export default function Picker({
       </button>
 
       {open && (
-        <div
-          className={panel}
-          role="presentation"
-          style={place.left === null ? undefined : { left: place.left }}
-        >
+        <div className={panel} role="presentation">
           {/*
               The fade anchors to the LIST, not to the panel. The panel is
               absolutely positioned already, and giving it `relative` as well
