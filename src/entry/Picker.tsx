@@ -24,15 +24,24 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
  * That list is the specification for this component, and it is why a custom
  * dropdown is more work than it looks rather than less.
  *
- * TWO SHAPES, ONE COMPONENT. On a phone it opens as a BOTTOM SHEET -- thumb
- * reach, big targets, no chance of being clipped by the viewport. On a desktop
- * it opens as a panel under the field. Same markup, same state, same
- * behaviour; only the position differs, which is the only thing that should.
+ * ATTACHED TO ITS FIELD, ALWAYS -- including on a phone.
+ *
+ * The first version opened as a bottom sheet on small screens, which is the
+ * conventional mobile pattern and was wrong here. Jeremy: "dropdowns should
+ * stay attached to the field they represent, not float around... this
+ * disassociates the dropdown from the field."
+ *
+ * He is right, and the reason is that this form has THREE of them in a row.
+ * A sheet at the bottom of the screen is a list of numbers with no visible
+ * connection to the box that opened it -- it could be the day or the year, and
+ * the only clue is a caption. A panel under the field needs no caption at all.
+ *
+ * What the sheet was protecting against was being clipped at the screen edge.
+ * That is handled by measuring instead: the panel flips above the field when
+ * there is not room below, and anchors to whichever side keeps it on screen.
  */
 
 export type Option = { value: string; label: string; short?: string };
-
-const MOBILE = "(max-width: 639px)";
 
 export default function Picker({
   label,
@@ -81,20 +90,21 @@ export default function Picker({
    * that lies on the lists which fit.
    */
   const [overflows, setOverflows] = useState(false);
+  /**
+   * WHERE THE PANEL FITS, measured rather than assumed.
+   *
+   * Three fields sit in a row and the last one is against the right edge on a
+   * phone, so a panel anchored left every time would hang off the screen. And
+   * the form sits low enough on a short screen that there is sometimes no room
+   * below at all. Both are measured after the panel exists and before it is
+   * painted, so neither is ever briefly visible in the wrong place.
+   */
+  const [place, setPlace] = useState({ above: false, right: false });
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const typed = useRef({ text: "", at: 0 });
 
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(MOBILE).matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE);
-    const onChangeMq = () => setIsMobile(mq.matches);
-    mq.addEventListener("change", onChangeMq);
-    return () => mq.removeEventListener("change", onChangeMq);
-  }, []);
 
   const index = options.findIndex((o) => o.value === value);
   const chosen = index >= 0 ? options[index] : null;
@@ -114,6 +124,19 @@ export default function Picker({
     el?.scrollIntoView({ block: "center" });
     const box = list.current;
     setOverflows(!!box && box.scrollHeight > box.clientHeight + 2);
+
+    const field = button.current?.getBoundingClientRect();
+    const panelEl = box?.parentElement?.parentElement;
+    if (field && panelEl) {
+      const h = panelEl.offsetHeight;
+      const w = panelEl.offsetWidth;
+      setPlace({
+        // Flip up only when there is genuinely more room up there. A panel
+        // that flips on a screen where neither side fits should stay put.
+        above: field.bottom + h + 8 > window.innerHeight && field.top - h - 8 > 0,
+        right: field.left + w > window.innerWidth - 8,
+      });
+    }
   }, [open, index, options.length]);
 
   // Close on anything else. Pointerdown rather than click, so a press that
@@ -127,15 +150,6 @@ export default function Picker({
     return () => document.removeEventListener("pointerdown", away);
   }, [open]);
 
-  // The page behind a bottom sheet must not scroll under the thumb.
-  useEffect(() => {
-    if (!open || !isMobile) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open, isMobile]);
 
   function choose(i: number) {
     const opt = options[i];
@@ -218,17 +232,11 @@ export default function Picker({
     "bg-ground-top/60 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/40 " +
     "disabled:opacity-40";
 
-  const panel = isMobile
-    ? "fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-brand-gold/25 bg-[#241a4e] px-4 pb-8 pt-3 shadow-2xl"
-    : // THE PANEL IS NOT THE WIDTH OF THE FIELD.
-      //
-      // Pinning it left-0/right-0 looked tidy and clipped the year list: four
-      // columns of four digits do not fit inside a box sized for the word
-      // "2014", so the panel rendered "202..." and the last column fell off the
-      // edge. It sizes to its CONTENT now, never narrower than the field it
-      // belongs to and never wider than the screen.
-      "absolute left-0 top-[calc(100%+6px)] z-50 w-max min-w-full max-w-[min(22rem,88vw)] " +
-      "rounded-xl border border-brand-gold/25 bg-[#241a4e] p-3 shadow-2xl";
+  const panel =
+    "absolute z-50 w-max min-w-full max-w-[min(22rem,88vw)] rounded-xl border-2 " +
+    "border-brand-teal/70 bg-[#241a4e] p-3 shadow-2xl " +
+    (place.above ? "bottom-[calc(100%+6px)] " : "top-[calc(100%+6px)] ") +
+    (place.right ? "right-0" : "left-0");
 
   return (
     <div ref={root} className="relative">
@@ -254,31 +262,7 @@ export default function Picker({
       </button>
 
       {open && (
-        <>
-          {/*
-            A scrim on mobile only. It darkens the page behind the sheet and
-            gives a large, obvious place to tap to dismiss -- the thing a
-            bottom sheet needs and a small dropdown does not.
-          */}
-          {isMobile && (
-            <div
-              className="fixed inset-0 z-40 bg-black/50"
-              aria-hidden
-              onPointerDown={() => setOpen(false)}
-            />
-          )}
-          <div className={panel} role="presentation">
-            {isMobile && (
-              <>
-                <div
-                  className="mx-auto mb-3 h-1 w-10 rounded-full bg-brand-muted/40"
-                  aria-hidden
-                />
-                <p className="mb-3 text-center font-sans text-[12px] uppercase tracking-[0.16em] text-brand-gold">
-                  {label}
-                </p>
-              </>
-            )}
+        <div className={panel} role="presentation">
             {/*
               The fade anchors to the LIST, not to the panel. The panel is
               absolutely positioned already, and giving it `relative` as well
@@ -335,8 +319,7 @@ export default function Picker({
                 />
               )}
             </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
