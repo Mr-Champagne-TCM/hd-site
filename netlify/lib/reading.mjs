@@ -111,7 +111,7 @@ export async function saveReading(
     // arrives in a store nobody meant to put it in, which is exactly the
     // failure the birth-data guard above exists to prevent.
     buyer: {
-      name: str(name),
+      name: nameCase(name),
       email: str(email),
       phone: str(phone),
     },
@@ -124,6 +124,36 @@ export async function saveReading(
     createdAt: Math.floor(now / 1000),
   });
   return id;
+}
+
+/**
+ * A NAME, CAPITALISED ONCE, HERE.
+ *
+ * Jeremy: "auto capitalize their name(s)... we can support a bit and look
+ * professional with this." Somebody typing `asdf asdf` into Stripe at half past
+ * eleven gets `Asdf Asdf` on their reading, and the page stops looking like it
+ * was assembled from whatever was in the box.
+ *
+ * HIS RULE, and it is narrower than title-casing on purpose: uppercase the
+ * first letter of each term and LEAVE THE REST ALONE. So `McDonald` survives as
+ * `McDonald` rather than being flattened to `Mcdonald`, which is what a naive
+ * title-case does to half the surnames in Scotland.
+ *
+ * Terms break on spaces, hyphens and apostrophes, so `o'brien` becomes
+ * `O'Brien` and `mary-jane` becomes `Mary-Jane`. He asked for O'Brien by
+ * spelling it that way.
+ *
+ * DONE AT THE STORE, not at each place that displays it. The email, the reading
+ * page and the entry form all show this name; capitalising in three places is
+ * how they come to disagree, and there is no reason to keep the raw form.
+ */
+export function nameCase(raw) {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim().replace(/\s+/g, " ");
+  if (!trimmed) return null;
+  // The character AFTER a boundary is what gets raised. Everything else is
+  // left exactly as typed.
+  return trimmed.replace(/(^|[\s\-'’])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
 }
 
 /** Empty string, whitespace and anything that is not a string all become null. */

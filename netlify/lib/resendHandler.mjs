@@ -147,6 +147,10 @@ export async function handleResend({
     name: reading.buyer.name,
     url,
     links,
+    // A re-send may be either: somebody who paid and wandered off before the
+    // form, or somebody coming back to a reading they already have. The record
+    // has just been loaded, so this is known rather than assumed.
+    pending: reading.pending,
   });
 
   const sent = await send({ to: reading.buyer.email, subject, html, text });

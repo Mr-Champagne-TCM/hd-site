@@ -7,6 +7,7 @@ import {
   fillReading,
   loadReading,
   mintReadingLink,
+  nameCase,
   newReadingId,
   readReadingLink,
   saveReading,
@@ -421,4 +422,69 @@ test("undefined output is a caller bug, not a silent pending", async () => {
     () => saveReading(fakeStore(), { tier: 1 }),
     /must be an object or null/,
   );
+});
+
+// --- the buyer's name, capitalised once, at the store -----------------------
+
+test("a name typed in lower case is capitalised", () => {
+  assert.equal(nameCase("asdf asdf"), "Asdf Asdf");
+  assert.equal(nameCase("jeremy champagne"), "Jeremy Champagne");
+});
+
+test("terms break on hyphens and apostrophes, not just spaces", () => {
+  // Jeremy asked for O'Brien by spelling it that way.
+  assert.equal(nameCase("o'brien"), "O'Brien");
+  assert.equal(nameCase("mary-jane smith"), "Mary-Jane Smith");
+  assert.equal(nameCase("van der belt"), "Van Der Belt");
+  // A curly apostrophe is the one a phone actually types.
+  assert.equal(nameCase("o\u2019brien"), "O\u2019Brien");
+});
+
+test("THE REST OF EACH TERM IS LEFT ALONE", () => {
+  // A naive title-case flattens half the surnames in Scotland and Ireland.
+  assert.equal(nameCase("McDonald"), "McDonald");
+  assert.equal(nameCase("MacLeod"), "MacLeod");
+  assert.equal(nameCase("van der BERG"), "Van Der BERG");
+  assert.equal(nameCase("JEREMY"), "JEREMY", "shouting is not ours to correct");
+});
+
+test("whitespace is tidied without changing the name", () => {
+  assert.equal(nameCase("  spaced   out "), "Spaced Out");
+});
+
+test("a missing or unusable name is null, never a crash or an empty string", () => {
+  for (const bad of ["", "   ", null, undefined, 42, {}, []]) {
+    assert.equal(nameCase(bad), null, JSON.stringify(bad) + " produced something");
+  }
+});
+
+test("names outside the Latin alphabet are not mangled", () => {
+  // \p{L} covers them, and a script with no case is returned unchanged.
+  assert.equal(nameCase("陈"), "陈");
+  assert.equal(nameCase("élodie martin"), "Élodie Martin");
+});
+
+test("the store capitalises, so nothing downstream has to", async () => {
+  // Three surfaces show this name -- the email, the reading page and the entry
+  // form. Capitalising in three places is how they come to disagree.
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: OUTPUT, name: "o'brien mary-jane" });
+  assert.equal((await loadReading(store, id)).buyer.name, "O'Brien Mary-Jane");
+});
+
+test("AN INNER CAPITAL IS PRESERVED, NEVER INVENTED", async () => {
+  // The first version of the test above asserted that `mcdonald` becomes
+  // `McDonald`. It does not, and it should not: raising the first letter of a
+  // term is a rule; knowing that this particular m wants a capital D four
+  // letters later is a guess, and it would be wrong on `macey` and `mcguffin`
+  // does not exist.
+  //
+  // So `McDonald` survives being typed, and `mcdonald` becomes `Mcdonald`.
+  // The person who cares about their own capitals types them.
+  assert.equal(nameCase("McDonald"), "McDonald");
+  assert.equal(nameCase("mcdonald"), "Mcdonald");
+
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: OUTPUT, name: "McDonald" });
+  assert.equal((await loadReading(store, id)).buyer.name, "McDonald");
 });

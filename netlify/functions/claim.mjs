@@ -123,6 +123,9 @@ export default async (request) => {
       name: buyer.name,
       url,
       links: SITE,
+      // Always pending here. This email goes out the moment the card clears,
+      // and nobody has entered a birth moment yet -- the link opens a form.
+      pending: true,
     });
     const sent = await sendMail(
       { to: buyer.email, subject, html, text },

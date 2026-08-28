@@ -21,21 +21,73 @@ const LINKS = {
 };
 const URL_ = "https://humandesign.thechampagnemethod.co/r/abc.def";
 
-const build = (tier, name) => deliveryEmail({ tier, name, url: URL_, links: LINKS });
+const build = (tier, name, pending = false) =>
+  deliveryEmail({ tier, name, url: URL_, links: LINKS, pending });
 
 // --- D-11, point by point --------------------------------------------------
 
-test("the thank-you sentence names the tier and IS the link", () => {
-  for (const [tier, word] of [[0, "summary"], [1, "chart"], [2, "reading"]]) {
+test("the thank-you is TEXT and the action is a BUTTON", () => {
+  // Jeremy: "TEXT: Thank you for your purchase! Followed by button."
+  for (const tier of [0, 1, 2]) {
     const { html, text } = build(tier, "Jeremy");
-    const lead = `Thank you for your purchase! Here is your Human Design ${word}`;
-    assert.ok(text.includes(lead), `tier ${tier} text is missing the sentence`);
-    // The sentence sits INSIDE the anchor, not beside it.
-    assert.ok(
-      html.includes(`href="${URL_}" style="color:#3fe0c5;text-decoration:underline">${lead}`),
-      `tier ${tier}: the sentence is not the hyperlink`,
-    );
+    assert.ok(text.includes("Thank you for your purchase!"), `tier ${tier} lost the thank-you`);
+    // A table with a background colour is the only thing that renders as a
+    // button everywhere; a styled <a> collapses to a text link in Outlook,
+    // which is exactly what this was trying to stop being.
+    assert.match(html, /<table[^>]*role="presentation"[\s\S]*?bgcolor="#3fe0c5"/);
+    assert.match(html, /border-radius:999px/);
   }
+});
+
+test("THE BUTTON SAYS CREATE WHEN THERE IS NOTHING TO ACCESS YET", () => {
+  // The first version promised "Here is your Human Design summary" in an email
+  // sent seconds after the card -- before any birth moment had been entered.
+  // It was a door to a form, described as a chart.
+  for (const [tier, word] of [[0, "summary"], [1, "chart"], [2, "reading"]]) {
+    const pendingMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: true });
+    const filledMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: false });
+
+    assert.ok(
+      pendingMail.text.includes(`Create and view your Human Design ${word}`),
+      `tier ${tier} pending wording is wrong`,
+    );
+    assert.ok(
+      filledMail.text.includes(`Access your Human Design ${word}`),
+      `tier ${tier} filled wording is wrong`,
+    );
+    assert.doesNotMatch(pendingMail.text, /Access your/, "a pending reading offered access");
+    assert.doesNotMatch(filledMail.text, /Create and view/, "a filled reading offered creation");
+  }
+});
+
+test("the action is what the button links to, in both states", () => {
+  for (const pending of [true, false]) {
+    const { html } = deliveryEmail({ tier: 1, name: "J", url: URL_, links: LINKS, pending });
+    const btn = html.match(/<a href="([^"]+)"[^>]*border-radius:999px">([^<]+)</);
+    assert.ok(btn, "no button found");
+    assert.equal(btn[1], URL_);
+    assert.match(btn[2], pending ? /^Create and view/ : /^Access/);
+  }
+});
+
+test("each library link carries a line saying what it is for", () => {
+  // Jeremy: "there should be a description after it".
+  const { html, text } = build(1, "Jeremy");
+  for (const body of [html, text]) {
+    assert.match(body, /What the system is, what it is not/);
+    assert.match(body, /what the shapes mean/);
+  }
+});
+
+test("the greeting is gold, not the brightest thing on the page", () => {
+  // "The brighter white makes it feel insignificant."
+  const { html } = build(1, "Jeremy");
+  assert.match(html, /color:#c9a227">Hello Jeremy,/);
+});
+
+test("there is a link home", () => {
+  const { html, text } = build(1, "Jeremy");
+  assert.ok(html.includes(LINKS.home) && text.includes(LINKS.home));
 });
 
 test("both library links are present, in both bodies", () => {
@@ -70,7 +122,7 @@ test("NOTHING IS ATTACHED - the email is a door, not the product", () => {
   for (const body of [html, text]) {
     assert.doesNotMatch(body, /<svg|base64|attachment/i, "the product travelled in the email");
   }
-  assert.ok(html.length < 4000, `html is ${html.length} bytes -- too big to be only a door`);
+  assert.ok(html.length < 6000, `html is ${html.length} bytes -- too big to be only a door`);
 });
 
 // --- the voice -------------------------------------------------------------

@@ -3,25 +3,33 @@ import { TIERS } from "../../shared/pricing.mjs";
 /**
  * The delivery email, which is a door and not the product.
  *
- * D-11, close to Jeremy's own words: it says "Thank you for your purchase! Here
- * is your Human Design [summary | chart | reading]", and THAT SENTENCE is the
- * hyperlink. It also carries the two library links and, unless they are already
- * at the top tier, a link to upgrade -- which is the SAME link, because there is
- * one signed URL per purchase and the page decides what to offer.
+ * D-11, close to Jeremy's own words: it says "Thank you for your purchase!",
+ * then a BUTTON to their reading. Two library links with a line each saying
+ * what they are for, a link home, and — unless they are already at the top
+ * tier — a way to upgrade. The upgrade is the SAME link, because there is one
+ * signed URL per purchase and the page decides what to offer.
  *
  * NO ATTACHMENT. The reading is delivered by link so that a re-send is possible
- * at all and so that an upgrade lands the buyer on a page rather than in an
- * inbox thread. Nothing in this email is the product.
+ * at all and so an upgrade lands the buyer on a page rather than in an inbox
+ * thread. Nothing in this email is the product.
+ *
+ * IT KNOWS WHETHER THE READING EXISTS YET, which is the fault the first version
+ * had. Somebody pays before they enter a birth moment, so the email that
+ * arrives seconds after the card is a door to a FORM, not to a chart —
+ * "Here is your Human Design summary" was a promise about something that had
+ * not been made. Two wordings now, chosen by whether the reading is filled:
+ *
+ *   pending   Create and view your Human Design chart
+ *   filled    Access your Human Design chart
  *
  * THE VOICE RULES APPLY HERE TOO, and they are easy to forget in an email
  * because every transactional email ever written is full of imperatives. This
- * one asks and offers; it does not instruct. "Here is your chart", not "Click
- * here to view your chart". "If you would like the rest", not "Upgrade now".
- * No urgency, no countdown, no "don't miss out" -- the link's six days are
- * stated as a fact about the link, never as pressure.
+ * one asks and offers; it does not instruct. No urgency, no countdown, no
+ * "don't miss out" — the link's six days are stated as a fact about the link
+ * and immediately followed by the reassurance, never as pressure.
  *
- * The tier words come from shared/pricing.mjs rather than being written here.
- * A tier named in two places is a tier that will eventually be named two
+ * The tier words come from shared/pricing.mjs rather than being written here. A
+ * tier named in two places is a tier that will eventually be named two
  * different things.
  */
 
@@ -39,45 +47,85 @@ const esc = (s) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+/** Brand, in the few places an email client will honour them. */
+const GOLD = "#c9a227";
+const TEAL = "#3fe0c5";
+const PAPER = "#e9e4f2";
+const MUTED = "#b4a8ce";
+const GROUND = "#1a1040";
+const PANEL = "#241a4e";
+
+/**
+ * A button that survives Outlook, which draws no CSS it was not asked to.
+ *
+ * A table with a background colour and padding is the only thing that renders
+ * as a button everywhere. A styled <a> collapses to a text link in several
+ * clients, which is exactly what this email was trying to stop being.
+ */
+function button(href, text) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px">
+  <tr><td align="center" bgcolor="${TEAL}" style="border-radius:999px">
+    <a href="${esc(href)}" style="display:inline-block;padding:15px 30px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:17px;font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px">${esc(text)}</a>
+  </td></tr>
+</table>`;
+}
+
 /**
  * Build the delivery email.
  *
  * Takes everything it needs and reads nothing from the environment, so the
  * whole message can be asserted in a test without a network, a key or a clock.
  *
- * `name` is the buyer's, from the purchase. It is used only to open the message
- * and is allowed to be missing -- a greeting is a nicety, and a message that
- * cannot be sent because somebody checked out without a name would be a real
+ * `name` is the buyer's, already capitalised at the store. It opens the message
+ * and is allowed to be missing — a greeting is a nicety, and a message that
+ * could not be sent because somebody checked out without a name would be a real
  * failure caused by a decorative one.
+ *
+ * `pending` says the reading has been paid for and not yet computed.
  */
-export function deliveryEmail({ tier, name, url, links }) {
+export function deliveryEmail({ tier, name, url, links, pending = false }) {
   const word = tierWord(tier);
   const top = tier >= TIERS.length - 1;
   const greeting = name ? `Hello ${name},` : "Hello,";
 
-  const lead = `Thank you for your purchase! Here is your Human Design ${word}`;
+  const action = pending
+    ? `Create and view your Human Design ${word}`
+    : `Access your Human Design ${word}`;
 
-  // The subject says what arrived, because a subject line is how somebody finds
+  // The subject says WHAT ARRIVED, because a subject line is how somebody finds
   // this again in a year. "Thank you for your purchase" is a lovely opening and
   // a useless thing to search for.
   const subject = `Your Human Design ${word}`;
 
   const upgradeLine = top
     ? null
-    : `If you would like the rest of it, the same link has your next step on it — ` +
-      `and what you have already paid comes off what you pay next.`;
+    : `If you would like the rest of it, the same link has your next step on it — and what you ` +
+      `have already paid comes off what you pay next.`;
+
+  const RESOURCES = [
+    [
+      links.hd101,
+      "Human Design, plainly",
+      "What the system is, what it is not, and every word in your reading explained.",
+    ],
+    [
+      links.bodygraph,
+      "Reading your bodygraph",
+      "The picture itself — what the shapes mean, and why some are filled and some are not.",
+    ],
+  ];
 
   const text = [
     greeting,
     "",
-    `${lead}:`,
+    "Thank you for your purchase!",
+    "",
+    `${action}:`,
     url,
     "",
     "Two pieces in the library, free, written for exactly this moment:",
-    `  Human Design, plainly — ${links.hd101}`,
-    `  Reading your bodygraph — ${links.bodygraph}`,
-    ...(upgradeLine ? ["", upgradeLine] : []),
-    "",
+    ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
+    ...(upgradeLine ? [upgradeLine, ""] : []),
     "This link is active for six days. After that it can be sent again — your",
     "reading is kept for a year, and it stays yours whether or not the link does.",
     "",
@@ -86,35 +134,46 @@ export function deliveryEmail({ tier, name, url, links }) {
   ].join("\n");
 
   const html = `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#1a1040;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#e9e4f2;line-height:1.6">
-<div style="max-width:34rem;margin:0 auto">
-  <p style="margin:0 0 20px">${esc(greeting)}</p>
+<html><body style="margin:0;padding:0;background:${GROUND}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${GROUND}">
+<tr><td align="center" style="padding:28px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:544px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:${PAPER};line-height:1.6">
 
-  <p style="margin:0 0 24px;font-size:18px">
-    <a href="${esc(url)}" style="color:#3fe0c5;text-decoration:underline">${esc(lead)}</a>.
-  </p>
+  <tr><td style="padding:0 0 22px;font-size:19px;font-weight:600;color:${GOLD}">${esc(greeting)}</td></tr>
 
-  <p style="margin:0 0 8px;color:#b4a8ce">Two pieces in the library, free, written for exactly this moment:</p>
-  <p style="margin:0 0 24px">
-    <a href="${esc(links.hd101)}" style="color:#3fe0c5">Human Design, plainly</a><br>
-    <a href="${esc(links.bodygraph)}" style="color:#3fe0c5">Reading your bodygraph</a>
-  </p>
+  <tr><td style="padding:0 0 18px;font-size:19px;color:${PAPER}">Thank you for your purchase!</td></tr>
+
+  <tr><td style="padding:0 0 26px">${button(url, action)}</td></tr>
+
+  <tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">
+    Free in the library
+  </td></tr>
+  ${RESOURCES.map(
+    ([href, title, blurb]) => `<tr><td style="padding:0 0 16px">
+    <a href="${esc(href)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:none">${esc(title)}</a>
+    <div style="font-size:15px;color:${MUTED};padding-top:2px">${esc(blurb)}</div>
+  </td></tr>`,
+  ).join("\n  ")}
 
   ${
     upgradeLine
-      ? `<p style="margin:0 0 24px;color:#b4a8ce">${esc(upgradeLine)}</p>`
-      : ""
+      ? `<tr><td style="padding:14px 18px;margin:0;background:${PANEL};border-radius:12px;font-size:15px;color:${MUTED}">${esc(upgradeLine)}</td></tr>
+  <tr><td style="height:22px"></td></tr>`
+      : `<tr><td style="height:8px"></td></tr>`
   }
 
-  <p style="margin:0 0 24px;font-size:14px;color:#b4a8ce">
-    This link is active for six days. After that it can be sent again — your reading is kept
-    for a year, and it stays yours whether or not the link does.
-  </p>
+  <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">
+    This link is active for six days. After that it can be sent again — your reading is kept for
+    a year, and it stays yours whether or not the link does.
+  </td></tr>
 
-  <p style="margin:0;font-size:14px;color:#b4a8ce">
-    — <a href="${esc(links.home)}" style="color:#c9a227">The Champagne Method</a>
-  </p>
-</div>
+  <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
+    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>
+    <div style="font-size:14px;color:${MUTED};padding-top:2px">Coaching, and the rest of the library.</div>
+  </td></tr>
+
+</table>
+</td></tr></table>
 </body></html>`;
 
   return { subject, html, text };
