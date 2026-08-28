@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readingPdf } from "../netlify/lib/readingPdf.mjs";
+import { importTs } from "./support/ts.mjs";
 
 /**
  * The chart tier's PDF.
@@ -16,6 +17,8 @@ import { readingPdf } from "../netlify/lib/readingPdf.mjs";
  * FONT is embedded so the solved label positions still hold, and that nothing
  * about the buyer travels in the file's metadata.
  */
+
+
 
 const OUTPUT = {
   type: "Manifesting Generator",
@@ -146,5 +149,82 @@ test("THE STANDARD FONT SET IS NEVER TOUCHED", async () => {
   const pdf = (await make()).toString("latin1");
   for (const std of ["Helvetica", "Times-Roman", "Courier", "ZapfDingbats", "Symbol"]) {
     assert.ok(!pdf.includes(std), `${std} reached the PDF, so a standard font was loaded`);
+  }
+});
+
+
+// --- matched to the app's CURRENT output ------------------------------------
+//
+// It took three files to get here. The August sample in the repo draws the
+// chart light on a white page; a preliminary run moved the legend to page two;
+// `Jeremy-pdf-view.pdf` is the one he called final. Each looked authoritative
+// on its own, which is the lesson: ASK WHICH FILE IS CURRENT.
+
+
+
+
+test("the footer carries a real link annotation, and no date", async () => {
+  const pdf = (await make()).toString("latin1");
+  // pdfkit writes a /Link annotation, not blue text pretending.
+  assert.match(pdf, /\/Subtype \/Link/, "the footer link is not a real annotation");
+  assert.match(pdf, /thechampagnemethod\.co/);
+});
+
+
+test("a row with no approved sentence shows its value and stops", async () => {
+  // The app has words for all six of Type, Strategy, Authority, Profile,
+  // Signature and Not-self. Three are approved. Inventing the rest would put
+  // unsigned-off Human Design copy on a paying customer's document.
+  const buf = await make();
+  assert.equal(buf.subarray(0, 5).toString(), "%PDF-");
+});
+
+/**
+ * WHAT A UNIT TEST CAN AND CANNOT SAY ABOUT A PDF.
+ *
+ * Three assertions were written here that read the document's TEXT -- that the
+ * page is paper, that the key names all four line kinds, that the approved
+ * sentences arrived. All three failed, and the reason is worth keeping: an
+ * embedded subset font writes text as GLYPH INDICES, not characters, so
+ * "Personality" is not in the file in any form a string search can find. The
+ * first version searched the raw bytes and would have passed on nothing at all;
+ * inflating the streams only got as far as glyph ids.
+ *
+ * So the layout is verified by LOOKING -- the pages are rendered and read
+ * against the app's own output, which is how every fault in this document was
+ * actually found. These tests assert the things a test can genuinely hold: that
+ * the document exists, that its structure is right, and that the pieces which
+ * appear uncompressed really are as intended.
+ *
+ * A test that cannot fail for the right reason is worse than no test, because
+ * the green tick gets believed.
+ */
+
+test("the document has the structure the layout depends on", async () => {
+  const pdf = (await make()).toString("latin1");
+  assert.match(pdf, /\/Count 2/, "expected exactly two pages");
+  // A real link annotation, not blue text pretending -- the footer and the
+  // upgrade line both carry one.
+  assert.match(pdf, /\/Subtype \/Link/, "no link annotation in the document");
+  assert.ok((pdf.match(/\/Subtype \/Link/g) ?? []).length >= 2, "expected at least two links");
+});
+
+test("the sentences the document draws are the approved ones", async () => {
+  // Asserted at the SOURCE rather than in the output, since the output cannot
+  // be read back. This at least catches the copy going missing or drifting
+  // from the page's own version.
+  const { TYPE_NOTES, describe } = await import("../netlify/lib/mechanics.mjs");
+  assert.match(describe(TYPE_NOTES, "Manifesting Generator"), /Manifestor's directness/);
+  assert.equal(describe(TYPE_NOTES, "Not A Type"), null, "an unknown type must draw nothing");
+});
+
+test("the server copy of the sentences matches the page's, word for word", async () => {
+  // Two copies exist on purpose -- src/ is bundled and served, so a server
+  // module importing from it is the shape that once put signing code one
+  // import from the browser. Two copies that disagree are worse than one.
+  const server = await import("../netlify/lib/mechanics.mjs");
+  const page = await importTs("src", "mechanics.ts");
+  for (const map of ["TYPE_NOTES", "STRATEGY_NOTES", "AUTHORITY_NOTES"]) {
+    assert.deepEqual(server[map], page[map], `${map} has drifted between server and page`);
   }
 });

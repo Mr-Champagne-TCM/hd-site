@@ -7,14 +7,17 @@ import { AUTHORITY_NOTES, STRATEGY_NOTES, TYPE_NOTES, describe } from "./mechani
 /**
  * The chart tier's PDF, in the app's format.
  *
- * REBUILT AGAINST THE APP'S OWN OUTPUT, which Jeremy asked me to look at rather
- * than guess from. `tools/reading-layout/sample-output-ON-DEVICE.pdf` settled
- * all of this, and the first web version matched none of it:
+ * REBUILT AGAINST THE APP'S CURRENT OUTPUT — `Jeremy-pdf-view.pdf`, and it took
+ * three files to get there. The August sample in the repo draws the chart light
+ * on a white page; a preliminary run he shared moved the legend to page two;
+ * this is the one he called final. The lesson is cheap and worth keeping: ASK
+ * WHICH FILE IS CURRENT before matching one, because every version of it looked
+ * authoritative on its own.
  *
- *   PAPER, NOT NAVY. A dark page is a screenshot pretending to be a document —
- *   it costs a cartridge to print, and the pale gate numerals that read well on
- *   a lit screen close up on paper. The engine renders a print palette for
- *   exactly this, returned alongside the screen one.
+ *   A PAPER PAGE WITH A NAVY PANEL. The page is white and the chart stays dark,
+ *   inset. Which is exactly what the website already does on screen — "the
+ *   chart wears its navy as a panel on the violet page" — so there was never a
+ *   second drawing to make. The screen SVG is the PDF's drawing.
  *
  *   A GOLD-RULED BOX of value-plus-sentence rows, which is where the approved
  *   Type, Strategy and Authority sentences belong. The app already had the
@@ -23,7 +26,10 @@ import { AUTHORITY_NOTES, STRATEGY_NOTES, TYPE_NOTES, describe } from "./mechani
  *   A PLAIN VALUES TABLE under it — thin rules, no border — for the things that
  *   are values rather than explanations.
  *
- *   A LEGEND under the drawing, so somebody holding the page alone can read it.
+ *   THE LEGEND IS ON PAGE ONE, under the drawing, and it is a key to the
+ *   CHANNEL LINES — personality, design, both, open. Under the chart is where
+ *   it belongs: it explains what is directly above it, and somebody who prints
+ *   only the first page still has it.
  *
  *   A FOOTER of name and page number, and NO DATE. Jeremy asked for today's
  *   date off it, and he is right: a generation date on a document about a fixed
@@ -47,7 +53,7 @@ const PAGE = { w: 612, h: 792 };
 const M = 56;
 const COL = PAGE.w - M * 2;
 
-export function readingPdf({ tier, name, output }) {
+export function readingPdf({ tier, name, output, links }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: [PAGE.w, PAGE.h],
@@ -75,7 +81,7 @@ export function readingPdf({ tier, name, output }) {
     doc.registerFont("body", OUTFIT_400);
     doc.registerFont("bold", OUTFIT_600);
 
-    chartPage(doc, { name, output });
+    chartPage(doc, { name, output, links });
     doc.addPage();
     glancePage(doc, { output, tier });
 
@@ -108,14 +114,16 @@ function footer(doc, page) {
   doc.fillColor(MUTED).text(String(page), PAGE.w - M - 40, y, { width: 40, align: "right" });
 }
 
-function chartPage(doc, { name, output }) {
+function chartPage(doc, { name, output, links }) {
   paper(doc);
 
   doc
     .font("body")
     .fontSize(8.5)
     .fillColor(GOLD)
-    .text("THE CHAMPAGNE METHOD", M, M, { characterSpacing: 1.7 });
+    .text("THE CHAMPAGNE METHOD · HUMAN DESIGN INTERPRETATION", M, M, {
+      characterSpacing: 1.7,
+    });
   doc
     .font("bold")
     .fontSize(26)
@@ -137,41 +145,24 @@ function chartPage(doc, { name, output }) {
   doc.moveTo(M, ruleY).lineTo(PAGE.w - M, ruleY).strokeColor(GOLD).lineWidth(1).stroke();
 
   /**
-   * The PRINT drawing, not the screen one. Falls back to the screen version for
-   * a reading stored before the print palette existed — a legible dark chart
-   * beats a blank page.
+   * THE SCREEN DRAWING, dark, on a paper page — which is the app's design and
+   * was the whole thing I got backwards. The SVG carries its own navy ground
+   * and border, so the panel comes for free: nothing here draws a rectangle.
    */
-  const svg =
-    typeof output?.bodygraphPrintSvg === "string"
-      ? output.bodygraphPrintSvg
-      : typeof output?.bodygraphSvg === "string"
-        ? output.bodygraphSvg
-        : null;
-
-  const legendTop = PAGE.h - 118;
+  const svg = typeof output?.bodygraphSvg === "string" ? output.bodygraphSvg : null;
+  const legendTop = PAGE.h - 150;
   if (svg) {
-    const top = ruleY + 18;
+    const top = ruleY + 20;
     SVGtoPDF(doc, svg, M, top, {
       width: COL,
-      height: legendTop - top - 12,
+      height: legendTop - top - 14,
       preserveAspectRatio: "xMidYMid meet",
       fontCallback: (family, bold, italic, opts) =>
         bold || Number(opts?.["font-weight"]) >= 500 ? "bold" : "body",
     });
   }
 
-  doc
-    .font("body")
-    .fontSize(9)
-    .fillColor(MUTED)
-    .text(
-      "Filled centres are consistently yours. Open centres take their colour from whoever is " +
-        "nearby. The numbers are the gates — the filled ones are active in your chart.",
-      M,
-      legendTop,
-      { width: COL, lineGap: 2 },
-    );
-
+  channelKey(doc, legendTop, links);
   footer(doc, 1);
 }
 
@@ -189,6 +180,7 @@ function glancePage(doc, { output, tier }) {
       characterSpacing: 1.7,
     });
 
+  let y = M + 26;
   /**
    * The gold-ruled box: a value and a sentence about it, which is the app's
    * shape and the reason the sentences were written.
@@ -197,9 +189,20 @@ function glancePage(doc, { output, tier }) {
     ["TYPE", output?.type, describe(TYPE_NOTES, output?.type)],
     ["STRATEGY", output?.strategy, describe(STRATEGY_NOTES, output?.strategy)],
     ["AUTHORITY", output?.authority, describe(AUTHORITY_NOTES, output?.authority)],
+    /**
+     * SIX ROWS, matching the app, but only three carry a sentence.
+     *
+     * The app has words for all six. Three are approved here, and a row with a
+     * value and no sentence is honest -- inventing the other three would be
+     * putting Human Design copy on a paying customer's document that nobody
+     * signed off. When sentences exist for Profile, Signature and Not-self they
+     * drop straight into these slots.
+     */
+    ["PROFILE", output?.profile, null],
+    ["SIGNATURE", output?.signature, null],
+    ["NOT-SELF", output?.notSelfTheme, null],
   ].filter(([, v]) => v);
 
-  let y = M + 26;
   if (rows.length) {
     const labelW = 92;
     const textX = M + 14 + labelW;
@@ -232,14 +235,17 @@ function glancePage(doc, { output, tier }) {
     .text("YOUR CHART VALUES", M, y, { characterSpacing: 1.3 });
   y = doc.y + 8;
 
+  /**
+   * Channels arrive from the engine already named -- "20-34 (Charisma)" -- so
+   * one per line rather than run together, which is how the app prints them and
+   * the only way the names are readable.
+   */
   const values = [
     ["Definition", output?.definition],
     ["Incarnation cross", output?.incarnationCross],
-    ["Signature", output?.signature],
-    ["Not-self theme", output?.notSelfTheme],
     ["Defined centres", (output?.definedCenters ?? []).join(", ")],
     ["Open centres", (output?.openCenters ?? []).join(", ")],
-    ["Channels", (output?.channels ?? []).join("   ")],
+    ["Channels", (output?.channels ?? []).join("\n")],
   ].filter(([, v]) => v);
 
   const lw = 150;
@@ -302,4 +308,55 @@ function glancePage(doc, { output, tier }) {
 
 function lowerFirst(s) {
   return typeof s === "string" && s ? s[0].toLowerCase() + s.slice(1) : "";
+}
+
+/**
+ * THE CHANNEL KEY, under the drawing it explains.
+ *
+ * Four ways a line between two gates can be drawn, and without this a reader is
+ * looking at a picture full of them with no way to tell them apart. Under the
+ * chart rather than on the next page, so somebody who prints only page one
+ * still has it.
+ *
+ * The swatches are DRAWN rather than described, because "violet means design"
+ * is useless beside a line whose violet you cannot check. Every one is
+ * outlined: the personality line is near-white by design — it reads on navy and
+ * would disappear on paper without a border.
+ */
+function channelKey(doc, top, links) {
+  const KEY = [
+    ["#F0F3F9", "Personality", "conscious — what you know"],
+    ["#7C5BFF", "Design", "unconscious — what the body knows"],
+    ["#F0F3F9", "Both", "held consciously AND unconsciously", "#7C5BFF"],
+    ["#1F3151", "Open", "not activated — open to others"],
+  ];
+  const half = COL / 2;
+  doc.lineWidth(0.5);
+  KEY.forEach(([colour, label, blurb, second], i) => {
+    const cx = M + (i % 2) * half;
+    const cy = top + Math.floor(i / 2) * 30;
+    doc.roundedRect(cx, cy + 3, 30, second ? 4 : 7, 2).fillAndStroke(colour, RULE);
+    if (second) doc.roundedRect(cx, cy + 8, 30, 4, 2).fillAndStroke(second, RULE);
+    doc.font("bold").fontSize(9).fillColor(INK).text(label, cx + 40, cy, { width: half - 50 });
+    doc.font("body").fontSize(7.5).fillColor(MUTED).text(blurb, cx + 40, doc.y, {
+      width: half - 50,
+    });
+  });
+
+  const guide = links?.bodygraph ?? "https://thechampagnemethod.co/library/bodygraph/";
+  /**
+   * ONE CENTRED LINE, not two joined with `continued`.
+   *
+   * The first version drew the sentence and the URL as two calls so the URL
+   * could be gold, and they landed on top of each other -- `continued` carries
+   * the pen position, and `align: "center"` re-centres each fragment
+   * independently, so both were centred over the same span. The whole line is
+   * the link now, which is also the larger tap target.
+   */
+  doc
+    .font("body")
+    .fontSize(9)
+    .fillColor(GOLD)
+    .text("How to understand your bodygraph chart  →  thechampagnemethod.co/library/bodygraph",
+      M, top + 66, { width: COL, align: "center", link: guide, underline: false });
 }
