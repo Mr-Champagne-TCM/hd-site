@@ -1,5 +1,7 @@
 import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE, RESOURCES } from "./copy";
+import { useState } from "react";
 import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
+import { startCheckout } from "./purchase";
 import ExampleSummary from "./ExampleSummary";
 import EntryForm from "./entry/EntryForm";
 
@@ -100,6 +102,27 @@ function Example() {
 
 function Tiers() {
   const rows = ladder();
+  /**
+   * Which card is waiting on Stripe, and what went wrong if anything did.
+   *
+   * Held per card rather than once for the section, so pressing one button does
+   * not grey out the other two -- and so a failure is reported next to the
+   * thing that failed rather than somewhere else on the page.
+   */
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ sku: string; message: string } | null>(null);
+
+  const buy = async (sku: string, level: number) => {
+    setBusy(sku);
+    setFailed(null);
+    // Resolves with a message only if it did NOT leave -- the success case is a
+    // redirect, so there is nothing to do afterwards.
+    const problem = await startCheckout(level);
+    if (problem) {
+      setFailed({ sku, message: problem });
+      setBusy(null);
+    }
+  };
   return (
     <section className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
@@ -110,10 +133,10 @@ function Tiers() {
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {rows.map(({ tier, full, due, credit }) => (
+        {rows.map(({ tier, full, due, credit }, level) => (
           <div
             key={tier.sku}
-            className="flex flex-col rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
+            className="flex flex-col gap-0 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
           >
             <h3 className="font-sans text-[16px] font-semibold text-brand-paper">{tier.label}</h3>
             <p className="mt-3 font-display text-[2rem] leading-none text-brand-gold tabular-nums">
@@ -128,6 +151,23 @@ function Tiers() {
               </p>
             )}
             <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">{tier.blurb}</p>
+
+            {/*
+              The cards were inert until now, and "clicking the price squares
+              does nothing" was exactly right. mt-auto pins the button to the
+              bottom so three cards of different heights still line up.
+            */}
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => buy(tier.sku, level)}
+              className="mt-auto rounded-full bg-brand-teal px-5 py-3 font-sans text-[15px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {busy === tier.sku ? "Opening…" : `Buy ${tier.label.replace(/^The /, "the ")}`}
+            </button>
+            {failed?.sku === tier.sku && (
+              <p className="mt-2 text-[14px] leading-snug text-brand-gold">{failed.message}</p>
+            )}
           </div>
         ))}
       </div>

@@ -6,6 +6,7 @@ import Summary, { type SummaryData } from "../Summary";
 import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
 import { warmEngine } from "./warm";
+import { claimIfReturning, heldGrant } from "../purchase";
 
 /**
  * The way in.
@@ -78,6 +79,25 @@ export default function EntryForm() {
   const [state, setState] = useState<State>({ at: "asking" });
 
   /**
+   * Catch somebody coming back from Stripe.
+   *
+   * They return to this page with a session id in the URL. It is handed
+   * straight to the server, which asks Stripe whether it was really paid for --
+   * the id itself proves nothing. On the way through, the parameter is stripped
+   * from the address bar, so a reload does not re-claim and a shared link does
+   * not carry a purchase.
+   *
+   * Runs once, and says something either way. A payment that succeeded in
+   * silence is indistinguishable from one that failed.
+   */
+  const [purchase, setPurchase] = useState<
+    { ok: true; level: number } | { ok: false; message: string } | null
+  >(null);
+  useEffect(() => {
+    claimIfReturning().then((r) => r && setPurchase(r));
+  }, []);
+
+  /**
    * Wake the engine when the form is OFFERED, not when it is touched.
    *
    * Asked for directly: "ready at load to start typing, not after click into
@@ -131,6 +151,7 @@ export default function EntryForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          grant: heldGrant() ?? undefined,
           birth: {
             date,
             zone: place.zone,
@@ -209,6 +230,17 @@ export default function EntryForm() {
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
         {ENTRY.body}
       </p>
+
+      {purchase?.ok === true && (
+        <p className="mt-5 rounded-xl border border-brand-teal/40 bg-brand-teal/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
+          Payment received, thank you. Your details below, and it is yours.
+        </p>
+      )}
+      {purchase?.ok === false && (
+        <p className="mt-5 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
+          {purchase.message}
+        </p>
+      )}
 
       <form onSubmit={submit} className="mt-8 max-w-[34rem]">
         {/*
