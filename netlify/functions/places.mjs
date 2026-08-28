@@ -168,8 +168,38 @@ function json(status, payload, headers = {}) {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      // The index is fixed, so a browser may keep an answer briefly too.
-      "Cache-Control": status === 200 ? "private, max-age=300" : "no-store",
+      /**
+       * PUBLIC, NOT PRIVATE, AND THAT ONE WORD WAS THE LAG.
+       *
+       * Reported three times: "birth place lookup search results are still SO
+       * LAGGY". Measured against the live endpoint rather than guessed at --
+       * every prefix of "austin", cold and warm, came back in 180-230ms, and
+       * the response headers said why:
+       *
+       *     Cache-Status: "Netlify Durable"; fwd=bypass
+       *     Cache-Status: "Netlify Edge";    fwd=miss
+       *
+       * `private` tells the CDN it may not keep this. So every keystroke from
+       * every visitor reached the function, forever -- the two caches inside
+       * this file were doing real work and still could not help, because the
+       * request had already crossed the network to get to them.
+       *
+       * Nothing here is private. It is town names and timezones from a fixed
+       * public index; the QUERY belongs to a person but the ANSWER does not,
+       * and the CDN stores answers keyed by URL, not askers.
+       *
+       * s-maxage is an hour rather than the seven days that caused the last
+       * stale-place bug. Netlify purges the edge on deploy, and an hour bounds
+       * the damage if it ever does not.
+       *
+       * A cache hit no longer runs the rate limiter, which is correct: the
+       * limiter exists to protect compute, and a hit costs none. Forcing
+       * misses with unique queries still meets it.
+       */
+      "Cache-Control":
+        status === 200
+          ? "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400"
+          : "no-store",
       ...headers,
     },
   });
