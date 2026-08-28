@@ -59,13 +59,27 @@ function Rule({ label, done }: { label: string; done?: boolean }) {
 /**
  * Which promise this form is allowed to make.
  *
- * This is the summary path, tier 0, and tier 0 genuinely keeps nothing. The
- * paid paths pass their own tier and get the sentence that is true for them --
- * the seam is here rather than added later, because a privacy sentence chosen
- * by hand at three call sites is one that will eventually be wrong at one of
- * them.
+ * Tier 0 genuinely keeps nothing, so it gets the stronger sentence. A form
+ * opened from a paid reading link keeps the reading, and says so. The seam is
+ * a PROP rather than a constant precisely because the same component now
+ * serves both, and a privacy sentence chosen by hand at each call site is one
+ * that will eventually be wrong at one of them.
  */
-const TIER = 0;
+const FREE_TIER = 0;
+
+/**
+ * What this form is filling in, if anything.
+ *
+ * `readingToken` present means somebody paid, followed their link, and this
+ * form is the second half of that purchase. The token travels with the chart
+ * request so the answer is stored against the reading they already own --
+ * without it, a computed chart is handed over and forgotten.
+ */
+export type EntryProps = {
+  readingToken?: string;
+  tier?: number;
+  name?: string | null;
+};
 
 type State =
   | { at: "asking" }
@@ -73,7 +87,7 @@ type State =
   | { at: "done"; summary: SummaryData }
   | { at: "failed"; message: string };
 
-export default function EntryForm() {
+export default function EntryForm({ readingToken, tier = FREE_TIER, name = null }: EntryProps = {}) {
   const [date, setDate] = useState("");
   const [place, setPlace] = useState<Place | null>(null);
   const [timeKnown, setTimeKnown] = useState<boolean | null>(null);
@@ -165,6 +179,10 @@ export default function EntryForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // The link is the stronger claim and is sent when there is one: a
+          // buyer arriving from their email has no grant, because the grant
+          // lived in the tab they closed.
+          reading: readingToken ?? undefined,
           grant: heldGrant() ?? undefined,
           birth: {
             date,
@@ -205,7 +223,7 @@ export default function EntryForm() {
           {place ? `, ${place.label}` : ""}
         </h2>
         <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-          {privacyFor(TIER)}
+          {privacyFor(tier)}
         </p>
         {/*
           The picture comes BEFORE the table, when there is one.
@@ -256,24 +274,24 @@ export default function EntryForm() {
   return (
     <section ref={section} id="yours" className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {ENTRY.title}
+        {readingToken && name ? `${name}, your birth details` : ENTRY.title}
       </h2>
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
         {ENTRY.body}
       </p>
 
-      {purchase?.ok === true && (
+      {!readingToken && purchase?.ok === true && (
         <p className="mt-5 rounded-xl border border-brand-teal/40 bg-brand-teal/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
           Payment received, thank you. Your details below, and it is yours.
         </p>
       )}
-      {purchase?.ok !== true && owned && (
+      {!readingToken && purchase?.ok !== true && owned && (
         <p className="mt-5 rounded-xl border border-brand-teal/25 bg-brand-teal/[0.05] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
           {TIERS[owned.level] ? `You have ${TIERS[owned.level].label.replace(/^The /, "the ")}` : "Purchase held"}
           , paid for on this device. It stays with this tab.
         </p>
       )}
-      {purchase?.ok === false && (
+      {!readingToken && purchase?.ok === false && (
         <p className="mt-5 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
           {purchase.message}
         </p>
@@ -323,7 +341,7 @@ export default function EntryForm() {
             {state.at === "working" ? "Working…" : "My summary"}
           </button>
           <p className="mt-3 max-w-[52ch] text-[14px] leading-relaxed text-brand-muted">
-            {privacyFor(TIER)}
+            {privacyFor(tier)}
           </p>
         </div>
       </form>

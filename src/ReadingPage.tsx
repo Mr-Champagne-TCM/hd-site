@@ -6,6 +6,7 @@ import { SITE } from "./copy";
 /** The forwarding address, never the personal inbox (D-12). */
 const CONTACT = "hd-readings@thechampagnemethod.co";
 import { startCheckout } from "./purchase";
+import EntryForm from "./entry/EntryForm";
 
 /**
  * What a delivery link opens.
@@ -26,6 +27,7 @@ import { startCheckout } from "./purchase";
  */
 
 type Reading = {
+  pending: boolean;
   tier: number;
   label: string | null;
   name: string | null;
@@ -154,6 +156,25 @@ export default function ReadingPage({ token }: { token: string }) {
   }
 
   const { reading } = state;
+
+  /**
+   * PAID, AND NOT YET TOLD US WHEN THEY WERE BORN.
+   *
+   * The ordinary state of every purchase for the minute or two between the
+   * card and the form -- and it can last much longer, because somebody is free
+   * to close the tab and come back a week later from the email.
+   *
+   * The SAME EntryForm the offer page uses, handed the token. One form, so the
+   * date rules, the place search and the clock cannot behave differently
+   * depending on which door somebody came in through.
+   */
+  if (reading.pending) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <EntryForm readingToken={token} tier={reading.tier} name={reading.name} />
+      </div>
+    );
+  }
 
   return (
     <div className={shell}>
