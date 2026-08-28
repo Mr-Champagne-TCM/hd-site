@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
-import { fileURLToPath } from "node:url";
 import { TIERS } from "../../shared/pricing.mjs";
+import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 
 /**
  * The chart tier's PDF — "a page you can share and a PDF you keep".
@@ -32,8 +32,6 @@ import { TIERS } from "../../shared/pricing.mjs";
  * and faint. Two static instances are cut from it instead, at 400 and 600 --
  * the two weights the drawing actually uses.
  */
-
-const FONT_DIR = fileURLToPath(new URL("./fonts/", import.meta.url));
 
 /** The panel palette, matching what the page shows on screen. */
 const INK = "#F3EFF7";
@@ -72,8 +70,15 @@ export function readingPdf({ tier, name, output, generatedAt = new Date() }) {
        * Naming our own font here means the standard set is never touched at
        * all, which is both the fix and what we wanted anyway: nothing in this
        * document should be rendered in a font that is not Outfit.
+       *
+       * A BUFFER, NOT A PATH -- and that is the second half of the same bug.
+       * The path version was right in the repo and wrong in the bundle:
+       * esbuild inlines this module into netlify/functions/pdf.mjs, so
+       * `import.meta.url` names a different directory at runtime and the fonts
+       * were looked for somewhere they had never been. A compiled-in buffer
+       * has no path to get wrong.
        */
-      font: `${FONT_DIR}Outfit-400.ttf`,
+      font: OUTFIT_400,
       info: {
         Title: name ? `${name} — Human Design` : "Human Design",
         Author: "The Champagne Method",
@@ -89,8 +94,8 @@ export function readingPdf({ tier, name, output, generatedAt = new Date() }) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.registerFont("body", `${FONT_DIR}Outfit-400.ttf`);
-    doc.registerFont("bold", `${FONT_DIR}Outfit-600.ttf`);
+    doc.registerFont("body", OUTFIT_400);
+    doc.registerFont("bold", OUTFIT_600);
 
     drawChartPage(doc, { name, output, tier });
     doc.addPage();

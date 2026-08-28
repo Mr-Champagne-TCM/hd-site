@@ -24,6 +24,12 @@ export async function handleChart({
   grantSecret,
   paywall = false,
   readings = null,
+  /**
+   * Sends the "it is ready" email. Injected so the whole path stays testable
+   * without a network or a key, and OPTIONAL so the free summary path -- which
+   * has nobody to write to -- simply does not pass one.
+   */
+  deliver = null,
 }) {
   let request;
   try {
@@ -131,7 +137,30 @@ export async function handleChart({
   if (readingLink.ok && readings) {
     try {
       const filled = await fillReading(readings, readingLink.id, upstream.payload, now);
-      if (!filled.ok) console.log(`chart: reading not filled (${filled.reason})`);
+      if (!filled.ok) {
+        console.log(`chart: reading not filled (${filled.reason})`);
+      } else if (deliver) {
+        /**
+         * THE SECOND EMAIL, and the one that is actually worth keeping.
+         *
+         * The first goes out when the card clears and contains a door to a
+         * FORM -- there is no chart in it, because there is no chart yet.
+         * Jeremy, having just made one: "as soon as the bodygraph is shown, an
+         * email should be in flight with link/code, right? I didn't get one."
+         *
+         * Right. So one goes now, and because the reading is filled it says
+         * "Access your Human Design chart" rather than "Create and view".
+         *
+         * Sent only on a FIRST fill. `fillReading` is write-once, so a second
+         * submission returns `already_filled` and lands in the branch above --
+         * which means a double-tapped form cannot send a second email either.
+         *
+         * A failure here does not fail the chart. The person is looking at it.
+         */
+        await deliver({ id: readingLink.id, tier: filled.tier }).catch((e) =>
+          console.log(`chart: ready-email failed (${e.message})`),
+        );
+      }
     } catch (e) {
       console.log(`chart: could not store the reading (${e.message})`);
     }

@@ -1,6 +1,10 @@
 import { getStore } from "@netlify/blobs";
 import { createHash } from "node:crypto";
 import { handleChart } from "../lib/handler.mjs";
+import { loadReading, mintReadingLink } from "../lib/reading.mjs";
+import { deliveryEmail } from "../lib/deliveryEmail.mjs";
+import { sendMail } from "../lib/mail.mjs";
+import { SITE } from "../lib/siteLinks.mjs";
 
 /**
  * POST /api/chart -- the free summary.
@@ -83,6 +87,36 @@ export default async (request, context) => {
      * wrong thing.
      */
     readings: getStore({ name: "readings", consistency: "strong" }),
+
+    /**
+     * Tell them it is ready, with a link that now opens a chart rather than a
+     * form. A FRESH link, six days from now, because the one they followed may
+     * be most of the way through its own six.
+     */
+    deliver: async ({ id, tier }) => {
+      const secret = process.env.GRANT_SECRET;
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!secret || !apiKey) return;
+
+      const store = getStore({ name: "readings", consistency: "strong" });
+      const reading = await loadReading(store, id, Date.now());
+      const to = reading?.buyer?.email;
+      if (!to) {
+        console.log("chart: no address on the purchase, nothing sent");
+        return;
+      }
+
+      const url = `${new URL(request.url).origin}/r/${mintReadingLink({ id, tier }, secret)}`;
+      const { subject, html, text } = deliveryEmail({
+        tier,
+        name: reading.buyer.name,
+        url,
+        links: SITE,
+        pending: false,
+      });
+      const sent = await sendMail({ to, subject, html, text }, { apiKey });
+      console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
+    },
     // The launch switch. Absent or anything but "1" means open, which is how
     // the page has behaved since it went up and how it is being tested. Set it
     // to "1" and nothing is served without a paid grant.

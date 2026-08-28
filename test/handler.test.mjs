@@ -309,3 +309,99 @@ test("a FORGED reading link does not entitle anything", async () => {
   assert.equal(res.status, 402, "a forged link bought a chart");
   assert.equal(called, false, "the engine was called for a forged link");
 });
+
+// --- the email that says it is ready ----------------------------------------
+//
+// The first email goes out when the card clears and contains a door to a FORM,
+// because there is no chart yet. Jeremy, having just made one: "as soon as the
+// bodygraph is shown, an email should be in flight with link/code, right? I
+// didn't get one."
+
+test("filling a reading sends the it-is-ready email", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null, name: "Jeremy" });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+
+  const delivered = [];
+  await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+    grantSecret: secret,
+    paywall: true,
+    readings,
+    deliver: async (x) => { delivered.push(x); },
+  });
+
+  assert.equal(delivered.length, 1, "no ready-email was sent");
+  assert.equal(delivered[0].id, id);
+  assert.equal(delivered[0].tier, 1);
+});
+
+test("A DOUBLE-SUBMITTED FORM DOES NOT SEND A SECOND EMAIL", async () => {
+  // fillReading is write-once, so the second submission lands in the
+  // already-filled branch -- which is also what stops a second email.
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+
+  const delivered = [];
+  const submit = () =>
+    handleChart({
+      body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+      ip: "1.2.3.4",
+      now: Date.now(),
+      store: counterStore(),
+      engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+      grantSecret: secret,
+      paywall: true,
+      readings,
+      deliver: async (x) => { delivered.push(x); },
+    });
+
+  await submit();
+  const second = await submit();
+  assert.equal(second.status, 200, "the person must still get their chart back");
+  assert.equal(delivered.length, 1, "a second email went out on a re-submit");
+});
+
+test("the free path sends nothing, having nobody to write to", async () => {
+  // No reading link, no `deliver`, no email. The summary on the offer page is
+  // handed over and forgotten, which is correct there.
+  const secret = randomBytes(32).toString("hex");
+  const res = await handleChart({
+    body: JSON.stringify({ birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+    grantSecret: secret,
+    paywall: false,
+  });
+  assert.equal(res.status, 200);
+});
+
+test("a failed send does not fail the chart - the person is looking at it", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+
+  const res = await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+    grantSecret: secret,
+    paywall: true,
+    readings,
+    deliver: async () => { throw new Error("resend is down"); },
+  });
+  assert.equal(res.status, 200, "a failed email took the chart down with it");
+  assert.equal((await loadReading(readings, id)).pending, false, "and it must still be stored");
+});

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SITE } from "./copy";
 import { startCheckout } from "./purchase";
+import { TIERS } from "../shared/pricing.mjs";
 
 /**
  * What now — the block under a finished reading.
@@ -65,9 +66,22 @@ export default function ReadingActions({
           <h2 className="font-display text-[20px] font-medium text-brand-paper">
             If you would like the rest of it
           </h2>
-          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-            {upgrade.label} goes further, and what you have already paid comes
-            off what you pay next.
+          {/*
+            WHAT IS ACTUALLY IN IT, not just its name. "The reading goes
+            further" tells somebody nothing they can decide on -- Jeremy asked
+            for the upgrade to sit "under a teaser or description of what is in
+            next tier", which is the difference between an offer and a nudge.
+
+            The words come from shared/pricing.mjs, the same blurb the offer
+            page shows. A tier described in two places is a tier that will
+            eventually be described two ways.
+          */}
+          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-paper/85">
+            {TIERS[upgrade.level]?.blurb}
+          </p>
+          <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
+            What you have already paid comes off what you pay next — every route
+            to the full reading costs the same in the end.
           </p>
           <button
             type="button"
@@ -86,7 +100,8 @@ export default function ReadingActions({
           </h2>
           <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
             Your chart and the values behind it, as a PDF — the same drawing, at
-            print size.
+            print size. Take it now, or have the link emailed and come back to
+            it later.
           </p>
           {/*
             A plain link, not a fetch-and-blob. A browser downloads what it
@@ -147,12 +162,19 @@ function Resource({
 }
 
 /**
- * "Send it to me again."
+ * "Email me this link."
  *
  * NOT "send it to". The address is never typed here and never sent from here —
- * it is the one on the purchase, chosen by the server (D-9). That single word
+ * it is the one on the purchase, chosen by the server (D-9). That distinction
  * is the whole difference between a convenience and a way to have somebody
  * else's reading mailed to you.
+ *
+ * AND NOT "again", which is what it said first. Jeremy, reading it on a chart
+ * he had just made: "this seems awkward... 'again'? they haven't gotten it
+ * sent once yet." He was right -- the delivery email is sent at PURCHASE, when
+ * there is no chart in it, so the first time somebody presses this it is the
+ * first send of anything worth keeping. One wording that is true whenever it
+ * is read beats two wordings that need a state to choose between them.
  */
 function Resend({ token }: { token: string }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">(
@@ -179,8 +201,8 @@ function Resend({ token }: { token: string }) {
         Keeping it
       </h2>
       <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-        Your reading is kept for a year, so it can be sent again whenever you
-        need it — to the address on your purchase, and only there.
+        Your reading is kept for a year, so the link can be sent to you whenever
+        you need it — to the address on your purchase, and only there.
       </p>
       {state === "sent" ? (
         <p className="mt-4 text-[16px] text-brand-teal">
@@ -193,7 +215,7 @@ function Resend({ token }: { token: string }) {
           disabled={state === "sending"}
           className="mt-4 rounded-full border border-brand-teal/50 px-5 py-2.5 font-sans text-[15px] text-brand-teal transition-colors hover:bg-brand-teal/10 disabled:opacity-50"
         >
-          {state === "sending" ? "Sending…" : "Send it to me again"}
+          {state === "sending" ? "Sending…" : "Email me this link"}
         </button>
       )}
       {state === "failed" && (
