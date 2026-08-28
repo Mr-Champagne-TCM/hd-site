@@ -118,3 +118,29 @@ export const NOT_SELF_NOTES: Record<string, string> = {
   Bitterness: "The signal of effort spent where it was not invited. It follows work offered rather than asked for.",
   Disappointment: "The signal of having been shaped by the wrong surroundings. For an open design it is about company and place more than about events.",
 };
+
+/**
+ * A PROFILE'S TWO LINES, NAMED — "2/4 — Hermit / Opportunist".
+ *
+ * The engine returns the digits alone. The app adds the names in its PDF layer
+ * rather than in the engine, and this is the same table it uses, so the two
+ * documents read the same. Standard Human Design vocabulary, not a coinage.
+ */
+export const PROFILE_LINE_NAMES: Record<string, string> = {
+  "1": "Investigator",
+  "2": "Hermit",
+  "3": "Martyr",
+  "4": "Opportunist",
+  "5": "Heretic",
+  "6": "Role Model",
+};
+
+/** "2/4" -> "2/4 — Hermit / Opportunist". Unrecognised shapes pass through. */
+export function profileWithNames(profile?: string | null): string {
+  const m = /^(\d)\s*\/\s*(\d)/.exec(String(profile ?? ""));
+  if (!m) return profile ? String(profile) : "";
+  const a = PROFILE_LINE_NAMES[m[1]];
+  const b = PROFILE_LINE_NAMES[m[2]];
+  if (!a || !b) return String(profile);
+  return `${m[1]}/${m[2]} — ${a} / ${b}`;
+}

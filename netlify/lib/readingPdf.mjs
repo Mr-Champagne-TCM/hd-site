@@ -11,6 +11,7 @@ import {
   STRATEGY_NOTES,
   TYPE_NOTES,
   describe,
+  profileWithNames,
 } from "./mechanics.mjs";
 
 /**
@@ -57,6 +58,49 @@ const INK = "#2A2620";
 const MUTED = "#8A8272";
 const GOLD = "#C9A227";
 const RULE = "#E3DDCB";
+/** The hairline the app rules its glance box with. Measured off its own PDF. */
+const ROW_RULE = "#EFE6C8";
+
+/**
+ * THE DRAWING, RECOLOURED FOR PRINT — and only the two colours that carry the
+ * medium, measured off the app's own PDF rather than guessed:
+ *
+ *   panel ground   #0E1A2B -> #5B6576
+ *   robed figure   #152744 -> #263E66
+ *
+ * The app runs its screen dark and its print light; this is the same departure,
+ * and D-10 is intact — a CLIENT never chooses a scheme, and there is still one
+ * bodygraph. What moves is the medium, chosen by us.
+ *
+ * Done here rather than in the engine because ONE drawing goes on the wire and
+ * that stays true: a second render would be a second set of coordinates to keep
+ * in step, and a bigger blob in storage, for two hex values.
+ *
+ * THE HALO MOVES WITH THE GROUND ON PURPOSE. `palette.halo` is the same navy,
+ * and its whole job is to be the colour behind a label so the channels under it
+ * are pushed back. If the ground moved and the halo did not, every centre name
+ * would sit in a dark patch.
+ *
+ * The risk this carries is that it is a STRING SWAP against constants that live
+ * in another repo. If the engine's palette moves, this quietly does nothing
+ * rather than failing — so `printSwap` reports what it matched and the tests
+ * assert both keys are hit.
+ */
+const PRINT_SWAP = Object.freeze({
+  "#0e1a2b": "#5B6576",
+  "#152744": "#263E66",
+});
+
+export function printSwap(svg) {
+  let hits = 0;
+  const out = String(svg).replace(/#[0-9a-fA-F]{6}(?![0-9a-fA-F])/g, (hex) => {
+    const to = PRINT_SWAP[hex.toLowerCase()];
+    if (!to) return hex;
+    hits += 1;
+    return to;
+  });
+  return { svg: out, hits };
+}
 
 const PAGE = { w: 612, h: 792 };
 const M = 56;
@@ -155,7 +199,7 @@ function chartPage(doc, { name, output, links, qr }) {
 
   const oneLine = [
     output?.type,
-    output?.profile && `Profile ${output.profile}`,
+    output?.profile && `Profile ${profileWithNames(output.profile)}`,
     output?.authority && `${output.authority} authority`,
   ]
     .filter(Boolean)
@@ -168,11 +212,11 @@ function chartPage(doc, { name, output, links, qr }) {
   doc.moveTo(M, ruleY).lineTo(PAGE.w - M, ruleY).strokeColor(GOLD).lineWidth(1).stroke();
 
   /**
-   * THE SCREEN DRAWING, dark, on a paper page — which is the app's design and
-   * was the whole thing I got backwards. The SVG carries its own navy ground
-   * and border, so the panel comes for free: nothing here draws a rectangle.
+   * THE ENGINE'S DRAWING, recoloured for paper. It carries its own ground and
+   * border, so the panel comes for free: nothing here draws a rectangle.
    */
-  const svg = typeof output?.bodygraphSvg === "string" ? output.bodygraphSvg : null;
+  const raw = typeof output?.bodygraphSvg === "string" ? output.bodygraphSvg : null;
+  const svg = raw ? printSwap(raw).svg : null;
   const legendTop = PAGE.h - 150;
   if (svg) {
     const top = ruleY + 20;
@@ -217,7 +261,7 @@ function glancePage(doc, { output, tier }) {
      * approved the same way as the first three: in the conversation, not in a
      * file somebody was pointed at.
      */
-    ["PROFILE", output?.profile, profileNote(output?.profile)],
+    ["PROFILE", output?.profile && profileWithNames(output.profile), profileNote(output?.profile)],
     ["SIGNATURE", output?.signature, describe(SIGNATURE_NOTES, output?.signature)],
     ["NOT-SELF", output?.notSelfTheme, describe(NOT_SELF_NOTES, output?.notSelfTheme)],
   ].filter(([, v]) => v);
@@ -228,21 +272,40 @@ function glancePage(doc, { output, tier }) {
     const textW = COL - 28 - labelW;
     const startY = y;
 
+    /**
+     * A HAIRLINE BETWEEN EVERY ROW, and the value in the SAME WEIGHT as the
+     * sentence after it -- both of which are the app's, and both of which I had
+     * diverged from: no rules at all, and the value set bold.
+     *
+     * The bold read well on its own and it is still wrong here. This document
+     * is meant to be the app's document, and a reader who has both should not
+     * be able to tell which one made which.
+     */
     let inner = y + 12;
-    for (const [label, value, note] of rows) {
+    rows.forEach(([label, value, note], i) => {
+      if (i) {
+        doc
+          .moveTo(M + 14, inner - 6)
+          .lineTo(PAGE.w - M - 14, inner - 6)
+          .strokeColor(ROW_RULE)
+          .lineWidth(0.5)
+          .stroke();
+      }
       doc
         .font("body")
         .fontSize(8)
         .fillColor(GOLD)
         .text(label, M + 14, inner + 2, { width: labelW - 10, characterSpacing: 1.1 });
       doc
-        .font("bold")
+        .font("body")
         .fontSize(10.5)
         .fillColor(INK)
-        .text(`${value}.`, textX, inner, { width: textW, continued: Boolean(note) });
-      if (note) doc.font("body").fillColor(INK).text(` ${note}`, { width: textW });
+        .text(note ? `${value}. ${note}` : `${value}.`, textX, inner, {
+          width: textW,
+          lineGap: 1,
+        });
       inner = doc.y + 12;
-    }
+    });
     doc.rect(M, startY, COL, inner - startY - 2).strokeColor(GOLD).lineWidth(1).stroke();
     y = inner + 22;
   }
@@ -292,9 +355,20 @@ function glancePage(doc, { output, tier }) {
   }
 
   /**
-   * A soft line toward the next tier, which Jeremy asked for — and it NAMES
-   * what is in it rather than saying "the rest of it". Nothing is asked of the
-   * reader; the sentence describes and stops.
+   * A soft line toward the next tier — and it now says WHERE the credit lives,
+   * which is Jeremy's note and a money question, so it gets said plainly.
+   *
+   * The credit is not a coupon and it is not attached to a person. It is on the
+   * READING PAGE, reached by the signed link in their email — D-11's one URL
+   * does view, re-send and upgrade. Somebody who buys from the front of the
+   * site instead starts a new purchase at full price and the money is simply
+   * gone. Naming the route is the difference between an offer and a trap.
+   *
+   * THE GENERIC PURCHASE URL IS DELIBERATELY ABSENT. It used to sit here as the
+   * clickable line, which is the exact wrong place to send somebody holding a
+   * credit they can only spend elsewhere. The footer still links the site.
+   *
+   * No imperative: it describes where the thing is and stops.
    */
   const next = TIERS[tier + 1];
   if (next) {
@@ -309,17 +383,14 @@ function glancePage(doc, { output, tier }) {
       .fontSize(10)
       .fillColor(INK)
       .text(
-        `${next.label} adds ${lowerFirst(next.blurb)} What you have already paid comes off what ` +
-          "you pay next — nobody pays twice for the same thing. ",
+        `${next.label} adds ${lowerFirst(next.blurb)} It is offered on the page your chart ` +
+          "came from — the one the link in your email opens — and what you have already paid " +
+          "comes off the price there. Started anywhere else it begins at full, and nobody " +
+          "should pay twice for the same thing.",
         M,
         doc.y + 6,
-        { width: COL, lineGap: 1.5, continued: true },
-      )
-      .fillColor(GOLD)
-      .text("humandesign.thechampagnemethod.co", {
-        link: "https://humandesign.thechampagnemethod.co",
-        underline: false,
-      });
+        { width: COL, lineGap: 1.5 },
+      );
   }
 
   footer(doc, 2);
@@ -363,18 +434,64 @@ function channelKey(doc, top, links, qr) {
     ["#F0F3F9", "Both", "held consciously AND unconsciously", "#7C5BFF"],
     ["#1F3151", "Open", "not activated — open to others"],
   ];
-  const half = COL / 2;
+
+  /**
+   * A GOLD RULE ABOVE AND A PALE ONE BELOW, which is what the app draws and
+   * what makes this read as a key rather than as four stray captions. Measured
+   * off its PDF: 1pt gold over, 0.5pt over the guide line under.
+   */
+  doc.moveTo(M, top).lineTo(PAGE.w - M, top).strokeColor(GOLD).lineWidth(1).stroke();
+
+  /** The QR takes the right end, so the four entries share what is left. */
+  const QR = 46;
+  const textW = COL - QR - 18;
+  const half = textW / 2;
+  const rowsY = top + 11;
+  const ROW = 27;
+  const SW = 13;
+
   doc.lineWidth(0.5);
   KEY.forEach(([colour, label, blurb, second], i) => {
     const cx = M + (i % 2) * half;
-    const cy = top + Math.floor(i / 2) * 30;
-    doc.roundedRect(cx, cy + 3, 30, second ? 4 : 7, 2).fillAndStroke(colour, RULE);
-    if (second) doc.roundedRect(cx, cy + 8, 30, 4, 2).fillAndStroke(second, RULE);
-    doc.font("bold").fontSize(9).fillColor(INK).text(label, cx + 40, cy, { width: half - 50 });
-    doc.font("body").fontSize(7.5).fillColor(MUTED).text(blurb, cx + 40, doc.y, {
-      width: half - 50,
+    const cy = rowsY + Math.floor(i / 2) * ROW;
+    /**
+     * A SQUARE, not a pill. The app draws a filled square with a hairline
+     * outline, and the outline is not decoration: the personality swatch is
+     * near-white by design and would be an invisible hole on paper without it.
+     * "Both" is the square split down the middle, because that is literally
+     * what the channel is — one half each.
+     */
+    doc.rect(cx, cy + 1, SW, SW).fillAndStroke(colour, MUTED);
+    if (second) {
+      doc.rect(cx + SW / 2, cy + 1, SW / 2, SW).fill(second);
+      doc.rect(cx, cy + 1, SW, SW).strokeColor(MUTED).stroke();
+    }
+    doc.font("bold").fontSize(9.5).fillColor(INK).text(label, cx + SW + 8, cy, {
+      width: half - SW - 14,
+    });
+    doc.font("body").fontSize(7.5).fillColor(MUTED).text(blurb, cx + SW + 8, doc.y + 1, {
+      width: half - SW - 14,
     });
   });
+
+  const belowY = rowsY + ROW * 2 - 3;
+  doc.moveTo(M, belowY).lineTo(M + textW, belowY).strokeColor(RULE).lineWidth(0.5).stroke();
+
+  /**
+   * THE QR, beside the guide line it encodes. It was built at the top of this
+   * module and then never drawn -- passed in, unused, and absent from the page
+   * for a whole review round. Vector, so it stays crisp at any size.
+   *
+   * A printed page cannot be clicked, and retyping a URL off paper is a thing
+   * nobody does.
+   */
+  if (qr) {
+    try {
+      SVGtoPDF(doc, qr, PAGE.w - M - QR, rowsY, { width: QR, height: QR });
+    } catch {
+      /* a missing QR is a page without a QR, never a failed download */
+    }
+  }
 
   const guide = links?.bodygraph ?? "https://thechampagnemethod.co/library/bodygraph/";
   /**
@@ -391,5 +508,5 @@ function channelKey(doc, top, links, qr) {
     .fontSize(9)
     .fillColor(GOLD)
     .text("How to understand your bodygraph chart  →  thechampagnemethod.co/library/bodygraph",
-      M, top + 66, { width: COL, align: "center", link: guide, underline: false });
+      M, belowY + 8, { width: textW, align: "center", link: guide, underline: false });
 }

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { readingPdf } from "../netlify/lib/readingPdf.mjs";
+import { readingPdf, printSwap } from "../netlify/lib/readingPdf.mjs";
 import { importTs } from "./support/ts.mjs";
 
 /**
@@ -224,7 +224,56 @@ test("the server copy of the sentences matches the page's, word for word", async
   // import from the browser. Two copies that disagree are worse than one.
   const server = await import("../netlify/lib/mechanics.mjs");
   const page = await importTs("src", "mechanics.ts");
-  for (const map of ["TYPE_NOTES", "STRATEGY_NOTES", "AUTHORITY_NOTES"]) {
+  const maps = [
+    "TYPE_NOTES",
+    "STRATEGY_NOTES",
+    "AUTHORITY_NOTES",
+    // The three added later, and the profile line names, drift exactly as
+    // easily as the first three did.
+    "PROFILE_NOTES",
+    "SIGNATURE_NOTES",
+    "NOT_SELF_NOTES",
+    "PROFILE_LINE_NAMES",
+  ];
+  for (const map of maps) {
+    assert.ok(server[map], `${map} is missing from the server copy`);
     assert.deepEqual(server[map], page[map], `${map} has drifted between server and page`);
   }
+});
+
+/**
+ * THE PRINT RECOLOUR.
+ *
+ * These two hex values are the engine's, and they live in another repo. The
+ * swap is a string match against them, which means its failure mode is SILENCE
+ * -- it matches nothing and the page comes out navy, exactly as it did on the
+ * first run of it. So the count is asserted, not just the result.
+ */
+test("the print swap recolours the panel and the figure, and says how many", () => {
+  const svg =
+    '<svg><rect fill="#0E1A2B"/><path fill="#152744"/>' +
+    '<text stroke="#0e1a2b">x</text><circle fill="#C9A227"/></svg>';
+  const { svg: out, hits } = printSwap(svg);
+  assert.equal(hits, 3, "expected three recolours, including the lowercase one");
+  assert.ok(!/#0[eE]1[aA]2[bB]/.test(out), "the navy ground survived");
+  assert.ok(!/#152744/i.test(out), "the figure colour survived");
+  assert.match(out, /#5B6576/, "the panel did not become the app's slate");
+  assert.match(out, /#263E66/, "the figure did not become the app's navy");
+  assert.match(out, /#C9A227/, "THE GOLD MUST NOT MOVE -- it is the brand");
+});
+
+test("a colour that is not in the map passes through untouched", () => {
+  const { svg, hits } = printSwap('<svg fill="#7C5BFF" stroke="#F0F3F9"/>');
+  assert.equal(hits, 0);
+  assert.match(svg, /#7C5BFF/);
+  assert.match(svg, /#F0F3F9/);
+});
+
+test("the profile is named the way the app names it", async () => {
+  const { profileWithNames } = await import("../netlify/lib/mechanics.mjs");
+  assert.equal(profileWithNames("2/4"), "2/4 — Hermit / Opportunist");
+  assert.equal(profileWithNames("6/2"), "6/2 — Role Model / Hermit");
+  // A shape nobody planned for prints the value rather than nothing.
+  assert.equal(profileWithNames("9/9"), "9/9");
+  assert.equal(profileWithNames(null), "");
 });

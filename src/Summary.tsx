@@ -11,6 +11,8 @@
  * boundary shows up as a missing value rather than as a silent blank.
  */
 
+import { profileWithNames } from "./mechanics";
+
 export type SummaryData = {
   type: string;
   strategy: string;
@@ -75,7 +77,13 @@ export default function Summary({ data }: { data: SummaryData }) {
       <dl className="divide-y divide-brand-gold/10">
         {ROWS.map(([label, field]) => (
           <Row key={label} label={label}>
-            {String(data[field])}
+            {/*
+              THE PROFILE IS NAMED HERE TOO, not only in the PDF. The engine
+              returns "2/4"; the app's document prints "2/4 — Hermit /
+              Opportunist". A page and a PDF of the same chart disagreeing on
+              the same row is the fault he already caught once over channels.
+            */}
+            {field === "profile" ? profileWithNames(String(data[field])) : String(data[field])}
             {provisional.has(field) && (
               <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                 provisional
