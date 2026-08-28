@@ -1,4 +1,5 @@
 import { check, record } from "./ratelimit.mjs";
+import { tierFor } from "./grant.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -13,7 +14,7 @@ import { check, record } from "./ratelimit.mjs";
 /** Birth data is never written down. Only these leave the request object. */
 const ALLOWED_BIRTH_FIELDS = ["date", "time", "zone", "timeKnown", "utc"];
 
-export async function handleChart({ body, ip, now, store, engine }) {
+export async function handleChart({ body, ip, now, store, engine, grantSecret, paywall = false }) {
   let request;
   try {
     request = JSON.parse(body);
@@ -51,9 +52,31 @@ export async function handleChart({ body, ip, now, store, engine }) {
     if (birth[f] !== undefined) scrubbed[f] = birth[f];
   }
 
+  /**
+   * What this request is entitled to.
+   *
+   * Read from the presented grant, not from anything the caller asked for --
+   * a request cannot name its own tier, which is the whole reason `tier` was
+   * hardcoded here before there was anything better. Now it is derived.
+   *
+   * The refusal happens BEFORE the engine call, deliberately, for the same
+   * reason the rate limiter does: work that will not be delivered should not
+   * be done, and an unpaid request must not cost us compute.
+   */
+  const entitled = tierFor({ token: request?.grant, paywall, secret: grantSecret, now });
+  if (entitled.tier === null) {
+    return json(402, {
+      error: {
+        code: "payment_required",
+        message:
+          "This one needs to be paid for first. Nothing was charged just now, and your birth details were not stored.",
+      },
+    });
+  }
+
   let upstream;
   try {
-    upstream = await engine({ birth: scrubbed, tier: 0 });
+    upstream = await engine({ birth: scrubbed, tier: entitled.tier });
   } catch {
     return json(502, {
       error: {

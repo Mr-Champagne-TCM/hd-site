@@ -74,6 +74,14 @@ export default async (request, context) => {
     now: Date.now(),
     store,
     engine,
+    grantSecret: process.env.GRANT_SECRET,
+    // The launch switch. Absent or anything but "1" means open, which is how
+    // the page has behaved since it went up and how it is being tested. Set it
+    // to "1" and nothing is served without a paid grant.
+    //
+    // A switch rather than a code change, so turning the paywall on is not a
+    // deploy and turning it back off in a hurry is not one either.
+    paywall: process.env.PAYWALL === "1",
   });
 
   // Status only. The request body carries birth data and is never logged, at

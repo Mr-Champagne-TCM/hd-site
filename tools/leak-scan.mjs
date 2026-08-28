@@ -136,6 +136,26 @@ const RULES = [
     id: "grant-minting",
     why: "signing or grant logic, which belongs server-side",
     re: /\bcreateHmac\b|\bHMAC_SECRET\b|\bmintGrant\b/,
+    /**
+     * Narrowed 2026-08-27, after it fired correctly and then fired wrongly.
+     *
+     * It fired CORRECTLY on `shared/grant.mjs` and blocked the commit. That was
+     * a real mistake: `src/App.tsx` imports `shared/pricing.mjs`, so everything
+     * in `shared/` is bundled and served, and signing code was sitting one
+     * careless import from the browser. The file moved to `netlify/lib/`.
+     *
+     * Then it fired on the moved file, which is the rule contradicting its own
+     * reason: it exists to keep this code server-side, so flagging it FOR being
+     * server-side blocks the fix it just demanded. Netlify functions live in
+     * this repo and are never bundled to the browser.
+     *
+     * `dist/` is the load-bearing entry. That is the built bundle, so if grant
+     * logic ever does reach the browser -- by an import from src/, by a bundler
+     * change, by anything -- this still blocks, which is the protection that
+     * actually matters. Narrowing it did not weaken it; leaving it to cry wolf
+     * on every server file is what would have.
+     */
+    onlyIn: ["src/", "shared/", "dist/"],
   },
   {
     id: "price-literal",
