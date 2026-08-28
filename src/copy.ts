@@ -189,9 +189,38 @@ export const ENTRY = {
     "with it — so a chart without a time is genuinely useful and honestly incomplete.",
 };
 
+/**
+ * Two promises, because only one of them stays true once money changes hands.
+ *
+ * The free summary genuinely keeps nothing: the details are used, the answer is
+ * returned, and nothing touches a disk. That sentence is a real part of the
+ * offer -- it is why somebody hands over a birth moment at all -- so it is not
+ * watered down to cover a case most visitors never reach.
+ *
+ * A purchase is different and has to say so. The reading is saved, and the
+ * reading has the buyer's birth date and place printed on it, so keeping the
+ * document keeps the details. Storing only the rendered file and claiming
+ * nothing was kept would be true in a database and false in the world.
+ *
+ * Said BEFORE the card, never after. A privacy sentence that appears once
+ * somebody is already committed reads as something you hoped they would miss.
+ *
+ * One function rather than two strings loose in the file, for the same reason
+ * P-1 keeps prices in one module: a promise written in two places is a promise
+ * that will eventually disagree with itself.
+ */
 export const PRIVACY_NOTE =
   "Your birth details are used to compute the chart and then discarded. They are not stored, " +
   "not logged, and not written to disk at any point.";
+
+export const PRIVACY_NOTE_PAID =
+  "Your birth details are used to make your reading and then discarded. The reading itself is " +
+  "saved so it can be delivered to you — your link is active for 6 days.";
+
+/** Tier 0 is the free summary; anything above it is bought and is kept. */
+export function privacyFor(tier: number): string {
+  return tier > 0 ? PRIVACY_NOTE_PAID : PRIVACY_NOTE;
+}
 
 export const FOOTER = {
   disclaimer:

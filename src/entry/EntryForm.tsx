@@ -3,7 +3,7 @@ import BirthDateField from "./BirthDateField";
 import PlaceField, { type Place } from "./PlaceField";
 import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
-import { ENTRY, PRIVACY_NOTE, SITE } from "../copy";
+import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
 import { warmEngine } from "./warm";
 
@@ -52,6 +52,17 @@ function Rule({ label, done }: { label: string; done?: boolean }) {
     </div>
   );
 }
+
+/**
+ * Which promise this form is allowed to make.
+ *
+ * This is the summary path, tier 0, and tier 0 genuinely keeps nothing. The
+ * paid paths pass their own tier and get the sentence that is true for them --
+ * the seam is here rather than added later, because a privacy sentence chosen
+ * by hand at three call sites is one that will eventually be wrong at one of
+ * them.
+ */
+const TIER = 0;
 
 type State =
   | { at: "asking" }
@@ -159,7 +170,7 @@ export default function EntryForm() {
           {place ? `, ${place.label}` : ""}
         </h2>
         <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-          {PRIVACY_NOTE}
+          {privacyFor(TIER)}
         </p>
         <div className="mt-6 max-w-[46rem]">
           <Summary data={state.summary} />
@@ -243,7 +254,7 @@ export default function EntryForm() {
             {state.at === "working" ? "Working…" : "My summary"}
           </button>
           <p className="mt-3 max-w-[52ch] text-[14px] leading-relaxed text-brand-muted">
-            {PRIVACY_NOTE}
+            {privacyFor(TIER)}
           </p>
         </div>
       </form>
