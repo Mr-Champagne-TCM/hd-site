@@ -85,5 +85,11 @@ test("a phone number is collected, and consent is asked for separately", () => {
   // Consent is asked as its own question rather than assumed from the purchase.
   // Delivering to a buyer and marketing to them are different permissions, and
   // for SMS in the US the difference has a price on it.
-  assert.equal(p.consent_collection.promotions, "auto");
+  // Consent collection is off until Stripe's extra terms are accepted in the
+  // dashboard -- asking for it without that makes the session fail to create.
+  assert.equal(p.consent_collection, undefined);
+  // Not decoration: in payment mode a consent answer has nothing to attach to
+  // without a customer, and the session fails to create at all. It is also what
+  // D-9c needs to key an upgrade credit to an earlier purchase.
+  assert.equal(p.customer_creation, "always");
 });

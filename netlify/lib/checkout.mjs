@@ -81,7 +81,44 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
      * being worked out afterwards, or found out the hard way.
      */
     phone_number_collection: { enabled: true },
-    consent_collection: { promotions: "auto" },
+    /**
+     * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
+     *
+     * Switching it on broke checkout outright, live, and the button reported
+     * only "the payment page did not open". Stripe's actual answer, found in
+     * the function log rather than guessed at a second time:
+     *
+     *   To set `consent_collection.promotions`, please visit
+     *   dashboard.stripe.com/settings/checkout to agree to the Terms of
+     *   Service.
+     *
+     * That is a terms agreement and belongs to the account holder, not to
+     * whoever is editing this file. Restore the line below once it is accepted:
+     *
+     *     consent_collection: { promotions: "auto" },
+     *
+     * Until then the phone and email are still collected -- delivery needs
+     * them (D-7) -- but nobody is asked about marketing, and NOBODY MAY BE
+     * MARKETED TO on the strength of having bought something. Delivery consent
+     * and marketing consent are different permissions (D-9), and the absence of
+     * the question is not a yes.
+     */
+    /**
+     * A customer record every time, and it is REQUIRED rather than tidy.
+     *
+     * In payment mode Stripe creates a customer only `if_required`, and a
+     * consent answer has nothing to attach to without one -- so asking for
+     * consent while leaving this at its default makes the whole session fail
+     * to create. That is exactly what happened: the buy button reported "the
+     * payment page did not open", live, with no clue as to why, because the
+     * Stripe error is logged rather than shown.
+     *
+     * It is also the thing D-9c needs. Credit at upgrade is keyed to the email
+     * on the earlier purchase, and looking that up means the earlier purchase
+     * has to be attached to a customer rather than floating loose. Same record
+     * is the contact list.
+     */
+    customer_creation: "always",
     // The buyer types a discount code on Stripe's page, not ours. We never
     // validate a code, never count redemptions, and never hold one (D-8).
     allow_promotion_codes: true,
