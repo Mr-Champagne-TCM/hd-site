@@ -11,3 +11,15 @@
   node_bundler = "esbuild"
 
 # The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
+
+# A delivered reading is served by the single-page app, so /r/<token> has to
+# return index.html rather than a 404 -- there is no file at that path and there
+# never will be. The token is read from the address bar by main.tsx.
+#
+# Scoped to /r/* rather than a catch-all: a blanket SPA fallback would turn
+# every genuine 404 into a silent 200 with an offer page in it, which is how a
+# broken link stops looking broken.
+[[redirects]]
+  from = "/r/*"
+  to = "/index.html"
+  status = 200
