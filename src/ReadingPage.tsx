@@ -87,7 +87,7 @@ export default function ReadingPage({ token }: { token: string }) {
     };
   }, [token]);
 
-  const shell = "mx-auto max-w-3xl px-6 pb-28 pt-16 sm:px-8";
+  const shell = "page-bottom mx-auto max-w-3xl px-6 pt-16 sm:px-8";
 
   if (state.at === "loading") {
     return (

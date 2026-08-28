@@ -14,3 +14,24 @@ body {
   background-attachment: fixed;
   min-height: 100vh;
 }
+
+/*
+  ROOM UNDER THE LAST THING ON A PAGE.
+
+  Reported twice, on two different pages: "site bottom is scrolled and the
+  bottom text looks crowded... crowded near my ask bar", and then "on chart
+  page, at bottom, text is crowded at bottom. Check all pages for this."
+
+  A phone's browser chrome and gesture bar own the last inch of the screen, so
+  a page whose final line ends flush with its own container ends underneath
+  them. The offer page never showed it because a footer sat below everything;
+  /r/<token> has no footer, so the form and the reading each end the page
+  themselves.
+
+  ONE CLASS RATHER THAN A NUMBER PER PAGE, because "check all pages for this"
+  is a fault that recurs every time a new page is added. env() is zero on a
+  desktop and real on a phone with a gesture bar.
+*/
+.page-bottom {
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+}

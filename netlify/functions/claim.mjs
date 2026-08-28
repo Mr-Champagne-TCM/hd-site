@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { paidLevel } from "../lib/checkout.mjs";
 import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
-import { mintReadingLink, saveReading } from "../lib/reading.mjs";
+import { mintReadingLink, nameCase, saveReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
@@ -120,7 +120,16 @@ export default async (request) => {
   if (url && buyer.email && process.env.RESEND_API_KEY) {
     const { subject, html, text } = deliveryEmail({
       tier: level,
-      name: buyer.name,
+      /**
+       * THE CAPITALISED NAME, the same one the store keeps.
+       *
+       * saveReading runs `nameCase` on the way in, so the reading page and the
+       * form both say "Asdf Asdf". This email was reading Stripe's raw
+       * `customer_details.name` a few lines above and said "Hello asdf asdf,"
+       * -- the one surface that skipped the rule, because it had the raw value
+       * in hand and never asked the store for the tidy one.
+       */
+      name: nameCase(buyer.name),
       url,
       links: SITE,
       // Always pending here. This email goes out the moment the card clears,

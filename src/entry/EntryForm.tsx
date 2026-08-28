@@ -252,7 +252,7 @@ export default function EntryForm({
     return (
       <section
         id="yours"
-        className="mx-auto max-w-3xl px-6 pb-28 pt-20 sm:px-8"
+        className="page-bottom mx-auto max-w-3xl px-6 pt-20 sm:px-8"
       >
         <h2 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
           {name ? `${name}’s Human Design` : "Your Human Design"}
@@ -334,7 +334,7 @@ export default function EntryForm({
     <section
       ref={section}
       id="yours"
-      className="mx-auto max-w-5xl px-6 pt-20 sm:px-8"
+      className="page-bottom mx-auto max-w-5xl px-6 pt-20 sm:px-8"
     >
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {readingToken && name ? `${name}, your birth details` : ENTRY.title}

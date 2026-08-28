@@ -296,8 +296,7 @@ function Footer() {
     // whatever the specific device says it needs on top -- which is zero on a
     // desktop and real on a phone with a gesture bar.
     <footer
-      className="mt-24 border-t border-brand-gold/15 pb-24 pt-11"
-      style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+      className="page-bottom mt-24 border-t border-brand-gold/15 pt-11"
     >
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
         <p className="max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
