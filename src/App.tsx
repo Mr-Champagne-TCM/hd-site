@@ -126,14 +126,30 @@ function Tiers() {
   };
   return (
     <section className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
+      {/*
+        The invitation leads, and the label follows.
+
+        "If you'd like to see your own" used to introduce the form at the foot of
+        the page. It is the strongest line on the page and it belongs here, above
+        the prices, where it turns three cards from a menu into an answer to a
+        question somebody is already asking.
+
+        "Three ways in" keeps its job -- naming what the cards are -- at the size
+        that job deserves. It stops being the headline and becomes the label,
+        which is what it was doing anyway.
+      */}
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {TIERS_INTRO.title}
+        {TIERS_INTRO.lead}
       </h2>
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
         {TIERS_INTRO.body}
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <p className="mt-10 font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal">
+        {TIERS_INTRO.title}
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {rows.map(({ tier, full, due, credit }, level) => (
           <div
             key={tier.sku}

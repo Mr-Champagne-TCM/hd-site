@@ -155,7 +155,20 @@ export const EXAMPLE = {
     "Yours would be your own, and would say so if the time were missing.",
 };
 
+/**
+ * The line that does the funnelling, and where it now sits.
+ *
+ * "If you'd like to see your own" was introducing the entry form at the bottom
+ * of the page. Jeremy's call: it is the strongest invitation on the page and it
+ * belongs ABOVE the prices, where it turns three cards from a menu into an
+ * answer to a question somebody is already asking.
+ *
+ * "Three ways in" is not discarded -- it still has a job, naming what the three
+ * cards ARE. It just stops being the headline and becomes the label, which is
+ * what it was doing all along.
+ */
 export const TIERS_INTRO = {
+  lead: "If you’d like to see your own",
   title: "Three ways in",
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   body:
@@ -175,7 +188,12 @@ export const LADDER_NOTE =
   "Nobody is charged twice for the same start.";
 
 export const ENTRY = {
-  title: "If you’d like to see your own",
+  /**
+   * Plainer than it was, because the invitation moved up to the prices. This
+   * heading is a caption on a form now rather than the page's pitch -- and the
+   * whole section is on its way out, once entry lives behind a signed link.
+   */
+  title: "Your birth details",
   body:
     "Three things are needed: the date, the place, and the time if it is known. " +
     "An unknown time is welcome — the chart is cast at noon and says so plainly, " +
