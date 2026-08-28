@@ -124,8 +124,60 @@ test("a test naming a paid tier is NOT caught - it proves the door is shut", () 
 });
 
 test("paid content in the repo is caught", () => {
-  assert.equal(scan({ "src/a.js": plant("const svg = data.bodygraph", "Svg;\n") }).blocked, true);
   assert.equal(scan({ "src/a.js": plant('const t = data["interpret', 'ation"];\n') }).blocked, true);
+  assert.equal(scan({ "src/a.js": plant('const t = data["activ', 'ations"];\n') }).blocked, true);
+});
+
+/**
+ * THE RULE WAS NARROWED, so here is exactly what it now does and does not do.
+ *
+ * It used to match the bare identifier `bodygraphSvg`, which made the chart
+ * tier unbuildable -- the page has to name the field to display the drawing,
+ * so the client, the type and the bundle all carry the word by necessity. A
+ * rule that fires on the only possible spelling of a required feature is one
+ * that gets skipped, and a skipped rule protects nothing.
+ *
+ * Narrowed with negatives in ALL FOUR positions the name has to appear in,
+ * because a narrowing checked in one place is a narrowing that turns out to be
+ * wider than anybody looked.
+ */
+test("a field CARRYING a drawing is still caught", () => {
+  const line = plant('{"bodygraph', 'Svg": "<svg viewBox=1></svg>"}\n');
+  assert.equal(scan({ "src/a.js": line }).blocked, true);
+  assert.equal(scan({ "netlify/f.mjs": line }).blocked, true);
+});
+
+test("the field NAME alone is not caught, in any of the four places it must appear", () => {
+  const uses = {
+    "src/Summary.tsx": plant("  bodygraph", "Svg?: unknown;\n"),
+    "src/entry/EntryForm.tsx": plant("if (d.bodygraph", "Svg !== undefined) show();\n"),
+    "netlify/lib/handler.mjs": plant("// upstream may carry bodygraph", "Svg\n"),
+    "test/x.test.mjs": plant("assert.ok(body.bodygraph", "Svg);\n"),
+  };
+  for (const [path, body] of Object.entries(uses)) {
+    const r = scan({ [path]: body });
+    assert.equal(r.blocked, false, path + " was blocked: " + r.output);
+  }
+});
+
+test("a rendered chart committed as a file is caught", () => {
+  // The renderer's own viewBox. The drawing is Jeremy's design and D-10 makes
+  // it the one global look, so a render in a public repo hands the whole
+  // appearance to anyone who clones it. This caught a real one: a 188 KB
+  // sample was on its way into test/fixtures as a test fixture.
+  const render = plant('<svg viewBox="-120 -12 ', '1090 1330"><circle r="13"/></svg>\n');
+  for (const path of ["test/fixtures/bodygraph.svg", "src/chart.svg", "dist/assets/x.svg"]) {
+    assert.equal(scan({ [path]: render }).blocked, true, path + " slipped through");
+  }
+});
+
+test("a chart-shaped svg that is NOT ours is not caught", () => {
+  // The layout is public knowledge on every Human Design site. This rule is
+  // about OUR drawing, identified by our viewBox, not about SVG in general.
+  assert.equal(
+    scan({ "src/icon.svg": '<svg viewBox="0 0 100 100"><circle r="13"/></svg>\n' }).blocked,
+    false,
+  );
 });
 
 test("an unlock switch is caught", () => {

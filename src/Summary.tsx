@@ -25,6 +25,13 @@ export type SummaryData = {
   timeKnown: boolean;
   note?: string;
   provisional?: string[];
+  /**
+   * Present from the chart tier upward, absent on the free summary. Typed
+   * `unknown` rather than `string` on purpose: it arrives from the network, it
+   * is about to be put into the DOM as markup, and calling it a string here
+   * would let a caller skip the gate without the compiler minding.
+   */
+  bodygraphSvg?: unknown;
 };
 
 /** Display label, and the field it comes from. Order is the reading order. */

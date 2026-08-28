@@ -122,10 +122,36 @@ const RULES = [
   {
     id: "paid-content",
     why: "paid content sitting in a public repo",
-    // Not \b-anchored around the quoted forms: \b before a quote can never
-    // match, because a word boundary needs a word character on one side. The
+    // Not word-anchored around the quoted forms: a word boundary before a
+    // quote can never match, needing a word character on one side. The
     // first draft of this rule was unfireable and its test caught it.
-    re: /\bbodygraphSvg\b|["']interpretation["']|["']activations["']/,
+    //
+    // NARROWED, with evidence. It used to match the bare identifier
+    // `bodygraphSvg`, which made the chart tier unbuildable: the page has to
+    // name the field to display the drawing, so the client, the type and the
+    // bundle all carry the word by necessity. A rule that fires on the only
+    // possible spelling of a required feature is a rule that gets skipped, and
+    // a skipped rule protects nothing.
+    //
+    // A NAME IS NOT CONTENT. What must never be committed is the field
+    // carrying an actual drawing, which the value form below catches, and a
+    // render sitting in the tree as a file, which is the rule after this one.
+    // Both are about bytes, not identifiers.
+    re: /["']bodygraphSvg["']\s*:\s*["']\s*<svg|["']interpretation["']|["']activations["']/,
+  },
+  {
+    id: "rendered-chart",
+    why: "a rendered bodygraph committed to a public repo",
+    // The picture is Jeremy's design -- the palette, the three-tier lighting,
+    // the solved label positions -- and D-10 makes it the single global look
+    // for the product. The chart LAYOUT is public knowledge on every Human
+    // Design site; the DRAWING of it is not, and a committed render hands the
+    // whole appearance to anyone who clones the repo.
+    //
+    // Matched on the renderer's own viewBox, which is specific to this drawing
+    // and appears in every render. This caught a real one: a 188 KB sample was
+    // about to go in as a test fixture.
+    re: /viewBox\s*=\s*["']-120 -12 1090 1330["']/,
   },
   {
     id: "unlock-switch",

@@ -3,6 +3,7 @@ import BirthDateField from "./BirthDateField";
 import PlaceField, { type Place } from "./PlaceField";
 import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
+import Bodygraph from "../Bodygraph";
 import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
 import { TIERS } from "../../shared/pricing.mjs";
@@ -206,6 +207,23 @@ export default function EntryForm() {
         <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
           {privacyFor(TIER)}
         </p>
+        {/*
+          The picture comes BEFORE the table, when there is one.
+
+          It is what was bought at this tier, and it is the thing somebody
+          recognises as their chart. The summary is the caption. On the free
+          tier the field is absent and nothing renders here at all -- no
+          placeholder, no empty frame, no hint of a locked feature. A greyed
+          box saying "chart" is an advert wearing a product's clothes.
+        */}
+        {state.summary.bodygraphSvg !== undefined && (
+          <div className="mt-6 max-w-[46rem]">
+            <Bodygraph
+              svg={state.summary.bodygraphSvg}
+              alt={`Bodygraph for ${humanDate(date)}${place ? `, ${place.label}` : ""}`}
+            />
+          </div>
+        )}
         <div className="mt-6 max-w-[46rem]">
           <Summary data={state.summary} />
         </div>
