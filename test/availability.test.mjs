@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { SELLABLE_MAX_LEVEL, sellable } from "../shared/availability.mjs";
 import { TIERS } from "../shared/pricing.mjs";
 import { sessionParams } from "../netlify/lib/checkout.mjs";
@@ -11,10 +12,29 @@ import { sessionParams } from "../netlify/lib/checkout.mjs";
  * that cannot be handed over.
  */
 
-test("only the summary is sellable today", () => {
+test("the summary and the chart are sellable; the reading is not", () => {
   assert.equal(sellable(0), true);
-  assert.equal(sellable(1), false, "the chart has no drawing yet");
-  assert.equal(sellable(2), false, "the reading has no interpretation yet");
+  // Raised 2026-08-28. The chart tier promises "a page you can share and a PDF
+  // you keep" and both now exist: /r/<token> renders the drawing, /api/pdf
+  // builds it from the same SVG with the font embedded.
+  assert.equal(sellable(1), true);
+  assert.equal(sellable(2), false, "the reading still has no interpretation");
+});
+
+test("THE THING THAT MAKES THE CHART SELLABLE ACTUALLY EXISTS", () => {
+  // The ceiling is a promise about deliverability, so it is worth checking
+  // against the deliverable rather than against itself. If the PDF builder or
+  // its fonts ever go missing, this fails before somebody pays for a download
+  // that 404s.
+  const here = new URL("../", import.meta.url);
+  for (const f of [
+    "netlify/lib/readingPdf.mjs",
+    "netlify/functions/pdf.mjs",
+    "netlify/lib/fonts/Outfit-400.ttf",
+    "netlify/lib/fonts/Outfit-600.ttf",
+  ]) {
+    assert.ok(existsSync(new URL(f, here)), `${f} is missing, so tier 1 is not deliverable`);
+  }
 });
 
 test("nonsense levels are not sellable", () => {
@@ -37,10 +57,11 @@ test("the unsellable tiers still exist and still have prices", () => {
 });
 
 test("the ceiling is a number that can be raised, not a special case", () => {
-  // A regression guard with a purpose: when the bodygraph lands and this
-  // becomes 1, this test should fail and be updated deliberately -- rather
-  // than the ceiling being quietly bypassed somewhere else.
-  assert.equal(SELLABLE_MAX_LEVEL, 0);
+  // A regression guard with a purpose, and it did its job: raising the ceiling
+  // to 1 failed this test, which is how the change got made deliberately
+  // rather than the ceiling being quietly bypassed somewhere else. It should
+  // fail again when the interpretation lands and this becomes 2.
+  assert.equal(SELLABLE_MAX_LEVEL, 1);
   for (let level = 0; level < TIERS.length; level += 1) {
     assert.equal(sellable(level), level <= SELLABLE_MAX_LEVEL);
   }
