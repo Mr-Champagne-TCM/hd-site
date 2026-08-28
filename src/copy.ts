@@ -157,11 +157,19 @@ export const EXAMPLE = {
 
 export const TIERS_INTRO = {
   title: "Three ways in",
+  notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   body:
     "The price is here before anything is asked of you, and what you have already paid comes off " +
     "what you pay next. Every route to the full reading costs the same in the end.",
 };
 
+/**
+ * What is said on a tier that cannot be delivered yet.
+ *
+ * Honest about the reason rather than vague about the timing. "Coming soon" is
+ * a promise with a date hidden in it; this says what is missing and does not
+ * pretend to know when.
+ */
 export const LADDER_NOTE =
   "Straight to the reading, or a step at a time — the total is identical either way. " +
   "Nobody is charged twice for the same start.";

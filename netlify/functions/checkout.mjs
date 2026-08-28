@@ -2,6 +2,7 @@ import { sessionParams } from "../lib/checkout.mjs";
 import { createSession } from "../lib/stripe.mjs";
 import { readGrant } from "../lib/grant.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
+import { sellable } from "../../shared/availability.mjs";
 
 /**
  * POST /api/checkout -- start a purchase.
@@ -36,6 +37,25 @@ export default async (request) => {
   const level = Number(body?.level);
   if (!Number.isInteger(level) || level < 0 || level >= TIERS.length) {
     return json(400, { error: { code: "bad_tier", message: "That is not something on offer." } });
+  }
+
+  /**
+   * Refused here, not hidden on the page.
+   *
+   * The buy buttons post a tier number, and anyone can post that number by
+   * hand -- so the page not offering a chart is not the same as a chart not
+   * being purchasable. This is the block. Everything the page does about it is
+   * decoration on top.
+   */
+  if (!sellable(level)) {
+    console.log(`POST /api/checkout -> 409 (tier ${level} not sellable yet)`);
+    return json(409, {
+      error: {
+        code: "not_yet",
+        message:
+          "That one is not ready to buy yet. Nothing was charged — the summary is available now.",
+      },
+    });
   }
 
   // What they already own, taken from the grant and nowhere else. A grant that

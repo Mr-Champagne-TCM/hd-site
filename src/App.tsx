@@ -2,6 +2,7 @@ import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE
 import { useState } from "react";
 import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
 import { startCheckout } from "./purchase";
+import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
 import EntryForm from "./entry/EntryForm";
 
@@ -157,6 +158,18 @@ function Tiers() {
               does nothing" was exactly right. mt-auto pins the button to the
               bottom so three cards of different heights still line up.
             */}
+            {/*
+              Only the summary can be delivered today, so only the summary is
+              offered. Said in words rather than shown as a dead grey button:
+              a control that does nothing is a worse answer than a sentence.
+              The refusal itself lives in the checkout function -- see
+              shared/availability.mjs.
+            */}
+            {!sellable(level) ? (
+              <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">
+                {TIERS_INTRO.notYet}
+              </p>
+            ) : (
             <button
               type="button"
               disabled={busy !== null}
@@ -165,6 +178,7 @@ function Tiers() {
             >
               {busy === tier.sku ? "Opening…" : `Buy ${tier.label.replace(/^The /, "the ")}`}
             </button>
+            )}
             {failed?.sku === tier.sku && (
               <p className="mt-2 text-[14px] leading-snug text-brand-gold">{failed.message}</p>
             )}
