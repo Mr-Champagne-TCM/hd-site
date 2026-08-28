@@ -62,6 +62,26 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
 
   return {
     mode: "payment",
+    /**
+     * A phone number, and a recorded answer about being contacted.
+     *
+     * Stripe always collects an email -- it needs one for the receipt -- so that
+     * arrives whether or not it is asked for. The phone does not, and Stripe has
+     * no optional mode: switching this on makes it REQUIRED, which is friction
+     * on a small purchase and was accepted deliberately.
+     *
+     * It has a purchase use rather than being a pretext: D-7 delivers by email
+     * OR TEXT, and both go to the details on the purchase.
+     *
+     * `consent_collection` is the part that matters later. Delivering to
+     * somebody who bought is one thing; marketing to them is a different thing
+     * legally, and for SMS in the US it is a different thing with a price on it.
+     * Asking once, here, means the contact list arrives already sorted into who
+     * may be marketed to and who may only be delivered to -- rather than that
+     * being worked out afterwards, or found out the hard way.
+     */
+    phone_number_collection: { enabled: true },
+    consent_collection: { promotions: "auto" },
     // The buyer types a discount code on Stripe's page, not ours. We never
     // validate a code, never count redemptions, and never hold one (D-8).
     allow_promotion_codes: true,

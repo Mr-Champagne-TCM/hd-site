@@ -78,3 +78,12 @@ test("a 100%-off session still counts as paid", () => {
   // paid path are the same path, so testing one tests the other.
   assert.equal(paidLevel({ payment_status: "paid", amount_total: 0, metadata: { level: "2" } }), 2);
 });
+
+test("a phone number is collected, and consent is asked for separately", () => {
+  const p = sessionParams({ level: 0, origin: "https://x" });
+  assert.equal(p.phone_number_collection.enabled, true);
+  // Consent is asked as its own question rather than assumed from the purchase.
+  // Delivering to a buyer and marketing to them are different permissions, and
+  // for SMS in the US the difference has a price on it.
+  assert.equal(p.consent_collection.promotions, "auto");
+});
