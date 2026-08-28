@@ -198,7 +198,7 @@ export default function ClockDial({
           key={`${radius}-${v}`}
           className={
             "pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 select-none text-[15px] " +
-            (active(v) ? "font-semibold text-[#0b1428]" : "text-brand-paper/80")
+            (active(v) ? "font-semibold text-[#1a1040]" : "text-brand-paper/80")
           }
           style={{ left: `${(x / SIZE) * 100}%`, top: `${(y / SIZE) * 100}%` }}
         >
@@ -217,12 +217,12 @@ export default function ClockDial({
     // Wide enough for two digits at this size. The first version was 3.2rem with px-3 and CLIPPED them -- "12" rendered as half a 1 and half a 2.
     "w-[4.6rem] rounded-xl px-1 py-2 text-[34px] leading-none tabular-nums outline-none transition-colors " +
     (on
-      ? "bg-brand-gold text-[#0b1428]"
-      : "bg-white/[0.06] text-brand-paper hover:bg-white/[0.10]");
+      ? "bg-brand-gold text-[#1a1040]"
+      : "bg-brand-violet/30 text-brand-paper hover:bg-brand-violet/45");
 
   const meridiemButton = (on: boolean) =>
     "rounded-lg px-3 py-2 text-[15px] font-semibold transition-colors " +
-    (on ? "bg-brand-gold text-[#0b1428]" : "bg-white/[0.06] text-brand-muted hover:text-brand-paper");
+    (on ? "bg-brand-gold text-[#1a1040]" : "bg-brand-violet/30 text-brand-paper/80 hover:text-brand-paper");
 
   return (
     <div
@@ -242,13 +242,13 @@ export default function ClockDial({
         role="dialog"
         aria-modal="true"
         aria-label="Time of birth"
-        className="w-[min(92vw,22rem)] max-h-[92vh] overflow-y-auto rounded-2xl border border-brand-gold/30 bg-ground-top p-5 shadow-2xl"
+        className="w-[min(92vw,22rem)] max-h-[92vh] overflow-y-auto rounded-2xl border border-brand-gold/35 bg-gradient-to-b from-ground-mid to-ground-bottom p-5 shadow-2xl"
       >
         <div className="flex items-baseline justify-between">
           <p className="font-sans text-[13px] uppercase tracking-[0.16em] text-brand-muted">
             Time of birth
           </p>
-          <div className="inline-flex rounded-lg bg-white/[0.06] p-0.5">
+          <div className="inline-flex rounded-lg bg-brand-violet/30 p-0.5">
             {([12, 24] as const).map((c) => (
               <button
                 key={c}
@@ -256,7 +256,7 @@ export default function ClockDial({
                 onClick={() => changeClock(c)}
                 className={
                   "rounded-md px-2 py-1 text-[12px] font-semibold transition-colors " +
-                  (clock === c ? "bg-brand-gold text-[#0b1428]" : "text-brand-muted")
+                  (clock === c ? "bg-brand-gold text-[#1a1040]" : "text-brand-muted")
                 }
               >
                 {c === 12 ? "12h" : "24h"}
@@ -312,7 +312,7 @@ export default function ClockDial({
         {/* The face. Square by aspect ratio so it scales with the panel. */}
         <div
           ref={dialRef}
-          className="relative mx-auto mt-4 aspect-square w-full max-w-[16rem] touch-none rounded-full bg-white/[0.04]"
+          className="relative mx-auto mt-4 aspect-square w-full max-w-[16rem] touch-none rounded-full bg-brand-violet/25"
           onPointerDown={(e) => {
             dragging.current = true;
             (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -385,7 +385,7 @@ export default function ClockDial({
           <button
             type="button"
             onClick={commit}
-            className="rounded-full bg-brand-gold px-5 py-2.5 text-[15px] font-semibold text-[#0b1428]"
+            className="rounded-full bg-brand-gold px-5 py-2.5 text-[15px] font-semibold text-[#1a1040]"
           >
             Set
           </button>

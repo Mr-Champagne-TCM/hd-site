@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BirthDateField from "./BirthDateField";
 import PlaceField, { type Place } from "./PlaceField";
 import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
 import { ENTRY, PRIVACY_NOTE, SITE } from "../copy";
 import { humanDate } from "./birthDate";
+import { warmEngine } from "./warm";
 
 /**
  * The way in.
@@ -64,6 +65,41 @@ export default function EntryForm() {
   const [timeKnown, setTimeKnown] = useState<boolean | null>(null);
   const [time, setTime] = useState("");
   const [state, setState] = useState<State>({ at: "asking" });
+
+  /**
+   * Wake the engine when the form is OFFERED, not when it is touched.
+   *
+   * Asked for directly: "ready at load to start typing, not after click into
+   * field". Warming on first touch still spent the cold start on somebody who
+   * was already there -- they answer the date and reach the place field within
+   * seconds, and the machine is still starting.
+   *
+   * Scrolling this section into view happens well before any of that, and it is
+   * the earliest moment that still means something: a visitor who never reaches
+   * the form never wakes anything, and neither does a crawler that only reads
+   * the top of the page. Firing on page load would wake it for both.
+   */
+  const section = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = section.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      // No observer to lean on: wake it now rather than not at all.
+      warmEngine();
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          warmEngine();
+          io.disconnect();
+        }
+      },
+      // A little before it arrives, so the head start is real.
+      { rootMargin: "400px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // TimeField hands back a complete 24-hour "HH:MM" or an empty string, so
   // there is nothing to re-validate here -- a second opinion about the same
@@ -155,7 +191,7 @@ export default function EntryForm() {
     "focus:ring-2 focus:ring-brand-teal/40";
 
   return (
-    <section id="yours" className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
+    <section ref={section} id="yours" className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {ENTRY.title}
       </h2>
