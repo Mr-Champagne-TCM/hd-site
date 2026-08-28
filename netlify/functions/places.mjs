@@ -19,6 +19,31 @@ import { getStore } from "@netlify/blobs";
 /** The index is a fixed file, so an answer is good until the file changes. */
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * A cache in FRONT of the cache, and the measurement that put it there.
+ *
+ * Measured against the live site: the engine answers in about 100ms, a Blobs
+ * cache HIT costs 380-450ms, and a miss 480-700ms. So the durable cache was
+ * saving roughly 150ms while spending 200ms of its own to do it -- the round
+ * trip to the blob store had become most of what a lookup cost.
+ *
+ * This map lives in the function instance and is checked first. A warm instance
+ * answers from memory with no store call at all. It is small, per-instance, and
+ * lost when the instance recycles, which is exactly right for a cache whose
+ * source of truth is a fixed file: losing it costs one slow lookup.
+ *
+ * Bounded, because a map that only grows is a leak with a friendly name.
+ */
+const MEMORY_MAX = 500;
+const memory = new Map();
+
+function remember(key, places) {
+  // Oldest out first. Map preserves insertion order, so the first key is the
+  // least recently added.
+  if (memory.size >= MEMORY_MAX) memory.delete(memory.keys().next().value);
+  memory.set(key, places);
+}
+
 /** Generous, because this is keystrokes rather than purchases. */
 const PER_HOUR = 600;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -26,7 +51,7 @@ const WINDOW_MS = 60 * 60 * 1000;
 export default async (request, context) => {
   const url = new URL(request.url);
   const raw = (url.searchParams.get("q") || "").trim();
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 8, 1), 20);
+  const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 8, 1), 40);
 
   if (!raw) return json(200, { places: [] });
   // Long enough to be a typo, not long enough to be an attack.
@@ -57,9 +82,16 @@ export default async (request, context) => {
   const cacheKey = `${version}|${raw.toLowerCase()}|${limit}`;
   const cache = getStore({ name: "places-cache", consistency: "eventual" });
 
+  // Memory first. This is the whole point of the layer above.
+  const remembered = memory.get(cacheKey);
+  if (remembered) {
+    return json(200, { places: remembered }, { "X-Cache": "memory" });
+  }
+
   try {
     const hit = await cache.get(cacheKey, { type: "json" });
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      remember(cacheKey, hit.places);
       return json(200, { places: hit.places }, { "X-Cache": "hit" });
     }
   } catch {
@@ -113,6 +145,7 @@ export default async (request, context) => {
   }
 
   const places = Array.isArray(payload?.places) ? payload.places : [];
+  remember(cacheKey, places);
   try {
     await cache.setJSON(cacheKey, { at: Date.now(), places });
   } catch {

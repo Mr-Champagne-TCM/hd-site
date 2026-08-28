@@ -87,7 +87,11 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
     allow_promotion_codes: true,
     // Where they land afterwards. The session id is how the page claims what
     // was bought -- see claim.mjs for why that is safe.
-    success_url: `${origin}/?paid={CHECKOUT_SESSION_ID}`,
+    // The anchor is load-bearing. Without it a buyer lands at the TOP of the
+    // page while the confirmation renders inside the form far below, so a
+    // payment that worked looks like a payment that vanished. Reported as
+    // "no way to tell this was successful by looking back at the site".
+    success_url: `${origin}/?paid={CHECKOUT_SESSION_ID}#yours`,
     cancel_url: `${origin}/#yours`,
     line_items: [
       {

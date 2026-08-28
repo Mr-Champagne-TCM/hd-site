@@ -78,7 +78,14 @@ const answers = new Map<string, Place[]>();
  * Adding a character can only ever REMOVE matches, so a cached shorter prefix
  * already contains every answer still standing.
  *
- * The guard that matters: a cached list was capped at `limit`, so it is not
+ * Twenty-five are asked for rather than eight, and that is what makes this work
+ * rather than merely exist. Narrowing a cached list can only find what the
+ * cached list contains, so a short prefix capped at eight almost never had the
+ * town still being typed -- the narrowing returned nothing and every keystroke
+ * waited on the network anyway. A wider first answer costs nothing extra to
+ * fetch and makes the local narrowing succeed for the rest of the word.
+ *
+ * The guard that matters: a cached list is still capped, so it is not
  * guaranteed complete. "w" returns eight towns and Wichita Falls need not be
  * among them. An empty filter therefore means "I do not know", NOT "no such
  * town" -- so nothing is shown in that case and the field keeps saying it is
@@ -144,7 +151,7 @@ export default function PlaceField({
     // bursts without ever making the field feel like it is waiting.
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/places?q=${encodeURIComponent(q)}&limit=8`);
+        const res = await fetch(`/api/places?q=${encodeURIComponent(q)}&limit=25`);
         const body = await res.json();
         // An answer that arrived late must not overwrite a newer one.
         if (mine !== seq.current) return;
@@ -227,7 +234,12 @@ export default function PlaceField({
         maxHeight: box.maxHeight,
       }}
     >
-      {results.map((p) => (
+      {/*
+        Twenty-five are FETCHED so the local narrowing has something to work
+        with; eight are SHOWN, because a dropdown of twenty-five towns is a
+        list nobody reads. The extra seventeen are working memory, not content.
+      */}
+      {results.slice(0, 8).map((p) => (
         <li key={`${p.label}|${p.zone}`}>
           <button
             type="button"
@@ -251,7 +263,7 @@ export default function PlaceField({
           </button>
         </li>
       ))}
-      {results.length === 0 && (
+      {results.slice(0, 8).length === 0 && (
         <li className="px-4 py-3 text-[15px] text-brand-muted">
           {searching ? "Looking…" : "No town by that name yet — another spelling may find it."}
         </li>

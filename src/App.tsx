@@ -189,14 +189,21 @@ function Tiers() {
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {LADDER_NOTE}
       </p>
-      {/* The cards used to be inert -- "I cannot tell how to get into the
-          reading" was exactly right, because there was nowhere to go. */}
-      <a
-        href="#yours"
-        className="mt-6 inline-block rounded-full bg-brand-teal px-6 py-3.5 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
-      >
-        Start with the summary &mdash; {money(SUMMARY.cents)}
-      </a>
+      {/*
+        The standalone call to action is gone, deliberately.
+
+        It said "Start with the summary" at a price and linked to #yours -- the
+        form immediately below it. Pressing it moved nobody anywhere, and it
+        quoted a price for something the form beneath was handing over free.
+        Reported as circular routing, and it was.
+
+        The cards above already carry the purchase, and the form below already
+        introduces itself. A third control that duplicates one and points at the
+        other is not a path in, it is a loop.
+
+        It comes back when PAYWALL is on and the two are no longer the same
+        thing -- at which point it can honestly be the buy button.
+      */}
     </section>
   );
 }
