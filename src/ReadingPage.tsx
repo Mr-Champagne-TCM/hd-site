@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import Summary, { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
-import { SITE } from "./copy";
 
 /** The forwarding address, never the personal inbox (D-12). */
 const CONTACT = "hd-readings@thechampagnemethod.co";
-import { startCheckout } from "./purchase";
 import EntryForm from "./entry/EntryForm";
+import ReadingActions, { Resend } from "./ReadingActions";
 
 /**
  * What a delivery link opens.
@@ -88,7 +87,7 @@ export default function ReadingPage({ token }: { token: string }) {
     };
   }, [token]);
 
-  const shell = "mx-auto max-w-3xl px-6 py-16 sm:px-8";
+  const shell = "mx-auto max-w-3xl px-6 pb-28 pt-16 sm:px-8";
 
   if (state.at === "loading") {
     return (
@@ -102,7 +101,9 @@ export default function ReadingPage({ token }: { token: string }) {
     return (
       <div className={shell}>
         <h1 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-          {state.expired ? "This link has finished its six days" : "That link could not be opened"}
+          {state.expired
+            ? "This link has finished its six days"
+            : "That link could not be opened"}
         </h1>
         <div className="mt-5 max-w-[60ch]">
           <Panel>{state.message}</Panel>
@@ -133,8 +134,9 @@ export default function ReadingPage({ token }: { token: string }) {
         {state.expired && (
           <div className="mt-8 max-w-[60ch]">
             <p className="text-[16px] leading-relaxed text-brand-muted">
-              A fresh one can be sent right now — to the address on your purchase, and only there.
-              As many times as you need, for the whole year.
+              A fresh one can be sent right now — to the address on your
+              purchase, and only there. As many times as you need, for the whole
+              year.
             </p>
             <div className="mt-4">
               <Resend token={token} />
@@ -171,7 +173,13 @@ export default function ReadingPage({ token }: { token: string }) {
   if (reading.pending) {
     return (
       <div className="mx-auto max-w-3xl">
-        <EntryForm readingToken={token} tier={reading.tier} name={reading.name} />
+        <EntryForm
+          readingToken={token}
+          tier={reading.tier}
+          name={reading.name}
+          upgrade={reading.upgrade}
+          canResend={reading.canResend}
+        />
       </div>
     );
   }
@@ -197,7 +205,9 @@ export default function ReadingPage({ token }: { token: string }) {
         <div className="mt-8">
           <Bodygraph
             svg={reading.output.bodygraphSvg}
-            alt={reading.name ? `${reading.name}’s bodygraph` : "Your bodygraph"}
+            alt={
+              reading.name ? `${reading.name}’s bodygraph` : "Your bodygraph"
+            }
           />
         </div>
       )}
@@ -206,130 +216,11 @@ export default function ReadingPage({ token }: { token: string }) {
         <Summary data={reading.output} />
       </div>
 
-      <ReadingLinks reading={reading} token={token} />
+      <ReadingActions
+        token={token}
+        upgrade={reading.upgrade}
+        canResend={reading.canResend}
+      />
     </div>
-  );
-}
-
-/**
- * Everything under the reading: the two library links, the upgrade, the
- * re-send. D-11 names all three and they belong together, because they are the
- * answer to the same question -- what now?
- */
-function ReadingLinks({ reading, token }: { reading: Reading; token: string }) {
-  return (
-    <div className="mt-12 space-y-10 border-t border-brand-gold/15 pt-10">
-      <section>
-        <h2 className="font-display text-[20px] font-medium text-brand-paper">
-          Making sense of it
-        </h2>
-        <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-          Both free in the library, and written for exactly this moment.
-        </p>
-        <p className="mt-3 space-x-5">
-          {/*
-            rel="noreferrer" on every outbound link. The token is in this page's
-            address bar, and a Referer header would hand it to whatever is on
-            the other end. It is our own site either way, which is precisely why
-            it would go unnoticed.
-          */}
-          <a
-            href={SITE.hd101}
-            rel="noreferrer"
-            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
-          >
-            Human Design, plainly
-          </a>
-          <a
-            href={SITE.bodygraph}
-            rel="noreferrer"
-            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
-          >
-            Reading your bodygraph
-          </a>
-        </p>
-      </section>
-
-      {reading.upgrade && (
-        <section>
-          <h2 className="font-display text-[20px] font-medium text-brand-paper">
-            If you would like the rest of it
-          </h2>
-          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-            {reading.upgrade.label} goes further, and what you have already paid comes off what you
-            pay next.
-          </p>
-          <button
-            type="button"
-            onClick={() => startCheckout(reading.upgrade!.level)}
-            className="mt-4 rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
-          >
-            {reading.upgrade.label}
-          </button>
-        </section>
-      )}
-
-      {reading.canResend && <Resend token={token} framed />}
-    </div>
-  );
-}
-
-/**
- * "Send it to me."
- *
- * NOT "send it to". The address is never typed here and never sent from here --
- * it is the one on the purchase, chosen by the server (D-9). That single word
- * is the whole difference between a convenience and a way to have somebody
- * else's reading mailed to you.
- */
-function Resend({ token, framed = false }: { token: string; framed?: boolean }) {
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
-
-  async function send() {
-    setState("sending");
-    try {
-      const res = await fetch("/api/resend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      setState(res.ok ? "sent" : "failed");
-    } catch {
-      setState("failed");
-    }
-  }
-
-  return (
-    <section>
-      {framed && (
-        <>
-          <h2 className="font-display text-[20px] font-medium text-brand-paper">Keeping it</h2>
-          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-            This link is active for six days. Your reading is kept for a year, so it can be sent
-            again whenever you need it — to the address on your purchase, and only there.
-          </p>
-        </>
-      )}
-      {state === "sent" ? (
-        <p className="mt-4 text-[16px] text-brand-teal">
-          On its way. It goes to the address you bought it with.
-        </p>
-      ) : (
-        <button
-          type="button"
-          onClick={send}
-          disabled={state === "sending"}
-          className="mt-4 rounded-full border border-brand-teal/50 px-5 py-2.5 font-sans text-[15px] text-brand-teal transition-colors hover:bg-brand-teal/10 disabled:opacity-50"
-        >
-          {state === "sending" ? "Sending…" : "Send it to me again"}
-        </button>
-      )}
-      {state === "failed" && (
-        <p className="mt-3 text-[15px] text-brand-muted">
-          That did not go through just now. Nothing has changed about your reading, and trying again
-          usually works.
-        </p>
-      )}
-    </section>
   );
 }

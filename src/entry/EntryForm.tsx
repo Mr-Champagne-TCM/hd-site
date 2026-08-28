@@ -6,6 +6,8 @@ import Summary, { type SummaryData } from "../Summary";
 import Bodygraph from "../Bodygraph";
 import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
+import { displayTime } from "./time";
+import ReadingActions from "../ReadingActions";
 import { TIERS } from "../../shared/pricing.mjs";
 import { warmEngine } from "./warm";
 import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
@@ -79,6 +81,13 @@ export type EntryProps = {
   readingToken?: string;
   tier?: number;
   name?: string | null;
+  /**
+   * Handed down from the reading page so that the screen after a submit can
+   * offer exactly what the screen after a reload offers. They were two
+   * different screens and it showed.
+   */
+  upgrade?: { level: number; label: string } | null;
+  canResend?: boolean;
 };
 
 type State =
@@ -87,7 +96,13 @@ type State =
   | { at: "done"; summary: SummaryData }
   | { at: "failed"; message: string };
 
-export default function EntryForm({ readingToken, tier = FREE_TIER, name = null }: EntryProps = {}) {
+export default function EntryForm({
+  readingToken,
+  tier = FREE_TIER,
+  name = null,
+  upgrade = null,
+  canResend = false,
+}: EntryProps = {}) {
   const [date, setDate] = useState("");
   const [place, setPlace] = useState<Place | null>(null);
   const [timeKnown, setTimeKnown] = useState<boolean | null>(null);
@@ -216,52 +231,92 @@ export default function EntryForm({ readingToken, tier = FREE_TIER, name = null 
   }
 
   if (state.at === "done") {
+    /**
+     * THE ONE TIME THE BIRTH DETAILS ARE ON SCREEN, and they are on screen from
+     * the browser's own memory rather than from anything we kept.
+     *
+     * Jeremy asked why the time was missing when the date and place were there.
+     * It was an oversight; all three are what was just typed, they are in this
+     * component's state, and none of them was stored. Reload this link and the
+     * heading is their name instead, because by then we genuinely do not know.
+     */
+    const born =
+      humanDate(date) +
+      (timeKnown === false
+        ? ", time unknown"
+        : timeReady
+          ? ` at ${displayTime(time, 12)}`
+          : "") +
+      (place ? `, ${place.label}` : "");
+
     return (
-      <section id="yours" className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
-        <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-          {humanDate(date)}
-          {place ? `, ${place.label}` : ""}
+      <section id="yours" className="mx-auto max-w-3xl px-6 pb-28 pt-20 sm:px-8">
+        <h2 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
+          {name ? `${name}’s Human Design` : "Your Human Design"}
         </h2>
-        <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
+        <p className="mt-2 font-sans text-[14px] text-brand-muted">{born}</p>
+        <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
           {privacyFor(tier)}
         </p>
-        {/*
-          The picture comes BEFORE the table, when there is one.
 
-          It is what was bought at this tier, and it is the thing somebody
-          recognises as their chart. The summary is the caption. On the free
-          tier the field is absent and nothing renders here at all -- no
-          placeholder, no empty frame, no hint of a locked feature. A greyed
-          box saying "chart" is an advert wearing a product's clothes.
+        {/*
+          The picture comes BEFORE the table, when there is one. It is what was
+          bought at this tier and the thing somebody recognises as their chart;
+          the summary is the caption. On the summary tier the field is absent
+          and nothing renders here -- no placeholder, no greyed frame. A locked
+          box is an advert wearing a product's clothes.
         */}
         {state.summary.bodygraphSvg !== undefined && (
-          <div className="mt-6 max-w-[46rem]">
+          <div className="mt-8">
             <Bodygraph
               svg={state.summary.bodygraphSvg}
-              alt={`Bodygraph for ${humanDate(date)}${place ? `, ${place.label}` : ""}`}
+              alt={name ? `${name}’s bodygraph` : "Your bodygraph"}
             />
           </div>
         )}
-        <div className="mt-6 max-w-[46rem]">
+
+        <div className="mt-8">
           <Summary data={state.summary} />
         </div>
-        <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">
-          Every word in it is explained in{" "}
-          <a
-            href={SITE.hd101}
-            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
-          >
-            Human Design, plainly
-          </a>
-          , free in the library.
-        </p>
-        <button
-          type="button"
-          onClick={() => setState({ at: "asking" })}
-          className="mt-6 text-[15px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
-        >
-          {ENTRY.restart}
-        </button>
+
+        {/*
+          A PAID READING AND A FREE ONE END DIFFERENTLY.
+
+          Somebody who paid gets the same block the reading page gives them --
+          the library links, the upgrade, the re-send -- because it is the same
+          moment and there is no reason for two answers to "what now".
+
+          Somebody on the free page gets the way back to trying another chart,
+          which is what they are there for. "Start a new chart" on a reading
+          somebody has paid for is an invitation to leave.
+        */}
+        {readingToken ? (
+          <ReadingActions
+            token={readingToken}
+            upgrade={upgrade}
+            canResend={canResend}
+          />
+        ) : (
+          <>
+            <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">
+              Every word in it is explained in{" "}
+              <a
+                href={SITE.hd101}
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+              >
+                Human Design, plainly
+              </a>
+              , free in the library.
+            </p>
+            <button
+              type="button"
+              onClick={() => setState({ at: "asking" })}
+              className="mt-6 text-[15px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+            >
+              {ENTRY.restart}
+            </button>
+          </>
+        )}
       </section>
     );
   }
@@ -272,7 +327,11 @@ export default function EntryForm({ readingToken, tier = FREE_TIER, name = null 
     "focus:ring-2 focus:ring-brand-teal/40";
 
   return (
-    <section ref={section} id="yours" className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
+    <section
+      ref={section}
+      id="yours"
+      className="mx-auto max-w-5xl px-6 pt-20 sm:px-8"
+    >
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {readingToken && name ? `${name}, your birth details` : ENTRY.title}
       </h2>
@@ -287,7 +346,9 @@ export default function EntryForm({ readingToken, tier = FREE_TIER, name = null 
       )}
       {!readingToken && purchase?.ok !== true && owned && (
         <p className="mt-5 rounded-xl border border-brand-teal/25 bg-brand-teal/[0.05] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
-          {TIERS[owned.level] ? `You have ${TIERS[owned.level].label.replace(/^The /, "the ")}` : "Purchase held"}
+          {TIERS[owned.level]
+            ? `You have ${TIERS[owned.level].label.replace(/^The /, "the ")}`
+            : "Purchase held"}
           , paid for on this device. It stays with this tab.
         </p>
       )}

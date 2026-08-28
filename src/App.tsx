@@ -284,7 +284,21 @@ function Resources() {
 
 function Footer() {
   return (
-    <footer className="mt-24 border-t border-brand-gold/15 py-11">
+    // ROOM UNDERNEATH, and it is not decoration.
+    //
+    // Reported on a phone: "site bottom is scrolled and the bottom text looks
+    // crowded... the lowest text is crowded near my ask bar." A phone's browser
+    // chrome, gesture bar and any keyboard-adjacent UI all sit in the last
+    // inch of the screen, and a page whose last line ends flush with its own
+    // footer ends underneath them.
+    //
+    // pb-24 on the footer buys that inch, and the safe-area inset adds
+    // whatever the specific device says it needs on top -- which is zero on a
+    // desktop and real on a phone with a gesture bar.
+    <footer
+      className="mt-24 border-t border-brand-gold/15 pb-24 pt-11"
+      style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+    >
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
         <p className="max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
           {FOOTER.disclaimer}
