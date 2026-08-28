@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { MONTHS, clampDay, daysInMonth, toIso, typedDate } from "./birthDate";
 import { warmEngine } from "./warm";
+import Picker from "./Picker";
 
 /**
  * A birth date, which is not the same problem as a date.
@@ -9,12 +10,21 @@ import { warmEngine } from "./warm";
  * somebody born in 1983 a calendar costs three navigations to reach a date they
  * know by heart.
  *
- * Native selects rather than custom columns, deliberately. They satisfy the
- * rules by construction rather than by code that could get them wrong: a select
- * opens ALREADY SCROLLED to its current value, it is the OS picker on a phone,
- * it takes keyboard and screen readers for free, and there is no scroll
- * position to compute. The app's custom columns exist because Compose has no
- * equivalent; the browser does.
+ * CUSTOM PICKERS, NOT NATIVE SELECTS -- reversed on 2026-08-28, Jeremy's call.
+ *
+ * The argument for native used to sit here, and it was a good one: a select
+ * opens already scrolled to its value, takes keyboard and screen readers for
+ * free, and costs no code. What it missed is that a select is THREE controls
+ * wearing one name -- a grey list on desktop, a bottom wheel on iOS, a white
+ * dialog on Android -- and none of them can be styled, because the OS draws
+ * the options and CSS cannot reach them. Three appearances of the same field,
+ * none of them his.
+ *
+ * So the behaviours native gave away are earned back by hand in Picker.tsx:
+ * opening scrolled to the current value, arrows and Enter and Escape,
+ * type-ahead, a listbox role, closing on an outside touch, and never being
+ * clipped by the screen edge. That list is the specification, and it is why
+ * this was more work than it looked.
  *
  * The month is NAMED. `06/07` is June 7 in the US and 6 July nearly everywhere
  * else -- a named month means that ambiguity cannot arise here at all.
@@ -126,65 +136,47 @@ export default function BirthDateField({
       </legend>
 
       <div className="grid grid-cols-[1.4fr_0.8fr_1fr] gap-2">
-        <label>
-          <span className="sr-only">Month</span>
-          <select
-            className={select(month !== null)}
-            value={month ?? NONE}
-            onChange={(e) => {
-              warmEngine();
-              const v = e.target.value;
-              commit(year, v === NONE ? null : Number(v), day);
-            }}
-          >
-            <option value={NONE}>&mdash;</option>
-            {MONTHS.map((name, i) => (
-              <option key={name} value={i + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Picker
+          label="Month"
+          placeholder="—"
+          value={month === null ? "" : String(month)}
+          options={MONTHS.map((name, i) => ({
+            value: String(i + 1),
+            label: name,
+            // Three months across needs the short form to fit; the full name
+            // stays as the label so type-ahead still matches what people read.
+            short: name.slice(0, 3),
+          }))}
+          columns={3}
+          onChange={(v) => {
+            warmEngine();
+            commit(year, v === "" ? null : Number(v), day);
+          }}
+        />
 
-        <label>
-          <span className="sr-only">Day</span>
-          <select
-            className={select(day !== null)}
-            value={day ?? NONE}
-            onChange={(e) => {
-              warmEngine();
-              const v = e.target.value;
-              commit(year, month, v === NONE ? null : Number(v));
-            }}
-          >
-            <option value={NONE}>&mdash;</option>
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Picker
+          label="Day"
+          placeholder="—"
+          value={day === null ? "" : String(day)}
+          options={days.map((d) => ({ value: String(d), label: String(d) }))}
+          columns={6}
+          onChange={(v) => {
+            warmEngine();
+            commit(year, month, v === "" ? null : Number(v));
+          }}
+        />
 
-        <label>
-          <span className="sr-only">Year</span>
-          <select
-            className={select(year !== null)}
-            value={year ?? NONE}
-            onChange={(e) => {
-              warmEngine();
-              const v = e.target.value;
-              commit(v === NONE ? null : Number(v), month, day);
-            }}
-          >
-            <option value={NONE}>&mdash;&mdash;&mdash;&mdash;</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Picker
+          label="Year"
+          placeholder="————"
+          value={year === null ? "" : String(year)}
+          options={years.map((y) => ({ value: String(y), label: String(y) }))}
+          columns={4}
+          onChange={(v) => {
+            warmEngine();
+            commit(v === "" ? null : Number(v), month, day);
+          }}
+        />
       </div>
 
       {/*
