@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { TIERS } from "../../shared/pricing.mjs";
+import { sellable } from "../../shared/availability.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 import {
   AUTHORITY_NOTES,
@@ -370,7 +371,9 @@ function glancePage(doc, { output, tier }) {
    *
    * No imperative: it describes where the thing is and stops.
    */
-  const next = TIERS[tier + 1];
+  // Not for a tier that cannot be bought yet. A PDF is kept and re-read; an
+  // offer inside one outlives the moment it was true.
+  const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
   if (next) {
     const boxY = Math.min(y + 22, PAGE.h - 150);
     doc
@@ -383,7 +386,7 @@ function glancePage(doc, { output, tier }) {
       .fontSize(10)
       .fillColor(INK)
       .text(
-        `${next.label} adds ${lowerFirst(next.blurb)} It is offered on the page your chart ` +
+        `${next.label} contains ${lowerFirst(next.blurb)} It is offered on the page your chart ` +
           "came from — the one the link in your email opens — and what you have already paid " +
           "comes off the price there. Started anywhere else it begins at full, and nobody " +
           "should pay twice for the same thing.",

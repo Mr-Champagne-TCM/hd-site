@@ -228,6 +228,73 @@ function Zoom({
     gesture.current = pointers.current.size ? centroid() : null;
   }
 
+  /**
+   * ZOOM TO A POINT, keeping whatever is under it under it.
+   *
+   * `px`/`py` are relative to the surface. The drawing's left edge sits at
+   * (w - drawW)/2 + offset.x, so the fraction of the drawing under the cursor is
+   * (px - left)/drawW; holding that fraction still across a scale change gives
+   * the new offset directly. Passing the centre makes it an ordinary zoom, which
+   * is what the buttons do.
+   */
+  function zoomTo(nextRaw: number, px?: number, py?: number) {
+    const { w, h } = view();
+    if (!(w > 0 && h > 0)) return;
+    const next = clampScale(nextRaw);
+    const curW = w * scale;
+    const curH = curW / ASPECT;
+    const nxtW = w * next;
+    const nxtH = nxtW / ASPECT;
+    const ax = px ?? w / 2;
+    const ay = py ?? h / 2;
+    const left = (w - curW) / 2 + offset.x;
+    const top = (h - curH) / 2 + offset.y;
+    const u = curW ? (ax - left) / curW : 0.5;
+    const v = curH ? (ay - top) / curH : 0.5;
+    const ox = ax - u * nxtW - (w - nxtW) / 2;
+    const oy = ay - v * nxtH - (h - nxtH) / 2;
+    setScale(next);
+    setOffset(clamp(ox, oy, next, w, h, ASPECT));
+  }
+
+  /**
+   * THE WHEEL IS OURS WHILE THIS IS OPEN.
+   *
+   * Reported after the viewer finally opened: "ctrl + scroll zooms whole page
+   * and it gets weird". It did -- ctrl+wheel is the browser's own page zoom, and
+   * nothing here was stopping it, so the chart and the entire interface scaled
+   * together against a fixed overlay.
+   *
+   * Attached with `passive: false` through an effect rather than as onWheel,
+   * because React's synthetic wheel handler is registered passively and
+   * preventDefault() inside it does nothing at all. This is the one case where
+   * the listener has to be added by hand.
+   *
+   * Every wheel event over the surface is swallowed, ctrl or not: a plain scroll
+   * has nowhere to go behind a full-screen overlay, and letting it through is
+   * how a page ends up scrolled somewhere else when the viewer closes.
+   */
+  useEffect(() => {
+    const el = surface.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      // Trackpads report small deltas continuously and mice report ~100 at a
+      // time; exponentiating the delta makes both feel the same and keeps the
+      // step proportional, so zooming out is the exact inverse of zooming in.
+      const step = Math.exp(-e.deltaY / 320);
+      zoomTo(scale * step, e.clientX - rect.left, e.clientY - rect.top);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  });
+
+  function reset() {
+    setScale(MIN_SCALE);
+    setOffset({ x: 0, y: 0 });
+  }
+
   const { w, h } = view();
   const ready = w > 0 && h > 0;
   const drawW = w * scale;
@@ -242,11 +309,8 @@ function Zoom({
         onPointerMove={move}
         onPointerUp={up}
         onPointerCancel={up}
-        onDoubleClick={() => {
-          // A way back for a mouse, which cannot pinch.
-          setScale(MIN_SCALE);
-          setOffset({ x: 0, y: 0 });
-        }}
+        // A way back for a mouse, which cannot pinch.
+        onDoubleClick={reset}
       >
         {ready && (
           <div
@@ -265,7 +329,7 @@ function Zoom({
       </div>
 
       <p className="pointer-events-none absolute left-5 top-4 font-sans text-[12px] text-brand-muted">
-        Pinch to zoom, drag to move
+        Pinch or scroll to zoom, drag to move
       </p>
       <button
         type="button"
@@ -274,11 +338,47 @@ function Zoom({
       >
         Done
       </button>
-      {scale > MIN_SCALE && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 font-sans text-[12px] text-brand-muted">
+      {/*
+        CONTROLS, because a pinch is not available to everybody. A mouse without
+        a wheel, a trackpad somebody has never scrolled on, a keyboard user --
+        all of them had no way to zoom at all, which Jeremy reported as "no zoom
+        in / out controls available for not ctrl+scroll".
+
+        The reading is on the same row as the buttons rather than floating
+        separately, so what the numbers mean is beside the thing that changes
+        them.
+      */}
+      <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-brand-gold/25 bg-[#0E1A2B]/90 px-2 py-1.5">
+        <button
+          type="button"
+          aria-label="Zoom out"
+          disabled={scale <= MIN_SCALE}
+          onClick={() => zoomTo(scale / 1.4)}
+          className="h-9 w-9 rounded-full font-sans text-[20px] leading-none text-brand-gold disabled:opacity-30"
+        >
+          −
+        </button>
+        <span className="min-w-[5.5rem] text-center font-sans text-[12px] tabular-nums text-brand-muted">
           {scale.toFixed(1)}× of {MAX_SCALE}×
-        </p>
-      )}
+        </span>
+        <button
+          type="button"
+          aria-label="Zoom in"
+          disabled={scale >= MAX_SCALE}
+          onClick={() => zoomTo(scale * 1.4)}
+          className="h-9 w-9 rounded-full font-sans text-[20px] leading-none text-brand-gold disabled:opacity-30"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          disabled={scale <= MIN_SCALE}
+          onClick={reset}
+          className="ml-1 rounded-full px-3 py-1.5 font-sans text-[13px] text-brand-teal disabled:opacity-30"
+        >
+          Fit
+        </button>
+      </div>
     </div>
   );
 }

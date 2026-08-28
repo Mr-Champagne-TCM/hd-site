@@ -105,11 +105,22 @@ test("the upgrade NAMES the tier and what is in it, never 'the rest of it'", () 
   // as familiar with what they are getting until they get it in hand. We have
   // been swimming in this topic so we know all too well what 'it' is. Pretend
   // they don't."
-  for (const [tier, next] of [[0, "The chart"], [1, "The reading"]]) {
-    const { text } = build(tier, "J");
-    assert.ok(text.includes(next), `tier ${tier} does not name the next tier`);
-    assert.doesNotMatch(text, /the rest of it/i, `tier ${tier} still says "the rest of it"`);
-  }
+  //
+  // ONLY FOR A TIER THAT CAN ACTUALLY BE BOUGHT. This used to check tier 1 ->
+  // "The reading" too, and it passed while the offer page said in plain words
+  // that the reading is not ready and the checkout function refused to sell it.
+  // A test can assert a promise the product cannot keep; this one did.
+  const { text } = build(0, "J");
+  assert.ok(text.includes("The chart"), "the summary email does not name the chart");
+  assert.doesNotMatch(text, /the rest of it/i, 'the summary email still says "the rest of it"');
+});
+
+test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", () => {
+  // The reading does not exist yet. An email is the one surface nobody can
+  // correct after the fact, so it must not carry an offer that will be refused.
+  const { text, html } = build(1, "J");
+  assert.doesNotMatch(text, /comes off what you pay next/, "the chart email offered the reading");
+  assert.doesNotMatch(html, /comes off what you pay next/, "the chart email offered the reading");
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {
@@ -316,4 +327,20 @@ test("a network failure and a timeout are both answers", async () => {
     },
   );
   assert.deepEqual(slow, { ok: false, reason: "timeout" });
+});
+
+test("the library block is labelled as RESOURCES, so it reads as free tools", () => {
+  // Jeremy: the heading alone made the two links look load-bearing -- like
+  // something needed to use the reading rather than something free beside it.
+  const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: true });
+  assert.match(mail.html, /Resources &mdash; free in the library/i);
+  assert.match(mail.text, /RESOURCES — free in the library/);
+});
+
+test("the next tier CONTAINS its parts, it does not add them", () => {
+  // "adds" asks the reader to compute a delta against what they are holding.
+  const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: false });
+  const all = mail.html + mail.text;
+  assert.match(all, /contains/);
+  assert.ok(!/adds/.test(all), "the upgrade line still says 'adds'");
 });

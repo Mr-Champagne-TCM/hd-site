@@ -1,4 +1,5 @@
 import { TIERS } from "../../shared/pricing.mjs";
+import { sellable } from "../../shared/availability.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -111,9 +112,17 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
   // a useless thing to search for.
   const subject = `Your Human Design ${word}`;
 
-  const upgradeLine = top
+  // Nor for a tier that cannot be bought yet -- see readingHandler. An email
+  // is the one surface nobody can correct after the fact.
+  const upgradeLine = top || !sellable(tier + 1)
     ? null
-    : `${TIERS[tier + 1]?.label ?? "The next step"} adds ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
+    /**
+     * "CONTAINS", NOT "ADDS". Jeremy's note, and he is right: "adds" describes
+     * a delta somebody has to compute against what they are holding. The next
+     * tier is a thing in its own right, and this sentence is the only place
+     * they meet it.
+     */
+    : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
       `The same link has it, and what you have already paid comes off what you pay next — ` +
       `nobody pays twice for the same thing.`;
 
@@ -138,7 +147,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
     `${action}:`,
     url,
     "",
-    "Two pieces in the library, free, written for exactly this moment:",
+    "RESOURCES — free in the library, written for exactly this moment:",
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? [upgradeLine, ""] : []),
     ...(pending
@@ -165,7 +174,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false }) {
   <tr><td style="padding:0 0 26px">${button(url, action)}</td></tr>
 
   <tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">
-    Free in the library
+    Resources &mdash; free in the library
   </td></tr>
   ${RESOURCES.map(
     ([href, title, blurb]) => `<tr><td style="padding:0 0 16px">

@@ -293,7 +293,20 @@ export default function EntryForm({
           which is what they are there for. "Start a new chart" on a reading
           somebody has paid for is an invitation to leave.
         */}
-        {readingToken ? (
+        {/*
+          THE FORM IS ONLY EVER REACHED WITH A TOKEN NOW.
+
+          There used to be a second ending here, for the offer page's free
+          chart: library links and "Start a new chart". Both are gone with the
+          free chart itself -- Jeremy's call on the same day, and "no more start
+          new chart... they can go back to the webpage any way and start again".
+
+          `readingToken` is still checked rather than assumed. A missing token
+          here would mean somebody reached this component by a route that no
+          longer exists, and a page with no way forward is a better answer than
+          one that quietly offers a free reading.
+        */}
+        {readingToken && (
           <ReadingActions
             token={readingToken}
             upgrade={upgrade}
@@ -301,26 +314,6 @@ export default function EntryForm({
             tier={tier}
             mechanics={state.summary}
           />
-        ) : (
-          <>
-            <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">
-              Every word in it is explained in{" "}
-              <a
-                href={SITE.hd101}
-                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
-              >
-                Human Design, plainly
-              </a>
-              , free in the library.
-            </p>
-            <button
-              type="button"
-              onClick={() => setState({ at: "asking" })}
-              className="mt-6 text-[15px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
-            >
-              {ENTRY.restart}
-            </button>
-          </>
         )}
       </section>
     );
@@ -338,7 +331,7 @@ export default function EntryForm({
       className="page-bottom mx-auto max-w-5xl px-6 pt-20 sm:px-8"
     >
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {readingToken && name ? `${name}, your birth details` : ENTRY.title}
+        {readingToken && name ? `${name}, enter your birth details` : ENTRY.title}
       </h2>
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
         {ENTRY.body}

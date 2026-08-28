@@ -1,10 +1,10 @@
 import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE, RESOURCES } from "./copy";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
 import { startCheckout } from "./purchase";
 import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
-import EntryForm from "./entry/EntryForm";
+import { claimIfReturning } from "./purchase";
 
 /**
  * The offer page.
@@ -325,22 +325,65 @@ function Footer() {
   );
 }
 
+/**
+ * COMING BACK FROM STRIPE.
+ *
+ * ONE DOOR PER PURCHASE. This is the fix for a fault that produced four
+ * separate symptoms in one test buy: no PDF or re-send on the result page, no
+ * second email, an emailed link that kept offering the form, and one purchase
+ * able to make unlimited charts.
+ *
+ * All four were the same thing. Stripe returned the buyer HERE, where a form
+ * ran on a browser-held "grant" -- a path that computes a chart and files it
+ * against nothing. Meanwhile their real reading sat untouched, still pending,
+ * and the link in their email kept opening a form because that is what a
+ * pending reading is.
+ *
+ * So this page no longer takes birth details from anybody. It confirms the
+ * payment and hands the browser to the reading link, which is the only place a
+ * chart is ever made. Write-once, the ready email, the PDF, the re-send and the
+ * upgrade all follow from being on that path instead of beside it.
+ *
+ * `replace` rather than `href`: the ?paid= URL is spent, and Back should reach
+ * the offer page rather than a claim that cannot be made twice.
+ */
+function PaidReturn() {
+  const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    claimIfReturning().then((r) => {
+      if (!alive || !r) return;
+      if (r.ok && r.url) {
+        window.location.replace(r.url);
+        return;
+      }
+      setProblem(
+        r.ok
+          ? "Your payment went through and your link is on its way by email. If it has not " +
+            "arrived in a few minutes, hd-readings@thechampagnemethod.co is read by Jeremy."
+          : r.message,
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <div className="page-bottom mx-auto max-w-3xl px-6 pt-20 sm:px-8">
+      <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
+        {problem ? "Your purchase is safe" : "Payment received, thank you"}
+      </h1>
+      <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
+        {problem ?? "Opening your reading…"}
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   /**
-   * SOMEBODY WHO HAS JUST PAID DOES NOT NEED THE PITCH.
-   *
-   * Reported after a real purchase: "returned me here after pay-success... wait
-   * I see the form now... so far down the page... then there is the payment
-   * received... also way down there. This needs to be more immediately shown."
-   *
-   * He is right, and scrolling to it is the wrong fix. The hero, the worked
-   * example, the credibility case and the three prices exist to answer "should
-   * I buy this". Someone arriving back from Stripe has answered it. Leaving
-   * them there and jumping the page would still make them scroll past their own
-   * purchase to find it again on a reload.
-   *
-   * So on the paid return, the pitch is NOT RENDERED. The form is the page.
-   *
    * Detected from the `?paid=` parameter Stripe returns to, read before
    * `claimIfReturning` strips it -- which is why this is captured once, at
    * mount, rather than read live.
@@ -355,13 +398,22 @@ export default function App() {
       <div className="font-sans text-brand-paper">
         <Nav />
         <main>
-          <EntryForm />
+          <PaidReturn />
         </main>
         <Footer />
       </div>
     );
   }
 
+  /**
+   * NO BIRTH FORM FOR SOMEBODY WHO HAS NOT BOUGHT ANYTHING. Jeremy: "this goes
+   * away now. only see that when they buy something."
+   *
+   * It also closes a real hole. The form ran on a grant held in the tab, and a
+   * grant does not spend -- one purchase could produce any number of charts
+   * from this page. The offer page is the pitch and the prices; the chart is
+   * made behind the signed link and nowhere else.
+   */
   return (
     <div className="font-sans text-brand-paper">
       <Nav />
@@ -369,7 +421,6 @@ export default function App() {
         <Hero />
         <Example />
         <Tiers />
-        <EntryForm />
         <Credibility />
         <Resources />
       </main>

@@ -1,5 +1,6 @@
 import { loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
+import { sellable } from "../../shared/availability.mjs";
 
 /**
  * Opening a reading link, with the store passed in.
@@ -128,7 +129,20 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
      * check cannot advertise something that does not exist -- and so the same
      * answer serves the email and the screen.
      */
-    upgrade: next < TIERS.length ? { level: next, label: TIERS[next].label } : null,
+    /**
+     * AND WHETHER IT CAN ACTUALLY BE BOUGHT. Found while reviewing the page:
+     * a chart buyer was offered a Buy button for the reading -- a tier that
+     * does not exist, that the offer page says plainly is "not ready to buy
+     * yet", and that the checkout function refuses. Pressing it produced an
+     * error, which is the worst possible place to meet one.
+     *
+     * Answered here, from the same `sellable()` the checkout enforces, so the
+     * page, the email and the PDF cannot each decide it differently.
+     */
+    upgrade:
+      next < TIERS.length
+        ? { level: next, label: TIERS[next].label, available: sellable(next) }
+        : null,
     /** Whether a re-send has anywhere to go. The address itself never leaves. */
     canResend: Boolean(reading.buyer?.email),
   });

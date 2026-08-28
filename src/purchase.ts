@@ -81,7 +81,7 @@ export async function startCheckout(level: number): Promise<string | null> {
  * not re-claim and a shared link does not carry somebody's purchase.
  */
 export async function claimIfReturning(): Promise<
-  { ok: true; level: number } | { ok: false; message: string } | null
+  { ok: true; level: number; url: string | null } | { ok: false; message: string } | null
 > {
   const url = new URL(window.location.href);
   const id = url.searchParams.get("paid");
@@ -106,7 +106,17 @@ export async function claimIfReturning(): Promise<
       };
     }
     holdGrant(body.grant);
-    return { ok: true, level: Number(body.level) };
+    /**
+     * THE READING LINK COMES BACK WITH THE GRANT, and it is the thing that
+     * matters now. `/api/claim` mints it, emails it, and returns it; the
+     * caller sends the browser there.
+     *
+     * Null only when the store refused the write. The money is taken and the
+     * grant is real, so that is a message rather than a failure -- but it is
+     * NOT a reason to fall back to a form on this page. There is no longer one
+     * to fall back to, on purpose.
+     */
+    return { ok: true, level: Number(body.level), url: typeof body.url === "string" ? body.url : null };
   } catch {
     return {
       ok: false,

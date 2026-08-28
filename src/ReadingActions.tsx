@@ -24,7 +24,7 @@ import {
  * an invitation to leave.
  */
 
-export type Upgrade = { level: number; label: string } | null;
+export type Upgrade = { level: number; label: string; available?: boolean } | null;
 
 /** "The reading" -> "the reading", so it can sit inside a sentence. */
 function lowerFirst(s: string): string {
@@ -150,13 +150,33 @@ export default function ReadingActions({
             What you have already paid comes off what you pay next — nobody pays
             twice for the same thing.
           </p>
-          <button
-            type="button"
-            onClick={() => startCheckout(upgrade.level)}
-            className="mt-4 rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
-          >
-            {upgrade.label}
-          </button>
+          {/*
+            NO BUTTON FOR A TIER THAT CANNOT BE BOUGHT.
+
+            This offered "The reading" to every chart buyer, including while the
+            offer page said in plain words that it is not ready. The button ran
+            straight into the checkout function's own refusal -- an error, at
+            the exact moment somebody was trying to give money.
+
+            The server says whether it is available; this only renders it. The
+            sentence that replaces the button is the offer page's, so the two
+            surfaces say the same thing about the same tier.
+          */}
+          {upgrade.available === false ? (
+            <p className="mt-4 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
+              It is not ready to buy yet — the written interpretation is still
+              being made. Your credit keeps, and this link is how you come back
+              to it.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => startCheckout(upgrade.level)}
+              className="mt-4 rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
+            >
+              {upgrade.label}
+            </button>
+          )}
         </section>
       )}
 

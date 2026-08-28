@@ -32,7 +32,7 @@ type Reading = {
   name: string | null;
   purchasedAt: number;
   output: SummaryData;
-  upgrade: { level: number; label: string } | null;
+  upgrade: { level: number; label: string; available?: boolean } | null;
   canResend: boolean;
 };
 
