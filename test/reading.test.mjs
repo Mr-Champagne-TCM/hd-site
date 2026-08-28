@@ -87,7 +87,112 @@ test("BIRTH DATA IS REFUSED, loudly, rather than stored quietly", async () => {
 test("a reading with no email is allowed - a re-send simply has nowhere to go", async () => {
   const store = fakeStore();
   const id = await saveReading(store, { tier: 0, output: OUTPUT });
-  assert.equal((await loadReading(store, id)).email, null);
+  assert.equal((await loadReading(store, id)).buyer.email, null);
+});
+
+/**
+ * THE FIVE THINGS KEPT ABOUT A BUYER, named by Jeremy: name, email, phone, the
+ * time of the purchase, and what was purchased. Not four, not six.
+ *
+ * Each has a job, which is why the list is asserted whole rather than
+ * field-by-field as convenient. The name is how the page says whose reading
+ * this is WITHOUT keeping a birthday -- an earlier draft of this module stored
+ * only the email and concluded the page could not be labelled at all, which was
+ * wrong, and wrong in the direction of asking for data that was never needed.
+ */
+test("the buyer is kept as exactly the five fields, and no others", async () => {
+  const store = fakeStore();
+  const now = Date.UTC(2026, 7, 28);
+  const id = await saveReading(store, {
+    tier: 1,
+    output: OUTPUT,
+    name: "Jeremy",
+    email: "buyer@example.com",
+    phone: "+15125550142",
+    sku: "hd_chart",
+    purchasedAt: now,
+    now,
+  });
+
+  const raw = store.m.get(id);
+  assert.deepEqual(Object.keys(raw.buyer).sort(), ["email", "name", "phone"]);
+  assert.equal(raw.buyer.name, "Jeremy");
+  assert.equal(raw.buyer.phone, "+15125550142");
+  assert.equal(raw.sku, "hd_chart");
+  assert.equal(raw.purchasedAt, Math.floor(now / 1000));
+
+  // Nothing else about a person got in.
+  assert.deepEqual(
+    Object.keys(raw).sort(),
+    ["buyer", "createdAt", "output", "purchasedAt", "sku", "tier", "v"],
+  );
+});
+
+test("an extra field a caller passes does not reach the store", async () => {
+  // Written field by field rather than spread, because a spread is how a field
+  // nobody meant to keep ends up kept.
+  const store = fakeStore();
+  const id = await saveReading(store, {
+    tier: 1,
+    output: OUTPUT,
+    name: "Jeremy",
+    ip: "203.0.113.9",
+    referrer: "https://example.com",
+    cardLast4: "4242",
+  });
+  const raw = store.m.get(id);
+  for (const smuggled of ["ip", "referrer", "cardLast4"]) {
+    assert.equal(smuggled in raw, false, smuggled + " reached the store");
+    assert.equal(smuggled in raw.buyer, false, smuggled + " reached the buyer block");
+  }
+});
+
+test("blank and non-string buyer fields become null rather than empty strings", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, {
+    tier: 0,
+    output: OUTPUT,
+    name: "   ",
+    email: 42,
+    phone: null,
+  });
+  assert.deepEqual((await loadReading(store, id)).buyer, { name: null, email: null, phone: null });
+});
+
+test("a reading written before the buyer block still yields its email", async () => {
+  // v1 records carried a bare `email`. An early buyer must not lose the one
+  // address a re-send could go to because the shape moved on.
+  const store = fakeStore();
+  const id = newReadingId();
+  store.m.set(id, {
+    v: 1,
+    tier: 1,
+    output: OUTPUT,
+    email: "early@example.com",
+    createdAt: Math.floor(Date.now() / 1000),
+  });
+  const back = await loadReading(store, id);
+  assert.equal(back.buyer.email, "early@example.com");
+  assert.equal(back.buyer.name, null);
+});
+
+test("the year runs from the PURCHASE, not from when the record was written", async () => {
+  // A reading re-rendered after a fix keeps its purchase date. Measuring from
+  // createdAt would silently hand that buyer another year.
+  const store = fakeStore();
+  const bought = Date.UTC(2026, 0, 1);
+  const rerendered = bought + 300 * 24 * 60 * 60 * 1000;
+  const id = await saveReading(store, {
+    tier: 1,
+    output: OUTPUT,
+    purchasedAt: bought,
+    now: rerendered,
+  });
+
+  const stillInside = bought + (READING_TTL_SECONDS - 60) * 1000;
+  const past = bought + (READING_TTL_SECONDS + 60) * 1000;
+  assert.ok(await loadReading(store, id, stillInside), "died before its year was up");
+  assert.equal(await loadReading(store, id, past), null, "outlived its year by inheriting a later write");
 });
 
 // --- who can reach it ------------------------------------------------------
@@ -172,7 +277,7 @@ test("A DEAD LINK DOES NOT KILL THE READING - that is what a re-send is for", as
   assert.equal(readReadingLink(link, SECRET, wayLater).reason, "expired", "the link should be long dead");
   const still = await loadReading(store, id, wayLater);
   assert.ok(still, "the reading died with its link, which is the wrong lifetime");
-  assert.equal(still.email, "b@example.com", "and the address to re-send to must survive too");
+  assert.equal(still.buyer.email, "b@example.com", "and the address to re-send to must survive too");
 });
 
 test("a reading past its year is not served, even though it is still in the bucket", async () => {

@@ -11,10 +11,9 @@ import { open as openSealed, seal } from "./sig.mjs";
  * date, no time, no place, no coordinates. Those are used to compute and then
  * they are gone.
  *
- * That is a real promise with a real cost, and the cost should be named rather
- * than discovered: a kept reading CANNOT say whose it is or what moment it was
- * cast for, because we did not keep that. The page shows a chart, not a chart
- * labelled with somebody's birthday.
+ * A kept reading therefore cannot say what MOMENT it was cast for, and it does
+ * not need to. It is labelled by the buyer's name, which came from the purchase
+ * and not from the chart. "Jeremy's reading" needs no birthday attached to it.
  *
  * The activations in a stored reading are, in principle, invertible back to a
  * birth moment of about fifteen minutes -- not a place. That is why the privacy
@@ -22,10 +21,17 @@ import { open as openSealed, seal } from "./sig.mjs";
  * unrecoverable. Storing the outputs is not the same as storing the inputs, and
  * it is not the same as storing nothing either.
  *
- * WHAT IDENTIFIES A BUYER. The email on the purchase, per D-9, kept beside the
- * reading so a re-send has somewhere to go. It is the one piece of personal
- * data here and it exists for exactly one purpose: sending this reading back to
- * the person who bought it. Never to an address supplied in a request.
+ * WHAT IS KEPT ABOUT THE BUYER, named by Jeremy and kept complete rather than
+ * whittled down: name, email, phone, the time of the purchase and what was
+ * purchased. Nothing else, and specifically nothing about the birth moment.
+ *
+ * That list is not an oversight to be trimmed later -- each entry has a job. The
+ * email is where a re-send goes (D-9, and never to an address supplied in a
+ * request). The phone is where a text goes when texting exists. The name is how
+ * the page can say whose reading this is WITHOUT keeping a birthday, which is
+ * the whole reason the labelling problem is not a problem. The time and the
+ * purchase type are the receipt: what was bought, when, so that an upgrade
+ * knows what has already been paid for.
  *
  * TWO CLOCKS, and they are different on purpose (D-9d). The LINK is short --
  * six days -- because a link is a bearer token and anyone holding it is the
@@ -59,7 +65,10 @@ const ID = /^[0-9a-f]{32}$/;
  * here: a field this module does not know about is a field a later tier will
  * want, and the failure mode of choosing is silently losing something.
  */
-export async function saveReading(store, { tier, output, email, now = Date.now() }) {
+export async function saveReading(
+  store,
+  { tier, output, name, email, phone, sku, purchasedAt, now = Date.now() },
+) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
   if (!output || typeof output !== "object") throw new Error("saveReading: no output");
 
@@ -75,10 +84,31 @@ export async function saveReading(store, { tier, output, email, now = Date.now()
     v: 1,
     tier,
     output,
-    email: typeof email === "string" && email ? email : null,
+    // The buyer, as five fields and no more. Written explicitly rather than by
+    // spreading whatever the caller passed: a spread is how an extra field
+    // arrives in a store nobody meant to put it in, which is exactly the
+    // failure the birth-data guard above exists to prevent.
+    buyer: {
+      name: str(name),
+      email: str(email),
+      phone: str(phone),
+    },
+    // What was bought and when. `purchasedAt` comes from the payment and is the
+    // one that matters for the year-long promise; `createdAt` is when this
+    // record was written, which is usually seconds later and occasionally is
+    // not -- a reading re-rendered after a fix keeps its purchase date.
+    sku: str(sku),
+    purchasedAt: Number.isFinite(purchasedAt) ? Math.floor(purchasedAt / 1000) : Math.floor(now / 1000),
     createdAt: Math.floor(now / 1000),
   });
   return id;
+}
+
+/** Empty string, whitespace and anything that is not a string all become null. */
+function str(v) {
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 /**
@@ -99,10 +129,22 @@ export async function loadReading(store, id, now = Date.now()) {
   if (!raw || typeof raw !== "object") return null;
   if (!Number.isInteger(raw.tier) || !raw.output) return null;
 
-  const age = Math.floor(now / 1000) - (raw.createdAt ?? 0);
-  if (age > READING_TTL_SECONDS) return null;
+  // Measured from the PURCHASE, not from when the record happened to be
+  // written. The year belongs to what was bought; re-rendering a reading must
+  // not quietly extend it, and must not shorten it either.
+  const bought = raw.purchasedAt ?? raw.createdAt ?? 0;
+  if (Math.floor(now / 1000) - bought > READING_TTL_SECONDS) return null;
 
-  return { tier: raw.tier, output: raw.output, email: raw.email ?? null, createdAt: raw.createdAt ?? 0 };
+  return {
+    tier: raw.tier,
+    output: raw.output,
+    // v1 records written before the buyer block existed carried a bare `email`.
+    // Read both, so an early reading does not lose the one address it has.
+    buyer: raw.buyer ?? { name: null, email: raw.email ?? null, phone: null },
+    sku: raw.sku ?? null,
+    purchasedAt: bought,
+    createdAt: raw.createdAt ?? 0,
+  };
 }
 
 /**
