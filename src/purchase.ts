@@ -115,3 +115,40 @@ export async function claimIfReturning(): Promise<
     };
   }
 }
+
+/**
+ * What is currently owned, read straight off the held grant.
+ *
+ * FOR DISPLAY ONLY. The payload is base64url JSON and is not encrypted -- it
+ * does not need to be, because it is SIGNED: editing it invalidates it, and the
+ * server checks that signature on every request. So the page may read it to
+ * decide what to say, and may never rely on it to decide what to hand over.
+ *
+ * This exists because a purchase was invisible after a reload. The grant
+ * survived, the entitlement was intact, and there was nothing on screen saying
+ * so -- which is the worst version: right state, wrong display, and no way for
+ * the person who paid to tell the difference.
+ */
+export function ownedNow(now: number = Date.now()): { level: number; expiresAt: number } | null {
+  const token = heldGrant();
+  if (!token) return null;
+  const body = token.split(".")[0];
+  if (!body) return null;
+  try {
+    const json = JSON.parse(
+      atob(body.replace(/-/g, "+").replace(/_/g, "/")),
+    ) as { t?: unknown; x?: unknown };
+    const level = typeof json.t === "number" ? json.t : null;
+    const exp = typeof json.x === "number" ? json.x * 1000 : 0;
+    if (level === null || exp <= now) {
+      // Expired grants are cleared rather than displayed. A grant lives about an
+      // hour; saying "you own this" about one that the server will refuse is
+      // worse than saying nothing.
+      if (exp <= now) dropGrant();
+      return null;
+    }
+    return { level, expiresAt: exp };
+  } catch {
+    return null;
+  }
+}

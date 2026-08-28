@@ -5,8 +5,9 @@ import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
 import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
+import { TIERS } from "../../shared/pricing.mjs";
 import { warmEngine } from "./warm";
-import { claimIfReturning, heldGrant } from "../purchase";
+import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
 
 /**
  * The way in.
@@ -93,8 +94,20 @@ export default function EntryForm() {
   const [purchase, setPurchase] = useState<
     { ok: true; level: number } | { ok: false; message: string } | null
   >(null);
+  /**
+   * What is owned right now, which OUTLIVES the banner.
+   *
+   * The banner is driven by the ?paid= parameter, and that parameter is
+   * stripped on first load so a reload cannot re-claim. Reported exactly as it
+   * behaved: "I got a payment received banner, but I clicked refresh and it
+   * went away." The entitlement was fine; nothing on screen said so.
+   */
+  const [owned, setOwned] = useState(() => ownedNow());
   useEffect(() => {
-    claimIfReturning().then((r) => r && setPurchase(r));
+    claimIfReturning().then((r) => {
+      if (r) setPurchase(r);
+      setOwned(ownedNow());
+    });
   }, []);
 
   /**
@@ -234,6 +247,12 @@ export default function EntryForm() {
       {purchase?.ok === true && (
         <p className="mt-5 rounded-xl border border-brand-teal/40 bg-brand-teal/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
           Payment received, thank you. Your details below, and it is yours.
+        </p>
+      )}
+      {purchase?.ok !== true && owned && (
+        <p className="mt-5 rounded-xl border border-brand-teal/25 bg-brand-teal/[0.05] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
+          {TIERS[owned.level] ? `You have ${TIERS[owned.level].label.replace(/^The /, "the ")}` : "Purchase held"}
+          , paid for on this device. It stays with this tab.
         </p>
       )}
       {purchase?.ok === false && (
