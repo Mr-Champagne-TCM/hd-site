@@ -1,8 +1,17 @@
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
+import QRCode from "qrcode";
 import { TIERS } from "../../shared/pricing.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
-import { AUTHORITY_NOTES, STRATEGY_NOTES, TYPE_NOTES, describe } from "./mechanics.mjs";
+import {
+  AUTHORITY_NOTES,
+  NOT_SELF_NOTES,
+  PROFILE_NOTES,
+  SIGNATURE_NOTES,
+  STRATEGY_NOTES,
+  TYPE_NOTES,
+  describe,
+} from "./mechanics.mjs";
 
 /**
  * The chart tier's PDF, in the app's format.
@@ -53,7 +62,21 @@ const PAGE = { w: 612, h: 792 };
 const M = 56;
 const COL = PAGE.w - M * 2;
 
-export function readingPdf({ tier, name, output, links }) {
+export async function readingPdf({ tier, name, output, links }) {
+  /**
+   * The QR, drawn as vector rather than raster so it stays crisp at any size
+   * and costs a few hundred bytes. The app has one beside the same link; a
+   * printed page cannot be clicked, and retyping a URL from paper is a thing
+   * nobody does.
+   */
+  const guide = links?.bodygraph ?? "https://thechampagnemethod.co/library/bodygraph/";
+  let qr = null;
+  try {
+    qr = await QRCode.toString(guide, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
+  } catch {
+    /* a missing QR is a page without a QR, never a failed download */
+  }
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: [PAGE.w, PAGE.h],
@@ -81,7 +104,7 @@ export function readingPdf({ tier, name, output, links }) {
     doc.registerFont("body", OUTFIT_400);
     doc.registerFont("bold", OUTFIT_600);
 
-    chartPage(doc, { name, output, links });
+    chartPage(doc, { name, output, links, qr });
     doc.addPage();
     glancePage(doc, { output, tier });
 
@@ -114,7 +137,7 @@ function footer(doc, page) {
   doc.fillColor(MUTED).text(String(page), PAGE.w - M - 40, y, { width: 40, align: "right" });
 }
 
-function chartPage(doc, { name, output, links }) {
+function chartPage(doc, { name, output, links, qr }) {
   paper(doc);
 
   doc
@@ -162,7 +185,7 @@ function chartPage(doc, { name, output, links }) {
     });
   }
 
-  channelKey(doc, legendTop, links);
+  channelKey(doc, legendTop, links, qr);
   footer(doc, 1);
 }
 
@@ -190,17 +213,13 @@ function glancePage(doc, { output, tier }) {
     ["STRATEGY", output?.strategy, describe(STRATEGY_NOTES, output?.strategy)],
     ["AUTHORITY", output?.authority, describe(AUTHORITY_NOTES, output?.authority)],
     /**
-     * SIX ROWS, matching the app, but only three carry a sentence.
-     *
-     * The app has words for all six. Three are approved here, and a row with a
-     * value and no sentence is honest -- inventing the other three would be
-     * putting Human Design copy on a paying customer's document that nobody
-     * signed off. When sentences exist for Profile, Signature and Not-self they
-     * drop straight into these slots.
+     * ALL SIX CARRY A SENTENCE NOW. The three added later were drafted and
+     * approved the same way as the first three: in the conversation, not in a
+     * file somebody was pointed at.
      */
-    ["PROFILE", output?.profile, null],
-    ["SIGNATURE", output?.signature, null],
-    ["NOT-SELF", output?.notSelfTheme, null],
+    ["PROFILE", output?.profile, profileNote(output?.profile)],
+    ["SIGNATURE", output?.signature, describe(SIGNATURE_NOTES, output?.signature)],
+    ["NOT-SELF", output?.notSelfTheme, describe(NOT_SELF_NOTES, output?.notSelfTheme)],
   ].filter(([, v]) => v);
 
   if (rows.length) {
@@ -306,6 +325,20 @@ function glancePage(doc, { output, tier }) {
   footer(doc, 2);
 }
 
+/**
+ * A profile is a PAIR -- "2/4 -- Hermit / Opportunist" -- and there are twelve
+ * of them. Rather than write twelve, each LINE is described and the pair reads
+ * as its two halves, which is how the app names them too.
+ */
+function profileNote(profile) {
+  const m = /^(\d)\s*\/\s*(\d)/.exec(String(profile ?? ""));
+  if (!m) return null;
+  const first = describe(PROFILE_NOTES, m[1]);
+  const second = describe(PROFILE_NOTES, m[2]);
+  if (!first || !second) return null;
+  return `${first} ${second}`;
+}
+
 function lowerFirst(s) {
   return typeof s === "string" && s ? s[0].toLowerCase() + s.slice(1) : "";
 }
@@ -323,7 +356,7 @@ function lowerFirst(s) {
  * outlined: the personality line is near-white by design — it reads on navy and
  * would disappear on paper without a border.
  */
-function channelKey(doc, top, links) {
+function channelKey(doc, top, links, qr) {
   const KEY = [
     ["#F0F3F9", "Personality", "conscious — what you know"],
     ["#7C5BFF", "Design", "unconscious — what the body knows"],

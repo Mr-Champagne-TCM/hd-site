@@ -4,14 +4,13 @@
  * Jeremy asked for this on the chart tier: "I want the tier 1 to have a few
  * sentences about their type, strategy and authority."
  *
- * APPROVED BY JEREMY on 2026-08-28, reviewed in chat rather than in the source.
- * He was right to object to how the first draft was handed over: copy belongs
- * in the conversation where he can react to it, not in a file he is pointed at.
+ * APPROVED BY JEREMY, reviewed in chat rather than in the source. He was right
+ * to object to how the first draft was handed over: copy belongs in the
+ * conversation where he can react to it, not in a file he is pointed at.
  *
- * A COPY of src/mechanics.ts, deliberately. src/ is bundled and served to every
- * visitor, and a server module importing from it is the shape that once put
- * signing code one careless import from the browser. The test beside this
- * asserts the two agree word for word, so they cannot drift in silence.
+ * A COPY of src/mechanics.ts. src/ is bundled and served to every visitor, and
+ * a server module importing from it is the shape that once put signing code one
+ * careless import from the browser. A test asserts the two agree word for word.
  *
  * The rules it is drafted against, the same ones copy.ts is checked by:
  *
@@ -80,4 +79,44 @@ export const AUTHORITY_NOTES = {
     "You have no inner authority that settles this on its own. Clarity comes from talking through a decision in the company of people you trust, using them as a sounding board rather than as advisors.",
   "Lunar":
     "As a Reflector, what is true for you moves with your surroundings. A full lunar cycle gives a decision the time to be seen from every angle before it is made.",
+};
+
+/**
+ * PROFILE, SIGNATURE AND NOT-SELF.
+ *
+ * Drafted 2026-08-28 and reviewed in chat, as the first three were. The same
+ * rules apply and the same line is held: each stops at the MECHANISM. A
+ * Not-self theme in particular is easy to write as an accusation, and it is
+ * not one -- it names a signal, not a failing.
+ *
+ * Profile is a pair of numbers and there are twelve of them; rather than write
+ * twelve, the two LINES are described and the pair reads as its two halves.
+ * That is how the app names them too -- "2/4 -- Hermit / Opportunist".
+ */
+export const PROFILE_NOTES = {
+  "1": "The first line investigates. It wants the ground under a thing before it will stand on it, and it is uncomfortable being asked to act before it has looked.",
+  "2": "The second line is natural at something and largely unaware of it. It needs time alone for that to work, and it tends to be called out of that solitude by other people rather than by its own plans.",
+  "3": "The third line finds out by trying. What looks like a series of mistakes from outside is the method working — it is discovering what does not hold, which is not the same as failing.",
+  "4": "The fourth line works through the people it already knows. Opportunity arrives through that network rather than through strangers, which is why the network itself is the thing being tended.",
+  "5": "The fifth line gets projected onto. People see a solution in it, sometimes accurately and sometimes not, and its reputation runs slightly ahead of it in either direction.",
+  "6": "The sixth line lives in three parts — a trial-and-error start, a long look from the sidelines, and then a return. Which part it is in matters more than the number.",
+};
+
+export const SIGNATURE_NOTES = {
+  Satisfaction: "The sense that the day's energy went somewhere it belonged. It is a bodily settling rather than a thought about how things went.",
+  Peace: "A quiet that arrives when nothing is being pushed against. Not achievement — the absence of resistance.",
+  Success: "The feeling of having been seen and used well. It follows recognition rather than effort, which is why it cannot be manufactured by working harder.",
+  Surprise: "Delight at what a day turned out to hold. For an entirely open design, no two days are the same, and that is the point rather than the problem.",
+};
+
+/**
+ * The not-self theme is a SIGNAL, not a verdict. It says something is running
+ * off-design; it does not say anybody is doing life wrong. Every one of these
+ * is written to be readable by somebody having a bad week.
+ */
+export const NOT_SELF_NOTES = {
+  Frustration: "The signal that energy went into something it was not met by. It shows up when action started before there was anything to respond to.",
+  Anger: "The signal that arrives when a move landed on people who had not been told. It is about the informing, not about the move.",
+  Bitterness: "The signal of effort spent where it was not invited. It follows work offered rather than asked for.",
+  Disappointment: "The signal of having been shaped by the wrong surroundings. For an open design it is about company and place more than about events.",
 };

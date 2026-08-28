@@ -1,6 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { loadReading, readReadingLink } from "../lib/reading.mjs";
 import { readingPdf } from "../lib/readingPdf.mjs";
+import { SITE } from "../lib/siteLinks.mjs";
 
 /**
  * GET /api/pdf?t=<token> — the chart tier's downloadable PDF.
@@ -83,6 +84,7 @@ export default async (request) => {
       tier: reading.tier,
       name: reading.buyer?.name ?? null,
       output: reading.output,
+      links: SITE,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e.message})`);
