@@ -4,6 +4,21 @@
 # with --no-verify, and run against the BUILT output as well as the source --
 # which matters more, because source can look clean while a bundler inlines
 # something from outside it.
+#
+# THIS WORKFLOW FAILED ON EVERY PUSH FOR A DAY AND A HALF and the failure was
+# invisible from the machine doing the pushing: the notices went to the TCM
+# inbox, not the one the tooling could read.
+#
+# The cause was ordering. Tests ran BEFORE `npm ci`, so node_modules did not
+# exist, and the two tests that shell out to esbuild to compile TypeScript died
+# with MODULE_NOT_FOUND. Steps run in sequence and a failure aborts the job, so
+# the three steps after it never ran at all -- including the search of the built
+# output, which is the entire reason this file exists. A guard that fails before
+# it reaches the guarding is worth less than no guard, because it still reports
+# a status and still looks like coverage.
+#
+# Dependencies are installed first now, and every step that could quietly find
+# nothing to do says so loudly instead.
 name: publish-check
 
 on:
@@ -20,26 +35,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+
+      # First, because everything below needs it. This is the whole bug.
+      - name: Install
+        run: npm ci
 
       - name: Tests
-        run: node --test test/*.test.mjs
+        run: npm test
 
       - name: Search the source
         run: node tools/leak-scan.mjs .
 
-      - name: Build, if there is one yet
-        run: |
-          if [ -f package.json ] && grep -q '"build"' package.json; then
-            npm ci
-            npm run build
-          else
-            echo "no build step yet - source scan only"
-          fi
+      - name: Build
+        run: npm run build
 
+      # The step that matters most, and the one that has never run. A missing
+      # dist is now a failure rather than a shrug: "no dist yet" printed in
+      # green is indistinguishable from a scan that found nothing.
       - name: Search the built output
         run: |
-          if [ -d dist ]; then
-            node tools/leak-scan.mjs dist
-          else
-            echo "no dist yet"
+          if [ ! -d dist ]; then
+            echo "::error::dist/ is missing, so the built output was never scanned"
+            exit 1
           fi
+          node tools/leak-scan.mjs dist
