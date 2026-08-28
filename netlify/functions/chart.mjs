@@ -75,6 +75,14 @@ export default async (request, context) => {
     store,
     engine,
     grantSecret: process.env.GRANT_SECRET,
+    /**
+     * Where a computed chart is put away, when the request arrived on a paid
+     * reading link. Separate store from the rate counters above: one holds
+     * people's readings for a year, the other holds hashed IPs for a week, and
+     * a single bucket for both is how a retention rule gets applied to the
+     * wrong thing.
+     */
+    readings: getStore({ name: "readings", consistency: "strong" }),
     // The launch switch. Absent or anything but "1" means open, which is how
     // the page has behaved since it went up and how it is being tested. Set it
     // to "1" and nothing is served without a paid grant.

@@ -184,3 +184,38 @@ test("every error is uncacheable too, so a 404 cannot stick to a good link", asy
   const res = await open(store, mintReadingLink({ id: newReadingId(), tier: 1 }, SECRET));
   assert.match(res.headers["Cache-Control"], /no-store/);
 });
+
+// --- a reading that has been paid for but not yet computed ------------------
+//
+// The ordinary state of every purchase for the minute or two between the card
+// and the form. It is not an error and must not look like one.
+
+test("a pending reading says so, and carries no chart", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, ...BUYER });
+  const token = mintReadingLink({ id, tier: 1 }, SECRET);
+
+  const body = parse(await open(store, token));
+  assert.equal(body.pending, true);
+  assert.equal(body.output, null);
+  assert.equal(body.name, "Jeremy", "the receipt is there even though the chart is not");
+  assert.equal(body.label, "The chart");
+});
+
+test("NO UPGRADE IS OFFERED BEFORE THEY HAVE SEEN WHAT THEY BOUGHT", async () => {
+  // Selling the next tier to somebody still waiting on the first reads as a
+  // shop rather than a threshold, which is the register this site avoids.
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 0, output: null, ...BUYER });
+  const body = parse(await open(store, mintReadingLink({ id, tier: 0 }, SECRET)));
+  assert.equal(body.pending, true);
+  assert.equal(body.upgrade, null, "an upgrade was offered on a reading with nothing in it yet");
+});
+
+test("a filled reading is explicitly NOT pending", async () => {
+  // Absent would be falsy and would work by accident. The page branches on
+  // this, so it is stated rather than implied.
+  const { store, token } = await seed(1);
+  const body = parse(await open(store, token));
+  assert.equal(body.pending, false);
+});

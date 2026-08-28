@@ -1,7 +1,37 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { handleChart } from "../netlify/lib/handler.mjs";
 import { HOUR } from "../netlify/lib/ratelimit.mjs";
+import { mintGrant } from "../netlify/lib/grant.mjs";
+import { loadReading, mintReadingLink, saveReading } from "../netlify/lib/reading.mjs";
+
+/**
+ * Two different stores, and they are not interchangeable.
+ *
+ * `counterStore` is the rate limiter's -- keyed by a hashed IP, holding
+ * timestamps. `memoryStore` is the readings blob store, shaped like Netlify
+ * Blobs. Passing one where the other belongs is a mistake worth making
+ * impossible to make quietly, so they are named for what they hold.
+ */
+function counterStore() {
+  const data = new Map();
+  return {
+    data,
+    async keyFor(ip) { return `k:${ip}`; },
+    async load(key) { return data.get(key) ?? []; },
+    async save(key, hits) { data.set(key, hits); },
+  };
+}
+
+function memoryStore() {
+  const m = new Map();
+  return {
+    m,
+    async setJSON(k, v) { m.set(k, JSON.parse(JSON.stringify(v))); },
+    async get(k) { return m.has(k) ? m.get(k) : null; },
+  };
+}
 
 const T0 = Date.parse("2026-08-26T12:00:00Z");
 const BIRTH = { date: "1985-06-25", zone: "America/Chicago", timeKnown: false };
@@ -128,4 +158,154 @@ test("a missing birth object is asked about, not guessed at", async () => {
   const res = await handleChart({ body: JSON.stringify({}), ip: "3.3.3.3", now: T0, store: fakeStore(), engine: fakeEngine() });
   assert.equal(res.status, 400);
   assert.equal(JSON.parse(res.body).error.code, "no_birth");
+});
+
+// --- a reading link is also an entitlement ----------------------------------
+//
+// Somebody arriving from their delivery email has a signed link and no grant --
+// the grant lived in the tab they closed. The link says which tier was paid for
+// just as authoritatively, because we signed it when the money settled.
+
+test("a reading link entitles a chart, with no grant at all", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null, name: "Jeremy" });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+
+  const asked = [];
+  const res = await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async (payload) => {
+      asked.push(payload);
+      return { ok: true, status: 200, payload: { type: "Generator", profile: "3/5" } };
+    },
+    grantSecret: secret,
+    paywall: true,
+    readings,
+  });
+
+  assert.equal(res.status, 200, "a paid link was refused: " + res.body);
+  assert.equal(asked[0].tier, 1, "the engine was asked for the wrong tier");
+});
+
+test("THE LINK'S TIER WINS OVER A STALE GRANT LEFT IN A TAB", async () => {
+  // Otherwise an old tier-0 grant quietly downgrades what somebody bought.
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 2, output: null });
+  const link = mintReadingLink({ id, tier: 2 }, secret);
+  const staleGrant = mintGrant({ tier: 0, sku: "hd_summary" }, secret);
+
+  const asked = [];
+  await handleChart({
+    body: JSON.stringify({ reading: link, grant: staleGrant, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async (p) => { asked.push(p); return { ok: true, status: 200, payload: {} }; },
+    grantSecret: secret,
+    paywall: true,
+    readings,
+  });
+  assert.equal(asked[0].tier, 2, "a stale grant downgraded a paid link");
+});
+
+test("the computed chart is PUT AWAY, so the link shows it next time", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null, name: "Jeremy" });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+  const chart = { type: "Generator", profile: "3/5", bodygraphSvg: "<svg>x</svg>" };
+
+  await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: chart }),
+    grantSecret: secret,
+    paywall: true,
+    readings,
+  });
+
+  const back = await loadReading(readings, id);
+  assert.equal(back.pending, false, "the reading is still pending after a chart was computed");
+  assert.deepEqual(back.output, chart);
+  assert.equal(back.buyer.name, "Jeremy", "the receipt was lost in the fill");
+});
+
+test("A SECOND SUBMISSION CANNOT REPLACE A CHART ALREADY DELIVERED", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+  const first = { type: "Generator", profile: "3/5" };
+  const second = { type: "Projector", profile: "1/3" };
+
+  const submit = (payload) =>
+    handleChart({
+      body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+      ip: "1.2.3.4",
+      now: Date.now(),
+      store: counterStore(),
+      engine: async () => ({ ok: true, status: 200, payload }),
+      grantSecret: secret,
+      paywall: true,
+      readings,
+    });
+
+  await submit(first);
+  const res = await submit(second);
+
+  // The person still gets their chart back -- the request is not failed.
+  assert.equal(res.status, 200);
+  // But the stored one is untouched.
+  assert.deepEqual((await loadReading(readings, id)).output, first, "a stored chart was overwritten");
+});
+
+test("a storage failure does not fail the request - the person is waiting", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+
+  const broken = { ...readings, async setJSON() { throw new Error("blobs are down"); } };
+  const res = await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+    grantSecret: secret,
+    paywall: true,
+    readings: broken,
+  });
+  assert.equal(res.status, 200, "a storage failure was turned into a failed chart");
+});
+
+test("a FORGED reading link does not entitle anything", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const other = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 2, output: null });
+
+  let called = false;
+  const res = await handleChart({
+    body: JSON.stringify({
+      reading: mintReadingLink({ id, tier: 2 }, other),
+      birth: { utc: "1985-06-25T17:00:00Z" },
+    }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => { called = true; return { ok: true, status: 200, payload: {} }; },
+    grantSecret: secret,
+    paywall: true,
+    readings,
+  });
+  assert.equal(res.status, 402, "a forged link bought a chart");
+  assert.equal(called, false, "the engine was called for a forged link");
 });

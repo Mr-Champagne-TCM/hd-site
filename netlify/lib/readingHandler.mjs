@@ -91,8 +91,31 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
     return json(404, { error: { code: "not_found", message: "That link could not be opened." } });
   }
 
+  /**
+   * A PENDING READING IS NOT A BROKEN ONE. They have paid and have not yet
+   * said when they were born, which is the ordinary state of every purchase
+   * for the minute or two between the card and the form.
+   *
+   * No upgrade is offered here. Somebody who has not yet seen the thing they
+   * bought is not being sold the next one -- that is the register the whole
+   * site avoids, and it would read as a shop rather than a threshold.
+   */
+  if (reading.pending) {
+    return json(200, {
+      pending: true,
+      tier: reading.tier,
+      label: TIERS[reading.tier]?.label ?? null,
+      name: reading.buyer?.name ?? null,
+      purchasedAt: reading.purchasedAt,
+      output: null,
+      upgrade: null,
+      canResend: Boolean(reading.buyer?.email),
+    });
+  }
+
   const next = reading.tier + 1;
   return json(200, {
+    pending: false,
     tier: reading.tier,
     // What they bought, in the words the site already uses for it.
     label: TIERS[reading.tier]?.label ?? null,

@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import {
   LINK_TTL_SECONDS,
   READING_TTL_SECONDS,
+  fillReading,
   loadReading,
   mintReadingLink,
   newReadingId,
@@ -323,4 +324,101 @@ test("a bad tier never reaches the store", async () => {
     await assert.rejects(() => saveReading(store, { tier, output: OUTPUT }), /bad tier/);
   }
   assert.equal(store.m.size, 0);
+});
+
+// --- a reading starts pending, and is filled exactly once -------------------
+//
+// The order runs backwards from what you would guess: somebody pays FIRST, and
+// only then is there a form to enter a birth moment into. So a record exists
+// from the moment the money settles, holding the receipt and no chart.
+
+test("a reading created at purchase is pending, and says so", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, name: "Jeremy", email: "b@example.com" });
+  const back = await loadReading(store, id);
+  assert.equal(back.pending, true);
+  assert.equal(back.output, null);
+  // The receipt is there even though the chart is not.
+  assert.equal(back.buyer.name, "Jeremy");
+  assert.equal(back.tier, 1);
+});
+
+test("PENDING AND NON-EXISTENT ARE DIFFERENT THINGS", async () => {
+  // One means "enter your details", the other means "this link is not real".
+  // Confusing them would either lose a paying customer or invite a stranger
+  // into a form.
+  const store = fakeStore();
+  const pending = await saveReading(store, { tier: 1, output: null });
+  assert.ok(await loadReading(store, pending), "a pending reading read as missing");
+  assert.equal(await loadReading(store, newReadingId()), null);
+});
+
+test("a record with NO output key at all is corrupt, not pending", async () => {
+  // Absent was never written by saveReading. Serving it as pending would invite
+  // somebody to enter a birth moment into a record we do not understand.
+  const store = fakeStore();
+  const id = newReadingId();
+  store.m.set(id, { v: 1, tier: 1, buyer: {}, createdAt: 0 });
+  assert.equal(await loadReading(store, id), null);
+});
+
+test("filling a pending reading works, and it stops being pending", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, name: "Jeremy", email: "b@example.com" });
+  const r = await fillReading(store, id, OUTPUT);
+  assert.equal(r.ok, true);
+
+  const back = await loadReading(store, id);
+  assert.equal(back.pending, false);
+  assert.deepEqual(back.output, OUTPUT);
+  assert.equal(back.buyer.name, "Jeremy", "the receipt survived the fill");
+});
+
+test("A FILLED READING CANNOT BE REFILLED", async () => {
+  // Otherwise anybody holding the link could replace somebody's chart with one
+  // cast from a birth moment of their choosing -- silently, on a reading that
+  // had already been delivered and read.
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, name: "Jeremy" });
+  await fillReading(store, id, OUTPUT);
+
+  const second = await fillReading(store, id, { type: "Projector", profile: "1/3" });
+  assert.equal(second.ok, false);
+  assert.equal(second.reason, "already_filled");
+  assert.deepEqual((await loadReading(store, id)).output, OUTPUT, "the chart was overwritten");
+});
+
+test("filling something that does not exist is a reason, not a crash", async () => {
+  assert.deepEqual(await fillReading(fakeStore(), newReadingId(), OUTPUT), {
+    ok: false,
+    reason: "not_found",
+  });
+});
+
+test("birth data cannot get in through fillReading either", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null });
+  for (const field of ["date", "utc", "place"]) {
+    await assert.rejects(() => fillReading(store, id, { ...OUTPUT, [field]: "x" }), /birth data/);
+  }
+  assert.equal((await loadReading(store, id)).pending, true, "a refused fill still changed the record");
+});
+
+test("the purchase year is unchanged by filling it later", async () => {
+  const store = fakeStore();
+  const bought = Date.UTC(2026, 0, 1);
+  const id = await saveReading(store, { tier: 1, output: null, purchasedAt: bought, now: bought });
+  // They pay, then wander off for a month before entering their details.
+  await fillReading(store, id, OUTPUT, bought + 30 * 24 * 60 * 60 * 1000);
+
+  const back = await loadReading(store, id, bought + 60_000);
+  assert.equal(back.purchasedAt, Math.floor(bought / 1000), "the purchase date moved");
+  assert.equal(await loadReading(store, id, bought + (READING_TTL_SECONDS + 60) * 1000), null);
+});
+
+test("undefined output is a caller bug, not a silent pending", async () => {
+  await assert.rejects(
+    () => saveReading(fakeStore(), { tier: 1 }),
+    /must be an object or null/,
+  );
 });

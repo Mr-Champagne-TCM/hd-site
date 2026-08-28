@@ -1,6 +1,11 @@
+import { getStore } from "@netlify/blobs";
 import { paidLevel } from "../lib/checkout.mjs";
 import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
+import { mintReadingLink, saveReading } from "../lib/reading.mjs";
+import { deliveryEmail } from "../lib/deliveryEmail.mjs";
+import { sendMail } from "../lib/mail.mjs";
+import { SITE } from "../lib/siteLinks.mjs";
 
 /**
  * POST /api/claim -- turn a finished purchase into an entitlement.
@@ -72,8 +77,67 @@ export default async (request) => {
   // artefact it unlocks is kept far longer (D-7). A long-lived grant would be a
   // bearer token worth stealing.
   const grant = mintGrant({ tier: level, sku: session?.metadata?.sku, ttlSeconds: 3600 }, grantSecret);
-  console.log(`POST /api/claim -> 200 (tier ${level})`);
-  return json(200, { grant, level });
+
+  /**
+   * THE PURCHASE IS RECORDED BEFORE THERE IS ANYTHING TO SHOW.
+   *
+   * The order runs backwards from what you would guess, and it is Jeremy's
+   * ruling: no birth-data entry until a payment succeeds and a signed link
+   * gives access to the form. So the record written here holds the RECEIPT --
+   * name, email, phone, when, what -- and no chart at all. The link points at
+   * it immediately, because the link is how they reach the form.
+   *
+   * Stripe is where those details come from, never the browser. A page that
+   * could name the buyer is a page that could name a different one.
+   */
+  const buyer = session?.customer_details ?? {};
+  let url = null;
+  try {
+    const store = getStore({ name: "readings", consistency: "strong" });
+    const id = await saveReading(store, {
+      tier: level,
+      output: null,
+      name: buyer.name ?? null,
+      email: buyer.email ?? null,
+      phone: buyer.phone ?? null,
+      sku: session?.metadata?.sku ?? null,
+      purchasedAt: typeof session?.created === "number" ? session.created * 1000 : Date.now(),
+    });
+    url = `${new URL(request.url).origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
+  } catch (e) {
+    // A failure here must NOT fail the claim. The money is taken and the buyer
+    // is looking at the page; the grant in the response is what lets them
+    // carry on right now. Losing the emailed copy is a problem to fix, not a
+    // reason to tell somebody their purchase did not work.
+    console.log(`POST /api/claim: could not record the purchase (${e.message})`);
+  }
+
+  /**
+   * The email is best-effort for the same reason, and it is sent WITHOUT
+   * awaiting anything the response depends on. A buyer who never sees the
+   * email still has their reading on screen and can ask for it again.
+   */
+  if (url && buyer.email && process.env.RESEND_API_KEY) {
+    const { subject, html, text } = deliveryEmail({
+      tier: level,
+      name: buyer.name,
+      url,
+      links: SITE,
+    });
+    const sent = await sendMail(
+      { to: buyer.email, subject, html, text },
+      { apiKey: process.env.RESEND_API_KEY },
+    );
+    // Logged either way, and never with the address in it.
+    console.log(`POST /api/claim: delivery email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
+  } else if (url && !buyer.email) {
+    console.log("POST /api/claim: no email on the purchase, nothing sent");
+  }
+
+  console.log(`POST /api/claim -> 200 (tier ${level}${url ? ", link minted" : ", NO LINK"})`);
+  // `url` goes back so the page can offer it immediately -- the buyer is
+  // already holding it, so this reveals nothing they do not have.
+  return json(200, { grant, level, url });
 };
 
 function json(status, payload) {

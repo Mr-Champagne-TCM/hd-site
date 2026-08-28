@@ -64,26 +64,48 @@ const ID = /^[0-9a-f]{32}$/;
  * `output` is the engine's response, stored whole. Nothing is picked out of it
  * here: a field this module does not know about is a field a later tier will
  * want, and the failure mode of choosing is silently losing something.
+ *
+ * IT MAY ALSO BE NULL, which is how every reading starts.
+ *
+ * The order of events is Jeremy's ruling and it runs backwards from what you
+ * would guess: somebody pays FIRST, and only then is there a form to enter a
+ * birth moment into. "No birth data entry available until a payment succeeds
+ * and signed link provided access to this form."
+ *
+ * So a record is written the moment the money settles, holding the receipt --
+ * who bought, what, when -- and no chart at all. The link points at it
+ * immediately, because the link is how they reach the form. `fillReading` puts
+ * the chart in later, once.
+ *
+ * A pending reading is a real reading with nothing computed yet, which is a
+ * different thing from a reading that does not exist, and the two must never
+ * be confused: one means "enter your details", the other means "this link is
+ * not real".
  */
 export async function saveReading(
   store,
   { tier, output, name, email, phone, sku, purchasedAt, now = Date.now() },
 ) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
-  if (!output || typeof output !== "object") throw new Error("saveReading: no output");
+  // Null is a pending reading. Anything else that is not an object is a caller
+  // bug, and undefined is caught here rather than becoming a silent pending.
+  if (output !== null && (!output || typeof output !== "object")) {
+    throw new Error("saveReading: output must be an object or null");
+  }
 
   // Belt and braces on the promise above. If a birth field ever reaches this
   // function it is a bug upstream, and the right behaviour is to refuse
   // loudly rather than to store it and be quietly wrong about the privacy copy.
-  for (const forbidden of ["date", "time", "zone", "utc", "birth", "place", "lat", "lon"]) {
-    if (forbidden in output) throw new Error(`saveReading: output carries birth data (${forbidden})`);
-  }
+  if (output) refuseBirthData(output);
 
   const id = newReadingId();
   await store.setJSON(id, {
     v: 1,
     tier,
-    output,
+    // Explicitly null rather than absent. `loadReading` tells a pending record
+    // from a corrupt one by whether the key is THERE, so the difference has to
+    // be written down rather than implied by omission.
+    output: output ?? null,
     // The buyer, as five fields and no more. Written explicitly rather than by
     // spreading whatever the caller passed: a spread is how an extra field
     // arrives in a store nobody meant to put it in, which is exactly the
@@ -127,7 +149,13 @@ export async function loadReading(store, id, now = Date.now()) {
     return null;
   }
   if (!raw || typeof raw !== "object") return null;
-  if (!Number.isInteger(raw.tier) || !raw.output) return null;
+  if (!Number.isInteger(raw.tier)) return null;
+  // PRESENT-BUT-NULL is pending; ABSENT is corrupt. A record with no `output`
+  // key at all was not written by saveReading, and serving it as "pending"
+  // would invite somebody to enter a birth moment into a record we do not
+  // understand.
+  if (!("output" in raw)) return null;
+  if (raw.output !== null && typeof raw.output !== "object") return null;
 
   // Measured from the PURCHASE, not from when the record happened to be
   // written. The year belongs to what was bought; re-rendering a reading must
@@ -138,6 +166,8 @@ export async function loadReading(store, id, now = Date.now()) {
   return {
     tier: raw.tier,
     output: raw.output,
+    /** Nothing computed yet: they have paid, and not yet said when they were born. */
+    pending: raw.output === null,
     // v1 records written before the buyer block existed carried a bare `email`.
     // Read both, so an early reading does not lose the one address it has.
     buyer: raw.buyer ?? { name: null, email: raw.email ?? null, phone: null },
@@ -180,4 +210,46 @@ export function readReadingLink(token, secret, now = Date.now()) {
   if (typeof p?.x !== "number" || p.x * 1000 <= now) return { ok: false, reason: "expired" };
 
   return { ok: true, id: p.r, tier: p.t };
+}
+
+/** Birth details are used to compute and then discarded. Nothing here keeps one. */
+function refuseBirthData(output) {
+  for (const forbidden of ["date", "time", "zone", "utc", "birth", "place", "lat", "lon"]) {
+    if (forbidden in output) throw new Error(`saveReading: output carries birth data (${forbidden})`);
+  }
+}
+
+/**
+ * Put the chart into a pending reading. Once.
+ *
+ * WRITE-ONCE, and the refusal to overwrite is the point rather than tidiness.
+ * A filled reading that could be refilled would let anybody holding the link
+ * replace somebody's chart with one cast from a birth moment of their choosing
+ * -- silently, on a reading that had already been delivered and read.
+ *
+ * Returns `{ ok: true }`, or a reason. Never throws on a reading that simply is
+ * not fillable, because "already done" is an ordinary thing for a double-
+ * submitted form to be.
+ */
+export async function fillReading(store, id, output, now = Date.now()) {
+  if (!output || typeof output !== "object") throw new Error("fillReading: no output");
+  refuseBirthData(output);
+
+  const existing = await loadReading(store, id, now);
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (!existing.pending) return { ok: false, reason: "already_filled" };
+
+  await store.setJSON(id, {
+    v: 1,
+    tier: existing.tier,
+    output,
+    buyer: existing.buyer,
+    sku: existing.sku,
+    purchasedAt: existing.purchasedAt,
+    createdAt: existing.createdAt,
+    // When the chart was computed, which is NOT when it was bought. The year
+    // runs from the purchase either way; this is only ever for looking at.
+    filledAt: Math.floor(now / 1000),
+  });
+  return { ok: true, tier: existing.tier };
 }
