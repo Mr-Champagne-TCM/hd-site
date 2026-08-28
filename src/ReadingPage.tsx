@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import Summary, { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
 import { SITE } from "./copy";
+
+/** The forwarding address, never the personal inbox (D-12). */
+const CONTACT = "hd-readings@thechampagnemethod.co";
 import { startCheckout } from "./purchase";
 
 /**
@@ -108,18 +111,43 @@ export default function ReadingPage({ token }: { token: string }) {
           simply could not be opened gets no such offer -- there is nothing to
           send, and offering would imply we know who they are.
         */}
+        {/*
+          AN EXPIRED LINK FIXES ITSELF (D-13). Jeremy's call: "if they can do it
+          themselves ... this is best."
+
+          The button works because an expired link is not a broken one -- the
+          signature still names a real reading and still proves the holder was
+          given it legitimately. Only the clock ran out. A fresh link goes to
+          the address on the purchase, so the worst this button can do in the
+          wrong hands is send somebody their own reading.
+
+          Writing in is kept as the fallback for the case the button cannot
+          cover -- a purchase with no address on it -- and it names the
+          forwarding address, never the personal inbox.
+
+          A link that merely could not be opened gets none of this. There is
+          nothing to send, and offering would imply we know who they are.
+        */}
         {state.expired && (
-          <p className="mt-6 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-            Sending it again goes to the address on the purchase, and only there. If you would like a
-            fresh link,{" "}
-            <a
-              href={SITE.connect}
-              className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
-            >
-              a note through the site
-            </a>{" "}
-            reaches Jeremy directly.
-          </p>
+          <div className="mt-8 max-w-[60ch]">
+            <p className="text-[16px] leading-relaxed text-brand-muted">
+              A fresh one can be sent right now — to the address on your purchase, and only there.
+              As many times as you need, for the whole year.
+            </p>
+            <div className="mt-4">
+              <Resend token={token} />
+            </div>
+            <p className="mt-6 text-[15px] leading-relaxed text-brand-muted">
+              If that does not reach you,{" "}
+              <a
+                href={`mailto:${CONTACT}`}
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+              >
+                {CONTACT}
+              </a>{" "}
+              is read by Jeremy.
+            </p>
+          </div>
         )}
       </div>
     );
@@ -220,7 +248,7 @@ function ReadingLinks({ reading, token }: { reading: Reading; token: string }) {
         </section>
       )}
 
-      {reading.canResend && <Resend token={token} />}
+      {reading.canResend && <Resend token={token} framed />}
     </div>
   );
 }
@@ -233,7 +261,7 @@ function ReadingLinks({ reading, token }: { reading: Reading; token: string }) {
  * is the whole difference between a convenience and a way to have somebody
  * else's reading mailed to you.
  */
-function Resend({ token }: { token: string }) {
+function Resend({ token, framed = false }: { token: string; framed?: boolean }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
 
   async function send() {
@@ -252,11 +280,15 @@ function Resend({ token }: { token: string }) {
 
   return (
     <section>
-      <h2 className="font-display text-[20px] font-medium text-brand-paper">Keeping it</h2>
-      <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-        This link is active for six days. Your reading is kept for a year, so it can be sent again
-        whenever you need it — to the address on your purchase, and only there.
-      </p>
+      {framed && (
+        <>
+          <h2 className="font-display text-[20px] font-medium text-brand-paper">Keeping it</h2>
+          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
+            This link is active for six days. Your reading is kept for a year, so it can be sent
+            again whenever you need it — to the address on your purchase, and only there.
+          </p>
+        </>
+      )}
       {state === "sent" ? (
         <p className="mt-4 text-[16px] text-brand-teal">
           On its way. It goes to the address you bought it with.
