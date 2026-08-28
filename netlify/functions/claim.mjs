@@ -82,3 +82,11 @@ function json(status, payload) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
 }
+
+/**
+ * The route lives with the function, the way chart.mjs and places.mjs do.
+ * Netlify serves a v2 function at its own declared path; without this it is
+ * reachable only at /.netlify/functions/... and /api/... is a 404 -- which is
+ * exactly how the first deploy of this shipped.
+ */
+export const config = { path: "/api/claim" };
