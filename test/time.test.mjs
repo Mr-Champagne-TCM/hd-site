@@ -1,26 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { importTs } from "./support/ts.mjs";
 
-const dir = mkdtempSync(join(tmpdir(), "time-"));
-const out = join(dir, "time.mjs");
-execFileSync(
-  process.execPath,
-  [
-    join(process.cwd(), "node_modules", "esbuild", "bin", "esbuild"),
-    join(process.cwd(), "src", "entry", "time.ts"),
-    "--format=esm",
-    `--outfile=${out}`,
-  ],
-  { stdio: "pipe" },
-);
-const { formatTimeInput, toTwentyFourHour, timeProblem, displayTime } = await import(
-  "file://" + out.replace(/\\/g, "/")
-);
-process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+const { formatTimeInput, toTwentyFourHour, timeProblem, displayTime } = await importTs("src", "entry", "time.ts");
 
 /**
  * The colon is never typed.

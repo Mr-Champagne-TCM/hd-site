@@ -1,9 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { importTs } from "./support/ts.mjs";
 
 /**
  * The birth-date rules, tested against the same cases the app's own
@@ -17,22 +14,7 @@ import { tmpdir } from "node:os";
  * logic and the screen, and no unit test caught a single one of them.
  */
 
-const dir = mkdtempSync(join(tmpdir(), "bd-"));
-const out = join(dir, "birthDate.mjs");
-execFileSync(
-  process.execPath,
-  [
-    join(process.cwd(), "node_modules", "esbuild", "bin", "esbuild"),
-    join(process.cwd(), "src", "entry", "birthDate.ts"),
-    "--format=esm",
-    `--outfile=${out}`,
-  ],
-  { stdio: "pipe" },
-);
-const { clampDay, splitDate, typedDate, daysInMonth, toIso, humanDate, MONTHS } = await import(
-  "file://" + out.replace(/\\/g, "/")
-);
-process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+const { clampDay, splitDate, typedDate, daysInMonth, toIso, humanDate, MONTHS } = await importTs("src", "entry", "birthDate.ts");
 
 // --- the clamp -------------------------------------------------------------
 
