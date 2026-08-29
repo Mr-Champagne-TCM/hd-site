@@ -282,7 +282,27 @@ for (const root of roots) {
       const lines = content.split("\n");
       for (let i = 0; i < lines.length; i++) {
         if (rule.re.test(lines[i])) {
-          findings.push({ rel, rule, line: i + 1, text: lines[i].trim().slice(0, 90) });
+          /**
+           * THE OFFENDING LINE IS QUOTED -- EXCEPT WHEN QUOTING IT IS THE LEAK.
+           *
+           * Every other rule matches something you need to SEE to act on: a
+           * key, a price, a stray localhost. The private-terms rule matches a
+           * real person's name, and printing the line prints the name.
+           *
+           * That is fine in Jeremy's own terminal and NOT fine anywhere else.
+           * This scan runs in GitHub Actions on a PUBLIC repository, where the
+           * log is world-readable -- so the guard against publishing a client's
+           * name would have published it, in the very act of catching it. The
+           * same shape of mistake as the version that hardcoded four names.
+           *
+           * The location is enough to act on. Whoever gets this message knows
+           * the list; they do not need to be told which entry matched.
+           */
+          const text =
+            rule.id === "private-term"
+              ? "(line withheld: it contains the term that matched)"
+              : lines[i].trim().slice(0, 90);
+          findings.push({ rel, rule, line: i + 1, text });
           break; // one report per rule per file is enough to block
         }
       }

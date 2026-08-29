@@ -359,6 +359,14 @@ function Footer() {
         <p className="max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
           {FOOTER.disclaimer}
         </p>
+        {/*
+          THE TERMS SIT WHERE SOMEBODY CAN READ THEM BEFORE THEY PAY, which is
+          the only placement that is either fair or useful. See the note in
+          copy.ts for why the wording is what it is.
+        */}
+        <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
+          {FOOTER.terms}
+        </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-brand-gold/10 pt-6">
           {[
             [SITE.home, "The Champagne Method"],

@@ -267,6 +267,32 @@ export const FOOTER = {
   disclaimer:
     "Readings describe a Human Design chart and are offered for self-reflection. They are not " +
     "medical, psychological, legal or financial advice, and they do not predict the future.",
+  /**
+   * ALL PURCHASES ARE FINAL. Jeremy's decision, 2026-08-29.
+   *
+   * SAID BEFORE THE CARD, NOT AFTER IT. A refund policy discovered afterwards
+   * is not a policy, it is an excuse -- and practically, card networks let a
+   * buyer dispute whatever the seller's sign says. A clearly shown policy is
+   * the only version that is worth anything as evidence, and the only version
+   * that is fair to somebody deciding.
+   *
+   * SOFTLY, POLITELY, CLEARLY -- his words, and the order matters. "No refunds"
+   * is clear and neither of the other two. The wording below is final without
+   * being defensive, and it leaves a door: he can offer a discount on another
+   * reading, case by case, by email. That stays UNPROMISED here on purpose --
+   * naming a mechanism turns a kindness into an entitlement, and then into an
+   * argument about who qualifies.
+   *
+   * NOT A REFUND PATH FOR MISTYPED BIRTH DETAILS EITHER. Also his call: he
+   * handles those himself, from his own app, one at a time. Automating it can
+   * wait until the volume asks for it.
+   */
+  terms:
+    "All purchases are final. Your reading is made and sent the moment you ask for it, so there " +
+    "is nothing to send back — and I would rather say so plainly here than leave you to find " +
+    "out later. Two exceptions, and I would rather name the exceptions than have you wonder: if " +
+    "something did not arrive, or did not work, that is mine to put right. And if your " +
+    "birth details went in wrong, write to me — I read these myself, and I will do what I can.",
   attribution: "Place and timezone data from GeoNames, CC BY 4.0.",
   coaching: "thechampagnemethod.co",
 };

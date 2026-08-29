@@ -256,3 +256,51 @@ test("an env file is caught by its name, whatever is inside", () => {
 test("a note to ourselves in an HTML comment is caught", () => {
   assert.equal(scan({ "src/i.html": plant("<!-- TO", "DO swap this before launch -->\n") }).blocked, true);
 });
+
+/**
+ * THE GUARD MUST NOT PUBLISH WHAT IT IS GUARDING.
+ *
+ * Every other rule quotes the offending line, because you need to see a stray
+ * key or a hardcoded price to act on it. The private-terms rule matches a real
+ * person's NAME, and quoting the line prints the name.
+ *
+ * This scan runs in GitHub Actions on a PUBLIC repository, where the log is
+ * world-readable. So the check that stops a client's name being published
+ * would have published it, in the act of catching it -- the same shape of
+ * mistake as the version that hardcoded four real first names into the
+ * scanner's own source.
+ *
+ * Found by running it. Filling in the private-terms file for the first time
+ * made this rule fire for the first time, and the report quoted the whole
+ * offending line -- the name included.
+ *
+ * And then the scanner caught this very comment, which had quoted that report
+ * verbatim and so put a real client's name into the public repo inside the
+ * explanation of why real client names must not go into the public repo. It
+ * was right both times.
+ */
+test("A CAUGHT NAME IS NOT REPEATED IN THE REPORT", () => {
+  const r = scan(
+    { "src/app.js": 'const who = "Wilhelmina Farnsworth";\n' },
+    { LEAK_SCAN_TERMS: "Wilhelmina Farnsworth" },
+  );
+  assert.equal(r.blocked, true);
+  // It still says where, and which rule -- that is what makes it actionable.
+  assert.match(r.output, /app\.js:1/);
+  assert.match(r.output, /private-term/);
+  // And it does NOT say who.
+  assert.ok(
+    !/Wilhelmina/i.test(r.output),
+    "the scanner printed the very name it was catching:\n" + r.output,
+  );
+});
+
+test("other rules still quote the line, because you need to see it", () => {
+  // A price literal is safe to echo and useless without the text -- but it is
+  // still a price literal, and this rule does not exempt its own test. Built
+  // from fragments, like every other fixture in this file.
+  const money = plant("$", "44", ".", "44");
+  const r = scan({ "src/app.js": plant('const price = "', money, '";\n') });
+  assert.equal(r.blocked, true);
+  assert.ok(r.output.includes(money), "a non-name finding should still be quoted");
+});
