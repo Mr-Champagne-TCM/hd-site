@@ -55,6 +55,30 @@ export function formEncode(obj, prefix = "") {
  * bought the chart" would be a sentence anyone could type to get the reading at
  * the discounted step price.
  */
+/**
+ * WHAT COMES OFF THE PRICE, from two proofs of what is already owned.
+ *
+ * Lifted out of the endpoint so it can be tested without Stripe, because this
+ * is the arithmetic that overcharged a real buyer: credit used to come only
+ * from a GRANT held in the tab that paid, and the path we tell everybody to use
+ * -- the link in their email, on a later visit -- has no such tab.
+ *
+ * Both inputs are verified signatures, checked by the caller. Neither is a
+ * claim anybody can type. The BETTER of the two wins: somebody holding a chart
+ * link and a stale summary grant is credited for the chart.
+ *
+ * Credit is only ever for a tier BELOW the one being bought. Buying something
+ * cheaper than what you hold is not an upgrade and earns nothing back.
+ */
+export function creditFor({ grantTier = -1, linkTier = -1, level }) {
+  const owned = Math.max(
+    Number.isInteger(grantTier) ? grantTier : -1,
+    Number.isInteger(linkTier) ? linkTier : -1,
+  );
+  if (owned < 0 || owned >= level) return 0;
+  return TIERS[owned]?.cents ?? 0;
+}
+
 export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);

@@ -462,10 +462,20 @@ function UpgradeView({ token }: { token: string }) {
           <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
             What else there is
           </h1>
-          <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
-            {failed
-              ? "That link could not be read just now, so the prices below are the full ones. Your reading is safe — opening the link from your email again usually sorts it."
-              : "What you have already paid comes off whichever you choose. Nobody pays twice for the same thing."}
+          {/*
+            NOTHING IS SAID ABOUT PRICE UNTIL THE SERVER HAS ANSWERED.
+            Caught by looking at the deployed page: for the moment the fetch was
+            in flight it promised a credit above three tiles that had not
+            rendered yet -- and if the link then turned out to be unreadable,
+            that promise was already read. The tiles were guarded against
+            exactly this and the sentence above them was not.
+          */}
+          <p className="mt-4 min-h-[3.5rem] max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
+            {owned === null && !failed
+              ? "Reading your link…"
+              : failed
+                ? "That link could not be read just now, so the prices below are the full ones. Your reading is safe — opening the link from your email again usually sorts it."
+                : "What you have already paid comes off whichever you choose. Nobody pays twice for the same thing."}
           </p>
         </section>
         {/*

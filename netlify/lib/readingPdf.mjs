@@ -409,15 +409,19 @@ function glancePage(doc, { output, tier, links, written = null }) {
    * A soft line toward the next tier — and it now says WHERE the credit lives,
    * which is Jeremy's note and a money question, so it gets said plainly.
    *
-   * The credit is not a coupon and it is not attached to a person. It is on the
-   * READING PAGE, reached by the signed link in their email — D-11's one URL
-   * does view, re-send and upgrade. Somebody who buys from the front of the
-   * site instead starts a new purchase at full price and the money is simply
-   * gone. Naming the route is the difference between an offer and a trap.
+   * REWRITTEN once the credit stopped depending on a browser tab. It used to
+   * say the offer was on "the page your chart came from" and that starting
+   * anywhere else begins at full -- which was true, and was the bug: credit
+   * came only from a grant held in the tab that paid, so the emailed link the
+   * sentence pointed at was exactly the case that did NOT work. Jeremy paid
+   * the full price to find that out.
    *
-   * THE GENERIC PURCHASE URL IS DELIBERATELY ABSENT. It used to sit here as the
-   * clickable line, which is the exact wrong place to send somebody holding a
-   * credit they can only spend elsewhere. The footer still links the site.
+   * The credit travels with the signed link now, so this says what is true and
+   * useful in one breath: open it from the email and the discount is already
+   * on the price.
+   *
+   * THE GENERIC PURCHASE URL IS STILL DELIBERATELY ABSENT. A printed link that
+   * skips the token is a link that skips the credit.
    *
    * No imperative: it describes where the thing is and stops.
    */

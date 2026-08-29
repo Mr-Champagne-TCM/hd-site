@@ -1,4 +1,4 @@
-import { sessionParams } from "../lib/checkout.mjs";
+import { creditFor, sessionParams } from "../lib/checkout.mjs";
 import { createSession } from "../lib/stripe.mjs";
 import { readGrant } from "../lib/grant.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
@@ -81,11 +81,11 @@ export default async (request) => {
    */
   const held = readGrant(body?.grant, grantSecret);
   const link = readReadingLink(body?.reading, grantSecret, Date.now());
-  const ownedTier = Math.max(
-    held.ok ? held.tier : -1,
-    link.ok ? link.tier : -1,
-  );
-  const alreadyPaidCents = ownedTier >= 0 && ownedTier < level ? TIERS[ownedTier].cents : 0;
+  const alreadyPaidCents = creditFor({
+    grantTier: held.ok ? held.tier : -1,
+    linkTier: link.ok ? link.tier : -1,
+    level,
+  });
 
   const origin = new URL(request.url).origin;
 
