@@ -216,9 +216,33 @@ test("the subject says what arrived, so it can be found again in a year", () => 
   // "is ready" was added when the reading tier gained a third email and two of
   // them collided. It stays on every tier rather than only where it was needed:
   // one rule for what a subject says beats a rule with an exception in it.
-  assert.equal(build(0, "J").subject, "Your Human Design summary is ready");
-  assert.equal(build(1, "J").subject, "Your Human Design chart is ready");
-  assert.equal(build(2, "J").subject, "Your Human Design reading is ready");
+  //
+  // AND WHOSE CHART IT IS. Every buyer got the identical subject, so Gmail
+  // collapsed every purchase into one conversation -- six messages in one
+  // thread, and Jeremy went looking for his summary and arrived at a reading.
+  // The count was never the hazard; following a link to somebody else's chart
+  // is.
+  assert.equal(build(0, "J").subject, "J’s Human Design summary is ready");
+  assert.equal(build(1, "J").subject, "J’s Human Design chart is ready");
+  assert.equal(build(2, "J").subject, "J’s Human Design reading is ready");
+});
+
+test("TWO PEOPLE ON ONE ADDRESS GET TWO CONVERSATIONS", () => {
+  // One address buying for a partner or a friend is the case the credit rule
+  // was written around, and it is exactly the case that threaded into one.
+  const a = build(1, "Jack Black").subject;
+  const b = build(1, "Ada Lovelace").subject;
+  assert.notEqual(a, b, "two different charts still share a subject");
+  assert.match(a, /^Jack Black/);
+  assert.match(b, /^Ada Lovelace/);
+});
+
+test("a nameless purchase still gets a sensible subject", () => {
+  // Stripe does not always hand back a name, and a missing one must not
+  // produce "'s Human Design chart".
+  for (const nameless of [null, undefined, ""]) {
+    assert.equal(build(1, nameless).subject, "Your Human Design chart is ready");
+  }
 });
 
 test("the tier words come from the pricing module, not from this file", async () => {
@@ -403,6 +427,6 @@ test("the middle email does not promise words that are not written yet", () => {
 test("the chart tier never sees the middle stage", () => {
   // There are no words to wait for, so there is no gap to explain.
   const chart = deliveryEmail({ tier: 1, name: "J", url: "https://x/r/t", links: LINKS });
-  assert.match(chart.subject, /Your Human Design chart is ready/);
+  assert.match(chart.subject, /Human Design chart is ready/);
   assert.doesNotMatch(chart.subject, /being written/);
 });

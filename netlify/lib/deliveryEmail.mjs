@@ -129,11 +129,32 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
    * same subject twice reads as a duplicate send, so the second gets deleted --
    * and the second is the one with the reading in it.
    */
+  /**
+   * THE CHART'S NAME IS IN THE SUBJECT, and it is not decoration.
+   *
+   * Every buyer got the identical subject, so Gmail collapsed EVERY PURCHASE
+   * INTO ONE CONVERSATION -- one thread in Jeremy's inbox holds six messages
+   * from six different purchases. He counted four emails and reasonably
+   * suspected duplicates; they were four correct emails wearing one hat.
+   *
+   * The count was never the hazard. The hazard is that a buyer opens "their"
+   * thread, lands on the message Gmail chose to show, and follows a link to
+   * SOMEBODY ELSE'S CHART. He hit exactly that: went looking for his summary
+   * and arrived at a reading. And it is not a rare case -- one address buying
+   * for a partner or a friend is the case the whole credit rule was written
+   * around.
+   *
+   * A name threads correctly, stays searchable a year later, and matches the
+   * heading on the page the link opens. Nameless purchases keep the old
+   * wording, which is still better than nothing and still unique enough when
+   * there is only one of them.
+   */
+  const whose = name ? `${name}’s` : "Your";
   const subject = writing
-    ? "Your bodygraph is ready, your reading is being written"
+    ? `${whose} bodygraph is ready, the reading is being written`
     : pending
-      ? `Your Human Design ${word}`
-      : `Your Human Design ${word} is ready`;
+      ? `${whose} Human Design ${word}`
+      : `${whose} Human Design ${word} is ready`;
 
   /**
    * WHAT THEY BOUGHT, AND THEN -- SEPARATELY -- WHAT ELSE THERE IS.
