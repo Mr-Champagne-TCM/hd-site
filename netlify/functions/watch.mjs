@@ -15,18 +15,18 @@ import { SITE } from "../lib/siteLinks.mjs";
  * It goes to the forwarding address (D-12), never the personal inbox, and it
  * carries no buyer details -- see lib/health.mjs.
  *
- * 13:00 UTC is morning in Central time, which is when Jeremy is at a desk.
+ * 13:00 UTC Monday is morning in Central time, at the start of a week.
  */
 export default async () => {
   const apiKey = process.env.RESEND_API_KEY;
   const now = Date.now();
-  const WINDOW_HOURS = 24;
+  const WINDOW_DAYS = 7;
 
   let found = [];
   try {
     found = await incidents(getStore({ name: "health", consistency: "strong" }), {
       now,
-      window: WINDOW_HOURS * 60 * 60 * 1000,
+      window: WINDOW_DAYS * 24 * 60 * 60 * 1000,
     });
   } catch (e) {
     /**
@@ -37,7 +37,7 @@ export default async () => {
     found = [{ kind: "health-store", detail: e.message, at: now }];
   }
 
-  const { subject, text } = digest({ found, hours: WINDOW_HOURS, site: SITE.home });
+  const { subject, text } = digest({ found, days: WINDOW_DAYS, site: SITE.home });
 
   if (!apiKey) {
     console.log(`watch: ${subject} (no RESEND_API_KEY, nothing sent)`);
@@ -59,4 +59,8 @@ export default async () => {
   return new Response(null, { status: 204 });
 };
 
-export const config = { schedule: "0 13 * * *" };
+/**
+ * MONDAY MORNING, weekly. Failures already emailed the moment they happened;
+ * this is the follow-up list, and the proof the watcher is still running.
+ */
+export const config = { schedule: "0 13 * * 1" };

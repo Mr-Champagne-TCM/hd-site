@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { handleChart } from "../lib/handler.mjs";
 import { loadReading, mintReadingLink } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
-import { record } from "../lib/health.mjs";
+import { reportFailure } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
@@ -147,3 +147,19 @@ export default async (request, context) => {
 };
 
 export const config = { path: "/api/chart" };
+
+/**
+ * How an incident reaches Jeremy the moment it happens. Passed into
+ * `reportFailure` rather than imported by it, so the health module stays
+ * testable without a network.
+ */
+function alertSender(apiKey) {
+  if (!apiKey) return undefined;
+  return async ({ subject, text }) => {
+    const html =
+      '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
+      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+      "</pre>";
+    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
+  };
+}

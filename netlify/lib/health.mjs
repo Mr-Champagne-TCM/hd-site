@@ -7,15 +7,23 @@
  * reaches Jeremy is if they bother to write in. Everything before this was a
  * `console.log` in a function log nobody reads.
  *
- * TWO PARTS, AND THE SECOND IS THE IMPORTANT ONE.
+ TWO CADENCES, and Jeremy chose both:
  *
- *   1. Anything that fails quietly is RECORDED here.
- *   2. A digest goes out on a schedule EVEN WHEN THERE IS NOTHING WRONG.
+ *   IMMEDIATELY, when something fails. "No silent failing!" -- so the first of
+ *   a kind emails him the moment it happens, not tomorrow.
  *
- * A watcher that only speaks when something breaks is indistinguishable from a
- * watcher that has itself broken -- and the second is the more likely of the
- * two, because nothing exercises it. A daily "nothing to report" is the only
- * message that proves the thing is alive, so silence becomes the alarm.
+ *   WEEKLY, whether or not anything failed. The follow-up list, and the proof
+ *   the watcher is alive.
+ *
+ * The second is not redundant. A report that arrived only when something was
+ * wrong could not be told apart from a watcher that had itself stopped -- and
+ * the second is the more likely of the two, because nothing exercises it. The
+ * weekly all-clear turns SILENCE into the alarm rather than into reassurance.
+ *
+ * The immediate alert is rate-limited per kind. Resend going down does not fail
+ * once, it fails on every purchase until it is fixed, and forty identical
+ * emails is its own kind of silence -- the inbox stops being read. Every one is
+ * still recorded and counted in the weekly report; only the repetition is lost.
  *
  * WHAT IS NEVER RECORDED: the buyer's address, their name, their birth data.
  * An incident says what broke and why, never who it happened to. A monitoring
@@ -23,8 +31,84 @@
  * retention would be nobody's job.
  */
 
-/** A week. Long enough for a digest to be missed and still catch up. */
-export const INCIDENT_TTL_SECONDS = 7 * 24 * 60 * 60;
+/**
+ * A fortnight. The digest is WEEKLY, so a week is not enough -- one missed
+ * digest would take its incidents with it.
+ */
+export const INCIDENT_TTL_SECONDS = 14 * 24 * 60 * 60;
+
+/**
+ * How long one kind of failure stays quiet after it has been alerted on.
+ *
+ * A failure emails Jeremy AT ONCE, which is what he asked for. The hazard that
+ * creates is the opposite one: Resend going down at 2am does not fail once, it
+ * fails on every purchase until it is fixed, and forty identical emails is its
+ * own kind of silence -- the inbox stops being read.
+ *
+ * So the FIRST of a kind goes immediately and the rest are held. They are still
+ * recorded, and the weekly report counts every one of them, so nothing is lost;
+ * only the repetition is.
+ */
+export const ALERT_QUIET_SECONDS = 60 * 60;
+
+/**
+ * RECORD AND ALERT. What the purchase path actually calls.
+ *
+ * Jeremy: "lets put a watcher together. No silent failing!" and then, on the
+ * cadence: "immediately if a failure occurs". So this does both -- the incident
+ * is filed for the weekly report, and the first of its kind in an hour is sent
+ * the moment it happens.
+ *
+ * `send` is passed in rather than imported so this module stays testable
+ * without a network, and so a function that has no mail key simply records.
+ *
+ * IT NEVER THROWS AND IT NEVER REJECTS. It sits inside the purchase path, and
+ * failing a purchase in order to report that a purchase was not reported is
+ * not a trade worth making.
+ */
+export async function reportFailure(store, { kind, detail, now = Date.now(), send, site } = {}) {
+  const entry = await record(store, { kind, detail, now });
+  if (!entry || typeof send !== "function") return { recorded: Boolean(entry), alerted: false };
+
+  const gate = `alerted/${entry.kind}`;
+  try {
+    const last = await store.get(gate, { type: "json" });
+    if (last && now - last.at < ALERT_QUIET_SECONDS * 1000) {
+      return { recorded: true, alerted: false, reason: "quiet_period" };
+    }
+    await store.setJSON(gate, { at: now }, {
+      expiration: new Date(now + ALERT_QUIET_SECONDS * 1000),
+    });
+  } catch {
+    /* If the gate cannot be read, alert. Too many beats none. */
+  }
+
+  const { subject, text } = alert(entry, { site });
+  try {
+    await send({ subject, text });
+  } catch {
+    /* Nothing left to try. The incident is on file for the weekly report. */
+  }
+  return { recorded: true, alerted: true };
+}
+
+/** One failure, said plainly, in a subject line a phone shows in full. */
+export function alert(entry, { site } = {}) {
+  return {
+    subject: `HD readings: ${entry.kind} failed`,
+    text: [
+      `${entry.kind} failed at ${new Date(entry.at).toISOString()}.`,
+      entry.detail ? `Reason: ${entry.detail}` : "No reason was reported.",
+      "",
+      "Sent the moment it happened. Repeats of the same kind within the hour",
+      "are held back and counted in the weekly report instead.",
+      "",
+      "No buyer details are recorded, by design. The function logs have the",
+      "request that failed.",
+      ...(site ? ["", site] : []),
+    ].join("\n"),
+  };
+}
 
 /** Never let a broken monitor break the thing it monitors. */
 export async function record(store, { kind, detail, now = Date.now() } = {}) {
@@ -62,6 +146,7 @@ export async function incidents(store, { now = Date.now(), window = 24 * 60 * 60
   }
   const out = [];
   for (const blob of listed?.blobs ?? []) {
+    if (!blob.key.startsWith("incident/")) continue;
     try {
       const entry = await store.get(blob.key, { type: "json" });
       if (entry && now - entry.at <= window) out.push(entry);
@@ -79,24 +164,36 @@ export async function incidents(store, { now = Date.now(), window = 24 * 60 * 60
  * learn whether anything is wrong will stop being opened. "all clear" or a
  * count -- and the count is in the subject line where a phone shows it.
  */
-export function digest({ found, hours = 24, site }) {
+export function digest({ found, days = 7, site }) {
   const clear = found.length === 0;
+  const span = `${days}d`;
+  /**
+   * THE WEEKLY REPORT, and it goes out either way.
+   *
+   * Failures already emailed at the moment they happened, so this is not the
+   * alarm -- it is the FOLLOW-UP, and the proof the watcher is alive. A report
+   * that only arrived when something was wrong could not be told apart from a
+   * watcher that had stopped, and the second is the more likely of the two
+   * because nothing exercises it.
+   */
   const subject = clear
-    ? `HD readings: all clear (${hours}h)`
-    : `HD readings: ${found.length} problem${found.length === 1 ? "" : "s"} (${hours}h)`;
+    ? `HD readings: all clear (${span})`
+    : `HD readings: ${found.length} problem${found.length === 1 ? "" : "s"} to follow up (${span})`;
 
   const byKind = new Map();
   for (const i of found) byKind.set(i.kind, (byKind.get(i.kind) ?? 0) + 1);
 
   const lines = clear
     ? [
-        `Nothing failed in the last ${hours} hours.`,
+        `Nothing failed in the last ${days} days.`,
         "",
         "This message arrives whether or not anything went wrong. If it stops",
         "arriving, the watcher itself is down -- that is the point of it.",
       ]
     : [
-        `${found.length} thing${found.length === 1 ? "" : "s"} failed quietly in the last ${hours} hours.`,
+        `${found.length} thing${found.length === 1 ? "" : "s"} failed in the last ${days} days.`,
+        "You were emailed when the first of each kind happened; this is the",
+        "follow-up list.",
         "",
         ...[...byKind].map(([kind, n]) => `  ${n} x ${kind}`),
         "",
