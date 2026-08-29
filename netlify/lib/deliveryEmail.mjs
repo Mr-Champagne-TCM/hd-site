@@ -96,21 +96,44 @@ function button(href, text) {
  * could not be sent because somebody checked out without a name would be a real
  * failure caused by a decorative one.
  *
- * `pending` says the reading has been paid for and not yet computed.
+ * THREE STAGES, NOT TWO, and the third is the reading tier's.
+ *
+ *   pending          paid for, nothing computed. The link opens a FORM.
+ *   writing          the chart is drawn; the words are still being written.
+ *   neither          it is all there.
+ *
+ * The middle one exists because the reading tier gained a real gap: generation
+ * runs on a background function and takes tens of seconds, so a buyer gets
+ * their chart first and their words a minute later. Without this stage, both
+ * emails said "Access your Human Design reading" -- two identical messages, the
+ * first of them promising words that had not been written. A buyer who opened
+ * that one and found a chart would be right to think something had gone wrong.
  */
-export function deliveryEmail({ tier, name, url, links, pending = false }) {
+export function deliveryEmail({ tier, name, url, links, pending = false, writing = false }) {
   const word = tierWord(tier);
   const top = tier >= TIERS.length - 1;
   const greeting = name ? `Hello ${name},` : "Hello,";
 
   const action = pending
     ? `Create and view your Human Design ${word}`
-    : `Access your Human Design ${word}`;
+    : writing
+      ? "See your bodygraph now"
+      : `Access your Human Design ${word}`;
 
-  // The subject says WHAT ARRIVED, because a subject line is how somebody finds
-  // this again in a year. "Thank you for your purchase" is a lovely opening and
-  // a useless thing to search for.
-  const subject = `Your Human Design ${word}`;
+  /**
+   * THE SUBJECT SAYS WHAT ARRIVED, because a subject line is how somebody finds
+   * this again in a year. "Thank you for your purchase" is a lovely opening and
+   * a useless thing to search for.
+   *
+   * And the two reading-tier emails must not share one. An inbox showing the
+   * same subject twice reads as a duplicate send, so the second gets deleted --
+   * and the second is the one with the reading in it.
+   */
+  const subject = writing
+    ? "Your bodygraph is ready, your reading is being written"
+    : pending
+      ? `Your Human Design ${word}`
+      : `Your Human Design ${word} is ready`;
 
   // Nor for a tier that cannot be bought yet -- see readingHandler. An email
   // is the one surface nobody can correct after the fact.

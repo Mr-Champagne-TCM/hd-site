@@ -51,10 +51,10 @@ same validator, so a reading is the same reading whichever door it came from.
 | PDF pages for the reading | **Done** — seven pages, the same as the app |
 | The Gemini call | **Done** — `netlify/lib/gemini.mjs`, prompt ported word for word |
 | Storing it, write-once | **Done** — `fillInterpretation` |
-| Generating it | **Done** — `netlify/functions/interpret.mjs`, a sweeper every minute |
+| Generating it | **Done** — a background function called on demand, with a 15-minute safety net |
 | Site rendering | **Done** — the reading is on the page, not only in the PDF |
 | The wait, said in words | **Done** — a tier-2 buyer sees "being written now" rather than a short page |
 | `GEMINI_API_KEY` in Netlify | **Jeremy has added it** (free tier, his decision) |
-| Email nuance | Not started |
+| Email nuance | **Done** — three stages, three subjects; the middle one no longer promises unwritten words |
 | **Has never run against the real Gemini** | The whole path is tested against a fake. Nobody has seen a real generated reading on the web |
 | `SELLABLE_MAX_LEVEL` | Stays at **1** until a real one has been read and approved |

@@ -6,6 +6,7 @@ import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { reportFailure } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
+import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 
 /**
  * POST /api/chart -- the free summary.
@@ -118,7 +119,23 @@ export default async (request, context) => {
         url,
         links: SITE,
         pending: false,
+        /**
+         * ON THE READING TIER, THE CHART IS ONLY HALF OF IT. The words are
+         * being written as this goes out, so it says so rather than inviting
+         * somebody to "access your reading" and find a bodygraph.
+         */
+        writing: tier >= 2,
       });
+      /**
+       * RING THE WRITER, if this purchase bought words as well as a chart.
+       *
+       * Fire and forget: a background function answers 202 at once and then
+       * takes as long as it takes. Nothing here waits on it, and a failure to
+       * ring is not a failure of the chart -- `sweep` calls the same door every
+       * fifteen minutes for exactly this case.
+       */
+      if (tier >= 2) await ringTheWriter(request).catch(() => {});
+
       const sent = await sendMail({ to, subject, html, text }, { apiKey });
       console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
       // The second email. Nobody notices it missing except the buyer.
@@ -162,4 +179,23 @@ function alertSender(apiKey) {
       "</pre>";
     await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
   };
+}
+
+/**
+ * The writer's doorbell.
+ *
+ * A background function is invoked over HTTP, so this is an ordinary request to
+ * our own origin carrying the trigger token. Not awaited for its work -- only
+ * for the 202 -- because the whole point of a background function is that the
+ * caller is answered before the work starts.
+ */
+async function ringTheWriter(request) {
+  const token = triggerToken(process.env.GRANT_SECRET);
+  if (!token) return;
+  const origin = process.env.URL || new URL(request.url).origin;
+  const res = await fetch(`${origin}/api/interpret`, {
+    method: "POST",
+    headers: { [TRIGGER_HEADER]: token },
+  });
+  console.log(`chart: rang the writer -> ${res.status}`);
 }

@@ -194,16 +194,20 @@ test("and present once there is something to come back TO", () => {
 
 test("the subject says what arrived, so it can be found again in a year", () => {
   // "Thank you for your purchase" is a lovely opening and a useless search term.
-  assert.equal(build(0, "J").subject, "Your Human Design summary");
-  assert.equal(build(1, "J").subject, "Your Human Design chart");
-  assert.equal(build(2, "J").subject, "Your Human Design reading");
+  //
+  // "is ready" was added when the reading tier gained a third email and two of
+  // them collided. It stays on every tier rather than only where it was needed:
+  // one rule for what a subject says beats a rule with an exception in it.
+  assert.equal(build(0, "J").subject, "Your Human Design summary is ready");
+  assert.equal(build(1, "J").subject, "Your Human Design chart is ready");
+  assert.equal(build(2, "J").subject, "Your Human Design reading is ready");
 });
 
 test("the tier words come from the pricing module, not from this file", async () => {
   const { TIERS } = await import("../shared/pricing.mjs");
   for (let tier = 0; tier < TIERS.length; tier++) {
     const word = TIERS[tier].label.replace(/^The\s+/i, "").toLowerCase();
-    assert.ok(build(tier, "J").subject.endsWith(word), `tier ${tier} drifted from its label`);
+    assert.ok(build(tier, "J").subject.includes(word), `tier ${tier} drifted from its label`);
   }
 });
 
@@ -343,4 +347,44 @@ test("the next tier CONTAINS its parts, it does not add them", () => {
   const all = mail.html + mail.text;
   assert.match(all, /contains/);
   assert.ok(!/adds/.test(all), "the upgrade line still says 'adds'");
+});
+
+// --- three stages, three subjects -------------------------------------------
+
+test("EVERY EMAIL A BUYER GETS HAS ITS OWN SUBJECT", () => {
+  // The reading tier sends three. Two of them shared a subject, which in an
+  // inbox reads as a duplicate send -- and the one somebody deletes as the
+  // duplicate is the second, which is the one with the reading in it.
+  const at = (o) => deliveryEmail({ tier: 2, name: "J", url: "https://x/r/t", links: LINKS, ...o });
+  const subjects = [
+    at({ pending: true }).subject,
+    at({ pending: false, writing: true }).subject,
+    at({ pending: false }).subject,
+  ];
+  assert.equal(new Set(subjects).size, 3, `subjects collide: ${subjects.join(" | ")}`);
+});
+
+test("the middle email does not promise words that are not written yet", () => {
+  // Generation runs in the background and takes tens of seconds, so this goes
+  // out while the reading is still being written. It used to say "Access your
+  // Human Design reading" -- somebody opening it and finding a bodygraph would
+  // be right to think something had gone wrong.
+  const mail = deliveryEmail({
+    tier: 2,
+    name: "J",
+    url: "https://x/r/t",
+    links: LINKS,
+    pending: false,
+    writing: true,
+  });
+  assert.match(mail.subject, /being written/);
+  assert.doesNotMatch(mail.text, /Access your Human Design reading/);
+  assert.match(mail.text, /bodygraph/i);
+});
+
+test("the chart tier never sees the middle stage", () => {
+  // There are no words to wait for, so there is no gap to explain.
+  const chart = deliveryEmail({ tier: 1, name: "J", url: "https://x/r/t", links: LINKS });
+  assert.match(chart.subject, /Your Human Design chart is ready/);
+  assert.doesNotMatch(chart.subject, /being written/);
 });
