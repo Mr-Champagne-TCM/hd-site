@@ -40,6 +40,26 @@ import { paidLevel } from "./checkout.mjs";
 export const LOOK_BACK_MS = 48 * 60 * 60 * 1000;
 
 /**
+ * NOTHING BEFORE THIS CAN BE MATCHED, AND NOTHING BEFORE THIS NEEDS TO BE.
+ *
+ * A reading's id became an HMAC of the Stripe session id at this moment. Every
+ * reading created before it has a RANDOM id, and the hash is one way, so there
+ * is no way to look at an older payment and work out which reading belongs to
+ * it -- the session id was never stored.
+ *
+ * Which means an older paid session always looks undelivered here, whether or
+ * not it was delivered perfectly at the time. The first run said so: 18 paid,
+ * 18 "undelivered", every one of them a test purchase whose delivery email is
+ * sitting in Jeremy's inbox. Armed, that would have sent eighteen duplicates in
+ * one go. It shipped report-only, which is the only reason it did not.
+ *
+ * Those purchases were all handled by `claim` when they happened, so skipping
+ * them loses nothing. The window this function actually cares about -- the last
+ * two days of real trading -- moves past this line permanently within days.
+ */
+export const NEW_ID_SCHEME_FROM = Date.parse("2026-08-29T21:45:00Z");
+
+/**
  * Deliver anything paid that has no reading. Returns what it found and did.
  *
  * `deliver` may be omitted, which makes this a REPORT rather than an action --
@@ -56,11 +76,18 @@ export async function reconcile({
   report = null,
   now = Date.now(),
 }) {
-  const result = { checked: 0, paid: 0, missing: 0, delivered: 0, failed: 0, ids: [] };
+  const result = { checked: 0, skippedOld: 0, paid: 0, missing: 0, delivered: 0, failed: 0, ids: [] };
   if (!grantSecret || !Array.isArray(sessions)) return result;
 
   for (const session of sessions) {
     result.checked += 1;
+
+    // Older than the id scheme: unmatchable, and already delivered by `claim`.
+    const created = typeof session?.created === "number" ? session.created * 1000 : 0;
+    if (created < NEW_ID_SCHEME_FROM) {
+      result.skippedOld += 1;
+      continue;
+    }
 
     // paidLevel is the SAME function the claim path uses to decide whether a
     // session was paid and for what. Two implementations of "did they pay"

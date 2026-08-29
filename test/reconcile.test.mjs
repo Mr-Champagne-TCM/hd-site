@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { reconcile } from "../netlify/lib/reconcile.mjs";
+import { NEW_ID_SCHEME_FROM, reconcile } from "../netlify/lib/reconcile.mjs";
 import { readingIdForSession, saveReading } from "../netlify/lib/reading.mjs";
 
 /**
@@ -38,7 +38,7 @@ function session({ id = "cs_test_" + randomBytes(8).toString("hex"), level = 1, 
     id,
     payment_status: paid ? "paid" : "unpaid",
     status: paid ? "complete" : "open",
-    created: Math.floor(Date.now() / 1000) - 600,
+    created: Math.floor((NEW_ID_SCHEME_FROM + 60_000) / 1000),
     customer_details: { name: "grace hopper", email: "grace@example.invalid", phone: null },
     metadata: { level: String(level), sku: `tier-${level}` },
   };
@@ -217,4 +217,54 @@ test("no sessions is the normal case and is silent", async () => {
     missing: 0,
     delivered: 0,
   });
+});
+
+/**
+ * A PURCHASE OLDER THAN THE ID SCHEME IS NOT "UNDELIVERED".
+ *
+ * Its reading has a random id and the session id was never stored, so there is
+ * no way to match the two -- an older payment looks undelivered whether or not
+ * it went out perfectly at the time.
+ *
+ * The first live run found exactly this: 18 paid, 18 "undelivered", every one a
+ * test purchase whose delivery email was already in the inbox. Armed, it would
+ * have sent eighteen duplicates. This is the guard against that, and against
+ * the same thing happening to a real customer who bought before the change.
+ */
+test("SESSIONS OLDER THAN THE ID SCHEME ARE SKIPPED, NOT RE-DELIVERED", async () => {
+  const store = fakeStore();
+  const sent = [];
+  const reported = [];
+  const old = session();
+  old.created = Math.floor((NEW_ID_SCHEME_FROM - 60_000) / 1000);
+
+  const r = await reconcile({
+    sessions: [old],
+    store,
+    grantSecret: SECRET,
+    origin: ORIGIN,
+    deliver: async (d) => sent.push(d),
+    report: async (i) => reported.push(i),
+  });
+
+  assert.equal(r.skippedOld, 1);
+  assert.equal(r.missing, 0, "an old purchase was called undelivered");
+  assert.equal(sent.length, 0, "a duplicate was sent for a pre-existing purchase");
+  assert.equal(reported.length, 0, "a false alarm was raised for an old purchase");
+});
+
+test("a purchase after the cutoff is still checked normally", async () => {
+  const store = fakeStore();
+  const sent = [];
+  const fresh = session();
+  fresh.created = Math.floor((NEW_ID_SCHEME_FROM + 60_000) / 1000);
+  const r = await reconcile({
+    sessions: [fresh],
+    store,
+    grantSecret: SECRET,
+    origin: ORIGIN,
+    deliver: async (d) => sent.push(d),
+  });
+  assert.equal(r.skippedOld, 0);
+  assert.equal(r.delivered, 1, "the cutoff swallowed a purchase it should have caught");
 });
