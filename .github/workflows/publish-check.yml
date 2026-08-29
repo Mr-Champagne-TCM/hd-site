@@ -44,8 +44,42 @@ jobs:
       - name: Tests
         run: npm test
 
+      # THE NAME RULE, WHICH UNTIL NOW HAS NEVER RUN HERE.
+      #
+      # The scanner spots a key or an email address by SHAPE. It cannot spot a
+      # name, because a name looks like ordinary text -- so it has to be handed
+      # a list. On Jeremy's machine that list is tools/private-terms.local.txt,
+      # which is gitignored and therefore is NOT in this checkout. Without this
+      # variable every push here was scanned with that rule switched off, and
+      # said so in a line nobody was reading.
+      #
+      # SAFE TO FAIL IN PUBLIC, and only recently. A GitHub Actions log on a
+      # public repository is world-readable, so a scanner that quoted the
+      # offending line would publish the very name it had just caught. It
+      # withholds the line for this rule alone -- see tools/leak-scan.mjs. That
+      # fix is what makes putting this list into CI defensible at all.
       - name: Search the source
+        env:
+          LEAK_SCAN_TERMS: ${{ secrets.LEAK_SCAN_TERMS }}
         run: node tools/leak-scan.mjs .
+
+      # A rule that is switched off must not look like a rule that passed.
+      # This is the same failure the header of this file is about: a guard that
+      # reports a green status while guarding nothing is worth less than no
+      # guard, because it gets counted as coverage.
+      - name: The name rule is armed
+        env:
+          LEAK_SCAN_TERMS: ${{ secrets.LEAK_SCAN_TERMS }}
+        run: |
+          if [ -z "${LEAK_SCAN_TERMS}" ]; then
+            echo "::error::LEAK_SCAN_TERMS is empty, so client names were NOT checked."
+            echo "Set it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          # The COUNT is the useful part and the list is not, so only the count
+          # is ever printed. This log is public.
+          count=$(printf '%s' "$LEAK_SCAN_TERMS" | tr ',' '\n' | grep -c '[^[:space:]]' || true)
+          echo "name rule armed: ${count} term(s) loaded"
 
       - name: Build
         run: npm run build
@@ -54,6 +88,8 @@ jobs:
       # dist is now a failure rather than a shrug: "no dist yet" printed in
       # green is indistinguishable from a scan that found nothing.
       - name: Search the built output
+        env:
+          LEAK_SCAN_TERMS: ${{ secrets.LEAK_SCAN_TERMS }}
         run: |
           if [ ! -d dist ]; then
             echo "::error::dist/ is missing, so the built output was never scanned"
