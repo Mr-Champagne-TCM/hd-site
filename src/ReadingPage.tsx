@@ -302,7 +302,30 @@ export default function ReadingPage({ token }: { token: string }) {
       */}
       {reading.writing && (
         <div className="mt-10 rounded-xl border border-brand-gold/40 bg-brand-gold/[0.08] px-5 py-4">
-          <p className="text-[17px] leading-relaxed text-brand-paper">
+          {/*
+            SOMETHING THAT MOVES.
+            Jeremy: "No real way for user to know reading is pending." The panel
+            said the right words and looked like a finished page that happened
+            to be missing something. Three dots that pulse are the difference
+            between "waiting" and "broken" -- and they are the only part of this
+            page that is allowed to move.
+
+            Staggered so they read as a sequence rather than a flash, and stilled
+            entirely under prefers-reduced-motion, where the sentence carries it.
+          */}
+          <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.18em] text-brand-gold">
+            <span aria-hidden className="flex gap-1">
+              {[0, 150, 300].map((delay) => (
+                <span
+                  key={delay}
+                  className="h-[6px] w-[6px] rounded-full bg-brand-gold animate-pulse motion-reduce:animate-none"
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
+            </span>
+            Processing
+          </p>
+          <p className="mt-3 text-[17px] leading-relaxed text-brand-paper">
             Your chart is above, and your reading is being written now. It
             usually takes a minute or two.
           </p>
