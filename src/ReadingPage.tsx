@@ -92,6 +92,60 @@ export default function ReadingPage({ token }: { token: string }) {
     };
   }, [token]);
 
+  /**
+   * WHILE THE READING IS BEING WRITTEN, KEEP LOOKING.
+   *
+   * The page fetched once and never again. It said "your reading is being
+   * written now", the writer finished a minute later, and the page went on
+   * saying it -- Jeremy watched exactly that happen: the server had all eleven
+   * sections while the screen still showed the panel. A page that tells
+   * somebody to wait and then does not change is a page that looks broken at
+   * the moment it is actually working.
+   *
+   * Only while `writing` is true, so a finished reading costs nothing. Every
+   * six seconds, which is far below how long a generation takes and far above
+   * anything that would trouble a function.
+   *
+   * IT GIVES UP AFTER TEN MINUTES rather than polling a dead purchase forever.
+   * By then something has gone wrong that this cannot fix, and the alert has
+   * already reached Jeremy -- so the page says so plainly instead of spinning.
+   */
+  const writing = state.at === "ready" && state.reading.writing;
+  const [gaveUp, setGaveUp] = useState(false);
+
+  useEffect(() => {
+    if (!writing || gaveUp) return;
+    let alive = true;
+    const startedAt = Date.now();
+    const GIVE_UP_MS = 10 * 60 * 1000;
+
+    const timer = setInterval(async () => {
+      if (Date.now() - startedAt > GIVE_UP_MS) {
+        if (alive) setGaveUp(true);
+        return;
+      }
+      try {
+        const res = await fetch("/api/reading", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        if (!res.ok || !alive) return;
+        const body = (await res.json()) as Reading;
+        // Only ever swap FORWARD. A blip that answered "still writing" must not
+        // take a reading back off the screen once it has arrived.
+        if (alive && body && !body.writing) setState({ at: "ready", reading: body });
+      } catch {
+        /* a missed poll is a missed poll; the next one is six seconds away */
+      }
+    }, 6000);
+
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [writing, gaveUp, token]);
+
   const shell = "page-bottom mx-auto max-w-3xl px-6 pt-16 sm:px-8";
 
   if (state.at === "loading") {
@@ -253,8 +307,9 @@ export default function ReadingPage({ token }: { token: string }) {
             usually takes a minute or two.
           </p>
           <p className="mt-2 text-[15px] leading-relaxed text-brand-muted">
-            Nothing needs doing — an email arrives when it is ready, and this
-            same link will have it.
+            {gaveUp
+              ? "This is taking longer than it should. Nothing is lost and nothing needs doing — Jeremy has been told, and the email will reach you when it is written."
+              : "Nothing needs doing — this page will show it as soon as it is written, and an email arrives too."}
           </p>
         </div>
       )}

@@ -56,3 +56,20 @@ test("the paid form asks rather than announces", () => {
   const form = read("src/entry/EntryForm.tsx");
   assert.match(form, /enter your birth details/, "the paid heading was not updated");
 });
+
+test("THE PAGE KEEPS LOOKING WHILE THE READING IS BEING WRITTEN", () => {
+  // It fetched once and never again: it said "being written now", the writer
+  // finished a minute later, and the page went on saying it. Jeremy watched
+  // exactly that -- the server had all eleven sections while the screen still
+  // showed the panel. A page that tells somebody to wait and then never changes
+  // looks broken at the moment it is actually working.
+  const page = read("src/ReadingPage.tsx");
+  assert.match(page, /setInterval/, "nothing polls while a reading is being written");
+  assert.match(page, /if \(!writing \|\| gaveUp\) return;/, "it polls when there is nothing to wait for");
+  assert.match(
+    page,
+    /if \(alive && body && !body\.writing\) setState/,
+    "a poll answering 'still writing' could take an arrived reading back off the screen",
+  );
+  assert.match(page, /GIVE_UP_MS/, "it would poll a dead purchase forever");
+});
