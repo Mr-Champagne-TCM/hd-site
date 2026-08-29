@@ -123,7 +123,7 @@ export function sanitize(s) {
  *
  * Returns a sentence describing the FIRST problem, or null when it is sound.
  */
-export function firstProblem(raw) {
+export function firstProblem(raw, type = null) {
   const reading = String(raw ?? "");
   if (!reading.includes(DISCLAIMER)) {
     return "The reading came back without the required disclaimer.";
@@ -136,7 +136,7 @@ export function firstProblem(raw) {
   if (body.split(/\s+/).filter(Boolean).length < 380) {
     return "The reading came back too short to hand over.";
   }
-  return structureProblem(reading);
+  return structureProblem(reading) ?? typeProblem(reading, type);
 }
 
 /**
@@ -172,6 +172,63 @@ export function promptProblem(prompt) {
 }
 
 /** Every marker present, alone on its line, in order. */
+/**
+ * IS THIS ADVICE FOR THE RIGHT TYPE?
+ *
+ * Found on Jeremy's own paid reading. He is a Manifesting Generator, and the
+ * reading told him to "stop pushing against closed doors, and wait for a proper
+ * invitation to engage." Waiting for the invitation is the PROJECTOR strategy.
+ * A Manifesting Generator waits to respond.
+ *
+ * The structure checks could not see it: every heading was present, in order,
+ * the right length, no trailing question. The document was perfectly shaped and
+ * told him to live as somebody else. That is worse than a malformed reading,
+ * because it is the one error that looks like expertise until a reader knows
+ * the system -- and the people most likely to notice are the ones most likely
+ * to talk about it.
+ *
+ * DELIBERATELY NARROW. Each phrase below defines a type's strategy and belongs
+ * to that type alone; a false positive here costs a retry, and two of them cost
+ * the buyer their reading, so nothing goes in this list that could plausibly
+ * appear in ordinary prose about somebody else's chart.
+ */
+const STRATEGY_WORDS = [
+  {
+    re: /\binvitation\b/i,
+    only: ["Projector"],
+    says: "waiting for the invitation, which is the Projector strategy",
+  },
+  {
+    re: /\blunar cycle\b|\b28[- ]day\b/i,
+    only: ["Reflector"],
+    says: "waiting a lunar cycle, which is the Reflector strategy",
+  },
+  {
+    re: /\bwait(?:ing)? to respond\b/i,
+    only: ["Generator", "Manifesting Generator"],
+    says: "waiting to respond, which is the Generator strategy",
+  },
+];
+
+/**
+ * Returns a sentence when the reading gives another type's strategy, else null.
+ *
+ * `type` comes from the CHART, never from the reading -- the whole point is to
+ * catch the reading disagreeing with the chart it was written from.
+ */
+export function typeProblem(raw, type) {
+  const t = String(type ?? "").trim();
+  if (!t) return null;
+  const body = sanitize(raw);
+  for (const rule of STRATEGY_WORDS) {
+    if (rule.only.includes(t)) continue;
+    if (rule.re.test(body)) {
+      return `The reading tells a ${t} about ${rule.says}.`;
+    }
+  }
+  return null;
+}
+
 export function structureProblem(raw) {
   const lines = sanitize(raw)
     .split("\n")

@@ -161,7 +161,9 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }
   const clean = sanitize(text);
   if (!clean) return { ok: false, reason: "malformed", detail: "gemini returned nothing" };
 
-  const problem = firstProblem(clean);
+  // The TYPE comes from the chart, never from the reading. The check exists to
+  // catch the reading disagreeing with the chart it was written from.
+  const problem = firstProblem(clean, output?.type);
   if (problem) return { ok: false, reason: "malformed", detail: problem };
 
   return { ok: true, text: clean };

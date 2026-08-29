@@ -9,6 +9,7 @@ import {
   chartFactsOnly,
   firstProblem,
   parseReading,
+  typeProblem,
   sanitize,
   structureProblem,
   summaryRows,
@@ -240,4 +241,41 @@ test("ONE colon in a sentence does not make it a list", () => {
   ].join("\n");
   const section = parseReading(raw).sections.find((s) => s.heading === "Your definition");
   assert.equal(section.paragraphs.length, 1, "a mid-sentence colon was treated as a label");
+});
+
+/**
+ * A READING MUST NOT GIVE ANOTHER TYPE'S STRATEGY.
+ *
+ * From Jeremy's own paid reading. He is a Manifesting Generator and it told him
+ * to "stop pushing against closed doors, and wait for a proper invitation to
+ * engage." Waiting for the invitation is the PROJECTOR strategy.
+ *
+ * Every structural check passed it: headings present, in order, long enough, no
+ * trailing question. The document was perfectly shaped and told him to live as
+ * somebody else -- the one error that looks like expertise until the reader
+ * knows the system, and the readers who notice are the ones who talk.
+ */
+test("A READING MUST NOT GIVE ANOTHER TYPE'S STRATEGY", () => {
+  const line = "stop pushing against closed doors, and wait for a proper invitation to engage";
+  assert.match(
+    typeProblem(line, "Manifesting Generator") ?? "",
+    /Projector strategy/,
+    "the exact sentence that shipped to a paying customer was not caught",
+  );
+  assert.equal(typeProblem(line, "Projector"), null, "a Projector was refused its own strategy");
+});
+
+test("each type keeps its own strategy language", () => {
+  assert.equal(typeProblem("wait to respond", "Generator"), null);
+  assert.equal(typeProblem("wait to respond", "Manifesting Generator"), null);
+  assert.match(typeProblem("wait to respond", "Projector") ?? "", /Generator strategy/);
+  assert.match(typeProblem("wait a full lunar cycle", "Generator") ?? "", /Reflector strategy/);
+  assert.equal(typeProblem("wait a full lunar cycle", "Reflector"), null);
+});
+
+test("no type means no opinion, rather than a guess", () => {
+  // The type comes from the chart. Without one there is nothing to compare to,
+  // and refusing a reading on a missing field would fail the wrong thing.
+  assert.equal(typeProblem("wait for the invitation", null), null);
+  assert.equal(typeProblem("wait for the invitation", ""), null);
 });
