@@ -396,7 +396,7 @@ function glancePage(doc, { output, tier, links, written = null }) {
       y + 10,
       { width: COL, link: hd101, underline: false },
     );
-  y = doc.y + 4;
+  y = doc.y + 12;
 
   if (output?.note) {
     doc.font("body").fontSize(9).fillColor(MUTED).text(String(output.note), M, y + 12, {
@@ -440,10 +440,9 @@ function glancePage(doc, { output, tier, links, written = null }) {
       .fontSize(10)
       .fillColor(INK)
       .text(
-        `${next.label} contains ${lowerFirst(next.blurb)} It is offered on the page your chart ` +
-          "came from — the one the link in your email opens — and what you have already paid " +
-          "comes off the price there. Started anywhere else it begins at full, and nobody " +
-          "should pay twice for the same thing.",
+        `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
+          "the price, and the link in your email is what proves it — so opening this from there " +
+          "means the credit is already applied. Nobody pays twice for the same thing.",
         M,
         doc.y + 6,
         { width: COL, lineGap: 1.5 },
