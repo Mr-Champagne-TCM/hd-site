@@ -178,6 +178,27 @@ export async function handleChart({
    * kept; comparing two of them is exact rather than a guess about what somebody
    * typed.
    */
+  /**
+   * ONLY ON AN UPGRADE, and the reason is a case this got wrong on its first
+   * outing: ONE ADDRESS CAN BUY FOR MORE THAN ONE PERSON.
+   *
+   * Jeremy bought a summary, having already bought a reading with different
+   * details, and was told "this is not the chart you had before". It was not,
+   * and it was never meant to be -- a second purchase at the same tier or a
+   * lower one is somebody buying again, quite possibly for a partner or a
+   * friend, on the same email. Warning them that a different person's chart is
+   * different is the false alarm this feature cannot afford.
+   *
+   * An UPGRADE is different. It is the same purchase getting larger, the credit
+   * has already been applied on that assumption, and re-entering the birth
+   * details is a step the system asked them to repeat. That is the only case
+   * where "you typed something different this time" is the likely explanation
+   * rather than "this is someone else".
+   *
+   * What this gives up: a second summary bought with a typo goes through
+   * quietly. They end up with two summaries rather than one wrong reading, and
+   * the alternative -- crying wolf at everybody buying a gift -- costs more.
+   */
   if (readingLink.ok && readings && request?.accept !== true) {
     const previous = await previousChart(readings, {
       email: (await loadReading(readings, readingLink.id, now))?.buyer?.email ?? null,
@@ -186,7 +207,8 @@ export async function handleChart({
       now,
     }).catch(() => null);
 
-    const changed = previous ? chartDifferences(previous.output, upstream.payload) : [];
+    const isUpgrade = previous ? readingLink.tier > previous.tier : false;
+    const changed = isUpgrade ? chartDifferences(previous.output, upstream.payload) : [];
     if (changed.length) {
       console.log(`chart: differs from the previous one (${changed.join(", ")})`);
       return json(409, {

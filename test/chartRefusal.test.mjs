@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { handleChart } from "../netlify/lib/handler.mjs";
 import { mintReadingLink, saveReading } from "../netlify/lib/reading.mjs";
 
@@ -103,4 +105,31 @@ test("a reporter that throws does not fail the request", async () => {
     },
   });
   assert.equal(result.status, 502);
+});
+
+// --- one address, more than one person --------------------------------------
+
+test("A SECOND PURCHASE AT THE SAME TIER IS NOT AN UPGRADE, and is not questioned", async () => {
+  // Jeremy bought a summary having already bought a reading with different
+  // details, and was told "this is not the chart you had before". It was not,
+  // and it was never meant to be: one address can buy for a partner or a
+  // friend. Warning somebody that a different person's chart is different is
+  // the false alarm this feature cannot afford.
+  const { chartDifferences } = await import("../netlify/lib/chartDiff.mjs");
+  const handler = readFileSync(
+    fileURLToPath(new URL("../netlify/lib/handler.mjs", import.meta.url)),
+    "utf8",
+  );
+  assert.match(
+    handler,
+    /const isUpgrade = previous \? readingLink\.tier > previous\.tier : false;/,
+    "the comparison is no longer limited to upgrades",
+  );
+  assert.match(handler, /const changed = isUpgrade \?/, "a non-upgrade is still being compared");
+
+  // And the comparison itself is untouched -- it still notices a real change.
+  assert.deepEqual(
+    chartDifferences({ type: "Generator" }, { type: "Projector" }),
+    ["type"],
+  );
 });

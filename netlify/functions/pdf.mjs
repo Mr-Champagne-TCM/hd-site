@@ -85,6 +85,19 @@ export default async (request) => {
       name: reading.buyer?.name ?? null,
       output: reading.output,
       links: SITE,
+      /**
+       * THE WRITTEN INTERPRETATION. Forgotten when the reading tier's pages
+       * were built, and the failure was silent in the worst way: `readingPdf`
+       * treats a missing reading as "there isn't one yet" and quietly builds
+       * the two-page chart document. So a reading-tier buyer downloaded a
+       * chart-tier PDF that opened perfectly and was simply not what they paid
+       * for. Jeremy found it by reading his own download.
+       *
+       * There is a test that a tier-2 call with text produces seven pages. It
+       * passed throughout, because it called `readingPdf` directly -- the thing
+       * nothing tested was the ONE LINE that hands the text over.
+       */
+      reading: reading.reading ?? null,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e.message})`);
@@ -111,10 +124,27 @@ export default async (request) => {
     .replace(/^-|-$/g, "")
     .slice(0, 40);
 
-  return new Response(bytes, {
+  /**
+   * A LENGTH, AND A PLAIN BYTE ARRAY.
+   *
+   * Reported from a phone: "the pdf download was mangled. Couldn't open." The
+   * bytes are not the problem -- the same build produces a valid document at
+   * every tier, checked from the deploy artefact. A download that arrives
+   * incomplete looks exactly like this, and without a Content-Length nothing
+   * between here and the phone can tell that it did.
+   *
+   * So the length is declared, which lets the browser refuse a short read
+   * instead of saving one, and the body is a Uint8Array rather than a Node
+   * Buffer -- a Buffer is a Node type being handed to a Web Response, and the
+   * runtime is free to treat it as either.
+   */
+  const body = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+  return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
+      "Content-Length": String(body.byteLength),
       "Content-Disposition": `attachment; filename="${safe || "Human-Design"}-Human-Design.pdf"`,
       // A reading is private and the link is a bearer token. Nothing in between
       // may keep this.
