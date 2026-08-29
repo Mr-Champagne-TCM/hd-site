@@ -97,11 +97,22 @@ export default function ReadingActions({
         </section>
       )}
       <section>
-        <h2 className="font-display text-[20px] font-medium text-brand-paper">
+        {/*
+          THE LABEL SAYS THESE ARE FREE, the heading keeps the voice.
+
+          Jeremy's note was about the email -- the two links read as something
+          load-bearing, as though the reading needed them -- and the page had
+          the same problem for the same reason. The email's label is reused
+          verbatim so a reader meeting both does not meet two framings.
+        */}
+        <p className="font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal">
+          Resources — free in the library
+        </p>
+        <h2 className="mt-2 font-display text-[20px] font-medium text-brand-paper">
           Making sense of it
         </h2>
         <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-          Both free in the library, and written for exactly this moment.
+          Both written for exactly this moment.
         </p>
         {/*
           rel="noreferrer" on every outbound link. The token IS this page's
