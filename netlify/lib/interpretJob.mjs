@@ -33,6 +33,7 @@ export async function interpretOne({
   store,
   health,
   apiKey,
+  prompt,
   grantSecret,
   origin,
   deliver,
@@ -45,7 +46,7 @@ export async function interpretOne({
   if (reading.pending) return { ok: false, reason: "no_chart_yet" };
   if (reading.reading) return { ok: false, reason: "already_written" };
 
-  const made = await generate(reading.output, { apiKey });
+  const made = await generate(reading.output, { apiKey, prompt });
   if (!made.ok) {
     /**
      * REPORTED, NOT SWALLOWED. This is the one failure nobody else can see: the

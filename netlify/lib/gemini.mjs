@@ -35,19 +35,44 @@ const ENDPOINT = (model) =>
  * looked. The leak scanner has a rule for exactly this and it caught the first
  * attempt at this file, which is the only reason this comment exists.
  *
- * It lives in `hd-reading-app`, which is private, and reaches production as an
- * ENVIRONMENT VARIABLE that Jeremy sets. `tools/reading-prompt.local.txt` holds
- * a copy for local work; it is gitignored, and the scanner skips `.local.`
- * files by name because they exist to hold precisely what it refuses to
- * publish.
+ * It lives in `hd-reading-app`, which is private. In production it lives in a
+ * BLOB, not an environment variable, and that is a hard limit rather than a
+ * preference: Netlify Functions run on Lambda, Lambda caps ALL environment
+ * variables together at 4 KB, and this prompt is 6 KB on its own. Compressed it
+ * is 3.8 KB, which would leave no room for the six variables already there.
+ *
+ * Put in place once, from Jeremy's machine, with nothing exposed on the web:
+ *
+ *   netlify blobs:set config reading-prompt --input tools/reading-prompt.local.txt
+ *
+ * No endpoint writes it, so there is no endpoint to abuse. `.local.` files are
+ * gitignored and the scanner skips them by name -- they exist to hold precisely
+ * what it refuses to publish.
  *
  * WITHOUT IT, NOTHING IS GENERATED. That is the right failure: a reading
  * written to a prompt we did not choose is worse than no reading, and the
  * validator would only catch the ones that came back the wrong SHAPE.
  */
-export function systemPrompt(explicit) {
-  const raw = explicit ?? process.env.READING_PROMPT ?? "";
-  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+export const PROMPT_STORE = "config";
+export const PROMPT_KEY = "reading-prompt";
+
+/**
+ * The prompt, from wherever it actually is. An explicit one wins (tests), then
+ * the blob, then the environment -- the last kept because a short prompt would
+ * still fit there, and a fallback that costs one line is worth having.
+ */
+export async function loadPrompt({ store, explicit } = {}) {
+  if (typeof explicit === "string" && explicit.trim()) return explicit.trim();
+  if (store) {
+    try {
+      const text = await store.get(PROMPT_KEY, { type: "text" });
+      if (typeof text === "string" && text.trim()) return text.trim();
+    } catch {
+      /* an unreachable store is a missing prompt, and that is reported */
+    }
+  }
+  const env = process.env.READING_PROMPT ?? "";
+  return typeof env === "string" && env.trim() ? env.trim() : null;
 }
 
 /**
@@ -71,7 +96,7 @@ export async function generateReading(
   { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000 } = {},
 ) {
   if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
-  const instruction = systemPrompt(prompt);
+  const instruction = typeof prompt === "string" && prompt.trim() ? prompt.trim() : null;
   if (!instruction) {
     return { ok: false, reason: "misconfigured", detail: "no READING_PROMPT" };
   }

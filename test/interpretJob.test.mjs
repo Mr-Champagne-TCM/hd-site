@@ -352,3 +352,29 @@ test("the facts helper and the request agree about what a chart is", () => {
   assert.match(facts, /^Type: Manifesting Generator$/m);
   assert.match(facts, /^Channels: 20-34 \(Charisma\)$/m);
 });
+
+test("THE PROMPT COMES FROM THE BLOB, because it does not fit anywhere else", async () => {
+  // Netlify Functions run on Lambda; Lambda caps ALL environment variables
+  // together at 4 KB, and this prompt is 6 KB on its own. It is not a
+  // preference, it is the only place it fits.
+  const { loadPrompt, PROMPT_KEY } = await import("../netlify/lib/gemini.mjs");
+  const store = {
+    async get(key) {
+      return key === PROMPT_KEY ? "  from the blob  " : null;
+    },
+  };
+  assert.equal(await loadPrompt({ store }), "from the blob");
+
+  // An explicit prompt wins, so a test never depends on a store.
+  assert.equal(await loadPrompt({ store, explicit: "given" }), "given");
+
+  // An unreachable store is a MISSING prompt, not a crash -- and a missing
+  // prompt is reported before anything is sent.
+  const angry = {
+    async get() {
+      throw new Error("blobs are down");
+    },
+  };
+  assert.equal(await loadPrompt({ store: angry }), null);
+  assert.equal(await loadPrompt({}), null);
+});

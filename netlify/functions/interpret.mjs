@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { interpretOne } from "../lib/interpretJob.mjs";
 import { promptProblem } from "../lib/interpretation.mjs";
-import { systemPrompt } from "../lib/gemini.mjs";
+import { PROMPT_STORE, loadPrompt } from "../lib/gemini.mjs";
 import { reportFailure } from "../lib/health.mjs";
 import { loadReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
@@ -59,7 +59,10 @@ export default async () => {
    * missing heading instead of a slow trickle of "malformed" that looks like
    * Google having a bad week.
    */
-  const wrong = promptProblem(systemPrompt());
+  const prompt = await loadPrompt({
+    store: getStore({ name: PROMPT_STORE, consistency: "strong" }),
+  });
+  const wrong = promptProblem(prompt);
   if (wrong) {
     console.log(`interpret: ${wrong}`);
     await reportFailure(health, {
@@ -101,6 +104,7 @@ export default async () => {
     apiKey,
     grantSecret,
     origin,
+    prompt,
     deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
   });
 
