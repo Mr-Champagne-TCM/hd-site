@@ -65,3 +65,25 @@ export function createSession(key, params) {
 export function getSession(key, id) {
   return call(`/checkout/sessions/${encodeURIComponent(id)}`, key);
 }
+
+/**
+ * Sessions created since a moment, newest first.
+ *
+ * The third and last Stripe call. It exists for reconciliation: Stripe knows
+ * about every payment whether or not the buyer's browser ever came back, and
+ * that makes it the only source of truth for "who paid but got nothing".
+ *
+ * `customer_details` is included on a list response, which matters -- it holds
+ * the name, email and phone the delivery needs, and without it every session
+ * would need a second call to fetch.
+ *
+ * One page of up to 100. A day with more than a hundred purchases is a very
+ * good day and a paging bug waiting to happen, so the caller is told rather
+ * than being quietly handed a truncated list.
+ */
+export async function listSessions(key, { createdGte, limit = 100 } = {}) {
+  const params = { limit };
+  if (Number.isFinite(createdGte)) params["created[gte]"] = Math.floor(createdGte / 1000);
+  const page = await call("/checkout/sessions", key, { params });
+  return { sessions: page?.data ?? [], more: Boolean(page?.has_more) };
+}

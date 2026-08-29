@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { paidLevel } from "../lib/checkout.mjs";
 import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
-import { mintReadingLink, nameCase, saveReading } from "../lib/reading.mjs";
+import { loadReading, mintReadingLink, nameCase, readingIdForSession, saveReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { reportFailure } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
@@ -43,16 +43,16 @@ export default async (request) => {
     return json(400, { error: { code: "bad_json", message: "That request was not readable." } });
   }
 
-  const id = body?.session_id;
+  const id0 = body?.session_id;
   // Stripe session ids are `cs_` plus a long token. A length cap because this
   // parses what a stranger sends and nothing here should be unbounded.
-  if (typeof id !== "string" || !id.startsWith("cs_") || id.length > 256) {
+  if (typeof id0 !== "string" || !id0.startsWith("cs_") || id0.length > 256) {
     return json(400, { error: { code: "bad_session", message: "That purchase could not be found." } });
   }
 
   let session;
   try {
-    session = await getSession(key, id);
+    session = await getSession(key, id0);
   } catch (e) {
     console.log(`POST /api/claim -> 502 (${e.code || e.message})`);
     return json(502, {
@@ -93,17 +93,42 @@ export default async (request) => {
    */
   const buyer = session?.customer_details ?? {};
   let url = null;
+  /**
+   * ONE PAYMENT, ONE READING, however many times this runs.
+   *
+   * The session id travels in the success URL, so it is in the buyer's history
+   * and can be posted here again -- by a reload, a restored tab, a bookmark, or
+   * on purpose. This used to mint a fresh random reading and send a fresh
+   * delivery email every single time: one payment, unlimited copies.
+   *
+   * The id is now DERIVED from the session, so a repeat claim computes the same
+   * id, finds the reading already there, and returns the same link without
+   * writing or sending anything. No flag to keep, no lock, nothing to clean up.
+   *
+   * `alreadyThere` is also what will let a reconciliation sweep deliver a
+   * purchase whose browser never came back without risking a second copy of one
+   * that did.
+   */
+  let alreadyThere = false;
   try {
     const store = getStore({ name: "readings", consistency: "strong" });
-    const id = await saveReading(store, {
-      tier: level,
-      output: null,
-      name: buyer.name ?? null,
-      email: buyer.email ?? null,
-      phone: buyer.phone ?? null,
-      sku: session?.metadata?.sku ?? null,
-      purchasedAt: typeof session?.created === "number" ? session.created * 1000 : Date.now(),
-    });
+    const id = readingIdForSession(id0, grantSecret);
+    const existing = await loadReading(store, id).catch(() => null);
+    if (existing) {
+      alreadyThere = true;
+      console.log("POST /api/claim: already claimed, returning the same reading");
+    } else {
+      await saveReading(store, {
+        id,
+        tier: level,
+        output: null,
+        name: buyer.name ?? null,
+        email: buyer.email ?? null,
+        phone: buyer.phone ?? null,
+        sku: session?.metadata?.sku ?? null,
+        purchasedAt: typeof session?.created === "number" ? session.created * 1000 : Date.now(),
+      });
+    }
     url = `${new URL(request.url).origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
   } catch (e) {
     // A failure here must NOT fail the claim. The money is taken and the buyer
@@ -124,7 +149,7 @@ export default async (request) => {
    * awaiting anything the response depends on. A buyer who never sees the
    * email still has their reading on screen and can ask for it again.
    */
-  if (url && buyer.email && process.env.RESEND_API_KEY) {
+  if (url && !alreadyThere && buyer.email && process.env.RESEND_API_KEY) {
     const { subject, html, text } = deliveryEmail({
       tier: level,
       /**

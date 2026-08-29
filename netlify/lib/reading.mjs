@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { open as openSealed, seal } from "./sig.mjs";
 
 /**
@@ -55,6 +55,36 @@ export function newReadingId() {
   return randomBytes(16).toString("hex");
 }
 
+/**
+ * THE ID OF THE READING A PARTICULAR PAYMENT BUYS.
+ *
+ * One payment must produce exactly one reading, and until now nothing enforced
+ * that. `claim` minted a fresh random id every time it ran, and nothing
+ * anywhere recorded that a Stripe session had already been claimed -- so the
+ * same session id, which sits in the buyer's own browser history, could be
+ * posted to /api/claim again and again and mint another reading and another
+ * delivery email each time.
+ *
+ * Deriving the id FROM the session makes the operation idempotent without a
+ * lock, a flag or a second store: the same payment always computes the same
+ * id, so the second claim finds the first one's work and hands back the same
+ * link. There is nothing to keep in sync and nothing to clean up.
+ *
+ * HMAC RATHER THAN A PLAIN HASH, keyed with the grant secret, for the reason
+ * `newReadingId` is random in the first place: the id must not be guessable.
+ * A bare sha256 of the session id would mean anyone holding a session id --
+ * it travels in a URL -- could compute the storage key directly, which turns
+ * any future listing bug into a way to reach a specific person's reading.
+ *
+ * Same 32-hex shape as a random one, so every existing id check and every
+ * reading already in the store stays exactly as valid as it was.
+ */
+export function readingIdForSession(sessionId, secret) {
+  if (typeof sessionId !== "string" || !sessionId) throw new Error("readingIdForSession: no session");
+  if (!secret) throw new Error("readingIdForSession: no secret");
+  return createHmac("sha256", secret).update(`session:${sessionId}`).digest("hex").slice(0, 32);
+}
+
 /** A reading id, as it must look before it is allowed near a store. */
 const ID = /^[0-9a-f]{32}$/;
 
@@ -84,7 +114,7 @@ const ID = /^[0-9a-f]{32}$/;
  */
 export async function saveReading(
   store,
-  { tier, output, name, email, phone, sku, purchasedAt, now = Date.now() },
+  { tier, output, name, email, phone, sku, purchasedAt, id = null, now = Date.now() },
 ) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
   // Null is a pending reading. Anything else that is not an object is a caller
@@ -98,8 +128,12 @@ export async function saveReading(
   // loudly rather than to store it and be quietly wrong about the privacy copy.
   if (output) refuseBirthData(output);
 
-  const id = newReadingId();
-  await store.setJSON(id, {
+  // An id supplied by the caller is a DELIBERATE one -- see readingIdForSession
+  // -- and is what makes claiming the same payment twice harmless. Anything
+  // else keeps the random id it always had.
+  if (id !== null && !ID.test(id)) throw new Error(`saveReading: bad id ${id}`);
+  const readingId = id ?? newReadingId();
+  await store.setJSON(readingId, {
     v: 1,
     tier,
     // Explicitly null rather than absent. `loadReading` tells a pending record
@@ -123,7 +157,7 @@ export async function saveReading(
     purchasedAt: Number.isFinite(purchasedAt) ? Math.floor(purchasedAt / 1000) : Math.floor(now / 1000),
     createdAt: Math.floor(now / 1000),
   });
-  return id;
+  return readingId;
 }
 
 /**

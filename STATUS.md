@@ -98,11 +98,34 @@ longer an assertion about a table; it is production data across three routes.
 
 ---
 
+## 3b. Before real money — the two payment gaps
+
+Both closed in code, 2026-08-29. Found by reading the payment path rather than
+the tracker, when Jeremy asked whether he was ready for live Stripe keys.
+
+| | Was | Now |
+|---|---|---|
+| **Claimed twice** | The session id lives in the buyer's browser history and every POST to `/api/claim` minted another reading and another email. One payment, unlimited copies | The reading's id is an HMAC of the Stripe session id, so a repeat claim finds the first one's work and returns the same link. Nothing written, nothing sent |
+| **Paid and vanished** | Delivery only ever happened when the browser returned. A closed tab meant money taken and NO record anywhere — no reading, no email, no alert, because nothing knew a purchase had happened | `reconcile` runs every 15 minutes, asks Stripe who paid in the last 48 hours, and compares against the store. Anything missing raises an incident and, when armed, delivers it |
+
+**`reconcile` ships REPORT-ONLY.** It alerts and changes nothing until
+`RECONCILE_DELIVER=1` is set in Netlify. **Set that at the same time as the live
+Stripe key** — the alert itself says so if it ever fires while unset.
+
+A webhook was considered and deliberately not built. It is faster and it is
+another secret and another moving part, and it can be missed — which means the
+reconciliation would be needed anyway as a backstop. This catches every cause,
+including a webhook that never arrives.
+
+---
+
 ## 4. What is left for JEREMY, and only him
 
 | # | What | Blocking? |
 |---|---|---|
-| J1 | **Live Stripe keys** | Yes, before real money |
+| J1 | **Live Stripe keys** — the account is activated and has no outstanding tasks, so this is only the key itself. Set `RECONCILE_DELIVER=1` in the same visit | Yes, before real money |
+| J1b | **A privacy policy page.** There are good privacy sentences at the point of entry but no policy, and the site takes payments, keeps name/email/phone for a year and sends chart values to Google | Yes, before real money |
+| J1c | **Business address on Stripe is his home address**, and Stripe prints it on every customer receipt | His call |
 | J2 | **The refund/terms decision** (see B1) | Yes, before real money |
 | J3 | **A real purchase on live keys**, once J1 is done | Yes |
 | J4 | **Paste client names into `tools/private-terms.local.txt`** — gitignored, never leaves his machine. Until then the leak scanner's name rule has never run once | No |

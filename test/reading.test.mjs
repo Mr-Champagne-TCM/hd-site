@@ -10,6 +10,7 @@ import {
   nameCase,
   newReadingId,
   readReadingLink,
+  readingIdForSession,
   saveReading,
 } from "../netlify/lib/reading.mjs";
 
@@ -487,4 +488,59 @@ test("AN INNER CAPITAL IS PRESERVED, NEVER INVENTED", async () => {
   const store = fakeStore();
   const id = await saveReading(store, { tier: 1, output: OUTPUT, name: "McDonald" });
   assert.equal((await loadReading(store, id)).buyer.name, "McDonald");
+});
+
+/**
+ * ONE PAYMENT BUYS ONE READING, however many times the claim runs.
+ *
+ * The Stripe session id travels in the success URL, so it lives in the buyer's
+ * own history and can be sent to /api/claim again -- by a reload, a restored
+ * tab, a bookmark, or deliberately. Before this, every claim minted a fresh
+ * random reading and sent another delivery email: one payment, unlimited
+ * copies, and a store that grows for free.
+ *
+ * The id is derived from the session instead, so the second claim computes the
+ * same id, finds the first one's work, and writes nothing.
+ */
+test("A REPEATED CLAIM CANNOT MINT A SECOND READING", async () => {
+  const store = fakeStore();
+  const session = "cs_test_" + randomBytes(12).toString("hex");
+
+  const first = readingIdForSession(session, SECRET);
+  await saveReading(store, { id: first, tier: 1, output: null, name: "Grace Hopper", email: "g@example.invalid" });
+
+  // The same payment, claimed again.
+  const second = readingIdForSession(session, SECRET);
+  assert.equal(second, first, "the same session produced two different readings");
+
+  const found = await loadReading(store, second);
+  assert.ok(found, "the second claim could not see the first one's reading");
+  assert.equal(found.tier, 1);
+});
+
+test("a different payment is a different reading", () => {
+  const a = readingIdForSession("cs_test_aaa", SECRET);
+  const b = readingIdForSession("cs_test_bbb", SECRET);
+  assert.notEqual(a, b);
+});
+
+test("the id is not computable without the secret, because it travels in a URL", () => {
+  const mine = readingIdForSession("cs_test_aaa", SECRET);
+  const theirs = readingIdForSession("cs_test_aaa", "a different secret entirely");
+  assert.notEqual(mine, theirs, "anyone holding a session id could compute the storage key");
+});
+
+test("a session-derived id is the same shape as a random one", () => {
+  // Every id check in this module, and every reading already in the store,
+  // has to stay exactly as valid as it was.
+  assert.match(readingIdForSession("cs_test_aaa", SECRET), /^[0-9a-f]{32}$/);
+  assert.match(newReadingId(), /^[0-9a-f]{32}$/);
+});
+
+test("saveReading refuses an id that is not the right shape", async () => {
+  const store = fakeStore();
+  await assert.rejects(
+    () => saveReading(store, { id: "nope", tier: 0, output: null }),
+    /bad id/,
+  );
 });
