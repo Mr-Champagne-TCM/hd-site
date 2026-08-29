@@ -35,8 +35,23 @@
  * can post that number by hand.
  */
 
-/** Cheapest first, so this is an index into TIERS: 0 is the summary. */
-export const SELLABLE_MAX_LEVEL = 1;
+/**
+ * RAISED TO 2 ON 2026-08-29, and the why this file exists for.
+ *
+ * The written interpretation now exists end to end: the prompt, the validator,
+ * the generator, write-once storage, the background writer, the page and the
+ * seven-page PDF. Nothing is being sold that does not exist.
+ *
+ * WHAT IS STILL TRUE AND WORTH WRITING DOWN: no reading has ever been produced
+ * by the real Gemini. Every test above runs against a fake. The ceiling goes up
+ * so the purchase paths can be walked at all -- straight to the reading, and up
+ * the ladder from the summary -- and it goes up while STRIPE IS IN SANDBOX and
+ * the site is unannounced, which is what makes that safe.
+ *
+ * Jeremy's call, made with both of those in front of him. If a real reading
+ * comes back wrong, this number goes back to 1 in one line and one deploy.
+ */
+export const SELLABLE_MAX_LEVEL = 2;
 
 export function sellable(level) {
   return Number.isInteger(level) && level >= 0 && level <= SELLABLE_MAX_LEVEL;

@@ -12,13 +12,38 @@ import { sessionParams } from "../netlify/lib/checkout.mjs";
  * that cannot be handed over.
  */
 
-test("the summary and the chart are sellable; the reading is not", () => {
+test("every tier that is for sale exists", () => {
   assert.equal(sellable(0), true);
   // Raised 2026-08-28. The chart tier promises "a page you can share and a PDF
   // you keep" and both now exist: /r/<token> renders the drawing, /api/pdf
   // builds it from the same SVG with the font embedded.
   assert.equal(sellable(1), true);
-  assert.equal(sellable(2), false, "the reading still has no interpretation");
+  // Raised 2026-08-29. The reading tier promises the written interpretation,
+  // and the whole path exists: prompt, validator, generator, write-once
+  // storage, the page and the seven-page PDF.
+  assert.equal(sellable(2), true);
+  // And nothing above the ladder is ever sellable, whatever the ceiling says.
+  assert.equal(sellable(TIERS.length), false, "a tier that does not exist is for sale");
+  assert.equal(sellable(-1), false);
+});
+
+test("THE THING THAT MAKES THE READING SELLABLE ACTUALLY EXISTS", async () => {
+  // The ceiling is a promise about deliverability, so it is checked against the
+  // deliverable rather than against itself. What is NOT checked here, and
+  // cannot be: whether Gemini has ever actually written one.
+  const { firstProblem, promptProblem } = await import("../netlify/lib/interpretation.mjs");
+  const { generateReading } = await import("../netlify/lib/gemini.mjs");
+  const { interpretOne } = await import("../netlify/lib/interpretJob.mjs");
+  const { fillInterpretation } = await import("../netlify/lib/reading.mjs");
+  for (const [name, fn] of [
+    ["firstProblem", firstProblem],
+    ["promptProblem", promptProblem],
+    ["generateReading", generateReading],
+    ["interpretOne", interpretOne],
+    ["fillInterpretation", fillInterpretation],
+  ]) {
+    assert.equal(typeof fn, "function", `${name} is missing, and the reading is for sale`);
+  }
 });
 
 test("THE THING THAT MAKES THE CHART SELLABLE ACTUALLY EXISTS", () => {
@@ -57,11 +82,11 @@ test("the unsellable tiers still exist and still have prices", () => {
 });
 
 test("the ceiling is a number that can be raised, not a special case", () => {
-  // A regression guard with a purpose, and it did its job: raising the ceiling
-  // to 1 failed this test, which is how the change got made deliberately
-  // rather than the ceiling being quietly bypassed somewhere else. It should
-  // fail again when the interpretation lands and this becomes 2.
-  assert.equal(SELLABLE_MAX_LEVEL, 1);
+  // A regression guard with a purpose, and it has now done its job twice. It
+  // said in plain words that it should fail when the interpretation landed and
+  // this became 2 -- and it did, which is how the change got made deliberately
+  // rather than the ceiling being quietly bypassed somewhere else.
+  assert.equal(SELLABLE_MAX_LEVEL, 2);
   for (let level = 0; level < TIERS.length; level += 1) {
     assert.equal(sellable(level), level <= SELLABLE_MAX_LEVEL);
   }

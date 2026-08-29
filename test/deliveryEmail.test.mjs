@@ -115,12 +115,25 @@ test("the upgrade NAMES the tier and what is in it, never 'the rest of it'", () 
   assert.doesNotMatch(text, /the rest of it/i, 'the summary email still says "the rest of it"');
 });
 
-test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", () => {
-  // The reading does not exist yet. An email is the one surface nobody can
-  // correct after the fact, so it must not carry an offer that will be refused.
-  const { text, html } = build(1, "J");
-  assert.doesNotMatch(text, /comes off what you pay next/, "the chart email offered the reading");
-  assert.doesNotMatch(html, /comes off what you pay next/, "the chart email offered the reading");
+test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
+  // An email is the one surface nobody can correct after the fact, so it must
+  // never carry an offer the checkout will refuse.
+  //
+  // The chart tier CAN now offer the reading, because the reading exists and is
+  // for sale. What is asserted is the rule rather than today's ceiling: an
+  // upgrade line appears exactly when the next tier is sellable, and the top
+  // tier never has one because there is nothing above it.
+  const { sellable } = await import("../shared/availability.mjs");
+  for (const tier of [0, 1, 2]) {
+    const { text, html } = build(tier, "J");
+    const offered = /comes off what you pay next/.test(text);
+    assert.equal(
+      offered,
+      sellable(tier + 1),
+      `tier ${tier} ${offered ? "offered" : "did not offer"} the next tier, which is ${sellable(tier + 1) ? "" : "not "}sellable`,
+    );
+    assert.equal(/comes off what you pay next/.test(html), offered, "html and text disagree");
+  }
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {
