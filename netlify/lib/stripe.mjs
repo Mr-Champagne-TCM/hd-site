@@ -13,8 +13,44 @@ import { formEncode } from "./checkout.mjs";
 
 const BASE = "https://api.stripe.com/v1";
 
+/**
+ * DOES THIS EVEN LOOK LIKE A KEY?
+ *
+ * Checked because it was not, and the failure was a puzzle rather than a
+ * sentence. Switching to live keys stored `keysk_live_...` -- the word "key"
+ * copied along with the token from the dashboard's own table -- and what came
+ * back was a 502 with a generic message, no entry in Stripe's request log to
+ * find (an unauthenticated call is not attributed to any account), and an
+ * empty line in the function log.
+ *
+ * A whole diagnosis for a stray three letters. Two cheap guards so the next one
+ * says what it is:
+ *
+ *   TRIMMED, because a trailing newline from a copy-paste is the classic
+ *   version of this and is invisible in every UI that shows the value.
+ *
+ *   SHAPE-CHECKED, because "sk_" or "rk_" is the one thing every Stripe secret
+ *   has in common, and anything else is a configuration mistake rather than
+ *   something Stripe should be asked about.
+ *
+ * NEVER LOGS THE KEY. It says what the value starts with, which is enough to
+ * recognise a paste error and useless to anybody else.
+ */
+function checkKey(key) {
+  const k = typeof key === "string" ? key.trim() : "";
+  if (!k) throw new Error("stripe: no key");
+  if (!/^[sr]k_(test|live)_/.test(k)) {
+    const shown = k.slice(0, 6).replace(/[^A-Za-z_]/g, "*");
+    throw new Error(
+      `stripe: STRIPE_SECRET_KEY does not look like a secret key -- it begins "${shown}" ` +
+        `and should begin "sk_live_" or "sk_test_". Check for a stray prefix or a copied label.`,
+    );
+  }
+  return k;
+}
+
 async function call(path, key, { method = "GET", params } = {}) {
-  if (!key) throw new Error("stripe: no key");
+  key = checkKey(key);
 
   const headers = {
     Authorization: `Bearer ${key}`,
