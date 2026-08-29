@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { handleChart } from "../lib/handler.mjs";
 import { loadReading, mintReadingLink } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
+import { record } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
@@ -103,6 +104,10 @@ export default async (request, context) => {
       const to = reading?.buyer?.email;
       if (!to) {
         console.log("chart: no address on the purchase, nothing sent");
+        await record(getStore({ name: "health", consistency: "strong" }), {
+          kind: "ready-email-no-address",
+          detail: `tier ${tier}`,
+        });
         return;
       }
 
@@ -116,6 +121,13 @@ export default async (request, context) => {
       });
       const sent = await sendMail({ to, subject, html, text }, { apiKey });
       console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
+      // The second email. Nobody notices it missing except the buyer.
+      if (!sent.ok) {
+        await record(getStore({ name: "health", consistency: "strong" }), {
+          kind: "ready-email",
+          detail: `${sent.reason} (tier ${tier})`,
+        });
+      }
     },
     // The launch switch. Absent or anything but "1" means open, which is how
     // the page has behaved since it went up and how it is being tested. Set it

@@ -4,6 +4,7 @@ import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
 import { mintReadingLink, nameCase, saveReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
+import { record } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
@@ -110,6 +111,12 @@ export default async (request) => {
     // carry on right now. Losing the emailed copy is a problem to fix, not a
     // reason to tell somebody their purchase did not work.
     console.log(`POST /api/claim: could not record the purchase (${e.message})`);
+    // The worst failure on this path: money taken, nothing stored, and the page
+    // still looks fine. It must reach somebody.
+    await record(getStore({ name: "health", consistency: "strong" }), {
+      kind: "claim-not-recorded",
+      detail: e.message,
+    }).catch(() => {});
   }
 
   /**
@@ -142,6 +149,18 @@ export default async (request) => {
     );
     // Logged either way, and never with the address in it.
     console.log(`POST /api/claim: delivery email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
+    /**
+     * RECORDED, not just logged. This send is best-effort on purpose -- losing
+     * it must never fail a purchase -- and "best effort, logged" is how a buyer
+     * ends up the only person who knows. The reason travels; the address never
+     * does.
+     */
+    if (!sent.ok) {
+      await record(getStore({ name: "health", consistency: "strong" }), {
+        kind: "claim-email",
+        detail: `${sent.reason} (tier ${level})`,
+      });
+    }
   } else if (url && !buyer.email) {
     console.log("POST /api/claim: no email on the purchase, nothing sent");
   }
