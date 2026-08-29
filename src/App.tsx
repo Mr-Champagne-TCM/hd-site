@@ -101,7 +101,7 @@ function Example() {
   );
 }
 
-function Tiers() {
+function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | null }) {
   const rows = ladder();
   /**
    * Which card is waiting on Stripe, and what went wrong if anything did.
@@ -118,7 +118,7 @@ function Tiers() {
     setFailed(null);
     // Resolves with a message only if it did NOT leave -- the success case is a
     // redirect, so there is nothing to do afterwards.
-    const problem = await startCheckout(level);
+    const problem = await startCheckout(level, token);
     if (problem) {
       setFailed({ sku, message: problem });
       setBusy(null);
@@ -156,10 +156,47 @@ function Tiers() {
             className="flex flex-col gap-0 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
           >
             <h3 className="font-sans text-[16px] font-semibold text-brand-paper">{tier.label}</h3>
-            <p className="mt-3 font-display text-[2rem] leading-none text-brand-gold tabular-nums">
-              {money(full)}
-            </p>
-            {credit > 0 && (
+            {/*
+              THREE STATES, and the middle one is the whole point of this page.
+
+              Jeremy walked the upgrade with his own card and it dropped him
+              straight into Stripe at full price, with no chance to see the
+              other tiers. His design: come back to the tiles with the discount
+              ALREADY APPLIED and the old price struck through, and anything
+              already owned greyed out and saying so.
+
+              `owned` is -1 on the open offer page, which collapses this back to
+              exactly what it was.
+            */}
+            {level <= owned ? (
+              <>
+                <p className="mt-3 font-display text-[2rem] leading-none text-brand-muted tabular-nums">
+                  {money(full)}
+                </p>
+                <p className="mt-2 text-[14px] font-semibold leading-snug text-brand-teal">
+                  You already have this
+                </p>
+              </>
+            ) : owned >= 0 ? (
+              <p className="mt-3 flex flex-wrap items-baseline gap-2">
+                <span className="font-display text-[2rem] leading-none text-brand-gold tabular-nums">
+                  {money(Math.max(0, full - rows[owned].tier.cents))}
+                </span>
+                <span className="font-display text-[1.25rem] leading-none text-brand-muted line-through tabular-nums">
+                  {money(full)}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-3 font-display text-[2rem] leading-none text-brand-gold tabular-nums">
+                {money(full)}
+              </p>
+            )}
+            {owned >= 0 && level > owned && (
+              <p className="mt-2 text-[14px] leading-snug text-brand-teal">
+                {money(rows[owned].tier.cents)} already paid comes off
+              </p>
+            )}
+            {owned < 0 && credit > 0 && (
               <p className="mt-2 text-[14px] leading-snug text-brand-teal">
                 {/* The labels already begin with "The", so the article is stripped
                     rather than added. Without this it reads "the the summary". */}
@@ -181,7 +218,11 @@ function Tiers() {
               The refusal itself lives in the checkout function -- see
               shared/availability.mjs.
             */}
-            {!sellable(level) ? (
+            {level <= owned ? (
+              <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">
+                It is on the link in your email, and it stays there for a year.
+              </p>
+            ) : !sellable(level) ? (
               <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">
                 {TIERS_INTRO.notYet}
               </p>
@@ -382,7 +423,65 @@ function PaidReturn() {
   );
 }
 
-export default function App() {
+/**
+ * THE TILES, PRICED AGAINST WHAT A LINK ALREADY OWNS.
+ *
+ * Jeremy walked the upgrade with his own card: the button dropped him straight
+ * into Stripe, at full price, with no chance to see what the other tiers were
+ * or to pick a different one. This is the page he asked for instead -- the same
+ * tiles, the discount already applied, and anything already owned greyed out.
+ *
+ * The tier comes from the SERVER, from the signed token, not from anything the
+ * page works out. A page that decided for itself what somebody owned would be
+ * a page that could be argued with.
+ */
+function UpgradeView({ token }: { token: string }) {
+  const [owned, setOwned] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/reading", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("no"))))
+      .then((body) => alive && setOwned(Number(body?.tier ?? 0)))
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [token]);
+
+  return (
+    <div className="font-sans text-brand-paper">
+      <Nav />
+      <main>
+        <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+          <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
+            What else there is
+          </h1>
+          <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
+            {failed
+              ? "That link could not be read just now, so the prices below are the full ones. Your reading is safe — opening the link from your email again usually sorts it."
+              : "What you have already paid comes off whichever you choose. Nobody pays twice for the same thing."}
+          </p>
+        </section>
+        {/*
+          Rendered only once the server has answered. Showing full prices for a
+          moment and then quietly restriking them is how somebody comes away
+          remembering the wrong number.
+        */}
+        {(owned !== null || failed) && <Tiers owned={owned ?? -1} token={token} />}
+        <Resources />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default function App({ upgradeToken = null }: { upgradeToken?: string | null }) {
   /**
    * Detected from the `?paid=` parameter Stripe returns to, read before
    * `claimIfReturning` strips it -- which is why this is captured once, at
@@ -392,6 +491,8 @@ export default function App() {
     () =>
       typeof window !== "undefined" && new URL(window.location.href).searchParams.has("paid"),
   );
+
+  if (upgradeToken) return <UpgradeView token={upgradeToken} />;
 
   if (returningPaid) {
     return (

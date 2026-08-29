@@ -22,3 +22,20 @@ export function tokenFromPath(pathname: string): string | null {
   const m = /^\/r\/([A-Za-z0-9_.-]+)\/?$/.exec(pathname);
   return m ? m[1] : null;
 }
+
+/**
+ * `/u/<token>` is the same reading, looking at what it could become.
+ *
+ * A SECOND ROUTE RATHER THAN A FLAG, because it is a different page: the tiles,
+ * priced against what this link already owns. Jeremy asked for it after the
+ * upgrade button dropped him straight into Stripe with no chance to see what
+ * the other tiers were or pick a different one.
+ *
+ * Same character class and the same single segment as above, for the same
+ * reason -- the token is a bearer credential and the permissive direction is
+ * the dangerous one.
+ */
+export function upgradeTokenFromPath(pathname: string): string | null {
+  const m = /^\/u\/([A-Za-z0-9_.-]+)\/?$/.exec(pathname);
+  return m ? m[1] : null;
+}

@@ -67,9 +67,41 @@ function noNegativeZero(v: number): number {
 }
 
 /** The app's range. Below 1 the chart would float free of the viewport. */
+/**
+ * THE FLOOR IS "THE WHOLE CHART FITS", NOT "IT FILLS THE WIDTH".
+ *
+ * This was 1, meaning one viewport width, and on a wide screen that is already
+ * too close: the drawing is TALLER than it is wide, so filling the width pushes
+ * the head and the root off the top and bottom with nothing to zoom out to.
+ *
+ * Jeremy, on the live site: "clicking the graph jumps into a zoom level that is
+ * VERY close. cannot zoom further out from this 'too close' perspective... No
+ * side to side action." Both are the same fault -- at that scale the horizontal
+ * pan limit is exactly zero, because the drawing is precisely as wide as the
+ * viewport.
+ *
+ * And it is why FIT did nothing: it returned to a floor he was already sitting
+ * on. A control that is already satisfied looks broken, and it was not wrong to
+ * read it that way.
+ *
+ * `MIN_SCALE` stays as the name for the app's meaning of 1, because the drag
+ * arithmetic below is expressed in viewport widths and must not be re-based.
+ * What changes is that the floor is now COMPUTED from the viewport.
+ */
 export const MIN_SCALE = 1;
 export const MAX_SCALE = 8;
 
-export function clampScale(scale: number): number {
-  return Math.min(Math.max(scale, MIN_SCALE), MAX_SCALE);
+/**
+ * The largest scale at which the whole drawing is visible.
+ *
+ * Never more than 1: on a tall, narrow viewport the width is the binding
+ * constraint and filling it is already the most that fits.
+ */
+export function fitScale(viewW: number, viewH: number, aspect: number = ASPECT): number {
+  if (!(viewW > 0) || !(viewH > 0)) return MIN_SCALE;
+  return Math.min(MIN_SCALE, (viewH * aspect) / viewW);
+}
+
+export function clampScale(scale: number, floor: number = MIN_SCALE): number {
+  return Math.min(Math.max(scale, Math.min(floor, MAX_SCALE)), MAX_SCALE);
 }

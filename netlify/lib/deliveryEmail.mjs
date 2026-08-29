@@ -135,19 +135,44 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
       ? `Your Human Design ${word}`
       : `Your Human Design ${word} is ready`;
 
-  // Nor for a tier that cannot be bought yet -- see readingHandler. An email
-  // is the one surface nobody can correct after the fact.
+  /**
+   * WHAT THEY BOUGHT, AND THEN -- SEPARATELY -- WHAT ELSE THERE IS.
+   *
+   * Jeremy read the summary email and found it describing the CHART: "not tier
+   * 0 content relevant. Should only say what they just bought - don't get their
+   * hopes up, but DO offer upgrade to get more." One paragraph was doing both
+   * jobs, so the tier they had just paid for was never named at all and the one
+   * they had not was described in detail.
+   *
+   * Two blocks now, with a heading between them. The first says what is behind
+   * the link; the second is plainly an offer.
+   *
+   * "CONTAINS", NOT "ADDS" -- "adds" describes a delta somebody has to compute
+   * against what they are holding.
+   *
+   * AND NOT "the same link has it". Same link as what? He asked, which is the
+   * whole answer. It names the page instead.
+   */
+  //
+  // NO CASE SURGERY. The first attempt read "The summary is type, Strategy,
+  // Authority..." -- lowerFirst does not know a blurb opens with a list of
+  // proper nouns. A dash needs no such knowledge.
+  const bought = `${TIERS[tier]?.label ?? "What you bought"} — ${TIERS[tier]?.blurb ?? ""}`;
+
+  // Not for a tier that cannot be bought yet -- see readingHandler. An email is
+  // the one surface nobody can correct after the fact.
   const upgradeLine = top || !sellable(tier + 1)
     ? null
-    /**
-     * "CONTAINS", NOT "ADDS". Jeremy's note, and he is right: "adds" describes
-     * a delta somebody has to compute against what they are holding. The next
-     * tier is a thing in its own right, and this sentence is the only place
-     * they meet it.
-     */
     : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
-      `The same link has it, and what you have already paid comes off what you pay next — ` +
-      `nobody pays twice for the same thing.`;
+      `It is offered on the page above, and what you have already paid comes off the price ` +
+      `there — nobody pays twice for the same thing.`;
+
+  /**
+   * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs
+   * one line: somebody who has just been handed a page of Human Design
+   * vocabulary is exactly the person who will not write in unasked.
+   */
+  const askLine = `If anything here is unclear, ${links.contact} reaches Jeremy directly.`;
 
   const RESOURCES = [
     [
@@ -170,14 +195,18 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     `${action}:`,
     url,
     "",
+    bought,
+    "",
     "RESOURCES — free in the library, written for exactly this moment:",
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
-    ...(upgradeLine ? [upgradeLine, ""] : []),
+    ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),
+    askLine,
+    "",
     ...(pending
       ? []
       : [
-          "This link is active for six days, and can be sent to you again whenever you",
-          "need it. Your reading is kept for a year.",
+          "Your reading is kept for a year. This particular link rests after six days —",
+          "open it then and it offers you a fresh one, as many times as you need.",
           "",
         ]),
     "— The Champagne Method",
@@ -194,7 +223,9 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
 
   <tr><td style="padding:0 0 18px;font-size:19px;color:${PAPER}">Thank you for your purchase!</td></tr>
 
-  <tr><td style="padding:0 0 26px">${button(url, action)}</td></tr>
+  <tr><td style="padding:0 0 20px">${button(url, action)}</td></tr>
+
+  <tr><td style="padding:0 0 26px;font-size:15px;color:${MUTED}">${esc(bought)}</td></tr>
 
   <tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">
     Resources &mdash; free in the library
@@ -208,7 +239,8 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
 
   ${
     upgradeLine
-      ? `<tr><td style="padding:14px 18px;margin:0;background:${PANEL};border-radius:12px;font-size:15px;color:${MUTED}">${esc(upgradeLine)}</td></tr>
+      ? `<tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">If you would like more</td></tr>
+  <tr><td style="padding:14px 18px;margin:0;background:${PANEL};border-radius:12px;font-size:15px;color:${MUTED}">${esc(upgradeLine)}</td></tr>
   <tr><td style="height:22px"></td></tr>`
       : `<tr><td style="height:8px"></td></tr>`
   }
@@ -217,10 +249,12 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     pending
       ? ""
       : `<tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">
-    This link is active for six days, and can be sent to you again whenever you need it. Your
-    reading is kept for a year.
+    Your reading is kept for a year. This particular link rests after six days &mdash; open it then
+    and it offers you a fresh one, as many times as you need.
   </td></tr>`
   }
+
+  <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">${esc(askLine)}</td></tr>
 
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
     <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>

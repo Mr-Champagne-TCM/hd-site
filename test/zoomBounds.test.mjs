@@ -79,3 +79,49 @@ test("the aspect is the drawing's own, not a guess", () => {
   assert.ok(Math.abs(ASPECT - 1090 / 1330) < 1e-12);
   assert.ok(ASPECT < 1, "the bodygraph is taller than it is wide");
 });
+
+// --- the floor, after the first real walk-through ---------------------------
+
+test("THE FLOOR SHOWS THE WHOLE CHART, it does not fill the width", async () => {
+  // Jeremy on the live viewer: "jumps into a zoom level that is VERY close.
+  // cannot zoom further out... No side to side action." Both were the same
+  // fault -- at one viewport width the drawing is exactly as wide as the
+  // viewport (so the horizontal pan limit is zero) and much taller than it (so
+  // the head and root are off screen with nothing to zoom out to).
+  const { fitScale, ASPECT, MIN_SCALE, clampScale } = await import("../src/zoomBounds.ts")
+    .catch(() => import("../src/zoomBounds.js"));
+
+  // A wide desktop overlay: the whole drawing must fit inside the height.
+  const wide = fitScale(1200, 800);
+  assert.ok(wide < MIN_SCALE, "the floor still fills the width on a wide screen");
+  assert.ok(Math.abs(1200 * wide / ASPECT - 800) < 1, "the drawing does not fit the height exactly");
+
+  // A phone, where the WIDTH is the binding constraint. Filling it is already
+  // the most that fits, so the floor stays where it was.
+  assert.equal(fitScale(390, 700), MIN_SCALE);
+
+  // Never above 1, whatever the shape.
+  for (const [w, h] of [[100, 100000], [1, 1], [800, 800]]) {
+    assert.ok(fitScale(w, h) <= MIN_SCALE, `${w}x${h} produced a floor above 1`);
+  }
+});
+
+test("an unmeasured viewport does not produce a nonsense floor", async () => {
+  // The element is measured after it exists, so zero is a real state that this
+  // is asked about before the first paint.
+  const { fitScale, MIN_SCALE } = await import("../src/zoomBounds.ts")
+    .catch(() => import("../src/zoomBounds.js"));
+  for (const [w, h] of [[0, 0], [0, 800], [1200, 0], [-5, 100]]) {
+    assert.equal(fitScale(w, h), MIN_SCALE, `${w}x${h} did not fall back to 1`);
+  }
+});
+
+test("clampScale respects a floor below one, which is what made Fit work", async () => {
+  const { clampScale, MAX_SCALE } = await import("../src/zoomBounds.ts")
+    .catch(() => import("../src/zoomBounds.js"));
+  assert.equal(clampScale(0.1, 0.5), 0.5, "the computed floor was ignored");
+  assert.equal(clampScale(0.7, 0.5), 0.7);
+  assert.equal(clampScale(99, 0.5), MAX_SCALE);
+  // With no floor given it behaves exactly as it always did.
+  assert.equal(clampScale(0.1), 1);
+});

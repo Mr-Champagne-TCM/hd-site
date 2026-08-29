@@ -182,7 +182,17 @@ export default function ReadingActions({
           ) : (
             <button
               type="button"
-              onClick={() => startCheckout(upgrade.level)}
+              /*
+                TO THE TILES, NOT STRAIGHT TO STRIPE.
+
+                Jeremy walked this with his own card: one press and he was on a
+                payment page, at full price, with no chance to see what the
+                other tiers were or pick a different one. `/u/<token>` shows the
+                same tiles with his credit already applied.
+              */
+              onClick={() => {
+                window.location.href = `/u/${encodeURIComponent(token)}`;
+              }}
               className="mt-4 rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
             >
               {upgrade.label}
@@ -215,7 +225,23 @@ export default function ReadingActions({
         </section>
       )}
 
-      {canResend && <Resend token={token} />}
+      {/*
+        "EMAIL ME THIS LINK" IS GONE FROM THIS PAGE.
+
+        Jeremy, standing on a page he had reached BY that link: "it already is
+        in a place they can find. Only path to this link is through the vehicle
+        it offers. remove."
+
+        Right. The button was designed when the email WAS the delivery -- press
+        it and the reading arrives. Now the link opens this page and everything
+        is already on it, so the button offers to send somebody a copy of the
+        thing they are holding. It also threaded a duplicate into the original
+        email, which looks like a fault whichever way you read it.
+
+        `Resend` itself STAYS, and is still exported: an EXPIRED link has no
+        page to stand on, and asking for a fresh one is the only way back (D-13).
+        That is the case it was really for.
+      */}
 
       <section>
         <p className="text-[15px] leading-relaxed text-brand-muted">

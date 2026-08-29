@@ -52,7 +52,12 @@ export const SITE = {
  * a stranger. Different readers."
  */
 export const RESOURCES = {
-  title: "Free reading, either way",
+  /**
+   * NOT "Free reading, either way". On a site whose product is called a
+   * reading, that sentence offers a free one. Jeremy read it exactly that way:
+   * "implies they get a free human design reading". It meant reading MATTER.
+   */
+  title: "Free to read, either way",
   body:
     "Two pieces in the library, written for exactly these two moments. Both are free and always " +
     "will be, whether or not anything is bought here.",

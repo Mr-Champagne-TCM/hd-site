@@ -53,11 +53,29 @@ export function dropGrant(): void {
  * what has already been paid comes off what is paid next -- and the server
  * verifies it rather than believing it.
  */
-export async function startCheckout(level: number): Promise<string | null> {
+export async function startCheckout(
+  level: number,
+  reading?: string | null,
+): Promise<string | null> {
+  /**
+   * BOTH PROOFS OF WHAT IS ALREADY OWNED, and the second is the fix for a real
+   * overcharge. The grant lives in the tab that paid and dies with it; the
+   * reading token arrived by email and survives the tab, the device and the
+   * week. Somebody upgrading from their emailed link had no grant, so the
+   * credit was zero and Stripe asked full price -- on the one path we tell
+   * everybody to use.
+   *
+   * The server verifies both signatures and takes the better of the two.
+   * Neither is a claim anybody can type.
+   */
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ level, grant: heldGrant() ?? undefined }),
+    body: JSON.stringify({
+      level,
+      grant: heldGrant() ?? undefined,
+      reading: reading ?? undefined,
+    }),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.url) {

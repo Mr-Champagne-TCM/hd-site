@@ -1,6 +1,7 @@
 import { sessionParams } from "../lib/checkout.mjs";
 import { createSession } from "../lib/stripe.mjs";
 import { readGrant } from "../lib/grant.mjs";
+import { readReadingLink } from "../lib/reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 
@@ -58,12 +59,33 @@ export default async (request) => {
     });
   }
 
-  // What they already own, taken from the grant and nowhere else. A grant that
-  // does not verify is worth exactly as much as no grant: zero credit, full
-  // price. It is never an error -- somebody arriving fresh has no grant, and
-  // that is the normal case.
+  /**
+   * WHAT THEY ALREADY OWN. Two proofs, and the SECOND one is the fix for an
+   * overcharge Jeremy found by walking the site with his own card.
+   *
+   *   the GRANT   lives in the browser tab that paid. Good for the minutes
+   *               right after a purchase, worthless the moment that tab closes.
+   *
+   *   the LINK    is the signed reading token. It survives the tab, the device
+   *               and the week, because it arrived by email.
+   *
+   * He upgraded from a page reached by his emailed link on a later visit. There
+   * was no grant in that tab, so the credit was zero and Stripe asked for the
+   * whole price -- while the PDF in his hand said "what you have already paid
+   * comes off the price there". The promise was false, and it was false on the
+   * ONE PATH WE TELL EVERYBODY TO USE.
+   *
+   * Both are server-verified signatures, so neither is a sentence anyone can
+   * type. The better of the two wins: somebody holding a chart link and a
+   * summary grant is credited for the chart.
+   */
   const held = readGrant(body?.grant, grantSecret);
-  const alreadyPaidCents = held.ok && held.tier < level ? TIERS[held.tier].cents : 0;
+  const link = readReadingLink(body?.reading, grantSecret, Date.now());
+  const ownedTier = Math.max(
+    held.ok ? held.tier : -1,
+    link.ok ? link.tier : -1,
+  );
+  const alreadyPaidCents = ownedTier >= 0 && ownedTier < level ? TIERS[ownedTier].cents : 0;
 
   const origin = new URL(request.url).origin;
 

@@ -153,6 +153,19 @@ export default async (request, context) => {
     // A switch rather than a code change, so turning the paywall on is not a
     // deploy and turning it back off in a hurry is not one either.
     paywall: process.env.PAYWALL === "1",
+
+    /**
+     * A PAID CHART THAT THE ENGINE REFUSED. Nobody else can see this one: the
+     * buyer gets a message, the log gets a line, and the money has already
+     * moved. It cost a real purchase to learn that.
+     */
+    report: async ({ kind, detail }) =>
+      reportFailure(getStore({ name: "health", consistency: "strong" }), {
+        kind,
+        detail,
+        send: alertSender(process.env.RESEND_API_KEY),
+        site: process.env.URL,
+      }),
   });
 
   // Status only. The request body carries birth data and is never logged, at

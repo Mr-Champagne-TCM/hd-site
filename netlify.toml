@@ -37,3 +37,9 @@
   from = "/r/*"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  # The tiles, priced against what a link already owns. Same shape as /r/.
+  from = "/u/*"
+  to = "/index.html"
+  status = 200

@@ -219,6 +219,27 @@ export default function EntryForm({
         });
         return;
       }
+      /**
+       * STRAIGHT TO THE READING PAGE, rather than rendering a second version of
+       * it here.
+       *
+       * There were two views of the same purchase: this one, drawn from what
+       * had just been computed, and `/r/<token>`, drawn from the store. Jeremy
+       * found the seam immediately -- the upgrade offer appeared on one and not
+       * the other, because a PENDING reading is deliberately never sold the
+       * next tier and this view still had that answer in its hand.
+       *
+       * One view, from the store, every time. It also lands at the TOP of the
+       * page, which the other one did not: he arrived mid-page, scrolled to the
+       * bodygraph, with the title above him.
+       *
+       * `replace`, so Back does not return to a form whose purchase is already
+       * spent.
+       */
+      if (readingToken) {
+        window.location.replace(`/r/${encodeURIComponent(readingToken)}`);
+        return;
+      }
       setState({ at: "done", summary: body as SummaryData });
     } catch {
       setState({
@@ -356,6 +377,16 @@ export default function EntryForm({
         </p>
       )}
 
+      {/*
+        WHAT HAPPENS TO THE DETAILS, BEFORE THEY ARE ASKED FOR.
+        Jeremy: "There is a blurb at bottom about discard birth details. Maybe
+        that goes at the top?" It does -- a promise about what will be done with
+        something belongs before it is handed over, not after.
+      */}
+      <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
+        {privacyFor(tier)}
+      </p>
+
       <form onSubmit={submit} className="mt-8 max-w-[34rem]">
         {/*
           A top and a bottom on the asking.
@@ -397,11 +428,16 @@ export default function EntryForm({
             disabled={!ready}
             className="rounded-full bg-brand-teal px-6 py-3.5 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
           >
-            {state.at === "working" ? "Working…" : "My summary"}
+            {/*
+              THE BUTTON NAMES WHAT THEY BOUGHT. It said "My summary" at every
+              tier -- Jeremy, on a chart-tier form: "Isn't it a chart now?" It
+              was. The label comes from the pricing module, so a tier renamed
+              there is renamed here.
+            */}
+            {state.at === "working"
+              ? "Working…"
+              : `My ${(TIERS[tier]?.label ?? "summary").replace(/^The\s+/i, "").toLowerCase()}`}
           </button>
-          <p className="mt-3 max-w-[52ch] text-[14px] leading-relaxed text-brand-muted">
-            {privacyFor(tier)}
-          </p>
         </div>
       </form>
     </section>

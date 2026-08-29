@@ -126,20 +126,20 @@ test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
   const { sellable } = await import("../shared/availability.mjs");
   for (const tier of [0, 1, 2]) {
     const { text, html } = build(tier, "J");
-    const offered = /comes off what you pay next/.test(text);
+    const offered = /comes off the price/.test(text);
     assert.equal(
       offered,
       sellable(tier + 1),
       `tier ${tier} ${offered ? "offered" : "did not offer"} the next tier, which is ${sellable(tier + 1) ? "" : "not "}sellable`,
     );
-    assert.equal(/comes off what you pay next/.test(html), offered, "html and text disagree");
+    assert.equal(/comes off the price/.test(html), offered, "html and text disagree");
   }
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {
   const top = build(2, "J");
-  assert.doesNotMatch(top.text, /comes off what you pay next/, "the top tier was offered an upgrade");
-  assert.doesNotMatch(top.html, /comes off what you pay next/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.text, /comes off the price/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.html, /comes off the price/, "the top tier was offered an upgrade");
 });
 
 test("the upgrade uses the SAME link, because there is only one", () => {
@@ -199,10 +199,15 @@ test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL", () => {
 
 test("and present once there is something to come back TO", () => {
   const { text } = build(1, "J");
-  assert.match(text, /active for six days/);
-  // Immediately followed by the reassurance, so it cannot read as a threat.
-  assert.match(text, /sent to you again/);
-  assert.match(text, /kept for a year/);
+  assert.match(text, /rests after six days/);
+  // THE REASSURANCE COMES FIRST NOW, not after. Jeremy asked "are we still
+  // doing that?" about the six days, which is what a limit reads as when it
+  // leads: a countdown. The year leads instead, and the six days is a fact
+  // about one link rather than about the purchase.
+  const year = text.indexOf("kept for a year");
+  const six = text.indexOf("rests after six days");
+  assert.ok(year >= 0 && six > year, "the six-day line still leads");
+  assert.match(text, /offers you a fresh one/);
 });
 
 test("the subject says what arrived, so it can be found again in a year", () => {

@@ -30,6 +30,12 @@ export async function handleChart({
    * has nobody to write to -- simply does not pass one.
    */
   deliver = null,
+  /**
+   * How a paid request that FAILED reaches somebody. Injected for the same
+   * reason `deliver` is: the whole path stays testable without a network, and
+   * the free path simply does not pass one.
+   */
+  report = null,
 }) {
   let request;
   try {
@@ -117,6 +123,28 @@ export async function handleChart({
   }
 
   if (!upstream.ok) {
+    /**
+     * A PAID REQUEST THAT THE ENGINE REFUSED IS AN INCIDENT, not just a reply.
+     *
+     * This is the failure that cost a real purchase. Jeremy bought the reading
+     * tier and the engine answered "This key reaches tier 1. Tier 2 was asked
+     * for." -- the site's ceiling and the engine key's cap are two numbers in
+     * two repositories that must move together, and only one of them did. The
+     * money was taken and nothing was delivered, and the only reason anybody
+     * found out is that he was the buyer.
+     *
+     * Reported the moment it happens, and only for a request that arrived on a
+     * PAID LINK. A stranger poking at the endpoint is not an incident; somebody
+     * who has paid and been refused is.
+     *
+     * The upstream status and code travel. The birth moment does not.
+     */
+    if (readingLink.ok && typeof report === "function") {
+      await report({
+        kind: `chart-refused-${upstream.status}`,
+        detail: `tier ${readingLink.tier}: ${upstream.payload?.error?.code ?? "unknown"}`,
+      }).catch(() => {});
+    }
     // The engine's own message is already written for a person to read, and
     // its codes are stable, so it is passed through rather than reworded.
     return json(upstream.status, upstream.payload);

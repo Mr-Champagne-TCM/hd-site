@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { checkBodygraph } from "./bodygraphGate";
-import { ASPECT, MAX_SCALE, MIN_SCALE, clamp, clampScale } from "./zoomBounds";
+import { ASPECT, MAX_SCALE, MIN_SCALE, clamp, clampScale, fitScale } from "./zoomBounds";
 
 /**
  * The drawing, on the page.
@@ -120,6 +120,12 @@ function Zoom({
   onClose: () => void;
 }) {
   const surface = useRef<HTMLDivElement>(null);
+  /**
+   * OPENS SHOWING THE WHOLE CHART. It opened at scale 1 -- one viewport width --
+   * which on a wide screen already crops the head and the root. Set from the
+   * measured box the moment there is one; until then there is nothing drawn to
+   * be at the wrong scale.
+   */
   const [scale, setScale] = useState(MIN_SCALE);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
@@ -174,6 +180,18 @@ function Zoom({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  /**
+   * The first real measurement sets the opening scale. Guarded so a resize or a
+   * rotation later does not yank somebody back out of a zoom they chose.
+   */
+  const fitted = useRef(false);
+  useLayoutEffect(() => {
+    if (fitted.current || !(box.w > 0 && box.h > 0)) return;
+    fitted.current = true;
+    setScale(fitScale(box.w, box.h));
+    setOffset({ x: 0, y: 0 });
+  }, [box.w, box.h]);
 
   const view = () => box;
 
@@ -240,7 +258,7 @@ function Zoom({
   function zoomTo(nextRaw: number, px?: number, py?: number) {
     const { w, h } = view();
     if (!(w > 0 && h > 0)) return;
-    const next = clampScale(nextRaw);
+    const next = clampScale(nextRaw, fitScale(w, h));
     const curW = w * scale;
     const curH = curW / ASPECT;
     const nxtW = w * next;
@@ -290,13 +308,20 @@ function Zoom({
     return () => el.removeEventListener("wheel", onWheel);
   });
 
+  /**
+   * FIT means the whole drawing, centred. It used to mean "scale 1", which on a
+   * wide screen is already cropped -- so pressing it while sitting at 1 did
+   * visibly nothing.
+   */
   function reset() {
-    setScale(MIN_SCALE);
+    const { w: vw, h: vh } = view();
+    setScale(fitScale(vw, vh));
     setOffset({ x: 0, y: 0 });
   }
 
   const { w, h } = view();
   const ready = w > 0 && h > 0;
+  const floor = fitScale(w, h);
   const drawW = w * scale;
   const drawH = drawW / ASPECT;
 
@@ -352,7 +377,7 @@ function Zoom({
         <button
           type="button"
           aria-label="Zoom out"
-          disabled={scale <= MIN_SCALE}
+          disabled={scale <= floor + 0.001}
           onClick={() => zoomTo(scale / 1.4)}
           className="h-9 w-9 rounded-full font-sans text-[20px] leading-none text-brand-gold disabled:opacity-30"
         >
@@ -372,7 +397,7 @@ function Zoom({
         </button>
         <button
           type="button"
-          disabled={scale <= MIN_SCALE}
+          disabled={scale <= floor + 0.001}
           onClick={reset}
           className="ml-1 rounded-full px-3 py-1.5 font-sans text-[13px] text-brand-teal disabled:opacity-30"
         >
