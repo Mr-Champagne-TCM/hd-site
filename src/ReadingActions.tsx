@@ -60,7 +60,22 @@ export default function ReadingActions({
    * A value with no note renders nothing rather than something generic. A
    * sentence that fits every Type is a sentence about nobody.
    */
-  const notes = mechanics
+  /**
+   * NOT AFTER A WRITTEN READING.
+   *
+   * Jeremy, looking at his own tier-2 page: "is this content supposed to show
+   * after my reading?" No. It was built for the CHART tier, where nothing else
+   * explains what Type, Strategy and Authority are and somebody has just met
+   * three unfamiliar words.
+   *
+   * At the reading tier those same three are already covered, at length and
+   * about THEM -- "Because your Sacral authority provides a direct physical
+   * compass..." runs for two paragraphs on the page above. Following that with
+   * a stock paragraph that is identical for every Manifesting Generator reads
+   * as filler, and worse, it quietly contradicts the thing they paid for: the
+   * reading is individual, and this is not.
+   */
+  const notes = mechanics && tier < 2
     ? (
         [
           ["Type", mechanics.type, describe(TYPE_NOTES, mechanics.type)],

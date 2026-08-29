@@ -57,3 +57,23 @@ test("nothing else in the app links a PDF the summary tier cannot have", () => {
     "the download link is no longer behind a tier check",
   );
 });
+
+/**
+ * THE STOCK EXPLAINER DOES NOT FOLLOW A WRITTEN READING.
+ *
+ * Jeremy, on his own live tier-2 page: "is this content supposed to show after
+ * my reading?" It was built for the CHART tier, where somebody has just met the
+ * words Type, Strategy and Authority and nothing else explains them.
+ *
+ * After a reading it is filler, and it quietly contradicts what was bought: two
+ * paragraphs written about THIS person's Sacral authority, followed by a stock
+ * sentence identical for every Manifesting Generator.
+ */
+test("'What these three mean' is gone at the reading tier", () => {
+  const src = source("src/ReadingActions.tsx");
+  assert.match(
+    src,
+    /const notes = mechanics && tier < 2/,
+    "the stock explainer is no longer gated to below the reading tier",
+  );
+});
