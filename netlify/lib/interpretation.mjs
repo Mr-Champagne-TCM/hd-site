@@ -230,6 +230,38 @@ export function summaryRows(raw) {
  * interpretation section -- the app sets it large, and it is the sentence the
  * rest of the section rests on.
  */
+/**
+ * A LABELLED LIST IS NOT A WRAPPED PARAGRAPH.
+ *
+ * A block separated by blank lines is normally one paragraph that happens to be
+ * wrapped, so single newlines inside it become spaces. That is right for prose
+ * and WRONG for the mechanics sections that are lists, where the model puts one
+ * entry per line separated by a single newline:
+ *
+ *   Line 2 (Hermit), conscious: Natural talents live inside you quietly...
+ *   Line 4 (Opportunist), unconscious: Your foundations rest on the network...
+ *
+ * Joined into one paragraph, the renderer splits on the FIRST colon only -- so
+ * "Line 2 (Hermit), conscious" became the label and EVERYTHING ELSE, Line 4
+ * included, became its note. Jeremy found it on the profile lines of his own
+ * paid reading: "info that is misplaced".
+ *
+ * THE MODEL WAS RIGHT AND THE PARSER WAS WRONG, which is worth saying because
+ * the instinct on seeing mangled output is to go and change the prompt.
+ *
+ * A block is a LIST when two or more of its lines open with a short label and a
+ * colon. Two, not one: a sentence that happens to contain a colon halfway
+ * through is prose, and treating that as a list would break every section that
+ * has one.
+ */
+const ENTRY = /^[^:\n]{1,70}:\s/;
+
+function unwrap(block) {
+  const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+  const labelled = lines.filter((l) => ENTRY.test(l)).length;
+  return labelled >= 2 ? lines : [lines.join(" ").trim()];
+}
+
 export function parseReading(raw) {
   const text = sanitize(raw);
   const body = text.includes(DISCLAIMER) ? text.slice(0, text.indexOf(DISCLAIMER)) : text;
@@ -242,7 +274,7 @@ export function parseReading(raw) {
     const paras = buf
       .join("\n")
       .split(/\n\s*\n/)
-      .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
+      .flatMap(unwrap)
       .filter(Boolean);
     const big = INTERPRETATION.includes(current);
     sections.push({

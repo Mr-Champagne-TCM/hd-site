@@ -181,3 +181,63 @@ test("the disclaimer is not parsed as content", () => {
   const all = sections.flatMap((s) => [s.lede ?? "", ...s.paragraphs]).join(" ");
   assert.ok(!all.includes("self-reflection"), "the disclaimer leaked into a section");
 });
+
+/**
+ * A LABELLED LIST STAYS A LIST.
+ *
+ * Found on Jeremy's own paid reading. The model emitted the profile lines
+ * correctly -- one entry per line, separated by a single newline -- and the
+ * parser folded them into one paragraph, because a single newline inside a
+ * block is normally just wrapping. The renderer then split on the FIRST colon,
+ * so "Line 2 (Hermit), conscious" became the label and everything after it,
+ * Line 4 included, became its note.
+ *
+ * The model was right and the parser was wrong.
+ */
+test("TWO LABELLED LINES ARE TWO ENTRIES, NOT ONE MANGLED PARAGRAPH", () => {
+  const raw = [
+    "Your profile lines",
+    "",
+    "Line 2 (Hermit), conscious: Natural talents live inside you quietly.",
+    "Line 4 (Opportunist), unconscious: Your foundations rest on the network.",
+    "",
+  ].join("\n");
+  const section = parseReading(raw).sections.find((s) => s.heading === "Your profile lines");
+  assert.ok(section, "the section was not parsed at all");
+  assert.equal(section.paragraphs.length, 2, "the two lines were folded together");
+  assert.match(section.paragraphs[0], /^Line 2 \(Hermit\)/);
+  assert.match(section.paragraphs[1], /^Line 4 \(Opportunist\)/);
+  assert.ok(
+    !section.paragraphs[0].includes("Line 4"),
+    "line 4 is still buried inside line 2's entry",
+  );
+});
+
+test("wrapped prose is still joined, which is what the old behaviour was for", () => {
+  // A section that is one sentence, wrapped by the model across three lines.
+  const raw = [
+    "Your definition",
+    "",
+    "Having a Single definition means your defined Throat and Sacral",
+    "centres are joined directly, so everything you generate flows",
+    "through one consistent internal pathway.",
+    "",
+  ].join("\n");
+  const section = parseReading(raw).sections.find((s) => s.heading === "Your definition");
+  assert.equal(section.paragraphs.length, 1, "wrapped prose was shredded into lines");
+  assert.match(section.paragraphs[0], /Throat and Sacral centres are joined/);
+});
+
+test("ONE colon in a sentence does not make it a list", () => {
+  // The reason the threshold is two labelled lines and not one. A single
+  // colon mid-sentence is ordinary prose and must not be shredded.
+  const raw = [
+    "Your definition",
+    "",
+    "There is one thing worth saying here: your two defined centres are",
+    "joined, and nothing else is.",
+    "",
+  ].join("\n");
+  const section = parseReading(raw).sections.find((s) => s.heading === "Your definition");
+  assert.equal(section.paragraphs.length, 1, "a mid-sentence colon was treated as a label");
+});
