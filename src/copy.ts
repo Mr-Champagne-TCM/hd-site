@@ -36,6 +36,15 @@ export const NAV = {
  */
 export const SITE = {
   home: "https://thechampagnemethod.co",
+  /**
+   * What each tier actually is, shown with real output from the example chart.
+   *
+   * It lives on the main site rather than here, which is Jeremy's call and the
+   * cheap one: that repo publishes to GitHub Pages for nothing, while every
+   * publish of this one spends Netlify credits. A page that will be edited for
+   * its wording rather than its behaviour belongs on the free side.
+   */
+  readings: "https://thechampagnemethod.co/readings/",
   library: "https://thechampagnemethod.co/library/",
   hd101: "https://thechampagnemethod.co/library/human-design/",
   bodygraph: "https://thechampagnemethod.co/library/bodygraph/",

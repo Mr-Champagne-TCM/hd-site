@@ -247,6 +247,22 @@ function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | 
         {LADDER_NOTE}
       </p>
       {/*
+        THE LONG ANSWER, one click away. Three cards carry one sentence each --
+        enough to price something, not enough to choose between two of them.
+        Jeremy asked for this after walking his own upgrade: "We need a page that
+        they can access that describes the tiers in more detail."
+      */}
+      <p className="mt-4 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
+        <a
+          href={SITE.readings}
+          className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+        >
+          What each one actually is
+        </a>
+        , shown with a real example chart — the summary in full, the bodygraph
+        drawn, and the PDF exactly as it downloads.
+      </p>
+      {/*
         The standalone call to action is gone, deliberately.
 
         It said "Start with the summary" at a price and linked to #yours -- the
@@ -484,6 +500,20 @@ function UpgradeView({ token }: { token: string }) {
           remembering the wrong number.
         */}
         {(owned !== null || failed) && <Tiers owned={owned ?? -1} token={token} />}
+        {/*
+          AND THE LONG ANSWER HERE TOO. This page has the least explanation on
+          the whole site -- three cards and a price -- and it is where somebody
+          is actually choosing between two tiers.
+        */}
+        <p className="mx-auto max-w-5xl px-6 pt-6 text-[16px] leading-relaxed text-brand-paper/85 sm:px-8">
+          <a
+            href={SITE.readings}
+            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+          >
+            What each one actually is
+          </a>
+          , shown with a real example chart.
+        </p>
         <Resources />
       </main>
       <Footer />
