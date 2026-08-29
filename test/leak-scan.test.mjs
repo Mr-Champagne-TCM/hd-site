@@ -324,3 +324,50 @@ test("other rules still quote the line, because you need to see it", () => {
   assert.equal(r.blocked, true);
   assert.ok(r.output.includes(money), "a non-name finding should still be quoted");
 });
+
+
+/**
+ * A LONE FIRST NAME IS MATCHED EXACTLY AS WRITTEN.
+ *
+ * Real failure, twice on main, and it cannot be described here with the name
+ * that caused it -- this file is public, the name is a real client's, and the
+ * scanner refused the first version of this very comment for saying it.
+ *
+ * The shape: a client's first name is also an ordinary English word, and that
+ * word is part of React's internal vocabulary, appearing hundreds of times in
+ * the bundle we ship. Matched case-insensitively, one client's first name
+ * failed every build forever on a dependency's internals, with nothing of ours
+ * in the file at all. A rule that cannot be satisfied is a rule that gets
+ * deleted, and then it protects nothing.
+ *
+ * The leak actually being guarded against is a person's name in OUR OWN text,
+ * and the delivery email greets people by first name -- so a greeting is the
+ * shape that has to stay caught. It does.
+ *
+ * `Meadow` stands in below: one word, an ordinary noun, nobody's client.
+ */
+test("A ONE-WORD NAME MATCHES ITS OWN CASING, NOT THE DICTIONARY", () => {
+  // The shape of a real leak: our own email, greeting somebody by name.
+  const caught = scan(
+    { "src/mail.js": 'const greeting = "Hello Meadow,";\n' },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(caught.blocked, true, "a greeting by first name was not caught");
+
+  // The shape of the false positive: a dependency's ordinary vocabulary.
+  const clean = scan(
+    { "src/vendor.js": "const x = { meadow: 1, meadows: [], nextMeadow: 2 };\n" },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(clean.blocked, false, "a lowercase common word was treated as a person");
+});
+
+test("a full name is still caught in any casing, which is the point of two words", () => {
+  // Two words in that order are never an accident, so casing cannot rescue one
+  // -- and a lowercased slug or a mangled fixture is still a leak.
+  const r = scan(
+    { "src/app.js": 'const w = "wilhelmina farnsworth";\n' },
+    { LEAK_SCAN_TERMS: "Wilhelmina Farnsworth" },
+  );
+  assert.equal(r.blocked, true, "a lowercased full name slipped through");
+});

@@ -241,12 +241,49 @@ const RULES = [
  */
 const PUBLIC_LOG = Boolean(process.env.GITHUB_ACTIONS || process.env.CI);
 
+/**
+ * A FULL NAME IS MATCHED IN ANY CASE. A LONE FIRST NAME MUST MATCH ITS OWN.
+ *
+ * Everything here used to be case-insensitive, which is right for "Wilhelmina
+ * Farnsworth" -- two words in that order are never an accident, in any casing,
+ * so a lowercased slug or a mangled fixture is still caught.
+ *
+ * It is wrong for a single word, because plenty of first names are also
+ * ordinary English -- and one of Jeremy's clients has exactly such a name,
+ * which is also part of React's internal vocabulary and appears hundreds of
+ * times in the bundle we ship. (Not written here: this repo is public and the
+ * name is real. The scanner refused an earlier draft of this comment for
+ * spelling it out, which is the rule working.) Matched case-insensitively, one
+ * client's first name failed every build forever on a dependency's internals,
+ * with nothing of ours in the file at all -- and a rule that cannot be
+ * satisfied gets deleted, after which it protects nothing.
+ *
+ * So a one-word term is matched EXACTLY AS WRITTEN. It still catches
+ * "Hello <Name>," which is what a real leak looks like here -- our own
+ * delivery email greets people by first name -- and not the lowercase noun.
+ *
+ * THE TRADE-OFF, STATED: a lone first name leaked in lowercase (a URL slug,
+ * say) is missed. Anyone worried about that for a particular person should add
+ * their full name as well; both entries can sit in the list at once, and the
+ * two-word one is caught in any casing. That is written in the header of
+ * tools/private-terms.local.txt so it is a choice rather than a surprise.
+ */
 const TERMS = privateTerms();
-if (TERMS.length) {
+const MULTI_WORD = TERMS.filter((t) => /\s/.test(t));
+const ONE_WORD = TERMS.filter((t) => !/\s/.test(t));
+
+if (MULTI_WORD.length) {
   RULES.push({
     id: "private-term",
     why: "a name or value from the private terms list",
-    re: new RegExp("\\b(" + TERMS.map(escapeRe).join("|") + ")\\b", "i"),
+    re: new RegExp("\\b(" + MULTI_WORD.map(escapeRe).join("|") + ")\\b", "i"),
+  });
+}
+if (ONE_WORD.length) {
+  RULES.push({
+    id: "private-term",
+    why: "a name from the private terms list, spelled as written",
+    re: new RegExp("\\b(" + ONE_WORD.map(escapeRe).join("|") + ")\\b"),
   });
 }
 
