@@ -105,3 +105,109 @@ export function fitScale(viewW: number, viewH: number, aspect: number = ASPECT):
 export function clampScale(scale: number, floor: number = MIN_SCALE): number {
   return Math.min(Math.max(scale, Math.min(floor, MAX_SCALE)), MAX_SCALE);
 }
+
+/**
+ * WHAT THE VIEWER SHOWS, AS A viewBox RATHER THAN A GIANT ELEMENT.
+ *
+ * The drawing used to be an element sized `viewportWidth * scale`. At the top
+ * of the range on a wide screen that is 15,360 x 18,742 CSS pixels of SVG --
+ * around 288 million pixels of potential raster for a picture that is only ever
+ * seen through a 1920 x 1000 window.
+ *
+ * HONESTY ABOUT WHY THIS CHANGED. Jeremy reported pixel noise at maximum zoom
+ * and I could not reproduce it: Chrome renders the giant element losslessly at
+ * that exact size, measured side by side against this approach. So this is NOT
+ * a proven fix for what he saw. What it is, is the removal of the only
+ * pathological case in the viewer -- the same picture, drawn through a window
+ * the size of the window, so the compositor is asked for a screenful instead of
+ * a mural. On a machine whose GPU is known to time out under load, that is
+ * worth having whether or not it was the cause.
+ *
+ * The arithmetic is a straight inversion of the positioning it replaces. The
+ * old element sat at `left = (w - drawW)/2 + offset.x` and was `drawW` wide for
+ * `src.w` user units, so one CSS pixel is `src.w / drawW` user units; the
+ * window's top-left in user space is `src.x - left * that`. Both axes share one
+ * scale, which is why `preserveAspectRatio="none"` is safe here and would be a
+ * distortion anywhere else.
+ */
+export type Box = { x: number; y: number; w: number; h: number };
+
+/** The drawing's own coordinate system, from BodygraphGeometry. */
+export const SOURCE_BOX: Box = { x: -120, y: -12, w: 1090, h: 1330 };
+
+/** The `viewBox` attribute for a window of `viewW x viewH` at this scale/offset. */
+export function viewBoxFor({
+  viewW,
+  viewH,
+  scale,
+  offset,
+  src = SOURCE_BOX,
+  aspect = ASPECT,
+}: {
+  viewW: number;
+  viewH: number;
+  scale: number;
+  offset: { x: number; y: number };
+  src?: Box;
+  aspect?: number;
+}): Box | null {
+  if (!(viewW > 0) || !(viewH > 0) || !(scale > 0)) return null;
+  const drawW = viewW * scale;
+  const drawH = drawW / aspect;
+  // Where the drawing's top-left would have been, in CSS pixels.
+  const left = (viewW - drawW) / 2 + offset.x;
+  const top = (viewH - drawH) / 2 + offset.y;
+  // User units per CSS pixel. Identical on both axes by construction.
+  const k = src.w / drawW;
+  return {
+    x: src.x - left * k,
+    y: src.y - top * k,
+    w: viewW * k,
+    h: viewH * k,
+  };
+}
+
+/** The same, formatted for the attribute. */
+export function viewBoxAttr(box: Box | null): string | null {
+  if (!box) return null;
+  const n = (v: number) => (Number.isFinite(v) ? v.toFixed(4) : "0");
+  return `${n(box.x)} ${n(box.y)} ${n(box.w)} ${n(box.h)}`;
+}
+
+/**
+ * THE CONTROLS SIT ON THE DRAWING, so the drawing is not given that space.
+ *
+ * Measured on Jeremy's screen while he was looking at it: the control bar
+ * starts 69px above the bottom of a 581px viewport, and at the FITTED scale
+ * the chart is exactly as tall as the viewport -- so the Root, the bottom
+ * centre, is under the bar every single time. Zoomed in it was 95px of
+ * overlap. "can never see the bottom center."
+ *
+ * The fix is not to move the bar. It is to stop pretending the whole viewport
+ * is available: everything works from a box with the furniture subtracted, so
+ * FIT means "the whole chart fits in the space you can actually see" rather
+ * than "in the rectangle".
+ *
+ * The top inset is smaller because the only thing up there is a hint and a
+ * Done button in the corners, not a bar across the middle.
+ *
+ * AT MODULE SCOPE because the opening scale needs it too, and when it lived
+ * inside the component it was easy for one caller to reach for the raw box
+ * instead -- which is exactly what happened. See `visible` below.
+ */
+export const CHROME_TOP = 40;
+export const CHROME_BOTTOM = 76;
+
+/**
+ * The part of the overlay a drawing may actually occupy.
+ *
+ * ONE FUNCTION, because there were two answers and only one of them was right.
+ * `reset()` subtracted the furniture and the OPENING scale did not, so the
+ * viewer opened with the Root under the control bar and pressing Fit moved it
+ * out -- Jeremy: "chart can clear but starts after click with the bottom
+ * hidden." A control that repairs the state you were put in is a control
+ * covering for a bug.
+ */
+export function visible(box: { w: number; h: number }): { w: number; h: number } {
+  return { w: box.w, h: Math.max(0, box.h - CHROME_TOP - CHROME_BOTTOM) };
+}

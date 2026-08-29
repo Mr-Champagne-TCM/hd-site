@@ -134,7 +134,7 @@ export default async (request, context) => {
        * ring is not a failure of the chart -- `sweep` calls the same door every
        * fifteen minutes for exactly this case.
        */
-      if (tier >= 2) await ringTheWriter(request).catch(() => {});
+      if (tier >= 2) await ringTheWriter(request, id).catch(() => {});
 
       const sent = await sendMail({ to, subject, html, text }, { apiKey });
       console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
@@ -202,13 +202,28 @@ function alertSender(apiKey) {
  * for the 202 -- because the whole point of a background function is that the
  * caller is answered before the work starts.
  */
-async function ringTheWriter(request) {
+async function ringTheWriter(request, id) {
   const token = triggerToken(process.env.GRANT_SECRET);
   if (!token) return;
   const origin = process.env.URL || new URL(request.url).origin;
+  /**
+   * WHOSE READING WOKE IT. Not a permission -- the trigger token is the only
+   * thing that opens that door, and the writer will not touch a purchase that
+   * has not been paid for whatever it is handed. This is a QUEUE POSITION.
+   *
+   * Without it the writer starts by listing the whole readings store and
+   * loading every blob in it to find what is pending, and only then begins the
+   * generation somebody is sitting on a page waiting for. That scan is one
+   * round trip per reading ever sold: unnoticeable today, a minute of dead
+   * waiting at a few hundred, and it is in front of every single buyer.
+   *
+   * Named first, drain afterwards. Same work, opposite order, and the order is
+   * the whole difference to the person watching the dots.
+   */
   const res = await fetch(`${origin}/api/interpret`, {
     method: "POST",
-    headers: { [TRIGGER_HEADER]: token },
+    headers: { [TRIGGER_HEADER]: token, "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
   });
   console.log(`chart: rang the writer -> ${res.status}`);
 }

@@ -1,8 +1,7 @@
 # Where the HD platform stands
 
-_Snapshot taken 29 August 2026, after two days of building and two live
-walk-throughs. Supersedes UNVERIFIED.md and CHANGED-OVERNIGHT.md as the place
-to look first._
+_Updated 29 August 2026, after Jeremy's third live walk-through. Supersedes
+UNVERIFIED.md and CHANGED-OVERNIGHT.md as the place to look first._
 
 **Live and working.** Stripe is in sandbox, the site is unannounced, and
 everything below the "what is left" line is what stands between that and
@@ -38,30 +37,64 @@ step.** Every part of that has been walked by Jeremy on the live site.
 
 ## 2. What is left to BUILD
 
-Nothing here blocks testing. Ordered by what matters.
-
-| # | What | Why it is not done |
+| # | What | State |
 |---|---|---|
-| B1 | **Refund / terms wording** | Jeremy leaned "no refunds" and parked the decision until just before launch. He decides the policy; the writing is an hour |
-| B2 | **A reading sample for the tiers page** | The reading tier is the only one with no evidence shown. Needs one real generation from the EXAMPLE chart — never a client's |
-| B3 | **Pixel noise at maximum zoom** in the viewer | Queued by Jeremy. The PDF zooms losslessly, so it is the viewer's rendering rather than the drawing |
-| B4 | **B-1 on the main site** — scroll indicator and ellipsis | Approved, queued for after launch |
+| B1 | **Refund / terms wording** | Jeremy's decision, put to him 29 Aug. Writing is an hour once he calls it |
+| B2 | **A reading sample for the tiers page** | **BLOCKED, and correctly so.** It needs one real generation from the EXAMPLE chart, which needs the Gemini key and the engine key. Both are Netlify SECRET variables: write-only, unreadable even by the CLI, which is exactly the protection Jeremy asked for. The unblock is one sandbox tier-2 purchase entering 25 June 1985 / Chicago / time unknown; the reading can then be lifted from the blob store |
+| B3 | ~~Pixel noise at maximum zoom~~ | **Changed, but NOT proven fixed.** See below |
+| B4 | ~~B-1 on the main site~~ | **Done** 29 Aug, in `the-champagne-method` |
+
+### B3, honestly
+
+I could not reproduce it. Measured side by side in Chrome at 8x with a
+15,360 x 18,742px element -- larger than Jeremy's screen produces -- the old
+approach rendered losslessly. The giant-element theory was wrong.
+
+What changed anyway: the viewer now moves a `viewBox` window over an element
+that stays the size of the viewport, instead of sizing an element to
+`viewportWidth * scale`. That removes the only pathological case in the viewer
+and is strictly cheaper, which is worth having on a machine whose GPU is known
+to time out -- but it is not a proven fix for what he saw, and should not be
+written up as one. If the noise comes back, the next suspect is the machine,
+not the drawing.
 
 ---
 
 ## 3. What is left to TEST
 
-Everything below is deployed and has never been confirmed by a person.
+Six of the seven are now confirmed by a person or by production logs.
 
-| # | What | How to prove it |
+| # | What | State |
 |---|---|---|
-| T1 | **The reading page updates itself** while the words are being written | Buy a reading, sit on the page, do not refresh. It should fill in on its own within a minute or two |
-| T2 | **The Processing indicator** | Same moment — three pulsing dots and the word Processing |
-| T3 | **Email subjects name the chart** | Any purchase. Two different names must land in two different Gmail conversations |
-| T4 | **The chart-differs warning only fires on an upgrade** | Buy a summary while already owning something, with different birth details. It should NOT warn. Then upgrade with different details — it should |
-| T5 | **The zoom clears the controls** | Open the chart. The Root must be visible at Fit, not under the button bar |
-| T6 | **The upgrade credit reaches Stripe** | Upgrade from an emailed link on any device. The payment page must show the discounted amount |
-| T7 | **The weekly watch report** | Arrives Monday 13:00 UTC, saying "all clear" if nothing failed. Its absence is the alarm |
+| T1 | The reading page updates itself while writing | **Confirmed** — Jeremy: "Page updated automagically when reading came in" |
+| T2 | The Processing indicator | **Confirmed** — seen, ~1.5 min |
+| T3 | Email subjects name the chart | **Confirmed** — five emails, five separate Gmail threads. The same inbox holds the before: two earlier runs collapsed "Jack Black" and "Jack Black #2" into one conversation |
+| T4 | chart-differs fires only on an upgrade | **Confirmed** — Jeremy: "No 'chart is different at lower tier' - good" |
+| T5 | The zoom clears the controls | **Was still broken, now fixed.** It opened at the raw box and only `reset()` subtracted the furniture, so Fit repaired a state the viewer had put you in. Verified in a browser at open, at 8x, and back to Fit |
+| T6 | The upgrade credit reaches Stripe | **Confirmed in production logs.** See below |
+| T7 | The weekly watch report | Waiting for Monday 13:00 UTC. Its absence is the alarm |
+
+### T6, from the checkout function's own logs, 29 August
+
+Credits are in cents, exactly as the function logged them. Prices are not
+written here -- they live in `shared/pricing.mjs` and nowhere else (P-1), which
+is the rule the scanner enforced when this table first tried to spell them out.
+
+```
+16:43  tier 0, credit 0        ladder A: 0 -> 1 -> 2
+17:00  tier 1, credit 111
+17:03  tier 2, credit 1111
+
+17:42  tier 1, credit 0        ladder B: 1 -> 2
+17:49  tier 2, credit 1111
+
+18:45  tier 0, credit 0        ladder C: 0 -> 2
+18:47  tier 2, credit 111
+```
+
+Each credit equals the full price of the tier already owned, so on every one of
+the three routes the amounts paid sum to the top tier's price exactly. D-6 is no
+longer an assertion about a table; it is production data across three routes.
 
 ---
 

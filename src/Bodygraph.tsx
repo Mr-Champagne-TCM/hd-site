@@ -1,6 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { checkBodygraph } from "./bodygraphGate";
-import { ASPECT, MAX_SCALE, MIN_SCALE, clamp, clampScale, fitScale } from "./zoomBounds";
+import {
+  ASPECT,
+  MAX_SCALE,
+  MIN_SCALE,
+  clamp,
+  clampScale,
+  fitScale,
+  viewBoxAttr,
+  viewBoxFor,
+  visible,
+  CHROME_TOP,
+} from "./zoomBounds";
 
 /**
  * The drawing, on the page.
@@ -189,7 +200,8 @@ function Zoom({
   useLayoutEffect(() => {
     if (fitted.current || !(box.w > 0 && box.h > 0)) return;
     fitted.current = true;
-    setScale(fitScale(box.w, box.h));
+    const { w, h } = visible(box);
+    setScale(fitScale(w, h));
     setOffset({ x: 0, y: 0 });
   }, [box.w, box.h]);
 
@@ -210,12 +222,7 @@ function Zoom({
    * The top inset is smaller because the only thing up there is a hint and a
    * Done button in the corners, not a bar across the middle.
    */
-  const CHROME_TOP = 40;
-  const CHROME_BOTTOM = 76;
-  const view = () => ({
-    w: box.w,
-    h: Math.max(0, box.h - CHROME_TOP - CHROME_BOTTOM),
-  });
+  const view = () => visible(box);
 
   function centroid() {
     const pts = [...pointers.current.values()];
@@ -341,11 +348,38 @@ function Zoom({
     setOffset({ x: 0, y: 0 });
   }
 
+  /**
+   * THE WINDOW IS MOVED, NOT THE PICTURE.
+   *
+   * `viewBoxFor` works out which part of the drawing's own coordinate system
+   * the visible rectangle is looking at, and that string goes onto the <svg>
+   * element -- which stays exactly the size of that rectangle no matter how far
+   * anybody zooms. See the note in zoomBounds.ts for why, and for the honest
+   * account of what this did and did not fix.
+   *
+   * SET IMPERATIVELY, on the element React already put there. The markup is a
+   * 184 KB string; rewriting it on every frame of a pinch to change four
+   * numbers would be the slowest possible way to do this. React does not touch
+   * `dangerouslySetInnerHTML` while the string is unchanged, so the child is
+   * stable and an attribute write is the whole update.
+   */
+  const frame = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = frame.current?.querySelector("svg");
+    if (!el) return;
+    const attr = viewBoxAttr(
+      viewBoxFor({ viewW: view().w, viewH: view().h, scale, offset }),
+    );
+    if (!attr) return;
+    el.setAttribute("viewBox", attr);
+    // Safe only because the scale is identical on both axes; the source box and
+    // the window are the same shape by construction.
+    el.setAttribute("preserveAspectRatio", "none");
+  });
+
   const { w, h } = view();
   const ready = w > 0 && h > 0;
   const floor = fitScale(w, h);
-  const drawW = w * scale;
-  const drawH = drawW / ASPECT;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0E1A2B]">
@@ -361,17 +395,11 @@ function Zoom({
       >
         {ready && (
           <div
+            ref={frame}
             role="img"
             aria-label={alt}
             className="absolute [&>svg]:h-full [&>svg]:w-full"
-            style={{
-              width: drawW,
-              height: drawH,
-              left: (w - drawW) / 2 + offset.x,
-              // Centred in the space that is actually visible, which starts
-              // below the hint row and ends above the controls.
-              top: CHROME_TOP + (h - drawH) / 2 + offset.y,
-            }}
+            style={{ width: w, height: h, left: 0, top: CHROME_TOP }}
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         )}

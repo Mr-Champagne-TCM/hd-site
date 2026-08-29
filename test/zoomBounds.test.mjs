@@ -157,3 +157,118 @@ test("THE CONTROLS DO NOT STAND ON THE CHART", async () => {
     `the chart still reaches ${bottom}px, and the controls start at ${viewportH - CHROME_BOTTOM}px`,
   );
 });
+
+/**
+ * THE OPENING SCALE, NOT JUST THE ARITHMETIC IT SHOULD USE.
+ *
+ * There was already a test above called "THE CONTROLS DO NOT STAND ON THE
+ * CHART" and it passed the whole time the viewer was opening with the Root
+ * hidden. It proved that `fitScale` given the usable height returns something
+ * that clears the bar -- which was true, and was never the question. The
+ * component called `fitScale(box.w, box.h)` with the RAW box on open, and
+ * `view()` only in `reset()`. So Fit repaired a state the viewer had put you
+ * in, and Jeremy found it by looking: "chart can clear but starts after click
+ * with the bottom hidden."
+ *
+ * A test that cannot fail for the right reason is worse than no test, because
+ * it is counted. What was missing is the thing below: the ONE function both
+ * paths must go through, checked against the raw box to prove they differ.
+ */
+test("OPENING AND FIT ARE THE SAME SCALE", async () => {
+  const { fitScale, visible, CHROME_TOP, CHROME_BOTTOM, ASPECT } = await import(
+    "../src/zoomBounds.ts"
+  ).catch(() => import("../src/zoomBounds.js"));
+
+  const box = { w: 1396, h: 581 };
+  const v = visible(box);
+  assert.equal(v.h, box.h - CHROME_TOP - CHROME_BOTTOM);
+
+  // What the viewer opens at, and what Fit returns to. One number or it is a bug.
+  const opening = fitScale(v.w, v.h);
+  const fit = fitScale(visible(box).w, visible(box).h);
+  assert.equal(opening, fit, "opening scale and Fit disagree");
+
+  // And it is genuinely different from the raw box, so this test can fail.
+  assert.ok(
+    opening < fitScale(box.w, box.h),
+    "fitting the raw box gave the same answer -- this test proves nothing",
+  );
+
+  // The bottom of the drawing clears where the control bar begins.
+  const drawH = (v.w * opening) / ASPECT;
+  const bottom = CHROME_TOP + (v.h - drawH) / 2 + drawH;
+  assert.ok(
+    bottom <= box.h - CHROME_BOTTOM + 1,
+    `chart bottom ${bottom} is under the bar at ${box.h - CHROME_BOTTOM}`,
+  );
+});
+
+test("the viewBox window shows exactly what the sized element used to", async () => {
+  const { viewBoxFor, SOURCE_BOX, ASPECT } = await import(
+    "../src/zoomBounds.ts"
+  ).catch(() => import("../src/zoomBounds.js"));
+
+  const viewW = 1396;
+  const viewH = 465;
+
+  for (const scale of [0.4, 1, 2.5, 8]) {
+    for (const offset of [{ x: 0, y: 0 }, { x: 120, y: -80 }]) {
+      const vb = viewBoxFor({ viewW, viewH, scale, offset });
+      // The old geometry, kept here as the thing being matched.
+      const drawW = viewW * scale;
+      const drawH = drawW / ASPECT;
+      const left = (viewW - drawW) / 2 + offset.x;
+      const top = (viewH - drawH) / 2 + offset.y;
+
+      // A point in user space maps to the same CSS pixel under both models.
+      const toCss = (ux, uy) => ({
+        x: left + ((ux - SOURCE_BOX.x) / SOURCE_BOX.w) * drawW,
+        y: top + ((uy - SOURCE_BOX.y) / SOURCE_BOX.h) * drawH,
+      });
+      const viaViewBox = (ux, uy) => ({
+        x: ((ux - vb.x) / vb.w) * viewW,
+        y: ((uy - vb.y) / vb.h) * viewH,
+      });
+
+      for (const [ux, uy] of [
+        [SOURCE_BOX.x, SOURCE_BOX.y],
+        [SOURCE_BOX.x + SOURCE_BOX.w, SOURCE_BOX.y + SOURCE_BOX.h],
+        [485, 655],
+      ]) {
+        const a = toCss(ux, uy);
+        const b = viaViewBox(ux, uy);
+        assert.ok(
+          Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001,
+          `scale ${scale}: (${ux},${uy}) lands at ${a.x},${a.y} vs ${b.x},${b.y}`,
+        );
+      }
+    }
+  }
+});
+
+test("NO DISTORTION: the window is always the shape of the element", async () => {
+  const { viewBoxFor } = await import("../src/zoomBounds.ts").catch(() =>
+    import("../src/zoomBounds.js"),
+  );
+  // preserveAspectRatio="none" is only safe while this holds. If the two ever
+  // diverge the chart stretches, which is exactly the kind of thing nobody
+  // notices until it is on somebody's paid reading.
+  for (const [viewW, viewH] of [[1396, 465], [390, 560], [1920, 884]]) {
+    for (const scale of [0.3, 1, 8]) {
+      const vb = viewBoxFor({ viewW, viewH, scale, offset: { x: 0, y: 0 } });
+      assert.ok(
+        Math.abs(vb.w / vb.h - viewW / viewH) < 1e-9,
+        `window ${vb.w}x${vb.h} is not the shape of ${viewW}x${viewH}`,
+      );
+    }
+  }
+});
+
+test("an unmeasured viewer asks for no window at all", async () => {
+  const { viewBoxFor } = await import("../src/zoomBounds.ts").catch(() =>
+    import("../src/zoomBounds.js"),
+  );
+  assert.equal(viewBoxFor({ viewW: 0, viewH: 400, scale: 1, offset: { x: 0, y: 0 } }), null);
+  assert.equal(viewBoxFor({ viewW: 400, viewH: 0, scale: 1, offset: { x: 0, y: 0 } }), null);
+  assert.equal(viewBoxFor({ viewW: 400, viewH: 400, scale: 0, offset: { x: 0, y: 0 } }), null);
+});

@@ -57,6 +57,19 @@ export default async (request) => {
   const store = getStore({ name: "readings", consistency: "strong" });
   const health = getStore({ name: "health", consistency: "strong" });
 
+  /** One reading, written. The named purchase and the drain share this exactly. */
+  const run = (id) =>
+    interpretOne({
+      id,
+      store,
+      health,
+      apiKey,
+      prompt,
+      grantSecret,
+      origin,
+      deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
+    });
+
   /**
    * IS THE CONFIGURED PROMPT THE ONE THIS CODE EXPECTS?
    *
@@ -82,16 +95,45 @@ export default async (request) => {
     return new Response(null, { status: 204 });
   }
 
+  /**
+   * THE ONE THAT WOKE US, FIRST -- BEFORE ANY SCAN.
+   *
+   * `pending()` below lists the readings store and loads every blob in it. That
+   * is a round trip per reading ever sold, and it used to sit in front of the
+   * generation the buyer is watching a page for. It is a safety net for missed
+   * triggers, not a step in the happy path, so it happens AFTERWARDS now.
+   *
+   * The id is a queue position and nothing more. `interpretOne` refuses
+   * anything that is not a paid reading tier with a chart and no words, so an
+   * id that named somebody else's purchase would either do the work that was
+   * already owed or do nothing at all. The trigger token is the door; this is
+   * only the order things are done in.
+   */
+  let first = null;
+  try {
+    const body = await request.json().catch(() => null);
+    if (body && typeof body.id === "string" && body.id) first = body.id;
+  } catch {
+    /* no body is the ordinary case for `sweep`, which has no one purchase */
+  }
+
+  const done = new Set();
+  if (first) {
+    const r = await run(first);
+    done.add(first);
+    console.log(`interpret: named ${first} -> ${r.ok ? "written" : r.reason}`);
+  }
+
   let waiting;
   try {
-    waiting = await pending(store);
+    waiting = (await pending(store)).filter((id) => !done.has(id));
   } catch (e) {
     console.log(`interpret: could not read the store (${e.message})`);
     return new Response(null, { status: 204 });
   }
 
   if (!waiting.length) {
-    console.log("interpret: nothing waiting");
+    console.log(`interpret: nothing else waiting (wrote ${done.size ? 1 : 0})`);
     return new Response(null, { status: 204 });
   }
 
@@ -110,21 +152,14 @@ export default async (request) => {
       console.log(`interpret: out of budget, ${waiting.length - wrote} still waiting`);
       break;
     }
-    const result = await interpretOne({
-      id,
-      store,
-      health,
-      apiKey,
-      prompt,
-      grantSecret,
-      origin,
-      deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
-    });
+    const result = await run(id);
     if (result.ok) wrote += 1;
     else console.log(`interpret: skipped one (${result.reason})`);
   }
 
-  console.log(`interpret: ${waiting.length} waiting, wrote ${wrote}`);
+  console.log(
+    `interpret: ${waiting.length} waiting, wrote ${wrote}${done.size ? " (+1 named)" : ""}`,
+  );
   return new Response(null, { status: 204 });
 };
 

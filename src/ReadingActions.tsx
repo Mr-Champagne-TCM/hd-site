@@ -37,12 +37,15 @@ export default function ReadingActions({
   canResend,
   tier = 0,
   mechanics,
+  writing = false,
 }: {
   token: string;
   upgrade: Upgrade;
   canResend: boolean;
   /** The PDF is the chart tier and above; the summary was never sold one. */
   tier?: number;
+  /** Paid for words that are not written yet. The PDF would be short of them. */
+  writing?: boolean;
   /** Type, Strategy and Authority, for the sentences about each. */
   mechanics?: { type?: string; strategy?: string; authority?: string } | null;
 }) {
@@ -212,16 +215,48 @@ export default function ReadingActions({
             it later.
           </p>
           {/*
-            A plain link, not a fetch-and-blob. A browser downloads what it
-            navigates to; building the file in the page and handing it to a
-            synthetic anchor is more moving parts and it breaks on a phone.
+            NOT WHILE THE READING IS STILL BEING WRITTEN.
+
+            Jeremy, mid-walkthrough: "i downloaded PDF while processing and it
+            came out short of the reading info." Of course it did -- the builder
+            puts in what is filed, and at that moment the words are not filed
+            yet. So he was handed a two-page chart PDF for a reading he had paid
+            forty-four dollars for, with nothing on it to say why.
+
+            That is the worst kind of fault: it succeeds. There is no error to
+            read, no retry offered, and the file looks finished. Somebody who
+            saves it and closes the tab has quietly lost the thing they bought.
+
+            The button is not hidden, because a control that vanishes reads as
+            something taken away. It is disabled and it says what it is waiting
+            for, so the wait is legible rather than mysterious.
           */}
-          <a
-            href={`/api/pdf?t=${encodeURIComponent(token)}`}
-            className="mt-4 inline-block rounded-full border border-brand-gold/50 px-5 py-2.5 font-sans text-[15px] text-brand-gold transition-colors hover:bg-brand-gold/10"
-          >
-            Download the PDF
-          </a>
+          {writing ? (
+            <>
+              <span
+                aria-disabled="true"
+                className="mt-4 inline-block cursor-not-allowed rounded-full border border-brand-gold/20 px-5 py-2.5 font-sans text-[15px] text-brand-gold/40"
+              >
+                Download the PDF
+              </span>
+              <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
+                Ready once your reading is written — it goes in the PDF, and a
+                copy taken now would be missing it.
+              </p>
+            </>
+          ) : (
+            /*
+              A plain link, not a fetch-and-blob. A browser downloads what it
+              navigates to; building the file in the page and handing it to a
+              synthetic anchor is more moving parts and it breaks on a phone.
+            */
+            <a
+              href={`/api/pdf?t=${encodeURIComponent(token)}`}
+              className="mt-4 inline-block rounded-full border border-brand-gold/50 px-5 py-2.5 font-sans text-[15px] text-brand-gold transition-colors hover:bg-brand-gold/10"
+            >
+              Download the PDF
+            </a>
+          )}
         </section>
       )}
 

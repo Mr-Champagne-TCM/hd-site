@@ -103,8 +103,14 @@ export default function ReadingPage({ token }: { token: string }) {
    * the moment it is actually working.
    *
    * Only while `writing` is true, so a finished reading costs nothing. Every
-   * six seconds, which is far below how long a generation takes and far above
+   * three seconds, which is far below how long a generation takes and far above
    * anything that would trouble a function.
+   *
+   * IT WAS SIX. Jeremy timed the whole wait at about a minute and a half, and
+   * up to six of those seconds were this page simply not having asked yet --
+   * the reading was finished and sitting on the server. Halving it is the
+   * cheapest second or two available: at three seconds a two-minute wait costs
+   * forty requests, against a free tier of 125,000 a month.
    *
    * IT GIVES UP AFTER TEN MINUTES rather than polling a dead purchase forever.
    * By then something has gone wrong that this cannot fix, and the alert has
@@ -136,9 +142,9 @@ export default function ReadingPage({ token }: { token: string }) {
         // take a reading back off the screen once it has arrived.
         if (alive && body && !body.writing) setState({ at: "ready", reading: body });
       } catch {
-        /* a missed poll is a missed poll; the next one is six seconds away */
+        /* a missed poll is a missed poll; the next one is three seconds away */
       }
-    }, 6000);
+    }, 3000);
 
     return () => {
       alive = false;
@@ -343,6 +349,7 @@ export default function ReadingPage({ token }: { token: string }) {
         canResend={reading.canResend}
         tier={reading.tier}
         mechanics={reading.output}
+        writing={reading.writing}
       />
     </div>
   );
