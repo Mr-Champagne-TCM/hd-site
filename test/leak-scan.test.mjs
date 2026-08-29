@@ -371,3 +371,119 @@ test("a full name is still caught in any casing, which is the point of two words
   );
   assert.equal(r.blocked, true, "a lowercased full name slipped through");
 });
+
+/**
+ * A COMMIT MESSAGE IS PUBLISHED AS PERMANENTLY AS A FILE.
+ *
+ * Nothing scanned it until now, and the gap was found the way most of these
+ * are: a commit message describing a change to the private-terms list named
+ * the client four times. The file scan passed, correctly -- the name was in no
+ * file. Only reading it back caught it, and a guard that depends on somebody
+ * remembering is not a guard.
+ *
+ * The first version of the hook then reported CLEAN on exactly that message.
+ * Two filters that are right for a directory sweep are wrong for a file the
+ * caller named by hand, and both applied: the message has no extension, and it
+ * lives under `.git/`, which is in SKIP_DIRS. Reported green while checking
+ * nothing -- the precise failure this file exists to prevent.
+ */
+function scanPath(target, files, env = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "leak-"));
+  try {
+    for (const [rel, body] of Object.entries(files)) {
+      const full = join(dir, rel);
+      mkdirSync(join(full, ".."), { recursive: true });
+      writeFileSync(full, body);
+    }
+    try {
+      const out = execFileSync(process.execPath, [SCANNER, target], {
+        cwd: dir,
+        encoding: "utf8",
+        env: { ...process.env, LEAK_SCAN_TERMS: "", ...env },
+      });
+      return { blocked: false, output: out };
+    } catch (e) {
+      return { blocked: true, output: (e.stdout ?? "") + (e.stderr ?? "") };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("A NAMED FILE IS SCANNED EVEN WITH NO EXTENSION", () => {
+  // COMMIT_EDITMSG has no extension, so the TEXTY list would skip it.
+  const r = scanPath(
+    "COMMIT_EDITMSG",
+    { COMMIT_EDITMSG: "tidy up\n\nTalked it through with Meadow.\n" },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(r.blocked, true, "an extensionless named file was skipped:\n" + r.output);
+});
+
+test("A NAMED FILE IS SCANNED EVEN INSIDE A SKIPPED DIRECTORY", () => {
+  // The real path is .git/COMMIT_EDITMSG, and .git is in SKIP_DIRS. This is
+  // the one that shipped broken and reported clean.
+  const r = scanPath(
+    join(".git", "COMMIT_EDITMSG"),
+    { ".git/COMMIT_EDITMSG": "tidy up\n\nTalked it through with Meadow.\n" },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(r.blocked, true, "a file under .git was skipped when named:\n" + r.output);
+});
+
+test("a clean commit message still passes", () => {
+  const r = scanPath(
+    join(".git", "COMMIT_EDITMSG"),
+    { ".git/COMMIT_EDITMSG": "tidy up\n\nNothing personal in here.\n" },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(r.blocked, false, r.output);
+});
+
+test("the sweep still skips .git when nobody asked for it", () => {
+  // The bypass must be for named paths only. If SKIP_DIRS were loosened
+  // generally, every scan would start reading git's object store.
+  const r = scanPath(
+    ".",
+    { ".git/COMMIT_EDITMSG": "Talked it through with Meadow.\n", "src/a.js": "export const x = 1;\n" },
+    { LEAK_SCAN_TERMS: "Meadow" },
+  );
+  assert.equal(r.blocked, false, "the sweep walked into .git:\n" + r.output);
+});
+
+/**
+ * THE CO-AUTHOR TRAILER IS ALLOWED. ANYTHING THAT MERELY LOOKS LIKE IT IS NOT.
+ *
+ * Every commit in this repo ends with a Co-Authored-By line naming a
+ * documented no-reply address. That never mattered until commit messages
+ * started being scanned, at which point the email rule would have refused
+ * every push forever -- and a rule that can never be satisfied gets deleted.
+ *
+ * Found by running the new CI step against real history rather than assuming
+ * it would pass.
+ */
+test("the co-author trailer is allowed, because it is on every commit", () => {
+  const at = "@";
+  const r = scanPath(
+    "msg.txt",
+    { "msg.txt": plant("tidy up\n\nCo-Authored-By: Claude Opus 5 <noreply", at, "anthropic.com>\n") },
+  );
+  assert.equal(r.blocked, false, "the trailer this repo writes on every commit was refused:\n" + r.output);
+});
+
+test("the anthropic carve-out is that domain, not a lookalike", () => {
+  const at = "@";
+  for (const domain of ["anthropic.com.attacker.com", "notanthropic.com", "anthropic.co"]) {
+    const r = scanPath("msg.txt", { "msg.txt": plant("hi ", "someone", at, domain, "\n") });
+    assert.equal(r.blocked, true, domain + " was let through by the carve-out");
+  }
+});
+
+test("a real address in a commit message is still caught", () => {
+  const at = "@";
+  const r = scanPath(
+    "msg.txt",
+    { "msg.txt": plant("fix\n\nreported by someone", at, "gmail.com\n") },
+  );
+  assert.equal(r.blocked, true, "a personal address in a message slipped through");
+});

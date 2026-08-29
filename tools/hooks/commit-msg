@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Refuses a commit MESSAGE that publishes something it should not.
+#
+# The pre-commit hook searches the files. Nothing searched the message, and a
+# commit message is published exactly as permanently as a file is -- it is in
+# the repository, on the web, in every clone, and rewriting history to remove
+# one is far worse than never writing it.
+#
+# This is not hypothetical. While adding a private name to the scanner's list,
+# the commit message describing the change named that client four times. The
+# file scan passed, because the name was not in any file. Only a human reading
+# it back caught it, and a guard that depends on somebody remembering is not a
+# guard.
+#
+# Same rules, same list. Install with:  sh tools/install-hooks.sh
+# Skip once (do not make a habit of it):  git commit --no-verify
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+# "$1" is the path to the message file, which git gives us and which lives
+# under .git/ -- outside the tree the directory sweep would ever reach.
+echo "commit-msg: reading the message back before it is published..."
+node tools/leak-scan.mjs "$1" || {
+    echo ""
+    echo "COMMIT BLOCKED: the message itself contains something that must not be published."
+    echo "The message is not saved. Reword it and commit again."
+    exit 1
+}

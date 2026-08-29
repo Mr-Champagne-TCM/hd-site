@@ -32,6 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Deep enough to see the messages of the commits being pushed. The
+          # default shallow clone has one commit and no range to compare.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -80,6 +84,34 @@ jobs:
           # is ever printed. This log is public.
           count=$(printf '%s' "$LEAK_SCAN_TERMS" | tr ',' '\n' | grep -c '[^[:space:]]' || true)
           echo "name rule armed: ${count} term(s) loaded"
+
+      # A COMMIT MESSAGE IS PUBLISHED AS PERMANENTLY AS A FILE, and until now
+      # nothing looked at one. The commit-msg hook catches these locally;
+      # this catches them when the hook was skipped with --no-verify, which is
+      # the same reason the file scan runs here as well as there.
+      #
+      # ONLY THE COMMITS IN THIS PUSH. Scanning all history would pin the build
+      # red on something already published, which cannot be fixed by a commit
+      # and would end with the step being deleted.
+      #
+      # The SHA comes through the environment rather than being interpolated
+      # into the script. It is a hash and safe either way, but commit messages
+      # next to it are attacker-controlled text, and shell interpolation of
+      # anything from a webhook payload is a habit worth not having.
+      - name: The messages are published too
+        env:
+          BEFORE: ${{ github.event.before }}
+          LEAK_SCAN_TERMS: ${{ secrets.LEAK_SCAN_TERMS }}
+        run: |
+          if [ -n "$BEFORE" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            git log --format=%B "${BEFORE}..HEAD" > commit-messages.txt
+          else
+            # A new branch, a force push, or a first commit: no usable range.
+            git log --format=%B -n 1 > commit-messages.txt
+          fi
+          echo "scanning $(grep -c '' commit-messages.txt) line(s) of commit message"
+          node tools/leak-scan.mjs commit-messages.txt
+          rm -f commit-messages.txt
 
       - name: Build
         run: npm run build

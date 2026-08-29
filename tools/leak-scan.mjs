@@ -120,7 +120,16 @@ const RULES = [
     // `someone@thechampagnemethod.co.attacker.com`, so the first version of
     // this narrowing let an attacker-controlled domain through by prefix. Its
     // own test caught it.
-    re: /\b[A-Za-z0-9._%+-]+@(?!example\.(com|org|net)\b|thechampagnemethod\.co(?![A-Za-z0-9.-]))[A-Za-z0-9.-]+\.(?!invalid\b)[A-Za-z]{2,}\b/,
+    // anthropic.com joins the carve-out only because commit MESSAGES are now
+    // scanned. Every commit here ends with a Co-Authored-By trailer naming a
+    // documented no-reply address, so without this the rule would refuse every
+    // push forever -- and a rule that can never be satisfied gets deleted.
+    // Found by running the new step against real history instead of assuming
+    // it would pass. A client's address is never at anthropic.com, so this
+    // cannot swallow the case the rule exists for, and it ends with the same
+    // `(?![A-Za-z0-9.-])` guard so it allows that domain rather than anything
+    // merely beginning with it.
+    re: /\b[A-Za-z0-9._%+-]+@(?!example\.(com|org|net)\b|thechampagnemethod\.co(?![A-Za-z0-9.-])|anthropic\.com(?![A-Za-z0-9.-]))[A-Za-z0-9.-]+\.(?!invalid\b)[A-Za-z]{2,}\b/,
   },
   {
     id: "birth-data",
@@ -288,6 +297,13 @@ if (ONE_WORD.length) {
 }
 
 function walk(dir, out = []) {
+  // A NAMED FILE IS SCANNED AS ITSELF. Every caller until now handed this a
+  // directory, and pointing it at a single file threw. The commit-msg hook
+  // needs exactly that: git hands it a path to the message and nothing else.
+  if (!statSync(dir).isDirectory()) {
+    out.push(dir);
+    return out;
+  }
   for (const entry of readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue;
     const full = join(dir, entry);
@@ -296,6 +312,30 @@ function walk(dir, out = []) {
   }
   return out;
 }
+
+/**
+ * A FILE NAMED ON THE COMMAND LINE IS SCANNED, WHATEVER IT IS CALLED AND
+ * WHEREVER IT LIVES.
+ *
+ * Two filters exist for the directory sweep and are both wrong for an explicit
+ * argument, and BOTH of them silently skipped the commit message on the first
+ * attempt -- which reported "clean" on a message containing a listed name. A
+ * guard that answers green while checking nothing is the failure this whole
+ * file is written against, and it took thirty seconds to reproduce because the
+ * hook was tested with a real commit instead of being assumed to work.
+ *
+ *   the extension list   COMMIT_EDITMSG has no extension at all
+ *   SKIP_DIRS            the message lives under .git/, which is skipped
+ *
+ * Neither filter is loosened for the sweep. They are bypassed only for paths
+ * the caller asked for by name, which cannot happen by accident.
+ */
+const NAMED_FILES = new Set(
+  process.argv
+    .slice(2)
+    .filter((t) => existsSync(t) && !statSync(t).isDirectory())
+    .map((t) => relative(ROOT, t)),
+);
 
 const targets = process.argv.slice(2);
 const roots = targets.length ? targets : [".", "dist"];
@@ -307,8 +347,12 @@ for (const root of roots) {
   for (const file of walk(root)) {
     const rel = relative(ROOT, file);
     const posix = rel.split(sep).join("/");
+    const named = NAMED_FILES.has(rel);
     if (SKIP_FILES.has(rel) || SKIP_LOCAL.test(rel)) continue;
-    if (rel.split(sep).some((p) => SKIP_DIRS.has(p))) continue;
+    // `.git` is in SKIP_DIRS, and the commit message lives there. Skipping a
+    // path the caller named by hand is how the first version of the commit-msg
+    // hook reported clean on a message that named a client.
+    if (!named && rel.split(sep).some((p) => SKIP_DIRS.has(p))) continue;
     const ext = extname(file).toLowerCase();
     const base = rel.split(sep).pop();
 
@@ -324,7 +368,7 @@ for (const root of roots) {
         findings.push({ rel, rule, line: 0, text: "(by filename)" });
         continue;
       }
-      if (!rule.re || !TEXTY.has(ext)) continue;
+      if (!rule.re || !(TEXTY.has(ext) || named)) continue;
       let content;
       try {
         content = readFileSync(file, "utf8");
