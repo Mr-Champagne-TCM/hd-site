@@ -282,7 +282,7 @@ test("a note to ourselves in an HTML comment is caught", () => {
 test("A CAUGHT NAME IS NOT REPEATED IN THE REPORT", () => {
   const r = scan(
     { "src/app.js": 'const who = "Wilhelmina Farnsworth";\n' },
-    { LEAK_SCAN_TERMS: "Wilhelmina Farnsworth" },
+    { LEAK_SCAN_TERMS: "Wilhelmina Farnsworth", GITHUB_ACTIONS: "true" },
   );
   assert.equal(r.blocked, true);
   // It still says where, and which rule -- that is what makes it actionable.
@@ -293,6 +293,26 @@ test("A CAUGHT NAME IS NOT REPEATED IN THE REPORT", () => {
     !/Wilhelmina/i.test(r.output),
     "the scanner printed the very name it was catching:\n" + r.output,
   );
+});
+
+/**
+ * AND IN JEREMY'S OWN TERMINAL IT DOES SAY WHO, because there the line is the
+ * entire point.
+ *
+ * Withholding it everywhere -- which is what the first version did -- meant a
+ * CI failure could only be diagnosed by guessing which entry had fired. That
+ * happened within an hour of the rule being switched on for real: an ordinary
+ * English word was also somebody's first name, it matched inside a bundled
+ * dependency rather than anything of ours, and the report said nothing about
+ * which term it was.
+ */
+test("locally it says which term fired, because he already knows the list", () => {
+  const r = scan(
+    { "src/app.js": 'const who = "Wilhelmina Farnsworth";\n' },
+    { LEAK_SCAN_TERMS: "Wilhelmina Farnsworth", GITHUB_ACTIONS: "", CI: "" },
+  );
+  assert.equal(r.blocked, true);
+  assert.match(r.output, /Wilhelmina/i, "the local report hid the matching line");
 });
 
 test("other rules still quote the line, because you need to see it", () => {

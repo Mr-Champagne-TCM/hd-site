@@ -226,6 +226,21 @@ const RULES = [
   { id: "localhost", why: "a local address left in the build", re: /https?:\/\/(localhost|127\.0\.0\.1)/, builtOnly: true },
 ];
 
+/**
+ * IS ANYONE ELSE GOING TO READ THIS OUTPUT?
+ *
+ * The private-term rule matches a real person's name, so quoting the offending
+ * line prints the name. In a GitHub Actions log on a public repository that is
+ * a leak, and withholding it there is not optional.
+ *
+ * In Jeremy's own terminal it is the opposite: he already knows the list, and
+ * the line is the only thing that tells him WHICH entry fired. Withholding it
+ * everywhere -- which is what the first version did -- turned a five-second
+ * diagnosis into guesswork. Found the hard way, on a CI failure caused by an
+ * ordinary English word being somebody's first name.
+ */
+const PUBLIC_LOG = Boolean(process.env.GITHUB_ACTIONS || process.env.CI);
+
 const TERMS = privateTerms();
 if (TERMS.length) {
   RULES.push({
@@ -299,8 +314,8 @@ for (const root of roots) {
            * the list; they do not need to be told which entry matched.
            */
           const text =
-            rule.id === "private-term"
-              ? "(line withheld: it contains the term that matched)"
+            rule.id === "private-term" && PUBLIC_LOG
+              ? "(line withheld: this log is public. Run the scan locally to see it)"
               : lines[i].trim().slice(0, 90);
           findings.push({ rel, rule, line: i + 1, text });
           break; // one report per rule per file is enough to block
