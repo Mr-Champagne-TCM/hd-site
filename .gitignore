@@ -6,3 +6,6 @@ node_modules/
 Thumbs.db
 dist/
 tools/private-terms.local.txt
+
+# Anything holding what must never be published. See tools/leak-scan.mjs.
+*.local.txt

@@ -204,6 +204,16 @@ export async function loadReading(store, id, now = Date.now()) {
     sku: raw.sku ?? null,
     purchasedAt: bought,
     createdAt: raw.createdAt ?? 0,
+    /** When the chart was cast. Carried so a later write cannot reset it. */
+    filledAt: raw.filledAt ?? 0,
+    /**
+     * The written interpretation, when one has been filed. Absent on every
+     * tier below 2 because none was ever asked for -- and read straight
+     * through rather than parsed, so what is stored stays the thing that was
+     * validated.
+     */
+    reading: typeof raw.reading === "string" ? raw.reading : null,
+    writtenAt: raw.writtenAt ?? 0,
   };
 }
 
@@ -280,6 +290,50 @@ export async function fillReading(store, id, output, now = Date.now()) {
     // When the chart was computed, which is NOT when it was bought. The year
     // runs from the purchase either way; this is only ever for looking at.
     filledAt: Math.floor(now / 1000),
+  });
+  return { ok: true, tier: existing.tier };
+}
+
+/**
+ * The written interpretation, filed against a reading. WRITE-ONCE, exactly as
+ * the chart is.
+ *
+ * Somebody who paid for a reading gets ONE reading, not a different one every
+ * time they open the link. A model asked twice answers twice, and a document
+ * that changes under a person quoting it back to their coach is worse than one
+ * that is merely imperfect.
+ *
+ * THE TIER IS CHECKED HERE, not only by whoever calls this. Storing an
+ * interpretation against a chart-tier purchase would put reading-tier content
+ * one `tier >= 2` mistake away from being handed over.
+ *
+ * The record is rebuilt field by field rather than spread, for the same reason
+ * `fillReading` does it: `loadReading` adds `pending` for the caller's
+ * convenience, and spreading would write that derived flag back as data.
+ */
+export async function fillInterpretation(store, id, text, now = Date.now()) {
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error("fillInterpretation: no text");
+  }
+  const existing = await loadReading(store, id, now);
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (existing.pending) return { ok: false, reason: "no_chart_yet" };
+  if (existing.tier < 2) return { ok: false, reason: "wrong_tier" };
+  if (existing.reading) return { ok: false, reason: "already_written" };
+
+  await store.setJSON(id, {
+    v: 1,
+    tier: existing.tier,
+    output: existing.output,
+    buyer: existing.buyer,
+    sku: existing.sku,
+    purchasedAt: existing.purchasedAt,
+    createdAt: existing.createdAt,
+    filledAt: existing.filledAt || Math.floor(now / 1000),
+    reading: text,
+    // When it was written -- neither when it was bought nor when the chart was
+    // cast. Kept for looking at, never for expiry.
+    writtenAt: Math.floor(now / 1000),
   });
   return { ok: true, tier: existing.tier };
 }

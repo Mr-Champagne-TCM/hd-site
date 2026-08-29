@@ -30,7 +30,14 @@ import { join, extname, relative, sep } from "node:path";
 const ROOT = process.cwd();
 const SKIP_DIRS = new Set(["node_modules", ".git", ".netlify", "coverage"]);
 /** The scanner names the things it hunts, so it must not hunt itself. */
+/**
+ * The scanner itself holds every pattern it looks for, so it always matches
+ * itself. And `.local.` files are gitignored by definition -- they exist to
+ * hold exactly the things this refuses to publish, which is why they are named
+ * that way and why scanning them would make the rule unusable.
+ */
 const SKIP_FILES = new Set([join("tools", "leak-scan.mjs")]);
+const SKIP_LOCAL = /\.local\.[A-Za-z0-9]+$/;
 const TEXTY = new Set([
   ".html", ".htm", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".json",
   ".css", ".svg", ".txt", ".md", ".yml", ".yaml", ".toml", ".map", ".env",
@@ -248,7 +255,7 @@ for (const root of roots) {
   for (const file of walk(root)) {
     const rel = relative(ROOT, file);
     const posix = rel.split(sep).join("/");
-    if (SKIP_FILES.has(rel)) continue;
+    if (SKIP_FILES.has(rel) || SKIP_LOCAL.test(rel)) continue;
     if (rel.split(sep).some((p) => SKIP_DIRS.has(p))) continue;
     const ext = extname(file).toLowerCase();
     const base = rel.split(sep).pop();

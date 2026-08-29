@@ -153,6 +153,16 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
         ? marginNotes(reading.output)
         : null,
     /**
+     * PAID FOR WORDS THAT ARE NOT WRITTEN YET.
+     *
+     * Generation runs on a sweep rather than on the request -- a reading takes
+     * the model tens of seconds and a synchronous function is cut off at ten --
+     * so there is a real minute or two where a reading-tier buyer has their
+     * chart and none of their reading. Answered here in a field of its own,
+     * because a page that quietly shows less than was paid for reads as broken.
+     */
+    writing: reading.tier >= 2 && !reading.pending && !reading.reading,
+    /**
      * D-11: no upgrade offered at the top tier, because there is nothing above
      * it. Decided here rather than in the page, so that a page which forgets to
      * check cannot advertise something that does not exist -- and so the same

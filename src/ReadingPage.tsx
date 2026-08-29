@@ -37,6 +37,8 @@ type Reading = {
   canResend: boolean;
   written: Written | null;
   notes: Record<string, Array<[string, string]>> | null;
+  /** Paid for words the sweeper has not written yet. */
+  writing: boolean;
 };
 
 type State =
@@ -218,6 +220,44 @@ export default function ReadingPage({ token }: { token: string }) {
       <div className="mt-8">
         <Summary data={reading.output} />
       </div>
+
+      {/*
+        THE READING ITSELF, ON THE PAGE.
+
+        Jeremy, looking at a tier-2 link that showed only the chart: "Should
+        have PDF content, in the page, then PDF'able when they need." A reading
+        whose only form is a download is one nobody opens on a phone, and it
+        turns the PDF from the thing they keep into a thing they must fetch
+        before they can read anything at all.
+
+        Above the actions, because the actions are what to do NEXT and this is
+        what they bought.
+      */}
+      {reading.written && (
+        <WrittenReading written={reading.written} notes={reading.notes ?? {}} />
+      )}
+
+      {/*
+        THE MINUTE BETWEEN THE CHART AND THE WORDS.
+
+        Generation runs on a sweep rather than on the request -- a reading takes
+        the model tens of seconds and a synchronous function is cut off at ten.
+        So there is a real gap, and a page that quietly shows less than was paid
+        for reads as broken. It says so instead, and says what to do, which is
+        nothing.
+      */}
+      {reading.writing && (
+        <div className="mt-10 rounded-xl border border-brand-gold/40 bg-brand-gold/[0.08] px-5 py-4">
+          <p className="text-[17px] leading-relaxed text-brand-paper">
+            Your chart is above, and your reading is being written now. It
+            usually takes a minute or two.
+          </p>
+          <p className="mt-2 text-[15px] leading-relaxed text-brand-muted">
+            Nothing needs doing — an email arrives when it is ready, and this
+            same link will have it.
+          </p>
+        </div>
+      )}
 
       <ReadingActions
         token={token}

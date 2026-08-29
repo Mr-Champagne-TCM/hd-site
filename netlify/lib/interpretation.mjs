@@ -139,6 +139,38 @@ export function firstProblem(raw) {
   return structureProblem(reading);
 }
 
+/**
+ * DOES THIS PROMPT ASK FOR WHAT THE VALIDATOR DEMANDS?
+ *
+ * The prompt is CONFIGURATION now, not code -- it cannot be committed to a
+ * public repo, so it arrives as an environment variable somebody pastes. That
+ * buys privacy and costs the one thing a committed constant gave for free: the
+ * two could not drift.
+ *
+ * They can now. A prompt one version behind, missing a heading this file
+ * requires, produces a reading that fails validation EVERY TIME, for every
+ * buyer, with a message about the model rather than about the configuration --
+ * and it would look exactly like the model having a bad day.
+ *
+ * So the deployed prompt is checked against the deployed validator, at runtime,
+ * before a single request is made. Cheaper than a unit test and it checks the
+ * thing that is actually running rather than a copy of it.
+ */
+export function promptProblem(prompt) {
+  const text = String(prompt ?? "");
+  if (!text.trim()) return "No reading prompt is configured.";
+  const wants = [SUMMARY_MARKER, ...HEADINGS, DISCLAIMER];
+  const missing = wants.filter((w) => !text.includes(w));
+  if (missing.length) {
+    return `The configured prompt never asks for ${missing.length === 1 ? `"${missing[0]}"` : `${missing.length} things, starting with "${missing[0]}"`}.`;
+  }
+  const rows = SUMMARY_KEYS.filter((k) => !text.includes(`${k}:`));
+  if (rows.length) {
+    return `The configured prompt never asks for the ${rows.join(", ")} line.`;
+  }
+  return null;
+}
+
 /** Every marker present, alone on its line, in order. */
 export function structureProblem(raw) {
   const lines = sanitize(raw)

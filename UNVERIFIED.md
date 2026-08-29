@@ -46,10 +46,15 @@ same validator, so a reading is the same reading whichever door it came from.
 
 | Piece | State |
 |---|---|
-| Prompt, section list, validator, parser | **Done** — `netlify/lib/interpretation.mjs`, 13 tests |
-| Privacy rule (chart values only reach Gemini) | **Done and tested** — a record stuffed with identity is fed in and none of it survives |
-| The Gemini call | Not written. Deliberately last: a generator is worth nothing until something can say the answer came back wrong |
-| PDF pages for the reading | Not written. The app's layout is measured — two columns, gold section label, large lede, two body paragraphs, chart facts in the right margin against a gold rule |
-| Site rendering | Not written |
-| Email nuance | Not written |
-| `SELLABLE_MAX_LEVEL` | Stays at **1** until all of the above exists |
+| Prompt, section list, validator, parser | **Done** — `netlify/lib/interpretation.mjs` |
+| Privacy rule (chart values only reach Gemini) | **Done and tested** — asserted against the real request body, not against the helper |
+| PDF pages for the reading | **Done** — seven pages, the same as the app |
+| The Gemini call | **Done** — `netlify/lib/gemini.mjs`, prompt ported word for word |
+| Storing it, write-once | **Done** — `fillInterpretation` |
+| Generating it | **Done** — `netlify/functions/interpret.mjs`, a sweeper every minute |
+| Site rendering | **Done** — the reading is on the page, not only in the PDF |
+| The wait, said in words | **Done** — a tier-2 buyer sees "being written now" rather than a short page |
+| `GEMINI_API_KEY` in Netlify | **Jeremy has added it** (free tier, his decision) |
+| Email nuance | Not started |
+| **Has never run against the real Gemini** | The whole path is tested against a fake. Nobody has seen a real generated reading on the web |
+| `SELLABLE_MAX_LEVEL` | Stays at **1** until a real one has been read and approved |
