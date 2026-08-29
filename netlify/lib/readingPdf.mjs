@@ -2,6 +2,13 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { TIERS } from "../../shared/pricing.mjs";
+import {
+  DISCLAIMER,
+  INTERPRETATION,
+  MECHANICS,
+  TAKEAWAYS,
+  parseReading,
+} from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 import {
@@ -107,7 +114,7 @@ const PAGE = { w: 612, h: 792 };
 const M = 56;
 const COL = PAGE.w - M * 2;
 
-export async function readingPdf({ tier, name, output, links }) {
+export async function readingPdf({ tier, name, output, links, reading = null }) {
   /**
    * The QR, drawn as vector rather than raster so it stays crisp at any size
    * and costs a few hundred bytes. The app has one beside the same link; a
@@ -151,7 +158,23 @@ export async function readingPdf({ tier, name, output, links }) {
 
     chartPage(doc, { name, output, links, qr });
     doc.addPage();
-    glancePage(doc, { output, tier });
+
+    /**
+     * THE WRITTEN INTERPRETATION, when there is one -- tier 2 and above.
+     *
+     * `reading` is the raw text the model returned, already checked by
+     * `firstProblem` before it was ever stored. Parsing it HERE rather than
+     * storing a parsed shape means the document is always built from the thing
+     * that was validated, never from a derivative of it.
+     */
+    const written = tier >= 2 && typeof reading === "string" ? parseReading(reading) : null;
+
+    glancePage(doc, { output, tier, written });
+    if (written) {
+      doc.addPage();
+      mechanicsPage(doc, written);
+      interpretationPages(doc, { output, written });
+    }
 
     doc.end();
   });
@@ -234,7 +257,7 @@ function chartPage(doc, { name, output, links, qr }) {
   footer(doc, 1);
 }
 
-function glancePage(doc, { output, tier }) {
+function glancePage(doc, { output, tier, written = null }) {
   paper(doc);
 
   doc.font("body").fontSize(11).fillColor(INK).text("Your chart at a glance", M, M);
@@ -512,4 +535,292 @@ function channelKey(doc, top, links, qr) {
     .fillColor(GOLD)
     .text("How to understand your bodygraph chart  →  thechampagnemethod.co/library/bodygraph",
       M, belowY + 8, { width: textW, align: "center", link: guide, underline: false });
+}
+
+/* ==========================================================================
+ * TIER 2 -- the written interpretation, laid out as the app lays it out.
+ *
+ * Measured off `Jeremy-pdf-view.pdf` rather than invented: a mechanics page of
+ * gold-labelled blocks, then the six interpretation sections as a two-column
+ * spread -- the writing on the left, chart facts in the right margin against a
+ * gold rule. Two sections to a page, and a section is never split across one.
+ * ========================================================================== */
+
+/** Where the writing stops and the margin begins. */
+/**
+ * Measured off the app's page 4, not chosen: its writing column runs 55pt to
+ * 405pt and its margin starts at 435pt. A narrower column was the reason the
+ * first attempt put ONE section on a page where the app fits two -- the layout
+ * was right and the measurements were mine.
+ */
+const BODY_W = 350;
+const NOTE_GAP = 30;
+const NOTE_X = M + BODY_W + NOTE_GAP;
+const NOTE_W = COL - BODY_W - NOTE_GAP;
+const FOOT = PAGE.h - 70;
+
+/** A running head, so a loose page still says what it belongs to. */
+function runningHead(doc, title) {
+  doc.font("body").fontSize(11).fillColor(INK).text(title, M, M);
+  doc
+    .font("body")
+    .fontSize(8.5)
+    .fillColor(GOLD)
+    .text("THE CHAMPAGNE METHOD", PAGE.w / 2, M + 1, {
+      width: COL / 2,
+      align: "right",
+      characterSpacing: 1.7,
+    });
+  const y = M + 20;
+  doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
+  return y + 16;
+}
+
+function sectionLabel(doc, text, x, y, width) {
+  doc
+    .font("body")
+    .fontSize(8.5)
+    .fillColor(GOLD)
+    .text(String(text).toUpperCase(), x, y, { width, characterSpacing: 1.3 });
+  return doc.y + 4;
+}
+
+/**
+ * PAGE THREE: the mechanics.
+ *
+ * Four blocks. Two are paragraphs; two are lists whose lines the model was told
+ * to write in a fixed shape -- "20-34 (Charisma), Throat to Sacral: ..." -- so
+ * they are split on the FIRST colon and set as a term beside its sentence.
+ *
+ * A line that carries no colon is printed whole rather than dropped. A reading
+ * that came back slightly off should LOOK slightly off; silently discarding a
+ * channel would leave a document that is wrong and looks finished.
+ */
+function mechanicsPage(doc, written) {
+  paper(doc);
+  let y = runningHead(doc, "The mechanics of your chart");
+
+  for (const heading of MECHANICS) {
+    const section = written.sections.find((s) => s.heading === heading);
+    if (!section || !section.paragraphs.length) continue;
+
+    if (y > FOOT - 90) {
+      footer(doc, 3);
+      doc.addPage();
+      paper(doc);
+      y = runningHead(doc, "The mechanics of your chart");
+    }
+
+    y = sectionLabel(doc, heading, M, y, COL);
+    const listy = heading === MECHANICS[2] || heading === MECHANICS[3];
+
+    for (const para of section.paragraphs) {
+      const at = listy ? para.indexOf(":") : -1;
+      if (at > 0) {
+        const top = y;
+        doc.font("body").fontSize(9.5).fillColor(INK).text(para.slice(0, at).trim(), M, top, {
+          width: 168,
+        });
+        const afterTerm = doc.y;
+        doc.font("body").fontSize(10.5).fillColor(MUTED).text(para.slice(at + 1).trim(), M + 180, top, {
+          width: COL - 180,
+          lineGap: 1,
+        });
+        y = Math.max(afterTerm, doc.y) + 8;
+        continue;
+      }
+      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, { width: COL, lineGap: 1.5 });
+      y = doc.y + 10;
+    }
+    y += 8;
+  }
+
+  footer(doc, 3);
+}
+
+/**
+ * PAGES FOUR ONWARD: the reading itself.
+ *
+ * A SECTION IS NEVER SPLIT. Its height is measured before anything is drawn,
+ * and a page without room starts a new one instead. A lede stranded at the foot
+ * of a page with its two paragraphs overleaf is the fault this avoids -- and it
+ * is a fault only a real reading shows, never a fixture.
+ */
+function interpretationPages(doc, { output, written }) {
+  const notes = marginNotes(output);
+  doc.addPage();
+  paper(doc);
+  let y = runningHead(doc, "Your reading");
+  let page = 4;
+
+  const measure = (section) => {
+    let h = 16;
+    h += doc
+      .font("body")
+      .fontSize(8.5)
+      .heightOfString(section.heading.toUpperCase(), { width: BODY_W });
+    if (section.lede) {
+      h += 8 + doc.font("bold").fontSize(13).heightOfString(section.lede, { width: BODY_W, lineGap: 1 });
+    }
+    for (const para of section.paragraphs) {
+      h += 10 + doc.font("body").fontSize(10.5).heightOfString(para, { width: BODY_W, lineGap: 1.5 });
+    }
+    return h;
+  };
+
+  for (const heading of INTERPRETATION) {
+    const section = written.sections.find((s) => s.heading === heading);
+    if (!section) continue;
+
+    if (y + measure(section) > FOOT) {
+      footer(doc, page);
+      page += 1;
+      doc.addPage();
+      paper(doc);
+      y = runningHead(doc, "Your reading");
+    }
+
+    const top = y;
+    y = sectionLabel(doc, heading, M, y, BODY_W);
+    if (section.lede) {
+      doc.font("bold").fontSize(13).fillColor(INK).text(section.lede, M, y, {
+        width: BODY_W,
+        lineGap: 1,
+      });
+      y = doc.y + 8;
+    }
+    for (const para of section.paragraphs) {
+      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, {
+        width: BODY_W,
+        lineGap: 1.5,
+      });
+      y = doc.y + 10;
+    }
+
+    /**
+     * THE MARGIN, AND EVERY WORD OF IT COMES FROM THE CHART.
+     *
+     * Not from the model. This is the column a reader checks the writing
+     * against, so a value here must be one the engine produced. A paraphrase
+     * that drifted would be indistinguishable from the chart being wrong.
+     */
+    let ny = top;
+    for (const [k, v] of notes[heading] || []) {
+      if (!k) continue;
+      doc.font("body").fontSize(8.5).fillColor(GOLD).text(k, NOTE_X, ny, {
+        width: NOTE_W,
+        characterSpacing: 0.8,
+      });
+      doc.font("body").fontSize(9).fillColor(MUTED).text(String(v ?? ""), NOTE_X, doc.y + 1, {
+        width: NOTE_W,
+        lineGap: 1,
+      });
+      ny = doc.y + 8;
+    }
+
+    // The rule runs the height of whichever column is taller, so it reads as
+    // this section's own edge rather than as a fixed decoration.
+    const bottom = Math.max(y, ny) - 6;
+    doc
+      .moveTo(NOTE_X - 16, top)
+      .lineTo(NOTE_X - 16, bottom)
+      .strokeColor(GOLD)
+      .lineWidth(0.75)
+      .stroke();
+
+    y = bottom + 22;
+  }
+
+  const takeaways = written.sections.find((s) => s.heading === TAKEAWAYS);
+  if (takeaways && takeaways.paragraphs.length) {
+    if (y > FOOT - 130) {
+      footer(doc, page);
+      page += 1;
+      doc.addPage();
+      paper(doc);
+      y = runningHead(doc, "Your reading");
+    }
+    y = sectionLabel(doc, TAKEAWAYS, M, y, COL);
+    for (const para of takeaways.paragraphs) {
+      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, { width: COL, lineGap: 1.5 });
+      y = doc.y + 10;
+    }
+  }
+
+  /**
+   * THE DISCLAIMER IS OURS, NOT THE MODEL'S.
+   *
+   * The prompt asks for it and the validator refuses a reading without it, but
+   * what is PRINTED is the constant from `interpretation.mjs` -- so a model
+   * that reworded it cannot reword what a reader is handed.
+   */
+  if (y > FOOT - 40) {
+    footer(doc, page);
+    page += 1;
+    doc.addPage();
+    paper(doc);
+    y = runningHead(doc, "Your reading");
+  }
+  doc.font("body").fontSize(8.5).fillColor(MUTED).text(DISCLAIMER, M, y + 8, {
+    width: COL,
+    lineGap: 1,
+  });
+
+  footer(doc, page);
+}
+
+/**
+ * The chart facts beside each section, ported from the app -- with one fix.
+ *
+ * The app prints "Decided over time, not in the moment." beside EVERY
+ * authority. That is right for Emotional and wrong for Sacral and Splenic:
+ * both answer in the instant, and telling somebody with Sacral authority to
+ * decide over time is the opposite of their own design. Visible on page 4 of
+ * `Jeremy-pdf-view.pdf`, in the margin next to "SACRAL AUTHORITY".
+ *
+ * Flagged for the app rather than fixed quietly in one place -- two documents
+ * disagreeing about somebody's authority is worse than one being wrong.
+ */
+function marginNotes(c) {
+  const defined = (c && c.definedCenters) || [];
+  const decidingCentre = defined.includes("Solar Plexus")
+    ? "Solar Plexus"
+    : defined.includes("Sacral")
+      ? "Sacral"
+      : defined.includes("Spleen")
+        ? "Spleen"
+        : (c && c.definition) || "";
+
+  const HOW = {
+    Emotional: "Decided over time, not in the moment.",
+    Sacral: "Answered in the moment, in the body.",
+    Splenic: "Answered once, quietly, in the present.",
+    Ego: "Decided by what there is will for.",
+    "Self-Projected": "Heard by saying it out loud.",
+    Mental: "Talked through with people you trust.",
+    Lunar: "Decided over a full lunar cycle.",
+  };
+  const authority = (c && c.authority) || "";
+  const profileNames = profileWithNames(c && c.profile).replace(/^[^—]*—\s*/, "");
+
+  return {
+    [INTERPRETATION[0]]: [
+      [String((c && c.type) || "").toUpperCase(), (c && c.strategy) || ""],
+      ["DEFINITION", (c && c.definition) || ""],
+    ],
+    [INTERPRETATION[1]]: [
+      [`${authority.toUpperCase()} AUTHORITY`.trim(), HOW[authority] || ""],
+      ["CENTRE", decidingCentre],
+    ],
+    [INTERPRETATION[2]]: [
+      [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
+      ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
+    ],
+    [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
+    [INTERPRETATION[4]]: [["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"]],
+    [INTERPRETATION[5]]: [
+      ["SIGNATURE", (c && c.signature) || ""],
+      ["NOT-SELF", (c && c.notSelfTheme) || ""],
+    ],
+  };
 }

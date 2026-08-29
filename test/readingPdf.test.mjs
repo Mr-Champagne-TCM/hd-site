@@ -277,3 +277,35 @@ test("the profile is named the way the app names it", async () => {
   assert.equal(profileWithNames("9/9"), "9/9");
   assert.equal(profileWithNames(null), "");
 });
+
+// --- tier 2, the written interpretation -------------------------------------
+
+test("tier 1 gets two pages; a tier-2 reading gets the app's seven", async () => {
+  const buf = await make({ tier: 1 });
+  assert.match(buf.toString("latin1"), /\/Count 2/, "the chart tier grew pages");
+});
+
+test("A READING IS ONLY LAID OUT WHEN THE TIER PAID FOR ONE", async () => {
+  // Passing reading text at tier 1 must not quietly hand over the reading
+  // tier's pages. The tier is the entitlement; the text is just data.
+  const { TEXT } = await import("./support/tier2Fixture.mjs");
+  const one = await make({ tier: 1, reading: TEXT });
+  assert.match(one.toString("latin1"), /\/Count 2/, "tier 1 was given the reading pages");
+});
+
+test("the reading's pages are built from the text, and only from valid text", async () => {
+  const { TEXT } = await import("./support/tier2Fixture.mjs");
+  const { firstProblem } = await import("../netlify/lib/interpretation.mjs");
+  assert.equal(firstProblem(TEXT), null, "the fixture itself is not a valid reading");
+
+  const two = await make({ tier: 2, reading: TEXT });
+  const pages = Number(/\/Count (\d+)/.exec(two.toString("latin1"))?.[1]);
+  assert.ok(pages >= 6 && pages <= 8, `expected the app's seven-ish pages, got ${pages}`);
+});
+
+test("a tier-2 purchase with no reading text yet still produces the chart", async () => {
+  // Generation is separate from delivery, and it can fail. A missing
+  // interpretation must leave the two chart pages, not a broken download.
+  const buf = await make({ tier: 2, reading: null });
+  assert.match(buf.toString("latin1"), /\/Count 2/);
+});
