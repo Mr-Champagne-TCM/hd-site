@@ -87,9 +87,19 @@ export default async () => {
       }),
   });
 
+  /**
+   * THE SKIPPED COUNT IS IN THE LINE, because without it the line lies.
+   *
+   * The first run after the cutoff landed said "23 session(s), 0 paid", which
+   * reads as nobody having bought anything -- when in fact all 23 were skipped
+   * as older than the id scheme and never examined. A log that has to be read
+   * alongside the source to be understood is a log that will be misread at
+   * three in the morning.
+   */
   console.log(
-    `reconcile: ${result.checked} session(s), ${result.paid} paid, ` +
-      `${result.missing} undelivered, ${result.delivered} delivered, ${result.failed} failed` +
+    `reconcile: ${result.checked} session(s), ${result.skippedOld} before the id scheme, ` +
+      `${result.paid} paid, ${result.missing} undelivered, ` +
+      `${result.delivered} delivered, ${result.failed} failed` +
       (acting ? "" : " [report-only]"),
   );
   return new Response(null, { status: 204 });
