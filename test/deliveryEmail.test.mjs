@@ -230,10 +230,10 @@ test("the subject says what arrived, so it can be found again in a year", () => 
 test("TWO PEOPLE ON ONE ADDRESS GET TWO CONVERSATIONS", () => {
   // One address buying for a partner or a friend is the case the credit rule
   // was written around, and it is exactly the case that threaded into one.
-  const a = build(1, "Jack Black").subject;
+  const a = build(1, "Grace Hopper").subject;
   const b = build(1, "Ada Lovelace").subject;
   assert.notEqual(a, b, "two different charts still share a subject");
-  assert.match(a, /^Jack Black/);
+  assert.match(a, /^Grace Hopper/);
   assert.match(b, /^Ada Lovelace/);
 });
 

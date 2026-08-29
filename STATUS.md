@@ -68,7 +68,7 @@ Six of the seven are now confirmed by a person or by production logs.
 |---|---|---|
 | T1 | The reading page updates itself while writing | **Confirmed** — Jeremy: "Page updated automagically when reading came in" |
 | T2 | The Processing indicator | **Confirmed** — seen, ~1.5 min |
-| T3 | Email subjects name the chart | **Confirmed** — five emails, five separate Gmail threads. The same inbox holds the before: two earlier runs collapsed "Jack Black" and "Jack Black #2" into one conversation |
+| T3 | Email subjects name the chart | **Confirmed** — five emails, five separate Gmail threads. The same inbox holds the before: two earlier runs, made under one test name and that name plus a number, collapsed into a single conversation |
 | T4 | chart-differs fires only on an upgrade | **Confirmed** — Jeremy: "No 'chart is different at lower tier' - good" |
 | T5 | The zoom clears the controls | **Was still broken, now fixed.** It opened at the raw box and only `reset()` subtracted the furniture, so Fit repaired a state the viewer had put you in. Verified in a browser at open, at 8x, and back to Fit |
 | T6 | The upgrade credit reaches Stripe | **Confirmed in production logs.** See below |
