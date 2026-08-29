@@ -6,6 +6,7 @@ import Bodygraph from "./Bodygraph";
 const CONTACT = "hd-readings@thechampagnemethod.co";
 import EntryForm from "./entry/EntryForm";
 import ReadingActions, { Resend } from "./ReadingActions";
+import WrittenReading, { type Written } from "./WrittenReading";
 
 /**
  * What a delivery link opens.
@@ -34,6 +35,8 @@ type Reading = {
   output: SummaryData;
   upgrade: { level: number; label: string; available?: boolean } | null;
   canResend: boolean;
+  written: Written | null;
+  notes: Record<string, Array<[string, string]>> | null;
 };
 
 type State =

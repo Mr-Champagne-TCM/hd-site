@@ -1,5 +1,6 @@
 import { loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
+import { marginNotes, parseReading } from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
 
 /**
@@ -123,6 +124,34 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
     name: reading.buyer?.name ?? null,
     purchasedAt: reading.purchasedAt,
     output: reading.output,
+    /**
+     * THE WRITTEN INTERPRETATION, PARSED, when the tier paid for one.
+     *
+     * Jeremy's assumption, and it held: "Should have PDF content, in the page,
+     * then PDF'able when they need." A reading whose only form is a download is
+     * a reading nobody reads on a phone.
+     *
+     * PARSED HERE, not in the browser. `interpretation.mjs` is a server module
+     * and stays one -- the prompt lives in it, and shipping a prompt to every
+     * visitor is how the next person builds the same product for nothing. What
+     * crosses is the finished blocks.
+     *
+     * Gated on the TIER rather than on whether text happens to be stored, so a
+     * record that somehow carried text it was not paid for still shows none.
+     */
+    written:
+      reading.tier >= 2 && typeof reading.reading === "string"
+        ? parseReading(reading.reading)
+        : null,
+    /**
+     * The chart facts that sit beside each section. From the CHART, never from
+     * the model -- the same table the PDF prints, sent rather than recomputed
+     * so the page and the document cannot answer differently.
+     */
+    notes:
+      reading.tier >= 2 && typeof reading.reading === "string"
+        ? marginNotes(reading.output)
+        : null,
     /**
      * D-11: no upgrade offered at the top tier, because there is nothing above
      * it. Decided here rather than in the page, so that a page which forgets to

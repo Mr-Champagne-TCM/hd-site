@@ -7,6 +7,7 @@ import {
   INTERPRETATION,
   MECHANICS,
   TAKEAWAYS,
+  marginNotes,
   parseReading,
 } from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
@@ -169,7 +170,7 @@ export async function readingPdf({ tier, name, output, links, reading = null }) 
      */
     const written = tier >= 2 && typeof reading === "string" ? parseReading(reading) : null;
 
-    glancePage(doc, { output, tier, written });
+    glancePage(doc, { output, tier, links, written });
     if (written) {
       doc.addPage();
       mechanicsPage(doc, written);
@@ -257,7 +258,7 @@ function chartPage(doc, { name, output, links, qr }) {
   footer(doc, 1);
 }
 
-function glancePage(doc, { output, tier, written = null }) {
+function glancePage(doc, { output, tier, links, written = null }) {
   paper(doc);
 
   doc.font("body").fontSize(11).fillColor(INK).text("Your chart at a glance", M, M);
@@ -370,6 +371,32 @@ function glancePage(doc, { output, tier, written = null }) {
     y = doc.y + 8;
   }
   doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
+
+  /**
+   * WHERE THE WORDS ARE EXPLAINED, as a real link annotation.
+   *
+   * Jeremy: "human design, plainly link in PDF missing. needed." He is right,
+   * and this page is exactly where it is missed -- it is where somebody meets
+   * "Manifesting Generator" and "incarnation cross" as bare values. The offer
+   * page and the reading page both offer the glossary at that moment; the
+   * document they keep did not.
+   *
+   * ONE LINE, ONE LINK. Not two fragments joined with `continued` -- that is
+   * the mistake the page-one guide line already made once, where each fragment
+   * re-centred over the same span and they landed on top of each other.
+   */
+  const hd101 = links?.hd101 ?? "https://thechampagnemethod.co/library/human-design/";
+  doc
+    .font("body")
+    .fontSize(9)
+    .fillColor(GOLD)
+    .text(
+      "Every word above is explained in Human Design, plainly  —  free in the library",
+      M,
+      y + 10,
+      { width: COL, link: hd101, underline: false },
+    );
+  y = doc.y + 4;
 
   if (output?.note) {
     doc.font("body").fontSize(9).fillColor(MUTED).text(String(output.note), M, y + 12, {
@@ -767,60 +794,4 @@ function interpretationPages(doc, { output, written }) {
   });
 
   footer(doc, page);
-}
-
-/**
- * The chart facts beside each section, ported from the app -- with one fix.
- *
- * The app prints "Decided over time, not in the moment." beside EVERY
- * authority. That is right for Emotional and wrong for Sacral and Splenic:
- * both answer in the instant, and telling somebody with Sacral authority to
- * decide over time is the opposite of their own design. Visible on page 4 of
- * `Jeremy-pdf-view.pdf`, in the margin next to "SACRAL AUTHORITY".
- *
- * Flagged for the app rather than fixed quietly in one place -- two documents
- * disagreeing about somebody's authority is worse than one being wrong.
- */
-function marginNotes(c) {
-  const defined = (c && c.definedCenters) || [];
-  const decidingCentre = defined.includes("Solar Plexus")
-    ? "Solar Plexus"
-    : defined.includes("Sacral")
-      ? "Sacral"
-      : defined.includes("Spleen")
-        ? "Spleen"
-        : (c && c.definition) || "";
-
-  const HOW = {
-    Emotional: "Decided over time, not in the moment.",
-    Sacral: "Answered in the moment, in the body.",
-    Splenic: "Answered once, quietly, in the present.",
-    Ego: "Decided by what there is will for.",
-    "Self-Projected": "Heard by saying it out loud.",
-    Mental: "Talked through with people you trust.",
-    Lunar: "Decided over a full lunar cycle.",
-  };
-  const authority = (c && c.authority) || "";
-  const profileNames = profileWithNames(c && c.profile).replace(/^[^—]*—\s*/, "");
-
-  return {
-    [INTERPRETATION[0]]: [
-      [String((c && c.type) || "").toUpperCase(), (c && c.strategy) || ""],
-      ["DEFINITION", (c && c.definition) || ""],
-    ],
-    [INTERPRETATION[1]]: [
-      [`${authority.toUpperCase()} AUTHORITY`.trim(), HOW[authority] || ""],
-      ["CENTRE", decidingCentre],
-    ],
-    [INTERPRETATION[2]]: [
-      [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
-      ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
-    ],
-    [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
-    [INTERPRETATION[4]]: [["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"]],
-    [INTERPRETATION[5]]: [
-      ["SIGNATURE", (c && c.signature) || ""],
-      ["NOT-SELF", (c && c.notSelfTheme) || ""],
-    ],
-  };
 }

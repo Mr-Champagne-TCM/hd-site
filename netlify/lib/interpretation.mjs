@@ -24,6 +24,8 @@
  * answer came back wrong.
  */
 
+import { profileWithNames } from "./mechanics.mjs";
+
 export const DISCLAIMER =
   "This reading describes a Human Design chart and is offered for self-reflection. " +
   "It is not medical, psychological, legal or financial advice, and it does not " +
@@ -231,4 +233,60 @@ export function parseReading(raw) {
   flush();
 
   return { summary: summaryRows(raw), sections };
+}
+
+/**
+ * The chart facts beside each section, ported from the app -- with one fix.
+ *
+ * The app prints "Decided over time, not in the moment." beside EVERY
+ * authority. That is right for Emotional and wrong for Sacral and Splenic:
+ * both answer in the instant, and telling somebody with Sacral authority to
+ * decide over time is the opposite of their own design. Visible on page 4 of
+ * `Jeremy-pdf-view.pdf`, in the margin next to "SACRAL AUTHORITY".
+ *
+ * Flagged for the app rather than fixed quietly in one place -- two documents
+ * disagreeing about somebody's authority is worse than one being wrong.
+ */
+export function marginNotes(c) {
+  const defined = (c && c.definedCenters) || [];
+  const decidingCentre = defined.includes("Solar Plexus")
+    ? "Solar Plexus"
+    : defined.includes("Sacral")
+      ? "Sacral"
+      : defined.includes("Spleen")
+        ? "Spleen"
+        : (c && c.definition) || "";
+
+  const HOW = {
+    Emotional: "Decided over time, not in the moment.",
+    Sacral: "Answered in the moment, in the body.",
+    Splenic: "Answered once, quietly, in the present.",
+    Ego: "Decided by what there is will for.",
+    "Self-Projected": "Heard by saying it out loud.",
+    Mental: "Talked through with people you trust.",
+    Lunar: "Decided over a full lunar cycle.",
+  };
+  const authority = (c && c.authority) || "";
+  const profileNames = profileWithNames(c && c.profile).replace(/^[^—]*—\s*/, "");
+
+  return {
+    [INTERPRETATION[0]]: [
+      [String((c && c.type) || "").toUpperCase(), (c && c.strategy) || ""],
+      ["DEFINITION", (c && c.definition) || ""],
+    ],
+    [INTERPRETATION[1]]: [
+      [`${authority.toUpperCase()} AUTHORITY`.trim(), HOW[authority] || ""],
+      ["CENTRE", decidingCentre],
+    ],
+    [INTERPRETATION[2]]: [
+      [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
+      ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
+    ],
+    [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
+    [INTERPRETATION[4]]: [["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"]],
+    [INTERPRETATION[5]]: [
+      ["SIGNATURE", (c && c.signature) || ""],
+      ["NOT-SELF", (c && c.notSelfTheme) || ""],
+    ],
+  };
 }
