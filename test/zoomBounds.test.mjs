@@ -125,3 +125,35 @@ test("clampScale respects a floor below one, which is what made Fit work", async
   // With no floor given it behaves exactly as it always did.
   assert.equal(clampScale(0.1), 1);
 });
+
+test("THE CONTROLS DO NOT STAND ON THE CHART", async () => {
+  // Measured on a real screen while Jeremy was looking at it: a 581px viewport,
+  // the control bar starting 69px from the bottom, and the chart at the fitted
+  // scale exactly as tall as the viewport -- so the Root was under the bar
+  // every time. "can never see the bottom center."
+  //
+  // The floor is asked about the space that is actually VISIBLE, not the whole
+  // rectangle, so this checks the arithmetic that decision rests on.
+  const { fitScale, ASPECT } = await import("../src/zoomBounds.ts").catch(() =>
+    import("../src/zoomBounds.js"),
+  );
+
+  const CHROME_TOP = 40;
+  const CHROME_BOTTOM = 76;
+  const viewportH = 581;
+  const usableH = viewportH - CHROME_TOP - CHROME_BOTTOM;
+
+  const naive = fitScale(1396, viewportH);
+  const honest = fitScale(1396, usableH);
+  assert.ok(honest < naive, "reserving the furniture did not shrink the fitted scale");
+
+  // At the honest floor the drawing fits inside the visible band, with the
+  // bottom of the chart ABOVE where the control bar starts.
+  const drawH = 1396 * honest / ASPECT;
+  assert.ok(drawH <= usableH + 1, `the drawing is ${drawH}px in a ${usableH}px band`);
+  const bottom = CHROME_TOP + (usableH - drawH) / 2 + drawH;
+  assert.ok(
+    bottom <= viewportH - CHROME_BOTTOM + 1,
+    `the chart still reaches ${bottom}px, and the controls start at ${viewportH - CHROME_BOTTOM}px`,
+  );
+});

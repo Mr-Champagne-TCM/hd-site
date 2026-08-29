@@ -193,7 +193,29 @@ function Zoom({
     setOffset({ x: 0, y: 0 });
   }, [box.w, box.h]);
 
-  const view = () => box;
+  /**
+   * THE CONTROLS SIT ON THE DRAWING, so the drawing is not given that space.
+   *
+   * Measured on Jeremy's screen while he was looking at it: the control bar
+   * starts 69px above the bottom of a 581px viewport, and at the FITTED scale
+   * the chart is exactly as tall as the viewport -- so the Root, the bottom
+   * centre, is under the bar every single time. Zoomed in it was 95px of
+   * overlap. "can never see the bottom center."
+   *
+   * The fix is not to move the bar. It is to stop pretending the whole viewport
+   * is available: everything below works from a box with the furniture
+   * subtracted, so FIT means "the whole chart fits in the space you can
+   * actually see" rather than "in the rectangle".
+   *
+   * The top inset is smaller because the only thing up there is a hint and a
+   * Done button in the corners, not a bar across the middle.
+   */
+  const CHROME_TOP = 40;
+  const CHROME_BOTTOM = 76;
+  const view = () => ({
+    w: box.w,
+    h: Math.max(0, box.h - CHROME_TOP - CHROME_BOTTOM),
+  });
 
   function centroid() {
     const pts = [...pointers.current.values()];
@@ -346,7 +368,9 @@ function Zoom({
               width: drawW,
               height: drawH,
               left: (w - drawW) / 2 + offset.x,
-              top: (h - drawH) / 2 + offset.y,
+              // Centred in the space that is actually visible, which starts
+              // below the hint row and ends above the controls.
+              top: CHROME_TOP + (h - drawH) / 2 + offset.y,
             }}
             dangerouslySetInnerHTML={{ __html: svg }}
           />
