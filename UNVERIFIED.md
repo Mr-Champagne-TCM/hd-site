@@ -7,7 +7,8 @@ do it.
 
 Kept here rather than in a conversation because conversations end.
 
-_Last updated 2026-08-28._
+_Last updated 2026-08-29, after the first real walk-through. Everything it found
+is fixed and deployed — see FINDINGS-2026-08-29.md and CHANGED-OVERNIGHT.md._
 
 ---
 
@@ -23,7 +24,7 @@ Nothing below has served a real purchase. Ordered by what breaks worst.
 | **Unsellable tier no longer offered for sale** — the reading had a live Buy button that the checkout refuses | An error at the moment somebody tries to pay | Open a chart-tier reading |
 | **Zoom** — ctrl+scroll swallowed, − / + / Fit controls | Contained to the viewer | Pinch and scroll on a phone |
 | **PDF matched to the app** — slate panel, square legend swatches, QR, row rules, named profile | Cosmetic | Download it |
-| **Watcher** — daily digest, all-clear included | It fails silently, which is the exact thing it exists to prevent | Wait for the 13:00 UTC digest, once |
+| **Watcher** — immediate on failure, weekly either way | It fails silently, which is the exact thing it exists to prevent | Wait for the Monday 13:00 UTC report, once |
 | **Email copy** — RESOURCES label, "contains" not "adds" | Cosmetic | Read the email |
 
 ## 2. Waiting on Jeremy
@@ -35,9 +36,9 @@ Nothing below has served a real purchase. Ordered by what breaks worst.
 | 3 | **Refund / terms policy** — parked until just before launch. He is inclined to **no refunds**; the features need designing either way | It is a commercial decision | Yes, before real money |
 | 4 | **Paste client names into `tools/private-terms.local.txt`** | The names are his; the file is gitignored and never leaves his machine. Until then the leak scanner's name rule has **never run** | No, but it is the only unchecked rule |
 | 5 | **Decide about four client first names in this repo's git history** — `hd-site` is public. Leave, rewrite history (breaks clones), or make the repo private | His clients | No |
-| 6 | **Live Stripe keys** — staying sandbox for now, by his decision | Keys never reach Claude | Yes, before real money |
-| 7 | **`PAYWALL=1` in Netlify** — off for now, by his decision. The form is gone from the page, but the API still serves a chart to a direct request | Netlify env is his | No, while sandbox |
-| 8 | **`GEMINI_API_KEY` in Netlify** when tier 2 is wired | Key is his | Blocks tier 2 |
+| 6 | **Live Stripe keys** — staying sandbox, by his decision. "no one knows about this site yet" | Keys never reach Claude | Yes, before real money |
+| 7 | ~~`PAYWALL=1`~~ **DONE 2026-08-29.** Verified live: a chart request with no proof returns 402 | — | — |
+| 8 | ~~`GEMINI_API_KEY`~~ **DONE.** And the prompt is in the `config` blob, verified byte-identical | — | — |
 
 ## 3. Tier 2 — where it actually stands
 
@@ -57,4 +58,4 @@ same validator, so a reading is the same reading whichever door it came from.
 | `GEMINI_API_KEY` in Netlify | **Jeremy has added it** (free tier, his decision) |
 | Email nuance | **Done** — three stages, three subjects; the middle one no longer promises unwritten words |
 | **Has never run against the real Gemini** | The whole path is tested against a fake. Nobody has seen a real generated reading on the web |
-| `SELLABLE_MAX_LEVEL` | Stays at **1** until a real one has been read and approved |
+| `SELLABLE_MAX_LEVEL` | **2 since 2026-08-29.** Raised deliberately so the purchase paths could be walked, while Stripe is sandbox and the site is unannounced. Back to 1 in one line if a real reading comes back wrong |

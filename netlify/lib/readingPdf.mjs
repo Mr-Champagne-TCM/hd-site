@@ -434,7 +434,18 @@ function glancePage(doc, { output, tier, links, written = null }) {
       .font("body")
       .fontSize(8.5)
       .fillColor(GOLD)
-      .text("IF YOU WOULD LIKE MORE", M, boxY, { characterSpacing: 1.3 });
+      /**
+       * MORE THAN WHAT, EXACTLY. "If you would like more" leaves the reader to
+       * work out what they are holding and what is being offered; naming the
+       * tier they bought does that work for them, and makes the heading true on
+       * whichever document it lands.
+       */
+      .text(
+        `IF YOU WOULD LIKE MORE THAN THIS ${(TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase()}`.trim(),
+        M,
+        boxY,
+        { characterSpacing: 1.3 },
+      );
     doc
       .font("body")
       .fontSize(10)
