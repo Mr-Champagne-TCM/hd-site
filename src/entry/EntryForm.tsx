@@ -94,6 +94,12 @@ type State =
   | { at: "asking" }
   | { at: "working" }
   | { at: "done"; summary: SummaryData }
+  | {
+      at: "differs";
+      message: string;
+      previous: Record<string, unknown>;
+      computed: Record<string, unknown>;
+    }
   | { at: "failed"; message: string };
 
 export default function EntryForm({
@@ -185,8 +191,8 @@ export default function EntryForm({
     (timeKnown === false || timeReady) &&
     state.at !== "working";
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e: React.FormEvent | null, accept = false) {
+    e?.preventDefault();
     if (!ready || !place) return;
     setState({ at: "working" });
     try {
@@ -199,6 +205,12 @@ export default function EntryForm({
           // lived in the tab they closed.
           reading: readingToken ?? undefined,
           grant: heldGrant() ?? undefined,
+          /**
+           * "YES, THIS IS THE CHART I MEANT." Sent only on the second submit,
+           * after the difference has been shown and looked at. The server does
+           * not compare again once this is set.
+           */
+          accept: accept || undefined,
           birth: {
             date,
             zone: place.zone,
@@ -208,6 +220,26 @@ export default function EntryForm({
         }),
       });
       const body = await res.json();
+      /**
+       * THE CHART IS NOT THE ONE THEY HAD LAST TIME.
+       *
+       * Shown BEFORE the chart, with both versions side by side and a way back
+       * to the form. Jeremy: "they have no way to update, that message should
+       * come before the output is shown, and allow chance to change or accept
+       * their entries."
+       *
+       * Neither answer is treated as the mistake. A time that was guessed last
+       * year and is known now produces exactly this, and so does a typo.
+       */
+      if (res.status === 409 && body?.error?.code === "chart_differs") {
+        setState({
+          at: "differs",
+          message: body.error.message,
+          previous: body.error.previous,
+          computed: body.error.computed,
+        });
+        return;
+      }
       if (!res.ok) {
         // The edge and the engine both write messages meant for a person to
         // read, so they are shown rather than reworded.
@@ -249,6 +281,83 @@ export default function EntryForm({
           "were not stored.",
       });
     }
+  }
+
+  if (state.at === "differs") {
+    const rows: Array<[string, string]> = [
+      ["Type", "type"],
+      ["Profile", "profile"],
+      ["Authority", "authority"],
+      ["Definition", "definition"],
+      ["Incarnation cross", "incarnationCross"],
+    ];
+    const show = (v: unknown) => (Array.isArray(v) ? v.join(" · ") : String(v ?? "—"));
+
+    return (
+      <section className="page-bottom mx-auto max-w-3xl px-6 pt-20 sm:px-8">
+        <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
+          This is not the chart you had before
+        </h2>
+        <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">
+          {state.message}
+        </p>
+
+        {/*
+          BOTH, SIDE BY SIDE, so the choice is made by looking rather than by
+          remembering. Neither column is labelled right or wrong -- a birth time
+          learned since last time changes a chart exactly as a typo does.
+        */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          {[
+            ["The one you had", state.previous],
+            ["What these details give", state.computed],
+          ].map(([label, data]) => (
+            <div
+              key={label as string}
+              className="rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
+            >
+              <h3 className="font-sans text-[12px] uppercase tracking-[0.16em] text-brand-teal">
+                {label as string}
+              </h3>
+              <dl className="mt-3 space-y-2">
+                {rows.map(([name, key]) => (
+                  <div key={key}>
+                    <dt className="font-sans text-[11px] uppercase tracking-[0.14em] text-brand-muted/80">
+                      {name}
+                    </dt>
+                    <dd className="text-[15px] leading-snug text-brand-paper">
+                      {show((data as Record<string, unknown>)?.[key])}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setState({ at: "asking" })}
+            className="rounded-full border border-brand-teal/60 px-6 py-3 font-sans text-[16px] text-brand-teal transition-colors hover:bg-brand-teal/10"
+          >
+            Change my details
+          </button>
+          <button
+            type="button"
+            onClick={() => submit(null, true)}
+            className="rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
+          >
+            These details are right
+          </button>
+        </div>
+
+        <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
+          Nothing is decided until you choose. Your details are still on the form
+          exactly as you typed them.
+        </p>
+      </section>
+    );
   }
 
   if (state.at === "done") {

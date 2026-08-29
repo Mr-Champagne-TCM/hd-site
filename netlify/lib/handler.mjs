@@ -1,6 +1,7 @@
 import { check, record } from "./ratelimit.mjs";
 import { tierFor } from "./grant.mjs";
-import { fillReading, readReadingLink } from "./reading.mjs";
+import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
+import { chartDifferences, describeDifferences, previousChart } from "./chartDiff.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -162,6 +163,48 @@ export async function handleChart({
    * chart is computed; handing it over is the thing that matters, and a
    * reading that was never stored can be recomputed from the same form.
    */
+  /**
+   * IS THIS THE SAME CHART THEY HAD LAST TIME?
+   *
+   * Asked BEFORE anything is filed or shown. Jeremy's instruction: "that message
+   * should come before the output is shown, and allow chance to change or accept
+   * their entries." A warning printed above a chart somebody is already reading
+   * is not a choice, it is an apology.
+   *
+   * Only on an upgrade -- there has to be an earlier chart to differ from -- and
+   * only until they say to go ahead. `accept` comes back on the second submit.
+   *
+   * Nothing extra is stored to make this work. The engine's outputs are already
+   * kept; comparing two of them is exact rather than a guess about what somebody
+   * typed.
+   */
+  if (readingLink.ok && readings && request?.accept !== true) {
+    const previous = await previousChart(readings, {
+      email: (await loadReading(readings, readingLink.id, now))?.buyer?.email ?? null,
+      excludeId: readingLink.id,
+      loadReading,
+      now,
+    }).catch(() => null);
+
+    const changed = previous ? chartDifferences(previous.output, upstream.payload) : [];
+    if (changed.length) {
+      console.log(`chart: differs from the previous one (${changed.join(", ")})`);
+      return json(409, {
+        error: {
+          code: "chart_differs",
+          message:
+            `This chart is not the same as the one you had. ${describeDifferences(changed)} ` +
+            "changed, which means the birth details entered this time are different from last " +
+            "time. Either can be the right one — a time that was guessed before and is known " +
+            "now would do exactly this.",
+          changed,
+          previous: summaryOf(previous.output),
+          computed: summaryOf(upstream.payload),
+        },
+      });
+    }
+  }
+
   if (readingLink.ok && readings) {
     try {
       const filled = await fillReading(readings, readingLink.id, upstream.payload, now);
@@ -202,5 +245,21 @@ function json(status, payload, headers = {}) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers },
     body: JSON.stringify(payload),
+  };
+}
+
+/**
+ * The few values worth putting side by side. Not the whole output and never the
+ * drawing -- this is a comparison, and a comparison nobody can read is not one.
+ */
+function summaryOf(output) {
+  return {
+    type: output?.type ?? null,
+    profile: output?.profile ?? null,
+    authority: output?.authority ?? null,
+    definition: output?.definition ?? null,
+    incarnationCross: output?.incarnationCross ?? null,
+    definedCenters: output?.definedCenters ?? [],
+    channels: output?.channels ?? [],
   };
 }

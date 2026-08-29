@@ -114,6 +114,17 @@ export default function PlaceField({
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
+  /**
+   * WHICH RESULT THE ARROW KEYS ARE ON. -1 is "none", which is where it starts
+   * and where it returns whenever the list changes underneath.
+   *
+   * Jeremy asked for this twice: "when typing in bplace, arrowing down into the
+   * search options would be cool. shouldn't remove cursor focus from typing
+   * field." That second half is the whole design -- focus never leaves the
+   * input, so typing carries on working mid-selection. The list is driven, not
+   * entered, which is what `aria-activedescendant` is for.
+   */
+  const [cursor, setCursor] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [searching, setSearching] = useState(false);
   const [box, setBox] = useState<Box | null>(null);
@@ -208,6 +219,10 @@ export default function PlaceField({
     if (showList) place();
   }, [showList, results.length, place]);
 
+  // A moving list must not leave the highlight pointing at whatever slid into
+  // that position.
+  useEffect(() => setCursor(-1), [results]);
+
   useEffect(() => {
     if (!showList) return;
     const vv = window.visualViewport;
@@ -225,6 +240,8 @@ export default function PlaceField({
 
   const list = showList && box && (
     <ul
+      id="place-results"
+      role="listbox"
       className="fixed z-40 divide-y divide-brand-gold/10 overflow-y-auto overscroll-contain rounded-xl border border-brand-gold/25 bg-ground-top shadow-2xl"
       style={{
         left: box.left,
@@ -239,10 +256,12 @@ export default function PlaceField({
         with; eight are SHOWN, because a dropdown of twenty-five towns is a
         list nobody reads. The extra seventeen are working memory, not content.
       */}
-      {results.slice(0, 8).map((p) => (
-        <li key={`${p.label}|${p.zone}`}>
+      {results.slice(0, 8).map((p, i) => (
+        <li key={`${p.label}|${p.zone}`} role="option" aria-selected={i === cursor} id={`place-result-${i}`}>
           <button
             type="button"
+            tabIndex={-1}
+            onMouseEnter={() => setCursor(i)}
             // onMouseDown, not onClick: a click arrives after blur, and by then
             // the list may be gone.
             onMouseDown={(e) => {
@@ -251,7 +270,10 @@ export default function PlaceField({
               setQuery(p.label);
               setFocused(false);
             }}
-            className="block w-full px-4 py-3 text-left text-[16px] text-brand-paper transition-colors hover:bg-white/[0.06]"
+            className={
+              "block w-full px-4 py-3 text-left text-[16px] text-brand-paper transition-colors " +
+              (i === cursor ? "bg-white/[0.10]" : "hover:bg-white/[0.06]")
+            }
           >
             {p.label}
             <span className="ml-2 text-[13px] text-brand-muted">{p.zone}</span>
@@ -295,6 +317,47 @@ export default function PlaceField({
             // Typing clears the choice so answers can appear. Nothing puts it
             // back except a tap -- that is fault 2.
             if (chosen) onChoose(null);
+          }}
+          role="combobox"
+          aria-expanded={showList}
+          aria-controls="place-results"
+          aria-autocomplete="list"
+          aria-activedescendant={cursor >= 0 ? `place-result-${cursor}` : undefined}
+          onKeyDown={(e) => {
+            const shown = results.slice(0, 8);
+            if (!showList || shown.length === 0) return;
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              /*
+                preventDefault so the caret does not jump to the ends of the
+                text while the list is being walked. Focus stays here.
+              */
+              e.preventDefault();
+              const step = e.key === "ArrowDown" ? 1 : -1;
+              setCursor((c) => {
+                const next = c + step;
+                if (next < 0) return shown.length - 1;
+                if (next >= shown.length) return 0;
+                return next;
+              });
+              return;
+            }
+            if (e.key === "Enter" && cursor >= 0) {
+              // Only when something is highlighted. Otherwise Enter belongs to
+              // the form, and stealing it would strand somebody who has typed
+              // an exact name and simply wants to go on.
+              e.preventDefault();
+              const p = shown[cursor];
+              onChoose(p);
+              setQuery(p.label);
+              setFocused(false);
+              setCursor(-1);
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setFocused(false);
+              setCursor(-1);
+            }
           }}
           className="w-full rounded-xl border border-brand-gold/30 bg-ground-top/60 px-3 py-3 text-[17px] text-brand-paper placeholder:text-brand-muted/50 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/40"
         />
