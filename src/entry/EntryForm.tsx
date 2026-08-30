@@ -207,9 +207,18 @@ export default function EntryForm({
    * the trouble to write in.
    */
   const missing = (() => {
-    if (!date) return "your date of birth";
-    if (!place) return "your place of birth — start typing, then pick it from the list";
-    if (timeKnown !== false && !timeReady) return "your time of birth, or the box that says you do not know it";
+    if (!date) return "the day you were born.";
+    if (!place)
+      return (
+        "where you were born. Start typing the town, then pick it from the list — " +
+        "the letters on their own are not enough, because the reading needs the " +
+        "coordinates and the timezone that come with the choice."
+      );
+    if (timeKnown !== false && !timeReady)
+      return (
+        "the time you were born — or tick “I don’t know my birth time”, " +
+        "which is a perfectly good answer and changes less than you would think."
+      );
     return null;
   })();
 
@@ -554,8 +563,8 @@ export default function EntryForm({
         )}
 
         {missing && state.at !== "working" && (
-          <p className="mt-6 text-[15px] leading-relaxed text-brand-muted">
-            Still needed: {missing}.
+          <p className="mt-6 max-w-[52ch] text-[15px] leading-relaxed text-brand-muted">
+            One thing left: {missing}
           </p>
         )}
 

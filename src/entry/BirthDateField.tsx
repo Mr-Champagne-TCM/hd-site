@@ -136,8 +136,8 @@ export default function BirthDateField({
     "w-full rounded-xl border bg-ground-top/60 px-3 py-3 text-[17px] " +
     "focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/40 " +
     (chosen
-      ? "border-brand-gold/30 text-brand-paper"
-      : "border-brand-gold/20 text-brand-muted");
+      ? "border-brand-teal/60 text-brand-paper"
+      : "border-brand-teal/25 text-brand-muted");
 
   return (
     <fieldset>

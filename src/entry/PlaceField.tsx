@@ -91,6 +91,17 @@ const answers = new Map<string, Place[]>();
  * town" -- so nothing is shown in that case and the field keeps saying it is
  * looking.
  */
+/*
+ * THE BORDER SAYS WHETHER THIS FIELD IS SATISFIED YET.
+ *
+ * Faint teal means "nothing usable here yet". Full teal means "this one is
+ * done". Jeremy's idea, after a buyer sat on a completed-looking form whose
+ * button would not move: the form should show its state field by field, so the
+ * outstanding one is visible before you ever reach the button.
+ *
+ * Teal at both ends rather than gold-then-teal on purpose -- a colour CHANGE
+ * reads as an error correction; the same colour ARRIVING reads as progress.
+ */
 function provisional(query: string): Place[] | null {
   const lower = query.toLowerCase();
   for (let cut = lower.length - 1; cut >= 1; cut -= 1) {
@@ -359,7 +370,15 @@ export default function PlaceField({
               setCursor(-1);
             }
           }}
-          className="w-full rounded-xl border border-brand-gold/30 bg-ground-top/60 px-3 py-3 text-[17px] text-brand-paper placeholder:text-brand-muted/50 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/40"
+          className={
+            "w-full rounded-xl border bg-ground-top/60 px-3 py-3 text-[17px] text-brand-paper " +
+            "placeholder:text-brand-muted/50 transition-colors focus:border-brand-teal focus:outline-none " +
+            "focus:ring-2 focus:ring-brand-teal/40 " +
+            // A TYPED PLACE IS NOT A CHOSEN PLACE. Until one is picked from
+            // the list there are no coordinates and no timezone, so the field
+            // stays faint no matter how much text is in it.
+            (chosen ? "border-brand-teal/60" : "border-brand-teal/25")
+          }
         />
       </label>
 

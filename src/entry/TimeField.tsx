@@ -57,7 +57,7 @@ export default function TimeField({
               "flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors " +
               (value
                 ? "border-brand-teal/60 bg-brand-teal/[0.07]"
-                : "border-brand-gold/30 bg-ground-top/60 hover:border-brand-gold/50")
+                : "border-brand-teal/25 bg-ground-top/60 hover:border-brand-teal/45")
             }
           >
             <svg
