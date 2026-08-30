@@ -191,6 +191,28 @@ export default function EntryForm({
     (timeKnown === false || timeReady) &&
     state.at !== "working";
 
+  /**
+   * WHY THE BUTTON IS OFF, in words, because a disabled button that explains
+   * nothing is a dead end.
+   *
+   * Reported by a real buyer on the day this went out: "'My reading' button
+   * doesn't appear to be clickable." Her form looked complete -- date filled,
+   * time filled, "Channelview, TX" sitting in the place box. What she could not
+   * see is that a typed place is not a chosen place: `place` is only set by
+   * picking from the list, because the reading needs the coordinates and the
+   * timezone that come with the pick, not the letters.
+   *
+   * So the form told her "That's everything" and then refused to move. She had
+   * no way to find out why, and the only reason it got fixed is that she took
+   * the trouble to write in.
+   */
+  const missing = (() => {
+    if (!date) return "your date of birth";
+    if (!place) return "your place of birth — start typing, then pick it from the list";
+    if (timeKnown !== false && !timeReady) return "your time of birth, or the box that says you do not know it";
+    return null;
+  })();
+
   async function submit(e: React.FormEvent | null, accept = false) {
     e?.preventDefault();
     if (!ready || !place) return;
@@ -528,6 +550,12 @@ export default function EntryForm({
         {state.at === "failed" && (
           <p className="mt-6 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
             {state.message}
+          </p>
+        )}
+
+        {missing && state.at !== "working" && (
+          <p className="mt-6 text-[15px] leading-relaxed text-brand-muted">
+            Still needed: {missing}.
           </p>
         )}
 
