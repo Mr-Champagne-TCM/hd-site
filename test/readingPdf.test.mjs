@@ -364,7 +364,7 @@ test("the chart tier is NOT given the activations, because it did not buy them",
 });
 
 test("planet names are turned into words, including one the map does not know", async () => {
-  const { planetName, activationLabel } = await import("../netlify/lib/readingPdf.mjs");
+  const { planetName, activationLabel } = await import("../shared/planets.mjs");
   assert.equal(planetName("NORTH_NODE"), "North Node");
   assert.equal(planetName("SUN"), "Sun");
   // An engine that adds a body tomorrow must not print it raw.

@@ -11,6 +11,7 @@ import {
   parseReading,
 } from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
+import { activationLabel, planetName } from "../../shared/planets.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 import {
   AUTHORITY_NOTES,
@@ -667,39 +668,6 @@ function sectionLabel(doc, text, x, y, width) {
  * words here; "NORTH_NODE" on a document somebody paid for reads as a leak of
  * the machinery.
  */
-const PLANET_NAMES = {
-  SUN: "Sun",
-  EARTH: "Earth",
-  MOON: "Moon",
-  NORTH_NODE: "North Node",
-  SOUTH_NODE: "South Node",
-  MERCURY: "Mercury",
-  VENUS: "Venus",
-  MARS: "Mars",
-  JUPITER: "Jupiter",
-  SATURN: "Saturn",
-  URANUS: "Uranus",
-  NEPTUNE: "Neptune",
-  PLUTO: "Pluto",
-};
-
-/** "NORTH_NODE" -> "North Node". An unknown key is title-cased rather than shown raw. */
-export function planetName(raw) {
-  const key = String(raw ?? "").toUpperCase();
-  if (PLANET_NAMES[key]) return PLANET_NAMES[key];
-  return key
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map((w) => w[0] + w.slice(1).toLowerCase())
-    .join(" ");
-}
-
-/** "6.2" — the gate and the line, which is how it is written everywhere. */
-export function activationLabel(a) {
-  if (!a || a.gate == null) return "";
-  return a.line == null ? String(a.gate) : `${a.gate}.${a.line}`;
-}
-
 /**
  * PAGE: the activations, in two columns.
  *

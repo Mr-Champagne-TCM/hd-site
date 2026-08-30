@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Summary, { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
+import Activations from "./Activations";
 
 /** The forwarding address, never the personal inbox (D-12). */
 const CONTACT = "hd-readings@thechampagnemethod.co";
@@ -293,6 +294,20 @@ export default function ReadingPage({ token }: { token: string }) {
         Above the actions, because the actions are what to do NEXT and this is
         what they bought.
       */}
+      {/*
+        THE ACTIVATIONS, on the reading tier only.
+        Sold as part of it and never built until now. Above the written
+        interpretation because they are chart facts, the same order the PDF
+        puts them in -- and gated on the tier because the summary and chart
+        tiers were never sold them.
+      */}
+      {reading.tier >= 2 && (
+        <Activations
+          personality={reading.output?.personality}
+          design={reading.output?.design}
+        />
+      )}
+
       {reading.written && (
         <WrittenReading written={reading.written} notes={reading.notes ?? {}} />
       )}
