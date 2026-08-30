@@ -5,7 +5,7 @@
   "description": "The Champagne Method - Human Design readings, public site and edge",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node tools/prerender.mjs",
     "preview": "vite preview",
     "test": "node --test test/*.test.mjs",
     "check": "node tools/leak-scan.mjs . dist"

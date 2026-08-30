@@ -33,13 +33,19 @@
 # Scoped to /r/* rather than a catch-all: a blanket SPA fallback would turn
 # every genuine 404 into a silent 200 with an offer page in it, which is how a
 # broken link stops looking broken.
+# app.html, NOT index.html. index.html is prerendered with the OFFER page, and
+# serving that here would flash the sales page at somebody opening the reading
+# they paid for -- React swaps the container on mount, so the wrong content is
+# painted first. app.html is the un-prerendered shell, which is the right thing
+# for a page whose content is private and arrives over the network anyway.
+# See tools/prerender.mjs.
 [[redirects]]
   from = "/r/*"
-  to = "/index.html"
+  to = "/app.html"
   status = 200
 
 [[redirects]]
   # The tiles, priced against what a link already owns. Same shape as /r/.
   from = "/u/*"
-  to = "/index.html"
+  to = "/app.html"
   status = 200

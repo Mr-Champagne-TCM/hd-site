@@ -221,6 +221,26 @@ const RULES = [
     why: "a price written outside shared/pricing.mjs (P-1)",
     re: /\$\s?(1\.11|11\.11|44\.44|33\.33|10\.00)\b/,
     exceptIn: ["shared/pricing.mjs", "DECISIONS.md", "README.md"],
+    /**
+     * NOT IN PRERENDERED HTML, and this is a narrowing rather than a skip.
+     *
+     * P-1 exists to stop a HUMAN typing a price somewhere other than
+     * shared/pricing.mjs, because two sources for one number is how a page and
+     * a checkout come to disagree about what something costs. A prerendered
+     * page is the opposite of that: the prices in it were PRODUCED by
+     * pricing.mjs, through `money()`, at build time. Finding them there is the
+     * pipeline working.
+     *
+     * The bundle is still checked, and still matters: `money()` formats at
+     * runtime, so dist/*.js carries 111 and 4444 as numbers. A literal price
+     * appearing in the JavaScript would mean somebody had hardcoded one, and
+     * that still blocks.
+     *
+     * Source HTML is still checked too -- index.html at the repo root is
+     * hand-written, and a price typed into it is exactly the mistake this rule
+     * is for. Only the BUILT html is exempt.
+     */
+    exceptBuiltHtml: true,
   },
 
   // --- Things a build leaves behind ---------------------------------------
@@ -343,10 +363,25 @@ const findings = [];
 
 for (const root of roots) {
   if (!existsSync(root)) continue;
-  const built = root.replace(/^\.\//, "").replace(/[/\\]$/, "") === "dist";
   for (const file of walk(root)) {
     const rel = relative(ROOT, file);
     const posix = rel.split(sep).join("/");
+    /**
+     * IS THIS FILE BUILT OUTPUT? Asked of the FILE, not of the root it was
+     * reached through.
+     *
+     * This used to be `root === "dist"`, which is true only on the second pass.
+     * The default roots are "." and "dist", and walking "." descends into dist/
+     * as well -- so every built file was examined TWICE, once with built=false.
+     * Any rule scoped by that flag was therefore applied wrongly on the first
+     * pass: `builtOnly` rules were skipped for files that are built, and
+     * exemptions for built files did not hold.
+     *
+     * Found when a prerendered page kept tripping the price rule despite an
+     * exemption that was plainly correct. The exemption was correct; the flag
+     * was lying about the file.
+     */
+    const built = posix === "dist" || posix.startsWith("dist/");
     const named = NAMED_FILES.has(rel);
     if (SKIP_FILES.has(rel) || SKIP_LOCAL.test(rel)) continue;
     // `.git` is in SKIP_DIRS, and the commit message lives there. Skipping a
@@ -358,6 +393,10 @@ for (const root of roots) {
 
     for (const rule of RULES) {
       if (rule.builtOnly && !built) continue;
+      // See the note on price-literal: a rendered page legitimately shows what
+      // the source computed, so a rule about hand-typed values must not fire on
+      // the render of the very module it protects.
+      if (rule.exceptBuiltHtml && built && ext === ".html") continue;
       if (rule.exceptIn && rule.exceptIn.some((p) => posix.endsWith(p))) continue;
       if (rule.onlyIn && !rule.onlyIn.some((p) => posix.startsWith(p))) continue;
       if (rule.ext && rule.ext.includes(ext)) {
