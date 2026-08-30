@@ -49,6 +49,9 @@ export const SITE = {
   hd101: "https://thechampagnemethod.co/library/human-design/",
   bodygraph: "https://thechampagnemethod.co/library/bodygraph/",
   connect: "https://thechampagnemethod.co/#connect",
+  /** What a purchase collects and what becomes of it. Mirrored in
+   *  netlify/lib/siteLinks.mjs -- test/siteLinks.test.mjs asserts they agree. */
+  privacy: "https://thechampagnemethod.co/readings/privacy/",
 };
 
 /**

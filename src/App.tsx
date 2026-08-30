@@ -374,6 +374,10 @@ function Footer() {
             [SITE.hd101, "Human Design, plainly"],
             [SITE.bodygraph, "Reading your bodygraph"],
             [SITE.connect, "Start a conversation"],
+            // Last in the row on purpose: it is the one a reader goes looking
+            // for rather than wanders into, and it belongs beside the terms
+            // above it rather than among the reading matter.
+            [SITE.privacy, "Privacy"],
           ].map(([href, label]) => (
             <a
               key={href}

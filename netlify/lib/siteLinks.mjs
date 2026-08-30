@@ -17,5 +17,17 @@ export const SITE = {
   library: "https://thechampagnemethod.co/library/",
   hd101: "https://thechampagnemethod.co/library/human-design/",
   bodygraph: "https://thechampagnemethod.co/library/bodygraph/",
+  /**
+   * What a purchase collects and what becomes of it.
+   *
+   * It is linked from the email and the PDF, not only from the shop, because
+   * those two are the only things a buyer still has a week later -- and the
+   * page describes THEIR data. A policy reachable only from the page you
+   * bought on is a policy nobody can find at the moment they want it.
+   *
+   * Under /readings/, not /privacy/: every fact on it is about buying a
+   * reading, and none of it describes the coaching.
+   */
+  privacy: "https://thechampagnemethod.co/readings/privacy/",
   contact: "hd-readings@thechampagnemethod.co",
 };

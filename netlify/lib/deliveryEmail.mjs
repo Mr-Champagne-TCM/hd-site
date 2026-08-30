@@ -232,6 +232,11 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
         ]),
     "— The Champagne Method",
     links.home,
+    "",
+    // The plain-text alternative is a real body, not a courtesy copy: it is what
+    // text-only clients and screen readers render. A link present in the HTML and
+    // absent here is a link half the recipients do not have.
+    `What we keep, and for how long: ${links.privacy}`,
   ].join("\n");
 
   const html = `<!doctype html>
@@ -280,6 +285,16 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
     <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>
     <div style="font-size:14px;color:${MUTED};padding-top:2px">Coaching, and the rest of the library.</div>
+  </td></tr>
+
+  <!--
+    THE POLICY TRAVELS WITH THE THING IT DESCRIBES. This email is what a buyer
+    still has in a week; the shop page is not. Putting the link only on the
+    page they bought from makes it unfindable at exactly the moment somebody
+    wonders what was kept.
+  -->
+  <tr><td style="padding:10px 0 0;font-size:13px;color:${MUTED}">
+    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline">What we keep, and for how long</a>
   </td></tr>
 
 </table>

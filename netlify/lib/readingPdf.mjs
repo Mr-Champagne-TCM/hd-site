@@ -197,6 +197,16 @@ function paper(doc) {
 const HOME = "https://thechampagnemethod.co";
 
 /**
+ * What a purchase collects and what becomes of it.
+ *
+ * ON PAGE ONE ONLY, not in every footer. This document is read straight
+ * through and often kept; a policy link repeated on all fourteen pages reads
+ * as boilerplate and gets skipped everywhere. Once, on the page nobody misses,
+ * is the placement that actually gets found.
+ */
+const PRIVACY = "https://thechampagnemethod.co/readings/privacy/";
+
+/**
  * Name on the left, page number on the right. No date, by his instruction.
  *
  * THE NAME IS A LINK, which is what he asked for -- a PDF is read on a screen
@@ -212,6 +222,13 @@ function footer(doc, page) {
     link: HOME,
     underline: false,
   });
+  if (page === 1) {
+    doc.text("Privacy", M + COL * 0.7 + 8, y, {
+      width: COL * 0.25,
+      link: PRIVACY,
+      underline: true,
+    });
+  }
   doc.fillColor(MUTED).text(String(page), PAGE.w - M - 40, y, { width: 40, align: "right" });
 }
 
