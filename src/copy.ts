@@ -295,7 +295,8 @@ export const FOOTER = {
     "is nothing to send back — and I would rather say so plainly here than leave you to find " +
     "out later. Two exceptions, and I would rather name the exceptions than have you wonder: if " +
     "something did not arrive, or did not work, that is mine to put right. And if your " +
-    "birth details went in wrong, write to me — I read these myself, and I will do what I can.",
+    "birth details went in wrong, write to hd-readings@thechampagnemethod.co — I read these " +
+    "myself, and I will do what I can.",
   attribution: "Place and timezone data from GeoNames, CC BY 4.0.",
   coaching: "thechampagnemethod.co",
 };
