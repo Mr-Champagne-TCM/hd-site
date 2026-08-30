@@ -43,6 +43,12 @@ const OUTPUT = {
     "</svg>",
 };
 
+/** Thirteen bodies, the shape the engine returns. */
+const ACTIVATIONS = [
+  "SUN", "EARTH", "MOON", "NORTH_NODE", "SOUTH_NODE", "MERCURY", "VENUS",
+  "MARS", "JUPITER", "SATURN", "URANUS", "NEPTUNE", "PLUTO",
+].map((planet, i) => ({ planet, gate: i + 1, line: (i % 6) + 1 }));
+
 const make = (over = {}) =>
   readingPdf({ tier: 1, name: "Jeremy Champagne", output: OUTPUT, ...over });
 
@@ -308,4 +314,62 @@ test("a tier-2 purchase with no reading text yet still produces the chart", asyn
   // interpretation must leave the two chart pages, not a broken download.
   const buf = await make({ tier: 2, reading: null });
   assert.match(buf.toString("latin1"), /\/Count 2/);
+});
+
+/**
+ * THE TWENTY-SIX ACTIVATIONS ARE ACTUALLY IN THE DOCUMENT.
+ *
+ * Sold in every price table, on the offer page and in every delivery email:
+ * "All twenty-six activations with the planet behind each." They were in none
+ * of them. Jeremy bought his own reading with a real card and found the gap --
+ * the failure a test suite cannot find, because nothing was broken. It was
+ * simply never built, while being charged for.
+ *
+ * His Android app had them all along, which is what the app is for: the web
+ * has to match it or beat it.
+ */
+test("A READING-TIER PDF CARRIES THE ACTIVATIONS PAGE", async () => {
+  const { TEXT } = await import("./support/tier2Fixture.mjs");
+  // The text inside is glyph indices under a subset font, so it cannot be
+  // string-searched. The PAGE COUNT is the honest assertion: the activations
+  // are a whole page, so the document is one longer than it used to be.
+  const withActs = await make({
+    tier: 2,
+    reading: TEXT,
+    output: { ...OUTPUT, personality: ACTIVATIONS, design: ACTIVATIONS },
+  });
+  const withNone = await make({
+    tier: 2,
+    reading: TEXT,
+    output: { ...OUTPUT, personality: [], design: [] },
+  });
+  const count = (b) => Number(/\/Count (\d+)/.exec(b.toString("latin1"))?.[1]);
+  assert.ok(count(withActs) > 0, "no pages at all");
+  assert.equal(
+    count(withActs),
+    count(withNone),
+    "the activations page must exist either way, so an empty chart is not a missing page",
+  );
+  assert.ok(count(withActs) >= 8, `expected eight-ish pages with activations, got ${count(withActs)}`);
+});
+
+test("the chart tier is NOT given the activations, because it did not buy them", async () => {
+  // Two pages: the chart and the glance. No activations, no reading.
+  const buf = await make({ tier: 1, output: { ...OUTPUT, personality: ACTIVATIONS, design: ACTIVATIONS } });
+  assert.match(
+    buf.toString("latin1"),
+    /\/Count 2/,
+    "the chart tier grew a page it did not pay for",
+  );
+});
+
+test("planet names are turned into words, including one the map does not know", async () => {
+  const { planetName, activationLabel } = await import("../netlify/lib/readingPdf.mjs");
+  assert.equal(planetName("NORTH_NODE"), "North Node");
+  assert.equal(planetName("SUN"), "Sun");
+  // An engine that adds a body tomorrow must not print it raw.
+  assert.equal(planetName("CHIRON_RETROGRADE"), "Chiron Retrograde");
+  assert.equal(activationLabel({ gate: 6, line: 2 }), "6.2");
+  assert.equal(activationLabel({ gate: 6, line: null }), "6");
+  assert.equal(activationLabel(null), "");
 });

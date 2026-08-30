@@ -174,6 +174,14 @@ export async function readingPdf({ tier, name, output, links, reading = null }) 
     if (written) {
       doc.addPage();
       mechanicsPage(doc, written);
+      /**
+       * THE ACTIVATIONS, which the reading tier has always been sold with and
+       * has never once shipped. Page three, between the mechanics and the
+       * reading: they are chart facts, so they belong with the other chart
+       * facts rather than after the prose.
+       */
+      doc.addPage();
+      activationsPage(doc, { output, links, page: 4 });
       interpretationPages(doc, { output, written });
     }
 
@@ -637,6 +645,146 @@ function sectionLabel(doc, text, x, y, width) {
  * that came back slightly off should LOOK slightly off; silently discarding a
  * channel would leave a document that is wrong and looks finished.
  */
+/**
+ * THE TWENTY-SIX ACTIVATIONS.
+ *
+ * SOLD AND NOT SHIPPED, until now. Every price table, the offer page and every
+ * delivery email describe the reading tier as "All twenty-six activations with
+ * the planet behind each, and the written interpretation." The written
+ * interpretation arrived. The activations never existed anywhere -- not in this
+ * document, not on the page -- and a comment further up this very file said
+ * they belonged to the reading tier, which is as close as code gets to a note
+ * saying "not built yet".
+ *
+ * Jeremy bought his own reading with a real card and it was missing. That is
+ * the kind of gap that only a real purchase finds, and the kind that matters
+ * most: it is the difference between what was paid for and what was handed
+ * over.
+ *
+ * PERSONALITY AND DESIGN, SIDE BY SIDE, because that is what they are -- the
+ * same thirteen bodies read at two moments, and the comparison is the point.
+ * The planet names arrive SCREAMING_SNAKE from the engine and are turned into
+ * words here; "NORTH_NODE" on a document somebody paid for reads as a leak of
+ * the machinery.
+ */
+const PLANET_NAMES = {
+  SUN: "Sun",
+  EARTH: "Earth",
+  MOON: "Moon",
+  NORTH_NODE: "North Node",
+  SOUTH_NODE: "South Node",
+  MERCURY: "Mercury",
+  VENUS: "Venus",
+  MARS: "Mars",
+  JUPITER: "Jupiter",
+  SATURN: "Saturn",
+  URANUS: "Uranus",
+  NEPTUNE: "Neptune",
+  PLUTO: "Pluto",
+};
+
+/** "NORTH_NODE" -> "North Node". An unknown key is title-cased rather than shown raw. */
+export function planetName(raw) {
+  const key = String(raw ?? "").toUpperCase();
+  if (PLANET_NAMES[key]) return PLANET_NAMES[key];
+  return key
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => w[0] + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** "6.2" — the gate and the line, which is how it is written everywhere. */
+export function activationLabel(a) {
+  if (!a || a.gate == null) return "";
+  return a.line == null ? String(a.gate) : `${a.gate}.${a.line}`;
+}
+
+/**
+ * PAGE: the activations, in two columns.
+ *
+ * Design is drawn FIRST in reading order on the left because it comes first in
+ * time -- roughly three months before birth -- and the document says so rather
+ * than assuming anybody knows.
+ */
+function activationsPage(doc, { output, links, page }) {
+  paper(doc);
+  let y = runningHead(doc, "Your twenty-six activations");
+
+  const personality = Array.isArray(output?.personality) ? output.personality : [];
+  const design = Array.isArray(output?.design) ? output.design : [];
+
+  doc
+    .font("body")
+    .fontSize(10)
+    .fillColor(MUTED)
+    .text(
+      "Every gate your chart activates, and the planet behind each one. The personality " +
+        "side is the moment you were born and is what you are conscious of. The design side " +
+        "is about three months earlier and is what the body knows without being told.",
+      M,
+      y,
+      { width: COL, lineGap: 1.5 },
+    );
+  y = doc.y + 16;
+
+  const colW = (COL - 24) / 2;
+  const right = M + colW + 24;
+  const head = (x, label, count) => {
+    sectionLabel(doc, label, x, y, colW);
+    doc
+      .font("body")
+      .fontSize(8.5)
+      .fillColor(MUTED)
+      .text(`${count} activations`, x, y + 12, { width: colW });
+  };
+  head(M, "Personality — conscious", personality.length);
+  head(right, "Design — unconscious", design.length);
+  y += 30;
+
+  const rows = Math.max(personality.length, design.length);
+  const startY = y;
+  const ROW = 17;
+
+  const column = (list, x) => {
+    let ry = startY;
+    for (const a of list) {
+      doc.font("body").fontSize(10).fillColor(INK).text(planetName(a.planet), x, ry, { width: colW - 54 });
+      doc
+        .font("bold")
+        .fontSize(10)
+        .fillColor(INK)
+        .text(activationLabel(a), x + colW - 54, ry, { width: 54, align: "right" });
+      doc
+        .moveTo(x, ry + ROW - 5)
+        .lineTo(x + colW, ry + ROW - 5)
+        .strokeColor(ROW_RULE)
+        .lineWidth(0.5)
+        .stroke();
+      ry += ROW;
+    }
+    return ry;
+  };
+
+  const endLeft = column(personality, M);
+  const endRight = column(design, right);
+  y = Math.max(endLeft, endRight) + 14;
+
+  doc
+    .font("body")
+    .fontSize(9)
+    .fillColor(MUTED)
+    .text(
+      "Each number is a gate and the line within it — 6.2 is gate 6, line 2. What the gates " +
+        "mean is explained in Human Design, plainly, free in the library.",
+      M,
+      y,
+      { width: COL, link: links?.hd101 ?? "https://thechampagnemethod.co/library/human-design/", underline: false, lineGap: 1 },
+    );
+
+  footer(doc, page);
+}
+
 function mechanicsPage(doc, written) {
   paper(doc);
   let y = runningHead(doc, "The mechanics of your chart");
@@ -692,7 +840,10 @@ function interpretationPages(doc, { output, written }) {
   doc.addPage();
   paper(doc);
   let y = runningHead(doc, "Your reading");
-  let page = 4;
+  // Five, not four: the activations took page four. A footer that disagrees
+  // with the page it is printed on is the kind of small wrongness that makes a
+  // paid document feel unchecked.
+  let page = 5;
 
   const measure = (section) => {
     let h = 16;
