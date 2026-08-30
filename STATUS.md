@@ -1,7 +1,19 @@
 # Where the HD platform stands
 
-_Updated 29 August 2026, after Jeremy's third live walk-through. Supersedes
-UNVERIFIED.md and CHANGED-OVERNIGHT.md as the place to look first._
+_Updated 29 August 2026, late — the day the site went live and took a real
+payment. Supersedes UNVERIFIED.md and CHANGED-OVERNIGHT.md as the place to look
+first._
+
+## THE SHORT VERSION
+
+**You are live and selling.** A real card was charged at the reading tier and
+delivered. The bank account is attached. Nothing is half-finished and nothing is broken.
+
+**One thing has a clock on it:** nothing. The Stripe website review completed.
+
+**The only open build** is a re-send tool so you can help somebody who lost
+their email — designed, not started, and it needs a decision from you first
+(see section 7).
 
 **Live and working.** Stripe is in sandbox, the site is unannounced, and
 everything below the "what is left" line is what stands between that and
@@ -39,10 +51,12 @@ step.** Every part of that has been walked by Jeremy on the live site.
 
 | # | What | State |
 |---|---|---|
-| B1 | **Refund / terms wording** | Jeremy's decision, put to him 29 Aug. Writing is an hour once he calls it |
-| B2 | **A reading sample for the tiers page** | **BLOCKED, and correctly so.** It needs one real generation from the EXAMPLE chart, which needs the Gemini key and the engine key. Both are Netlify SECRET variables: write-only, unreadable even by the CLI, which is exactly the protection Jeremy asked for. The unblock is one sandbox tier-2 purchase entering 25 June 1985 / Chicago / time unknown; the reading can then be lifted from the blob store |
-| B3 | ~~Pixel noise at maximum zoom~~ | **Changed, but NOT proven fixed.** See below |
-| B4 | ~~B-1 on the main site~~ | **Done** 29 Aug, in `the-champagne-method` |
+| B1 | Refund / terms wording | **Done.** "All purchases are final", his wording, live in the shop footer |
+| B2 | A reading sample for the tiers page | **Done.** Real excerpt from a real chart, live at thechampagnemethod.co/readings/ |
+| B3 | ~~Pixel noise at maximum zoom~~ | Changed, **not proven fixed** — see below |
+| B4 | ~~B-1 on the main site~~ | **Done** |
+| B5 | **The twenty-six activations** | **Done.** Sold in every price table and shipped in none of them until today. Now on PDF page 4 and on the reading page |
+| B6 | **A re-send tool** | **NOT STARTED.** The one open build. Needs a decision — section 7 |
 
 ### B3, honestly
 
@@ -119,17 +133,52 @@ including a webhook that never arrives.
 
 ---
 
-## 4. What is left for JEREMY, and only him
+## 4. What is left for JEREMY
 
 | # | What | Blocking? |
 |---|---|---|
-| J1 | **Live Stripe keys** — the account is activated and has no outstanding tasks, so this is only the key itself. Set `RECONCILE_DELIVER=1` in the same visit | Yes, before real money |
-| J1b | **A privacy policy page.** There are good privacy sentences at the point of entry but no policy, and the site takes payments, keeps name/email/phone for a year and sends chart values to Google | Yes, before real money |
-| J1c | **Business address on Stripe is his home address**, and Stripe prints it on every customer receipt | His call |
-| J2 | **The refund/terms decision** (see B1) | Yes, before real money |
-| J3 | **A real purchase on live keys**, once J1 is done | Yes |
-| J4 | **Paste client names into `tools/private-terms.local.txt`** — gitignored, never leaves his machine. Until then the leak scanner's name rule has never run once | No |
-| J5 | Four client first names in this repo's git history — he ruled: **leave them**, they are friends' or invented | Closed |
+| J1 | ~~Live Stripe keys~~ | **Done.** Live and charging |
+| J2 | ~~Refund decision~~ | **Done** |
+| J3 | ~~A real purchase~~ | **Done.** Reading tier, delivered, PDF read end to end |
+| J4 | ~~Bank account~~ | **Done.** UFCU ····2993, USD default, FREE settlement |
+| J5 | Paste client names into `tools/private-terms.local.txt` | **Done** — 7 terms, armed locally and in CI |
+| J6 | First payout | Arrives on its own, 7–14 days after the first charge |
+
+---
+
+## 4b. What happened on 29 August, in order
+
+1. Went live on real Stripe keys. First attempt failed: the key was stored as
+   `keysk_live_…` — the word "key" copied along with the token. Fixed; the
+   scanner now shape-checks the key so the next one says so in plain words.
+2. A real reading-tier purchase. Chart in ~19s, reading written ~10s after.
+3. Read all seven PDF pages and found two faults: profile lines collapsed into
+   one row (a parser bug, not the model), and the reading told a Manifesting
+   Generator to "wait for a proper invitation" — **Projector strategy**. Both
+   fixed, both now tested; his reading was regenerated clean.
+4. Found the reading tier promises "all twenty-six activations" and shipped
+   none. Built. His app had them all along.
+5. Stripe demanded a VAT number from a US sole proprietor. Support confirmed a
+   form bug; Anne advised entering zeros; it cleared. Business review complete.
+6. Disabled every non-USD payment method. Did **not** clear the VAT task —
+   my theory was wrong — but the checkout is USD-only, which is right anyway.
+7. Published the privacy policy, linked the readings page from the homepage,
+   and prerendered the shop, which had been serving **643 bytes** to anything
+   that does not run JavaScript.
+
+---
+
+## 4c. Bugs found in our own tooling today
+
+- **The leak scanner decided "is this built output?" from the ROOT, not the
+  FILE.** Default roots are `.` and `dist`, and walking `.` descends into
+  `dist` — so every built file was scanned twice, once with `built=false`, and
+  every `builtOnly` rule was mis-applied on that pass. Since it was written.
+- **The scanner printed the name it caught**, into a world-readable CI log.
+  Now withheld in public logs, shown locally where it is the only clue.
+- **Commit messages were never scanned.** They are now, by hook and in CI.
+- **A one-word private term matched case-insensitively** and broke every build
+  on a dependency's vocabulary. One-word terms now match their own casing.
 
 ---
 
@@ -165,3 +214,31 @@ including a webhook that never arrives.
 - **My harness has now been mistaken for the product twice** — `pdf.pdf`, and a
   PDF full of fixture prose. A stand-up must look like the thing or announce
   that it is not.
+
+---
+
+## 7. The one open question, for when you are rested
+
+**The re-send tool.** So somebody who lost their delivery email can be helped.
+
+The problem: minting a reading link needs `GRANT_SECRET`, sending needs
+`RESEND_API_KEY`, and both are Netlify secrets that cannot be read back. So it
+cannot be a local script.
+
+**What I proposed and then argued against myself:** putting `GRANT_SECRET` in
+the Android app. It is the wrong call. That key signs every reading link, an
+APK is trivially unzipped, and rotating it invalidates every link every
+customer holds. A Stripe key would be worse — that one moves money.
+
+**The design to build instead:** the app holds a *revocable support token*, not
+a secret. It authorises a request; it does not create authority. The endpoint
+does the work, only ever sends to the address on the purchase (D-9), and can
+read and re-send but never create, edit or refund. Lose the phone, revoke one
+token.
+
+**Also open:** he remembers a plan to create and track Stripe discount codes
+from the app. It is not in either repo — every "discount" in the code is either
+the upgrade credit or the app's festival special price for cash payments. D-8
+says we never validate or hold a code, but that does not forbid *creating* one.
+If he wants it, it is a real feature and needs scoping, including where the
+Stripe key would live.
