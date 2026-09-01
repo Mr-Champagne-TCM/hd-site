@@ -268,7 +268,9 @@ function chartPage(doc, { name, output, links, qr }) {
    */
   const raw = typeof output?.bodygraphSvg === "string" ? output.bodygraphSvg : null;
   const svg = raw ? printSwap(raw).svg : null;
-  const legendTop = PAGE.h - 150;
+  // 166, not 150: the key gained a line explaining what a white centre's gate
+  // numbers mean, and the chart gives up those points rather than the footer.
+  const legendTop = PAGE.h - 166;
   if (svg) {
     const top = ruleY + 20;
     SVGtoPDF(doc, svg, M, top, {
@@ -349,13 +351,13 @@ function glancePage(doc, { output, tier, links, written = null }) {
         .text(label, M + 14, inner + 2, { width: labelW - 10, characterSpacing: 1.1 });
       doc
         .font("body")
-        .fontSize(10.5)
+        .fontSize(10)
         .fillColor(INK)
         .text(note ? `${value}. ${note}` : `${value}.`, textX, inner, {
           width: textW,
           lineGap: 1,
         });
-      inner = doc.y + 12;
+      inner = doc.y + 9;
     });
     doc.rect(M, startY, COL, inner - startY - 2).strokeColor(GOLD).lineWidth(1).stroke();
     y = inner + 22;
@@ -373,11 +375,21 @@ function glancePage(doc, { output, tier, links, written = null }) {
    * one per line rather than run together, which is how the app prints them and
    * the only way the names are readable.
    */
+  /**
+   * THE THREE CENTRE ROWS ARE ALWAYS PRINTED, "None" included.
+   *
+   * They partition the nine centres exactly, so a reader can add them up. A
+   * Reflector has no defined centres and some charts have no open ones; under
+   * the old `.filter` those rows simply disappeared, which reads as a document
+   * that failed to work something out rather than as a fact about the chart.
+   */
+  const centres = (list) => (list ?? []).join(", ") || "None";
   const values = [
     ["Definition", output?.definition],
     ["Incarnation cross", output?.incarnationCross],
-    ["Defined centres", (output?.definedCenters ?? []).join(", ")],
-    ["Open centres", (output?.openCenters ?? []).join(", ")],
+    ["Defined centres", centres(output?.definedCenters)],
+    ["Undefined centres", centres(output?.undefinedCenters)],
+    ["Open centres", centres(output?.openCenters)],
     ["Channels", (output?.channels ?? []).join("\n")],
   ].filter(([, v]) => v);
 
@@ -394,7 +406,7 @@ function glancePage(doc, { output, tier, links, written = null }) {
       .fontSize(10.5)
       .fillColor(INK)
       .text(String(value), M + lw, y + 6, { width: COL - lw });
-    y = doc.y + 8;
+    y = doc.y + 6;
   }
   doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
 
@@ -422,7 +434,7 @@ function glancePage(doc, { output, tier, links, written = null }) {
       y + 10,
       { width: COL, link: hd101, underline: false },
     );
-  y = doc.y + 12;
+  y = doc.y + 4;
 
   if (output?.note) {
     doc.font("body").fontSize(9).fillColor(MUTED).text(String(output.note), M, y + 12, {
@@ -454,36 +466,52 @@ function glancePage(doc, { output, tier, links, written = null }) {
   // Not for a tier that cannot be bought yet. A PDF is kept and re-read; an
   // offer inside one outlives the moment it was true.
   const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
+  /**
+   * NO CLAMP. `Math.min(y + 22, PAGE.h - 150)` did not make room when the page
+   * ran long -- it pulled the offer UP and printed it on top of the channels
+   * row and the glossary line. Adding the third centre row was enough to
+   * trigger it, and the result was three layers of overlapping text on a
+   * document somebody paid for.
+   *
+   * It is measured against the footer now, and simply left out when it will not
+   * fit. A missing upsell is a smaller fault than a broken page.
+   */
+  /**
+   * MEASURED, NOT ESTIMATED. A fixed 100pt allowance guessed this box's height
+   * and dropped it off a page it had ample room on -- by five points. The
+   * strings are built first and asked how tall they are, so the only thing that
+   * can leave the offer out is genuinely running out of page.
+   */
   if (next) {
-    const boxY = Math.min(y + 22, PAGE.h - 150);
-    doc
-      .font("body")
-      .fontSize(8.5)
-      .fillColor(GOLD)
-      /**
-       * MORE THAN WHAT, EXACTLY. "If you would like more" leaves the reader to
-       * work out what they are holding and what is being offered; naming the
-       * tier they bought does that work for them, and makes the heading true on
-       * whichever document it lands.
-       */
-      .text(
-        `IF YOU WOULD LIKE MORE THAN THIS ${(TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase()}`.trim(),
-        M,
-        boxY,
-        { characterSpacing: 1.3 },
-      );
-    doc
-      .font("body")
-      .fontSize(10)
-      .fillColor(INK)
-      .text(
-        `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
-          "the price, and the link in your email is what proves it — so opening this from there " +
-          "means the credit is already applied. Nobody pays twice for the same thing.",
-        M,
-        doc.y + 6,
-        { width: COL, lineGap: 1.5 },
-      );
+    /**
+     * MORE THAN WHAT, EXACTLY. "If you would like more" leaves the reader to
+     * work out what they are holding and what is being offered; naming the
+     * tier they bought does that work for them, and makes the heading true on
+     * whichever document it lands.
+     */
+    const offerHead = `IF YOU WOULD LIKE MORE THAN THIS ${(TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase()}`.trim();
+    const offerBody =
+      `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
+      "the price, and the link in your email is what proves it — so opening this from there " +
+      "means the credit is already applied. Nobody pays twice for the same thing.";
+    const headH = doc.font("body").fontSize(8.5).heightOfString(offerHead, { width: COL, characterSpacing: 1.3 });
+    const bodyH = doc.font("body").fontSize(10).heightOfString(offerBody, { width: COL, lineGap: 1.5 });
+    const boxH = headH + 6 + bodyH;
+
+    /**
+     * TOP-ALIGNED WHEN THERE IS SLACK, BOTTOM-ALIGNED WHEN THERE IS NOT.
+     *
+     * A fixed `y + 22` put the offer 20pt past the footer on a chart with six
+     * defined centres and four channels -- so it was dropped, on a page showing
+     * ninety points of white space below it. Sliding it down to sit just above
+     * the footer keeps it on every page that can hold it at all; the guard is
+     * what stops the slide turning back into the overlap this replaced.
+     */
+    const boxY = Math.min(y + 22, PAGE.h - 60 - boxH);
+    if (boxY >= y + 8) {
+      doc.font("body").fontSize(8.5).fillColor(GOLD).text(offerHead, M, boxY, { characterSpacing: 1.3 });
+      doc.font("body").fontSize(10).fillColor(INK).text(offerBody, M, doc.y + 6, { width: COL, lineGap: 1.5 });
+    }
   }
 
   footer(doc, 2);
@@ -571,6 +599,26 @@ function channelKey(doc, top, links, qr) {
   doc.moveTo(M, belowY).lineTo(M + textW, belowY).strokeColor(RULE).lineWidth(0.5).stroke();
 
   /**
+   * WHAT A WHITE CENTRE'S GATE NUMBERS MEAN.
+   *
+   * The drawing already carries this and always has -- a centre with lit gates
+   * is undefined, one with none is open -- but nothing on the page said so, so
+   * a reader had no way to tell the two apart. NO THIRD COLOUR: adding one
+   * would put this chart out of agreement with every reference calculator, for
+   * information the picture is already showing.
+   */
+  doc
+    .font("body")
+    .fontSize(7.5)
+    .fillColor(MUTED)
+    .text(
+      "In a centre left unfilled, a gate drawn in white or violet means undefined — all of them dark means open.",
+      M,
+      belowY + 5,
+      { width: textW, align: "center" },
+    );
+
+  /**
    * THE QR, beside the guide line it encodes. It was built at the top of this
    * module and then never drawn -- passed in, unused, and absent from the page
    * for a whole review round. Vector, so it stays crisp at any size.
@@ -601,7 +649,7 @@ function channelKey(doc, top, links, qr) {
     .fontSize(9)
     .fillColor(GOLD)
     .text("How to understand your bodygraph chart  →  thechampagnemethod.co/library/bodygraph",
-      M, belowY + 8, { width: textW, align: "center", link: guide, underline: false });
+      M, belowY + 19, { width: textW, align: "center", link: guide, underline: false });
 }
 
 /* ==========================================================================

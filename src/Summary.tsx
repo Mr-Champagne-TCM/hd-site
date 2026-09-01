@@ -23,6 +23,9 @@ export type SummaryData = {
   signature: string;
   incarnationCross: string;
   definedCenters: string[];
+  /** White, but carrying at least one activated gate. */
+  undefinedCenters: string[];
+  /** White, with no activated gate at all. */
   openCenters: string[];
   timeKnown: boolean;
   note?: string;
@@ -91,8 +94,15 @@ export default function Summary({ data }: { data: SummaryData }) {
             )}
           </Row>
         ))}
-        <Row label="Defined centres">{data.definedCenters.join(" · ")}</Row>
-        <Row label="Open centres">{data.openCenters.join(" · ")}</Row>
+        {/*
+          THREE ROWS, AND ALL THREE ARE ALWAYS SHOWN -- "None" rather than a
+          missing row. They partition the nine centres exactly, so a reader can
+          count them; a row that silently vanished on a Reflector would read as
+          something we failed to work out rather than as a fact about them.
+        */}
+        <Row label="Defined centres">{data.definedCenters.join(" · ") || "None"}</Row>
+        <Row label="Undefined centres">{(data.undefinedCenters ?? []).join(" · ") || "None"}</Row>
+        <Row label="Open centres">{data.openCenters.join(" · ") || "None"}</Row>
         {/*
           THE CHANNELS, which the PDF had and this did not.
           Jeremy: "why does the PDF have channels but the web view doesn't?"

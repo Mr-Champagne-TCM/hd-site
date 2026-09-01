@@ -80,7 +80,8 @@ export function chartFactsOnly(output) {
     `Not-Self Theme: ${output?.notSelfTheme ?? ""}`,
     `Incarnation Cross: ${output?.incarnationCross ?? ""}`,
     `Defined centers: ${list(output?.definedCenters)}`,
-    `Open centers: ${list(output?.openCenters)}`,
+    `Undefined centers (white, but carrying gates): ${list(output?.undefinedCenters)}`,
+    `Open centers (white, with no gates at all): ${list(output?.openCenters)}`,
     `Channels: ${list(output?.channels)}`,
     `Personality activations: ${acts(output?.personality)}`,
     `Design activations: ${acts(output?.design)}`,
@@ -404,7 +405,10 @@ export function marginNotes(c) {
       ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
     ],
     [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
-    [INTERPRETATION[4]]: [["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"]],
+    [INTERPRETATION[4]]: [
+      ["UNDEFINED CENTRES", ((c && c.undefinedCenters) || []).join(", ") || "None"],
+      ["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"],
+    ],
     [INTERPRETATION[5]]: [
       ["SIGNATURE", (c && c.signature) || ""],
       ["NOT-SELF", (c && c.notSelfTheme) || ""],

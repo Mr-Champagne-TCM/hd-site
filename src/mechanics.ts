@@ -46,7 +46,7 @@ export const TYPE_NOTES: Record<string, string> = {
   Projector:
     "You have no defined Sacral, so your energy is not the consistent kind. What you have instead is the ability to see how other people's energy actually works, which is a different capacity and not a smaller one.",
   Reflector:
-    "Every one of your centres is open, which is rare. You take on and reflect back the energy of whatever room you are in, so what you experience shifts with your company and your surroundings rather than staying fixed.",
+    "None of your centres is defined, which is rare. You take on and reflect back the energy of whatever room you are in, so what you experience shifts with your company and your surroundings rather than staying fixed.",
 };
 
 export const STRATEGY_NOTES: Record<string, string> = {
@@ -104,7 +104,7 @@ export const SIGNATURE_NOTES: Record<string, string> = {
   Satisfaction: "The sense that the day's energy went somewhere it belonged. It is a bodily settling rather than a thought about how things went.",
   Peace: "A quiet that arrives when nothing is being pushed against. Not achievement — the absence of resistance.",
   Success: "The feeling of having been seen and used well. It follows recognition rather than effort, which is why it cannot be manufactured by working harder.",
-  Surprise: "Delight at what a day turned out to hold. For an entirely open design, no two days are the same, and that is the point rather than the problem.",
+  Surprise: "Delight at what a day turned out to hold. For a design with nothing defined, no two days are the same, and that is the point rather than the problem.",
 };
 
 /**
@@ -116,7 +116,7 @@ export const NOT_SELF_NOTES: Record<string, string> = {
   Frustration: "The signal that energy went into something it was not met by. It shows up when action started before there was anything to respond to.",
   Anger: "The signal that arrives when a move landed on people who had not been told. It is about the informing, not about the move.",
   Bitterness: "The signal of effort spent where it was not invited. It follows work offered rather than asked for.",
-  Disappointment: "The signal of having been shaped by the wrong surroundings. For an open design it is about company and place more than about events.",
+  Disappointment: "The signal of having been shaped by the wrong surroundings. For a design with nothing fixed, it is about company and place more than about events.",
 };
 
 /**
