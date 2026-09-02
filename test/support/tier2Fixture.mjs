@@ -9,7 +9,10 @@
  * they were asked to look at.
  *
  * So this is plausible prose for the chart it belongs to -- Manifesting
- * Generator, 2/4, Sacral authority, Throat and Sacral defined, channel 20-34.
+ * Generator, 2/4, Sacral authority, Throat and Sacral defined, channel 20-34,
+ * Solar Plexus and Root undefined (white with a gate), Head open (no gate).
+ * Three centre states, because the prompt now demands the distinction and the
+ * margin notes beside this text print both lists.
  * It is NOT approved copy and it is not what a buyer receives. It exists so a
  * page of this document looks like a page of this document.
  */
@@ -108,15 +111,17 @@ const SECTIONS = [
   ],
   [
     "What you take in from others",
-    "Seven open centres mean most of what you feel in a room arrives from the room.",
+    "Most of what you feel in a room arrives from the room, and it arrives two different ways.",
     [
-      "With Head, Ajna, G, Heart, Spleen, Solar Plexus and Root all open, you take in and amplify " +
-        "what is around you. An open Solar Plexus reads a room's mood as though it were your own; an " +
-        "open Root borrows its pressure to hurry. Neither began with you, and both leave when you do.",
-      "Openness is not deficiency. It is where you take in the most and see the most — an open Ajna " +
-        "can hold a question without needing to settle it. The trouble is only ever mistaking the " +
-        "borrowed for the built-in, which is why noticing what changes when you leave a room is worth " +
-        "more here than any amount of analysis inside it.",
+      "Your Solar Plexus and Root are undefined: white, but each carrying a gate of yours, so the " +
+        "energy is not yours to summon and yet the door it comes through is always the same one. An " +
+        "undefined Solar Plexus reads a room's mood as though it were your own; an undefined Root " +
+        "borrows its pressure to hurry. Neither began with you, and both leave when you do.",
+      "Your Head is open — white with no gate at all — and that is where nothing of yours is mixed in. " +
+        "An open Head can hold a question without needing to settle it, and it is the most accurate " +
+        "instrument you have for reading a room. The trouble is only ever mistaking the borrowed for " +
+        "the built-in, which is why noticing what changes when you leave a room is worth more here " +
+        "than any amount of analysis inside it.",
     ],
   ],
   [
@@ -144,7 +149,7 @@ const TAKEAWAY_BLOCK = [
   "",
   "(Channel 20-34) Watch what happens when speaking and doing arrive together rather than one after the other.",
   "",
-  "(Open Solar Plexus) Notice how a room's mood reads as your own while you are in it, and how it changes once you leave.",
+  "(Undefined Solar Plexus) Notice how a room's mood reads as your own while you are in it, and how it changes once you leave.",
   "",
   "(Profile line 4) Watch where opportunity actually arrives from over a month, and how much of it comes through people you already know.",
   "",
