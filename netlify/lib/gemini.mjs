@@ -163,11 +163,20 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }
 
   // The TYPE comes from the chart, never from the reading. The check exists to
   // catch the reading disagreeing with the chart it was written from.
-  const problem = firstProblem(clean, output?.type);
+  const problem = firstProblem(clean, output?.type, output?.profile);
   // The rejected text travels with the reason, so an incident can show WHAT
   // was refused -- without it a prompt regression is indistinguishable from
   // Google having a bad week.
-  if (problem) return { ok: false, reason: "malformed", detail: problem, text: clean };
+  if (problem) {
+    // Every short line is a heading candidate; a "missing section" incident
+    // then shows what the model wrote instead of the heading it was given.
+    const headings = clean
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && l.length < 60 && !/[.!?]$/.test(l) && !/^\(/.test(l))
+      .join(" | ");
+    return { ok: false, reason: "malformed", detail: problem, text: `${headings}\n---\n${clean}` };
+  }
 
   return { ok: true, text: clean };
 }

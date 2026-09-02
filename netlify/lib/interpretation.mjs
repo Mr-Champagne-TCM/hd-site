@@ -124,7 +124,7 @@ export function sanitize(s) {
  *
  * Returns a sentence describing the FIRST problem, or null when it is sound.
  */
-export function firstProblem(raw, type = null) {
+export function firstProblem(raw, type = null, profile = null) {
   const reading = String(raw ?? "");
   if (!reading.includes(DISCLAIMER)) {
     return "The reading came back without the required disclaimer.";
@@ -137,7 +137,7 @@ export function firstProblem(raw, type = null) {
   if (body.split(/\s+/).filter(Boolean).length < 380) {
     return "The reading came back too short to hand over.";
   }
-  return structureProblem(reading) ?? typeProblem(reading, type);
+  return structureProblem(reading) ?? typeProblem(reading, type) ?? profileLineProblem(reading, profile);
 }
 
 /**
@@ -195,7 +195,12 @@ export function promptProblem(prompt) {
  */
 const STRATEGY_WORDS = [
   {
-    re: /\binvitation\b/i,
+    // NOT a bare "invitation": the prompt itself asks every reading to open its
+    // takeaways with "these are invitations to test against your own
+    // experience", and a model that writes "an invitation to test" in the
+    // singular tripped this rule on three charts in one afternoon (W1, W5).
+    // The strategy is the phrase, not the word.
+    re: /\bwait(?:ing|s)?\s+(?:for|on)\s+(?:an?\s+|the\s+)?(?:proper\s+|right\s+|formal\s+)?invitation/i,
     only: ["Projector"],
     says: "waiting for the invitation, which is the Projector strategy",
   },
@@ -228,6 +233,32 @@ export function typeProblem(raw, type) {
     }
   }
   return typeWordProblem(body, t) ?? centreCountProblem(body);
+}
+
+/**
+ * THE TWO PROFILE LINES ARE THE CHART'S TWO DIGITS, IN ORDER. Found live on
+ * 2026-09-02: a 6/2 reading wrote "Line 1 (Investigator), conscious" -- the
+ * wrong line and the wrong name -- and every structural check passed it. The
+ * lines under "Your profile lines" are read and compared with the profile the
+ * chart supplied; nothing about the names is judged, only the numbers.
+ */
+export function profileLineProblem(raw, profile) {
+  const m = /^(\d)\/(\d)/.exec(String(profile ?? "").trim());
+  if (!m) return null;
+  const want = [m[1], m[2]];
+  const lines = sanitize(raw).split("\n").map((l) => l.trim());
+  const at = lines.indexOf("Your profile lines");
+  if (at < 0) return null; // structureProblem reports a missing heading
+  const got = [];
+  for (const l of lines.slice(at + 1)) {
+    if (/^(Your energy, and how it starts)$/.test(l)) break;
+    const lm = /^Line\s+(\d)\b/i.exec(l);
+    if (lm) got.push(lm[1]);
+  }
+  if (got.length !== 2 || got[0] !== want[0] || got[1] !== want[1]) {
+    return `The reading describes profile lines ${got.join("/") || "(none)"} for a ${want.join("/")} profile.`;
+  }
+  return null;
 }
 
 /**
