@@ -1,0 +1,29 @@
+# THE SAFETY NET, FROM OUTSIDE THE PLATFORM.
+#
+# Netlify's scheduled functions stopped firing for this site on 2026-09-02
+# (16:15Z onward) with no incident, no credit problem, and the UI still
+# announcing the next run. A reading whose first draft the validator refused
+# then waits until somebody else buys one. This cron does the sweep's one job
+# -- ring the writer -- from GitHub, every fifteen minutes.
+#
+# Needs one repository secret: GRANT_SECRET, the same value Netlify holds. It
+# is used only to derive the trigger token, in memory, and is never printed.
+# Without it the job fails loudly rather than pretending to ring.
+name: ring-writer
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/ring-writer.mjs
+        env:
+          GRANT_SECRET: ${{ secrets.GRANT_SECRET }}
