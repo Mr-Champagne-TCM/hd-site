@@ -23,8 +23,8 @@ export type SummaryData = {
   signature: string;
   incarnationCross: string;
   definedCenters: string[];
-  /** White, but carrying at least one activated gate. */
-  undefinedCenters: string[];
+  /** White, but carrying at least one activated gate. Absent on readings stored before it existed. */
+  undefinedCenters?: string[];
   /** White, with no activated gate at all. */
   openCenters: string[];
   timeKnown: boolean;
@@ -101,7 +101,10 @@ export default function Summary({ data }: { data: SummaryData }) {
           something we failed to work out rather than as a fact about them.
         */}
         <Row label="Defined centres">{data.definedCenters.join(" · ") || "None"}</Row>
-        <Row label="Undefined centres">{(data.undefinedCenters ?? []).join(" · ") || "None"}</Row>
+        {/* Absent on readings stored before the third state existed -- see readingPdf. */}
+        {Array.isArray(data.undefinedCenters) && (
+          <Row label="Undefined centres">{data.undefinedCenters.join(" · ") || "None"}</Row>
+        )}
         <Row label="Open centres">{data.openCenters.join(" · ") || "None"}</Row>
         {/*
           THE CHANNELS, which the PDF had and this did not.

@@ -384,11 +384,20 @@ function glancePage(doc, { output, tier, links, written = null }) {
    * that failed to work something out rather than as a fact about the chart.
    */
   const centres = (list) => (list ?? []).join(", ") || "None";
+  /**
+   * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`
+   * key at all, and its `openCenters` still means "everything not defined".
+   * Absent is not empty: printing "Undefined centres: None" on such a reading
+   * would be a false statement on a document somebody already holds. Those
+   * readings keep the two rows they were sold with; only charts cast by the
+   * three-state engine get the third row.
+   */
+  const threeState = Array.isArray(output?.undefinedCenters);
   const values = [
     ["Definition", output?.definition],
     ["Incarnation cross", output?.incarnationCross],
     ["Defined centres", centres(output?.definedCenters)],
-    ["Undefined centres", centres(output?.undefinedCenters)],
+    ...(threeState ? [["Undefined centres", centres(output.undefinedCenters)]] : []),
     ["Open centres", centres(output?.openCenters)],
     ["Channels", (output?.channels ?? []).join("\n")],
   ].filter(([, v]) => v);

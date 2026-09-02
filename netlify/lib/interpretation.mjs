@@ -406,7 +406,11 @@ export function marginNotes(c) {
     ],
     [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
     [INTERPRETATION[4]]: [
-      ["UNDEFINED CENTRES", ((c && c.undefinedCenters) || []).join(", ") || "None"],
+      // Absent on readings stored before the third state existed; absent is
+      // not empty, so no "None" is printed for a value that was never computed.
+      ...(Array.isArray(c && c.undefinedCenters)
+        ? [["UNDEFINED CENTRES", c.undefinedCenters.join(", ") || "None"]]
+        : []),
       ["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"],
     ],
     [INTERPRETATION[5]]: [
