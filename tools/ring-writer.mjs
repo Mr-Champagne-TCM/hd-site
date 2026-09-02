@@ -18,9 +18,9 @@
 import { TRIGGER_HEADER, triggerToken } from "../netlify/lib/trigger.mjs";
 
 const origin = process.argv[2] || "https://humandesign.thechampagnemethod.co";
-const token = triggerToken(process.env.GRANT_SECRET);
+const token = triggerToken(process.env.RING_SECRET || process.env.GRANT_SECRET);
 if (!token) {
-  console.error("ring-writer: GRANT_SECRET is not set; nothing rung");
+  console.error("ring-writer: RING_SECRET is not set; nothing rung");
   process.exit(1);
 }
 const res = await fetch(`${origin}/api/interpret`, { method: "POST", headers: { [TRIGGER_HEADER]: token } });

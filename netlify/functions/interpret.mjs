@@ -34,7 +34,17 @@ import { TRIGGER_HEADER, triggerOk } from "../lib/trigger.mjs";
  */
 export default async (request) => {
   const grantSecret = process.env.GRANT_SECRET;
-  if (!triggerOk(request.headers.get(TRIGGER_HEADER), grantSecret)) {
+  /**
+   * TWO KEYS OPEN THIS DOOR. The sweep inside Netlify derives its token from
+   * GRANT_SECRET. The cron outside Netlify (.github/workflows/ring-writer.yml)
+   * derives its own from RING_SECRET, a value that exists only to ring this
+   * function -- because GRANT_SECRET signs every reading link and storage key
+   * and cannot be handed to a second platform, let alone rotated.
+   */
+  const rung =
+    triggerOk(request.headers.get(TRIGGER_HEADER), grantSecret) ||
+    triggerOk(request.headers.get(TRIGGER_HEADER), process.env.RING_SECRET);
+  if (!rung) {
     /**
      * A background function's path is on the public internet like any other.
      * The job is idempotent, so this is not a door to anything -- but two

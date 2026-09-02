@@ -6,8 +6,10 @@
 # then waits until somebody else buys one. This cron does the sweep's one job
 # -- ring the writer -- from GitHub, every fifteen minutes.
 #
-# Needs one repository secret: GRANT_SECRET, the same value Netlify holds. It
-# is used only to derive the trigger token, in memory, and is never printed.
+# Needs one repository secret: RING_SECRET, a ring-only value the writer also
+# accepts (set in Netlify production too). GRANT_SECRET stays where it is: it
+# signs every reading link and cannot be shared or rotated. The token is
+# derived in memory and never printed.
 # Without it the job fails loudly rather than pretending to ring.
 name: ring-writer
 
@@ -26,4 +28,4 @@ jobs:
           node-version: 22
       - run: node tools/ring-writer.mjs
         env:
-          GRANT_SECRET: ${{ secrets.GRANT_SECRET }}
+          RING_SECRET: ${{ secrets.RING_SECRET }}
