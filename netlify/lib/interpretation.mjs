@@ -252,7 +252,8 @@ export function typeWordProblem(body, type) {
   if (!own) return null;
   const lines = String(body).split("\n");
   for (const [label, key] of [["Signature:", "signature"], ["Not-self:", "notSelf"]]) {
-    const line = lines.find((l) => l.trim().startsWith(label));
+    // "Not-Self:" and "Not-self:" are the same line; the model writes both.
+    const line = lines.find((l) => l.trim().toLowerCase().startsWith(label.toLowerCase()));
     if (!line) continue;
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
@@ -272,7 +273,17 @@ export function typeWordProblem(body, type) {
  */
 const CENTRE_RE = /\b(Head|Ajna|Throat|G|Heart|Sacral|Spleen|Solar Plexus|Root)\b/g;
 export function centreCountProblem(body) {
-  for (const sentence of String(body).split(/(?<=[.!?])\s+|\n+/)) {
+  /**
+   * "Your definition" is the one place a list is the answer: the prompt asks
+   * how the DEFINED centres connect, and a Single definition with six defined
+   * centres is six names in one sentence. The first live run of this rule
+   * refused exactly that paragraph, so that section is exempt.
+   */
+  const text = String(body);
+  const from = text.indexOf("\nYour definition\n");
+  const to = text.indexOf("\nYour channels\n");
+  const judged = from >= 0 && to > from ? text.slice(0, from) + text.slice(to) : text;
+  for (const sentence of judged.split(/(?<=[.!?])\s+|\n+/)) {
     const named = new Set(sentence.match(CENTRE_RE) ?? []);
     if (named.size > 3) {
       return `The reading names ${named.size} centres in one sentence (the limit is three): "${sentence.trim().slice(0, 90)}..."`;

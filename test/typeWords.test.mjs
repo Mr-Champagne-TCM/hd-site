@@ -49,3 +49,23 @@ test("a cross name does not count as a centre", () => {
 test("typeProblem now carries both checks", () => {
   assert.match(typeProblem("Signature: Success.\nNot-self: Bitterness.\n", "Generator"), /Success|Bitterness/);
 });
+
+/**
+ * The first live run of the centre rule refused a Single-definition chart for
+ * its OWN definition paragraph -- "Because your Ajna, Throat, G, Sacral, Spleen,
+ * and Solar Plexus connect directly..." -- which is the one sentence the prompt
+ * asks to be a list. That paragraph is exempt; the rest of the reading is not.
+ */
+test("THE DEFINITION PARAGRAPH MAY LIST EVERY DEFINED CENTRE", () => {
+  const text =
+    "IN SHORT\n\nType: x.\n\nYour definition\n\nBecause your Ajna, Throat, G, Sacral, Spleen, and Solar Plexus connect directly, nothing is stranded.\n\nYour channels\n\n1-8 (x), G to Throat: y.\n";
+  assert.equal(centreCountProblem(text), null);
+  assert.match(
+    centreCountProblem(text + "\nHow you decide\n\nYour Ajna, Throat, G, Sacral, Spleen and Root all pull at once.\n"),
+    /6 centres/,
+  );
+});
+
+test("the labelled lines are found whatever their capitalisation", () => {
+  assert.match(typeWordProblem("Not-Self: Frustration flares.\n", "Manifestor"), /Frustration/);
+});
