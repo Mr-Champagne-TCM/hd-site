@@ -78,6 +78,33 @@ test("a changed channel list is caught", () => {
   assert.equal(describeDifferences(diff), "your channels");
 });
 
+/**
+ * THE MEANING OF `openCenters` MOVED UNDER STORED READINGS.
+ *
+ * Before the engine told undefined from open, `openCenters` was every centre
+ * not defined. A reading stored then, upgraded now, has the SAME birth moment
+ * and a different `openCenters` array -- which is exactly the false alarm this
+ * module promises never to raise. The record's shape says which vocabulary it
+ * speaks; across the boundary the field is not compared at all.
+ */
+test("A READING STORED BEFORE THE THIRD STATE IS NOT A DIFFERENT CHART", () => {
+  const stored = { ...CHART, openCenters: ["Head", "Ajna", "G", "Heart", "Spleen", "Solar Plexus", "Root"] };
+  const fresh = {
+    ...CHART,
+    undefinedCenters: ["Ajna", "G", "Heart", "Spleen", "Solar Plexus", "Root"],
+    openCenters: ["Head"],
+  };
+  assert.deepEqual(chartDifferences(stored, fresh), []);
+  assert.deepEqual(chartDifferences(fresh, stored), []);
+});
+
+test("two three-state charts still catch a moved white centre", () => {
+  const a = { ...CHART, undefinedCenters: ["Ajna"], openCenters: ["Head"] };
+  const b = { ...CHART, undefinedCenters: ["Head"], openCenters: ["Ajna"] };
+  assert.deepEqual(chartDifferences(a, b).sort(), ["openCenters", "undefinedCenters"]);
+  assert.equal(describeDifferences(["undefinedCenters"]), "your undefined centres");
+});
+
 test("nothing to compare against is silence, not a warning", () => {
   assert.deepEqual(chartDifferences(null, CHART), []);
   assert.deepEqual(chartDifferences(CHART, null), []);

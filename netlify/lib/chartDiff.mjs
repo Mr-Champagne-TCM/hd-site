@@ -40,7 +40,26 @@ export const IDENTIFYING = [
 ];
 
 /** Arrays that are also decided by the birth moment. Order is not significant. */
-export const IDENTIFYING_SETS = ["definedCenters", "openCenters", "channels"];
+export const IDENTIFYING_SETS = ["definedCenters", "undefinedCenters", "openCenters", "channels"];
+
+/**
+ * THE MEANING OF `openCenters` CHANGED, and a comparison across that change is
+ * not a comparison of birth moments.
+ *
+ * Before the engine split the white centres into two states, `openCenters`
+ * meant "every centre not defined". After, it means "white with no gate at
+ * all". A reading stored under the old meaning, upgraded after the new one
+ * shipped, has an identical birth moment and a different `openCenters` array
+ * -- and this module's whole contract is no false alarms.
+ *
+ * Whether a record carries `undefinedCenters` says which meaning its
+ * `openCenters` has. When the two sides disagree on that, `openCenters` is not
+ * comparable and is skipped. `definedCenters` and `channels` carry the same
+ * meaning on both sides and still catch a changed birth moment.
+ */
+function sameCentreVocabulary(before, after) {
+  return Array.isArray(before?.undefinedCenters) === Array.isArray(after?.undefinedCenters);
+}
 
 /**
  * What changed between two engine outputs, as a list of field names. Empty
@@ -61,7 +80,9 @@ export function chartDifferences(before, after) {
     if (String(a).trim() !== String(b).trim()) changed.push(key);
   }
 
+  const comparable = sameCentreVocabulary(before, after);
   for (const key of IDENTIFYING_SETS) {
+    if (key === "openCenters" && !comparable) continue;
     const a = before[key];
     const b = after[key];
     if (!Array.isArray(a) || !Array.isArray(b)) continue;
@@ -122,6 +143,7 @@ export function describeDifferences(fields) {
     notSelfTheme: "Not-Self Theme",
     incarnationCross: "Incarnation Cross",
     definedCenters: "your defined centres",
+    undefinedCenters: "your undefined centres",
     openCenters: "your open centres",
     channels: "your channels",
   };
