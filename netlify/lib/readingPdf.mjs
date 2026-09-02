@@ -403,6 +403,13 @@ function glancePage(doc, { output, tier, links, written = null }) {
   ].filter(([, v]) => v);
 
   const lw = 150;
+  /**
+   * A LONG CHANNEL LIST GOES TWO ACROSS. Eleven channels one under another is
+   * what pushed the offer off the page on the densest chart in the sweep
+   * (one in 2,500 charts has ten or more). Two columns halve the height and
+   * the list is still read top to bottom, left column first.
+   */
+  const channelList = output?.channels ?? [];
   for (const [label, value] of values) {
     doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
     doc
@@ -410,6 +417,17 @@ function glancePage(doc, { output, tier, links, written = null }) {
       .fontSize(8.5)
       .fillColor(MUTED)
       .text(label.toUpperCase(), M, y + 8, { width: lw - 12, characterSpacing: 1.1 });
+    if (label === "Channels" && channelList.length > 6) {
+      const half = Math.ceil(channelList.length / 2);
+      const gap = 16;
+      const cw = (COL - lw - gap) / 2;
+      doc.font("body").fontSize(10.5).fillColor(INK);
+      doc.text(channelList.slice(0, half).join("\n"), M + lw, y + 6, { width: cw });
+      const yLeft = doc.y;
+      doc.text(channelList.slice(half).join("\n"), M + lw + cw + gap, y + 6, { width: cw });
+      y = Math.max(yLeft, doc.y) + 6;
+      continue;
+    }
     doc
       .font("body")
       .fontSize(10.5)
@@ -520,10 +538,24 @@ function glancePage(doc, { output, tier, links, written = null }) {
     if (boxY >= y + 8) {
       doc.font("body").fontSize(8.5).fillColor(GOLD).text(offerHead, M, boxY, { characterSpacing: 1.3 });
       doc.font("body").fontSize(10).fillColor(INK).text(offerBody, M, doc.y + 6, { width: COL, lineGap: 1.5 });
+      footer(doc, 2);
+    } else {
+      /**
+       * AND WHEN EVEN THAT WILL NOT FIT, A THIRD PAGE -- never a dropped offer
+       * and never an overlap. Jeremy, on seeing the densest chart lose the
+       * box: "I don't like this." The glance page is the last page of every
+       * tier that can be offered more, so a page after it disturbs nothing.
+       */
+      footer(doc, 2);
+      doc.addPage();
+      paper(doc);
+      doc.font("body").fontSize(8.5).fillColor(GOLD).text(offerHead, M, M, { characterSpacing: 1.3 });
+      doc.font("body").fontSize(10).fillColor(INK).text(offerBody, M, doc.y + 6, { width: COL, lineGap: 1.5 });
+      footer(doc, 3);
     }
+  } else {
+    footer(doc, 2);
   }
-
-  footer(doc, 2);
 }
 
 /**
@@ -975,7 +1007,22 @@ function interpretationPages(doc, { output, written }) {
       y = runningHead(doc, "Your reading");
     }
     y = sectionLabel(doc, TAKEAWAYS, M, y, COL);
+    /**
+     * EACH TAKEAWAY IS MEASURED BEFORE IT IS DRAWN. The 130pt allowance above
+     * only guarded the START of the block; a fifth paragraph, or four long
+     * ones, walked straight into the footer -- the geometry check caught it on
+     * every tier-2 render the day the fixture's fifth section grew by a line.
+     * A real reading's takeaways are whatever length the model wrote them.
+     */
     for (const para of takeaways.paragraphs) {
+      const h = doc.font("body").fontSize(10.5).heightOfString(para, { width: COL, lineGap: 1.5 });
+      if (y + h > FOOT) {
+        footer(doc, page);
+        page += 1;
+        doc.addPage();
+        paper(doc);
+        y = runningHead(doc, "Your reading");
+      }
       doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, { width: COL, lineGap: 1.5 });
       y = doc.y + 10;
     }
@@ -988,7 +1035,8 @@ function interpretationPages(doc, { output, written }) {
    * what is PRINTED is the constant from `interpretation.mjs` -- so a model
    * that reworded it cannot reword what a reader is handed.
    */
-  if (y > FOOT - 40) {
+  const disclaimerH = doc.font("body").fontSize(8.5).heightOfString(DISCLAIMER, { width: COL, lineGap: 1 });
+  if (y + 8 + disclaimerH > FOOT) {
     footer(doc, page);
     page += 1;
     doc.addPage();
