@@ -252,6 +252,9 @@ function chartPage(doc, { name, output, links, qr }) {
     output?.type,
     output?.profile && `Profile ${profileWithNames(output.profile)}`,
     output?.authority && `${output.authority} authority`,
+    // The one line everybody reads. Without a birth time these three are
+    // provisional, and the page-two note is not where a reader's eye lands.
+    output?.timeKnown === false && "birth time unknown — provisional",
   ]
     .filter(Boolean)
     .join("  ·  ");

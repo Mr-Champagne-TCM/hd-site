@@ -227,6 +227,57 @@ export function typeProblem(raw, type) {
       return `The reading tells a ${t} about ${rule.says}.`;
     }
   }
+  return typeWordProblem(body, t) ?? centreCountProblem(body);
+}
+
+/**
+ * THE SIGNATURE AND THE NOT-SELF THEME ARE FIXED BY TYPE. Five types, five
+ * pairs of words, no overlap. Found live on 2026-09-02: a Manifestor's IN SHORT
+ * line read "Not-self: Frustration flares up..." -- the Generator's word -- on
+ * a document whose body said "anger" correctly three pages later. Only the two
+ * labelled lines are checked, because the body may fairly mention frustration
+ * or peace in passing; the labelled line is the one that is a claim.
+ */
+const TYPE_WORDS = {
+  Manifestor: { signature: "Peace", notSelf: "Anger" },
+  Generator: { signature: "Satisfaction", notSelf: "Frustration" },
+  "Manifesting Generator": { signature: "Satisfaction", notSelf: "Frustration" },
+  Projector: { signature: "Success", notSelf: "Bitterness" },
+  Reflector: { signature: "Surprise", notSelf: "Disappointment" },
+};
+const ALL_TYPE_WORDS = [...new Set(Object.values(TYPE_WORDS).flatMap((w) => [w.signature, w.notSelf]))];
+
+export function typeWordProblem(body, type) {
+  const own = TYPE_WORDS[type];
+  if (!own) return null;
+  const lines = String(body).split("\n");
+  for (const [label, key] of [["Signature:", "signature"], ["Not-self:", "notSelf"]]) {
+    const line = lines.find((l) => l.trim().startsWith(label));
+    if (!line) continue;
+    for (const word of ALL_TYPE_WORDS) {
+      if (word === own[key]) continue;
+      if (new RegExp(`\\b${word}\\b`, "i").test(line)) {
+        return `The reading gives a ${type} the ${label.slice(0, -1).toLowerCase()} "${word}", which belongs to another type (theirs is ${own[key]}).`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * NEVER MORE THAN THREE CENTRES IN ONE SENTENCE -- the prompt's rule, and the
+ * model broke it on its first live outing ("Undefined centres like the Ajna, G,
+ * Heart, Sacral, and Root ... while open Head and Spleen ..."). A sentence that
+ * lists a whole state back to the reader is the enumeration the prompt forbids.
+ */
+const CENTRE_RE = /\b(Head|Ajna|Throat|G|Heart|Sacral|Spleen|Solar Plexus|Root)\b/g;
+export function centreCountProblem(body) {
+  for (const sentence of String(body).split(/(?<=[.!?])\s+|\n+/)) {
+    const named = new Set(sentence.match(CENTRE_RE) ?? []);
+    if (named.size > 3) {
+      return `The reading names ${named.size} centres in one sentence (the limit is three): "${sentence.trim().slice(0, 90)}..."`;
+    }
+  }
   return null;
 }
 

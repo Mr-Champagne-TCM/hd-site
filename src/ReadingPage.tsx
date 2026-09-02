@@ -348,7 +348,8 @@ export default function ReadingPage({ token }: { token: string }) {
           </p>
           <p className="mt-3 text-[17px] leading-relaxed text-brand-paper">
             Your chart is above, and your reading is being written now. It
-            usually takes a minute or two.
+            usually takes a few minutes, and a draft that does not pass its own
+            checks is written again rather than handed over.
           </p>
           <p className="mt-2 text-[15px] leading-relaxed text-brand-muted">
             {gaveUp

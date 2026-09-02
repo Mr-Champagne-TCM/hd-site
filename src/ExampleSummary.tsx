@@ -25,7 +25,10 @@ const EXAMPLE: SummaryData = {
   signature: "Satisfaction",
   incarnationCross: "Right Angle Cross of Service (52/58 | 17/18)",
   definedCenters: ["Ajna", "Throat", "G", "Sacral", "Spleen", "Root"],
-  openCenters: ["Head", "Heart", "Solar Plexus"],
+  // Three states, computed by the engine for this instant: the Heart carries a
+  // gate of its own (undefined); Head and Solar Plexus carry none (open).
+  undefinedCenters: ["Heart"],
+  openCenters: ["Head", "Solar Plexus"],
   timeKnown: false,
   note: "Birth time unknown - charted at noon. Treat Type, Authority and Profile as provisional.",
   provisional: ["type", "strategy", "authority", "profile", "notSelfTheme", "signature"],

@@ -46,7 +46,22 @@ export async function interpretOne({
   if (reading.pending) return { ok: false, reason: "no_chart_yet" };
   if (reading.reading) return { ok: false, reason: "already_written" };
 
-  const made = await generate(reading.output, { apiKey, prompt });
+  let made = await generate(reading.output, { apiKey, prompt });
+  /**
+   * ONE IMMEDIATE RETRY ON A REFUSED DRAFT. The first live buyer under the
+   * three-state prompt had two drafts refused (one wrong strategy, one missing
+   * heading) and then waited on a sweep that never came. A second ask costs
+   * thirty seconds; leaving it to the net costs the buyer the afternoon.
+   */
+  if (!made.ok && made.reason === "malformed") {
+    await reportFailure(health, {
+      kind: "interpretation-malformed",
+      detail: made.detail ?? null,
+      excerpt: made.text ?? null,
+      now,
+    }).catch(() => {});
+    made = await generate(reading.output, { apiKey, prompt });
+  }
   if (!made.ok) {
     /**
      * REPORTED, NOT SWALLOWED. This is the one failure nobody else can see: the
@@ -56,6 +71,7 @@ export async function interpretOne({
     await reportFailure(health, {
       kind: `interpretation-${made.reason}`,
       detail: made.detail ?? null,
+      excerpt: made.text ?? null,
       now,
       ...(deliver?.alert ? { send: deliver.alert, site: origin } : {}),
     }).catch(() => {});

@@ -112,7 +112,9 @@ function button(href, text) {
 export function deliveryEmail({ tier, name, url, links, pending = false, writing = false }) {
   const word = tierWord(tier);
   const top = tier >= TIERS.length - 1;
-  const greeting = name ? `Hello ${name},` : "Hello,";
+  // Guest checkout collects no name (Link would have supplied one). "Hello,"
+  // on its own reads like a field that failed to fill; this reads as intended.
+  const greeting = name ? `Hello ${name},` : "Hello there,";
 
   const action = pending
     ? `Create and view your Human Design ${word}`

@@ -24,6 +24,17 @@
 [functions.pdf]
   external_node_modules = ["pdfkit", "fontkit", "svg-to-pdfkit"]
 
+# The schedules are declared in each function's own `config` export. They are
+# repeated here because on 2026-09-02 both fifteen-minute functions stopped
+# firing for hours while the deploy still listed them as scheduled -- so the
+# declaration is made in both places Netlify reads.
+[functions.sweep]
+  schedule = "*/15 * * * *"
+[functions.reconcile]
+  schedule = "*/15 * * * *"
+[functions.watch]
+  schedule = "0 13 * * 1"
+
 # The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
 
 # A delivered reading is served by the single-page app, so /r/<token> has to

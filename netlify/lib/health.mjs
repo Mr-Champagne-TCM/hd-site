@@ -66,8 +66,8 @@ export const ALERT_QUIET_SECONDS = 60 * 60;
  * failing a purchase in order to report that a purchase was not reported is
  * not a trade worth making.
  */
-export async function reportFailure(store, { kind, detail, now = Date.now(), send, site } = {}) {
-  const entry = await record(store, { kind, detail, now });
+export async function reportFailure(store, { kind, detail, excerpt, now = Date.now(), send, site } = {}) {
+  const entry = await record(store, { kind, detail, excerpt, now });
   if (!entry || typeof send !== "function") return { recorded: Boolean(entry), alerted: false };
 
   const gate = `alerted/${entry.kind}`;
@@ -111,7 +111,7 @@ export function alert(entry, { site } = {}) {
 }
 
 /** Never let a broken monitor break the thing it monitors. */
-export async function record(store, { kind, detail, now = Date.now() } = {}) {
+export async function record(store, { kind, detail, excerpt, now = Date.now() } = {}) {
   if (!store || !kind) return null;
   const key = `incident/${now}-${Math.abs(hash(`${kind}${detail}${now}`))}`;
   const entry = {
@@ -119,6 +119,9 @@ export async function record(store, { kind, detail, now = Date.now() } = {}) {
     // Truncated, and it is a REASON rather than a payload. "resend 401" is the
     // whole of what is useful; anything longer is where an address ends up.
     detail: detail == null ? null : String(detail).slice(0, 200),
+    // A refused reading's opening, so the refusal can be read back. Chart
+    // prose only -- the writer is never given a name, address or birth moment.
+    ...(excerpt ? { excerpt: String(excerpt).slice(0, 600) } : {}),
     at: now,
   };
   try {

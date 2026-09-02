@@ -258,7 +258,10 @@ test("the tier words come from the pricing module, not from this file", async ()
 test("a missing name is a plainer greeting, not a failed send", () => {
   for (const name of [undefined, null, ""]) {
     const { text } = deliveryEmail({ tier: 1, name, url: URL_, links: LINKS });
-    assert.match(text, /^Hello,/, "a nicety became a failure");
+    // "Hello there," rather than "Hello," -- a bare "Hello," reads like a field
+    // that failed to fill, which is what a guest checkout with no name gave
+    // every buyer on 2026-09-02.
+    assert.match(text, /^Hello there,/, "a nicety became a failure");
   }
 });
 
