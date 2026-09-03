@@ -137,10 +137,10 @@ export const CREDIBILITY = {
   checks: [
     [
       "0.46″",
-      "root-mean-square error in the Sun's position against NASA's Jet Propulsion Laboratory " +
-        "ephemeris — the positions used to navigate spacecraft — over 24 charts spanning 1940 to 2022. " +
-        "The Sun sets the profile; in birth-time terms that is about eleven seconds of clock. " +
-        "Slower planets sit further out — Neptune at about 12″ — and none of them decides a line",
+      "typical error (root mean square) in this engine's Sun position, measured against NASA's " +
+        "Jet Propulsion Laboratory record, across 24 charts born between 1940 and 2022. That is " +
+        "about eleven seconds of birth time, and the Sun is what sets your profile. Slower planets " +
+        "sit further out, Neptune by about 12″, and none of them decides a line",
     ],
     [
       "2.6 million",
