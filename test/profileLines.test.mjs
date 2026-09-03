@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { profileLineProblem, typeProblem, firstProblem } from "../netlify/lib/interpretation.mjs";
+import { profileLineProblem, typeProblem, firstProblem, openCentreProblem } from "../netlify/lib/interpretation.mjs";
 
 /**
  * FOUND LIVE, 2026-09-02: a 6/2 chart's reading said "Line 1 (Investigator),
@@ -51,4 +51,44 @@ test("firstProblem carries the profile through", () => {
   const good = READING(6, 2);
   // Not a full reading, so structure fails first; the point is the arity.
   assert.equal(typeof firstProblem(good, "Generator", "6/2"), "string");
+});
+
+
+/**
+ * F38: W1's section 5 described both undefined centres and neither open one,
+ * beside a margin that printed the open ones. If the chart has open centres,
+ * the section names at least one, or at least says "open".
+ */
+const S5 = (body) => `IN SHORT\n\nType: x.\n\nWhat you take in from others\n\nlede.\n\n${body}\n\nWhen it is working, and when it is not\n\nlede.\n`;
+
+test("A SECTION 5 THAT NEVER MENTIONS AN OPEN CENTRE IS REFUSED WHEN THE CHART HAS ONE", () => {
+  const p = openCentreProblem(S5("Your undefined Ajna takes in fixed opinions. Your undefined Throat borrows the room's voice."), ["Head", "Heart"], ["Ajna", "Throat"]);
+  assert.match(p, /open centre/);
+  assert.match(p, /Head, Heart/);
+});
+
+test("naming one open centre, or the word open, is enough", () => {
+  assert.equal(openCentreProblem(S5("Your undefined Ajna borrows. Your Head takes in the whole room."), ["Head", "Heart"], ["Ajna"]), null);
+  assert.equal(openCentreProblem(S5("Your undefined Ajna borrows. Where you are open you take in the room whole."), ["Head"], ["Ajna"]), null);
+});
+
+test("a chart with no open centres is not asked to invent one, and vice versa", () => {
+  assert.equal(openCentreProblem(S5("Your undefined Heart is a filter."), [], ["Heart"]), null);
+  assert.equal(openCentreProblem(S5("Your open Head takes in everything."), ["Head"], []), null);
+  assert.match(openCentreProblem(S5("Your open Head takes in everything."), ["Head"], ["Ajna"]), /undefined centre/);
+});
+
+/** F45: the passive and noun forms of the Projector strategy. */
+test("passive Projector phrasings are caught on a Generator", () => {
+  for (const s of [
+    "Your work is to wait to be invited before you act.",
+    "Wait until you are invited into the room.",
+    "You wait for the invite rather than pushing.",
+    "Waiting for a genuine invitation is the whole art.",
+    "Rest until you're invited.",
+  ]) {
+    assert.match(typeProblem(s + "\n", "Generator") ?? "", /invitation/, s);
+  }
+  assert.equal(typeProblem("These are offered as an invitation to test against your own experience.\n", "Generator"), null);
+  assert.equal(typeProblem("Line 2 (Hermit): your gifts wait in solitude until the right invitation draws you out.\n", "Generator"), null);
 });

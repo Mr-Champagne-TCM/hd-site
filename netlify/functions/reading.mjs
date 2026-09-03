@@ -1,5 +1,8 @@
 import { getStore } from "@netlify/blobs";
 import { handleReading } from "../lib/readingHandler.mjs";
+import { loadReading, readReadingLink } from "../lib/reading.mjs";
+import { ringIfDue } from "../lib/ring.mjs";
+import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 
 /**
  * POST /api/reading -- open a signed reading link.
@@ -31,8 +34,9 @@ export default async (request) => {
     });
   }
 
+  const rawBody = await request.text();
   const result = await handleReading({
-    body: await request.text(),
+    body: rawBody,
     // Strong consistency: somebody arriving from an email seconds after their
     // purchase must not be told their reading does not exist because a replica
     // has not caught up yet. That is the worst possible first impression, and
@@ -47,8 +51,58 @@ export default async (request) => {
   // the identity it opens.
   console.log(`POST /api/reading -> ${result.status}`);
 
+  /**
+   * THE BUYER'S OWN PAGE RINGS THE WRITER when their reading is still
+   * unwritten past the grace period and nobody has rung for it lately. See
+   * ../lib/ring.mjs for why: both hosted schedulers failed in one week. This
+   * runs after the answer is built and never changes it; a failed ring is a
+   * missed nudge, and the next poll will try again.
+   */
+  if (result.status === 200) {
+    await nudgeIfStuck(rawBody, result.body, secret, request).catch(() => {});
+  }
+
   return new Response(result.body, { status: result.status, headers: result.headers });
 };
+
+async function nudgeIfStuck(rawBody, answer, secret, request) {
+  let parsed;
+  try {
+    parsed = JSON.parse(answer);
+  } catch {
+    return;
+  }
+  if (!parsed || parsed.writing !== true) return;
+  let token;
+  try {
+    token = JSON.parse(rawBody)?.token;
+  } catch {
+    return;
+  }
+  const link = readReadingLink(token, secret, Date.now());
+  if (!link.ok) return;
+  const store = getStore({ name: "readings", consistency: "strong" });
+  const reading = await loadReading(store, link.id, Date.now());
+  if (!reading || reading.reading || reading.pending) return;
+  const filledAtMs = Number(reading.filledAt) * 1000;
+  const origin = process.env.URL || new URL(request.url).origin;
+  const ringToken = triggerToken(secret);
+  if (!ringToken) return;
+  const out = await ringIfDue({
+    id: link.id,
+    filledAtMs,
+    gate: getStore({ name: "health", consistency: "strong" }),
+    ring: async (id) => {
+      const res = await fetch(`${origin}/api/interpret`, {
+        method: "POST",
+        headers: { [TRIGGER_HEADER]: ringToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      console.log(`reading: rang the writer for a stuck reading -> ${res.status}`);
+    },
+  });
+  if (!out.rang) return;
+}
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {

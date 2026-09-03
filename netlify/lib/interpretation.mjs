@@ -146,7 +146,7 @@ function canonicalHeading(line) {
  *
  * Returns a sentence describing the FIRST problem, or null when it is sound.
  */
-export function firstProblem(raw, type = null, profile = null) {
+export function firstProblem(raw, type = null, profile = null, openCenters = null) {
   const reading = String(raw ?? "");
   if (!reading.includes(DISCLAIMER)) {
     return "The reading came back without the required disclaimer.";
@@ -159,7 +159,40 @@ export function firstProblem(raw, type = null, profile = null) {
   if (body.split(/\s+/).filter(Boolean).length < 380) {
     return "The reading came back too short to hand over.";
   }
-  return structureProblem(reading) ?? typeProblem(reading, type) ?? profileLineProblem(reading, profile);
+  return (
+    structureProblem(reading) ??
+    typeProblem(reading, type) ??
+    profileLineProblem(reading, profile) ??
+    openCentreProblem(reading, openCenters)
+  );
+}
+
+/**
+ * THE SECTION THE SPLIT EXISTS FOR MUST SHOW BOTH HALVES. W1's "What you take
+ * in from others" described both undefined centres and neither open one,
+ * while the margin beside it printed "OPEN CENTRES Head, Heart" (audit F38).
+ * If the chart has open centres, that section must name at least one of them
+ * -- by name, or by the word "open" -- and if it has undefined centres, at
+ * least one of those. A Reflector with seven undefined and two open gets the
+ * same rule; a chart with none of one kind is not asked to invent it.
+ */
+export function openCentreProblem(raw, openCenters, undefinedCenters) {
+  const open = Array.isArray(openCenters) ? openCenters : [];
+  const und = Array.isArray(undefinedCenters) ? undefinedCenters : [];
+  if (!open.length && !und.length) return null;
+  const body = sanitize(raw);
+  const from = body.indexOf("\nWhat you take in from others\n");
+  if (from < 0) return null; // structureProblem reports a missing heading
+  const to = body.indexOf("\nWhen it is working, and when it is not\n", from);
+  const section = to > from ? body.slice(from, to) : body.slice(from);
+  const names = (list) => list.some((c) => new RegExp(`\\b${c}\\b`).test(section));
+  if (open.length && !names(open) && !/\bopen\b/i.test(section)) {
+    return `The reading's "What you take in from others" never mentions an open centre, and this chart has ${open.length} (${open.join(", ")}).`;
+  }
+  if (und.length && !names(und) && !/\bundefined\b/i.test(section)) {
+    return `The reading's "What you take in from others" never mentions an undefined centre, and this chart has ${und.length}.`;
+  }
+  return null;
 }
 
 /**
@@ -238,7 +271,9 @@ const STRATEGY_WORDS = [
     // experience", and a model that writes "an invitation to test" in the
     // singular tripped this rule on three charts in one afternoon (W1, W5).
     // The strategy is the phrase, not the word.
-    re: /\bwait(?:ing|s)?\s+(?:for|on)\s+(?:an?\s+|the\s+)?(?:proper\s+|right\s+|formal\s+)?invitation/i,
+    // The verb may be wait, rest or hold back; the object may be an
+    // invitation, an invite, or "being invited" (audit F45).
+    re: /\b(?:wait(?:ing|s|ed)?|rest(?:ing|s)?|hold(?:ing|s)?\s+(?:back|off))\s+(?:for|on|until|to\s+be)\s+(?:an?\s+|the\s+|you\s+are\s+|you're\s+|being\s+)?(?:proper\s+|right\s+|formal\s+|genuine\s+)?(?:invitation|invite|invited)\b/i,
     only: ["Projector"],
     says: "waiting for the invitation, which is the Projector strategy",
   },
