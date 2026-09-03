@@ -137,8 +137,10 @@ export const CREDIBILITY = {
   checks: [
     [
       "0.46″",
-      "average distance from NASA's Jet Propulsion Laboratory ephemeris — the planetary " +
-        "positions used to navigate spacecraft. In birth-time terms, about eleven seconds of clock",
+      "root-mean-square error in the Sun's position against NASA's Jet Propulsion Laboratory " +
+        "ephemeris — the positions used to navigate spacecraft — over 24 charts spanning 1940 to 2022. " +
+        "The Sun sets the profile; in birth-time terms that is about eleven seconds of clock. " +
+        "Slower planets sit further out — Neptune at about 12″ — and none of them decides a line",
     ],
     [
       "2.6 million",

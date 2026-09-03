@@ -50,8 +50,12 @@ for (const file of payloads) {
   const variants = [[base, output]];
   if (base === "ordinary" || base === "noopen") {
     // The stored-reading shape: no undefinedCenters key at all.
+    // A real 0.1.0 record has no undefinedCenters key AND an openCenters that
+    // means "everything not defined". Deleting the key alone left the narrow
+    // list, a shape the store never held (audit F42).
     const { undefinedCenters, ...legacy } = output;
-    void undefinedCenters;
+    legacy.openCenters = [...(undefinedCenters ?? []), ...(output.openCenters ?? [])];
+    legacy.engineVersion = "0.1.0";
     variants.push([`legacy-${base}`, legacy]);
   }
   for (const [label, out] of variants) {

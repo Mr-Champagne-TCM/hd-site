@@ -83,7 +83,13 @@ export async function loadPrompt({ store, explicit } = {}) {
  * second time, so those are not retried -- there is nothing to gain and a
  * second bill to pay.
  */
-const ATTEMPTS = 2;
+/**
+ * ONE ask per call now, not two: interpretJob.mjs retries a malformed draft
+ * once itself and records BOTH refusals with their excerpts. Two loops
+ * stacked meant four requests per stuck reading and only two of them on
+ * file (audit F40, 2026-09-03).
+ */
+const ATTEMPTS = 1;
 
 /**
  * Returns `{ ok: true, text }` or `{ ok: false, reason, detail }`.
@@ -108,7 +114,18 @@ export async function generateReading(
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs });
     if (last.ok) return last;
-    // Only a malformed reading is worth asking for again.
+    /**
+     * A BUSY MODEL IS NOT A VERDICT. On 2026-09-03 Google answered 503 for a
+     * stretch of minutes, every draft in that window was counted as a final
+     * failure, and two paid readings sat unwritten with no net to catch them.
+     * One pause and one more ask, before giving up.
+     */
+    const busy = last.reason === "http" && /\b(503|429)\b/.test(String(last.detail));
+    if (busy) {
+      await new Promise((r) => setTimeout(r, 5000));
+      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs });
+      if (last.ok) return last;
+    }
     if (last.reason !== "malformed") return last;
   }
   return last;

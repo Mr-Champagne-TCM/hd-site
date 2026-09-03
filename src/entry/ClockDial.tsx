@@ -186,8 +186,15 @@ export default function ClockDial({
    * It clamps rather than refuses: a stray third digit cannot produce an
    * impossible time, and nothing is rejected while somebody is still typing.
    */
+  /**
+   * THE LAST TWO DIGITS, NOT THE FIRST TWO. The field shows the value
+   * zero-padded ("04"), so typing 4 then 4 hands this "044" -- and slice(0, 2)
+   * kept the pad and dropped the keystroke. A buyer could not type any minute
+   * of ten or more (audit F50, 2026-09-03). Taking the tail means each new
+   * digit shifts the old one left, which is how a phone's clock keypad feels.
+   */
   const typeHour = (raw: string) => {
-    const d = raw.replace(/\D/g, "").slice(0, 2);
+    const d = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(-2);
     if (d === "") return setHour(clock === 12 ? 12 : 0);
     const n = Number(d);
     if (clock === 12) setHour(Math.min(12, Math.max(1, n)));
@@ -195,7 +202,7 @@ export default function ClockDial({
   };
 
   const typeMinute = (raw: string) => {
-    const d = raw.replace(/\D/g, "").slice(0, 2);
+    const d = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(-2);
     if (d === "") return setMinute(0);
     setMinute(Math.min(59, Number(d)));
   };

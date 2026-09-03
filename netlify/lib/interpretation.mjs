@@ -109,7 +109,29 @@ export function sanitize(s) {
     .replace(/\*\*/g, "")
     .replace(/^[ \t]*[*•–-][ \t]+/gm, "")
     .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map(canonicalHeading)
+    .join("\n")
     .trim();
+}
+
+/**
+ * THE HEADING THE MODEL KEEPS REWRITING. Across a day of live drafts the one
+ * heading it would not copy was "What you take in from others" -- it came back
+ * as "What is taken in from others", "What is through others", "What is
+ * undefined centres", and IN SHORT once arrived as IN_SHORT. Every one of
+ * those is unmistakably the section it stands for, and every one cost a paid
+ * reading a refusal and a retry. A line that is nothing but a paraphrase of a
+ * required heading becomes the heading; body text is untouched because it
+ * never sits alone on a short line ending without punctuation.
+ */
+function canonicalHeading(line) {
+  const l = line.trim();
+  if (!l || l.length > 60 || /[.!?:]$/.test(l)) return line;
+  if (/^IN[_ ]SHORT$/i.test(l)) return "IN SHORT";
+  if (/^what\b.*\bothers$/i.test(l)) return "What you take in from others";
+  if (/^what\b.*\b(undefined|open)\b.*centres?$/i.test(l)) return "What you take in from others";
+  return line;
 }
 
 /**
@@ -168,6 +190,22 @@ export function promptProblem(prompt) {
   const rows = SUMMARY_KEYS.filter((k) => !text.includes(`${k}:`));
   if (rows.length) {
     return `The configured prompt never asks for the ${rows.join(", ")} line.`;
+  }
+  /**
+   * AND THE CONTENT RULES. A prompt that stopped asking for "Line n" would
+   * pass here and then fail every reading in profileLineProblem; one that
+   * stopped naming the three centre states would fail them in the writer's
+   * own words. Each phrase below is one the validator depends on.
+   */
+  const rules = [
+    ["Line <n>", /Line <n>/],
+    ["the three centre states", /DEFINED[\s\S]{0,400}UNDEFINED[\s\S]{0,400}OPEN/],
+    ["the six headings copied exactly", /copied\s+EXACTLY/i],
+    ["a sentence after every label", /<one sentence>/],
+  ];
+  const lost = rules.filter(([, re]) => !re.test(text)).map(([name]) => name);
+  if (lost.length) {
+    return `The configured prompt no longer asks for ${lost.join("; ")}.`;
   }
   return null;
 }
@@ -284,7 +322,9 @@ export function typeWordProblem(body, type) {
   const lines = String(body).split("\n");
   for (const [label, key] of [["Signature:", "signature"], ["Not-self:", "notSelf"]]) {
     // "Not-Self:" and "Not-self:" are the same line; the model writes both.
-    const line = lines.find((l) => l.trim().toLowerCase().startsWith(label.toLowerCase()));
+    // "Not-self:", "Not-Self:", "Not self:", "Not-Self Theme:" -- one line.
+    const stem = label.slice(0, -1).toLowerCase().replace(/[^a-z]/g, "");
+    const line = lines.find((l) => l.trim().toLowerCase().replace(/[^a-z:]/g, "").replace(/theme:/, ":").startsWith(stem + ":"));
     if (!line) continue;
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
@@ -310,14 +350,27 @@ export function centreCountProblem(body) {
    * centres is six names in one sentence. The first live run of this rule
    * refused exactly that paragraph, so that section is exempt.
    */
+  /**
+   * Two sections are lists by design -- "Your definition" and "What is
+   * consistently yours" both describe the DEFINED centres, and an all-nine
+   * chart names nine. They are exempt. Everywhere else the line is drawn at
+   * FOUR, not the prompt's three: a Reflector has seven undefined centres to
+   * cover in two paragraphs and was refused on its first live draft for a
+   * sentence naming four of them. Seven in one sentence (the fault this rule
+   * was written for) is still refused.
+   */
   const text = String(body);
-  const from = text.indexOf("\nYour definition\n");
-  const to = text.indexOf("\nYour channels\n");
-  const judged = from >= 0 && to > from ? text.slice(0, from) + text.slice(to) : text;
+  const cut = (s, fromH, toH) => {
+    const from = s.indexOf(fromH);
+    const to = s.indexOf(toH);
+    return from >= 0 && to > from ? s.slice(0, from) + s.slice(to) : s;
+  };
+  let judged = cut(text, "\nYour definition\n", "\nYour channels\n");
+  judged = cut(judged, "\nWhat is consistently yours\n", "\nWhat you take in from others\n");
   for (const sentence of judged.split(/(?<=[.!?])\s+|\n+/)) {
     const named = new Set(sentence.match(CENTRE_RE) ?? []);
-    if (named.size > 3) {
-      return `The reading names ${named.size} centres in one sentence (the limit is three): "${sentence.trim().slice(0, 90)}..."`;
+    if (named.size > 4) {
+      return `The reading names ${named.size} centres in one sentence (the limit is four): "${sentence.trim().slice(0, 90)}..."`;
     }
   }
   return null;
@@ -365,9 +418,14 @@ export function summaryRows(raw) {
   if (start < 0) return out;
   for (const line of lines.slice(start + 1)) {
     if (HEADINGS.includes(line)) break;
-    const m = /^([A-Za-z-]+):\s*(.+)$/.exec(line);
+    // "Not-Self Theme:", "Not self:", "Not-Self:" are all the Not-self line --
+    // the model copies the label it was HANDED in the facts as often as the
+    // one it was asked for, and refusing a filled line over its spelling cost
+    // two paid readings a morning (2026-09-03).
+    const m = /^([A-Za-z][A-Za-z -]*?)(?:\s+theme)?:\s*(.+)$/i.exec(line);
     if (!m) continue;
-    const key = SUMMARY_KEYS.find((k) => k.toLowerCase() === m[1].toLowerCase());
+    const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, "");
+    const key = SUMMARY_KEYS.find((k) => norm(k) === norm(m[1]));
     if (key && !(key in out)) out[key] = m[2].trim();
   }
   return out;

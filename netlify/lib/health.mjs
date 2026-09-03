@@ -111,9 +111,13 @@ export function alert(entry, { site } = {}) {
 }
 
 /** Never let a broken monitor break the thing it monitors. */
+let sequence = 0;
+
 export async function record(store, { kind, detail, excerpt, now = Date.now() } = {}) {
   if (!store || !kind) return null;
-  const key = `incident/${now}-${Math.abs(hash(`${kind}${detail}${now}`))}`;
+  // A counter in the hash: two refusals for the same reason in one invocation
+  // used to write one key, and the second overwrote the first (audit F39).
+  const key = `incident/${now}-${Math.abs(hash(`${kind}${detail}${now}${++sequence}`))}`;
   const entry = {
     kind: String(kind).slice(0, 60),
     // Truncated, and it is a REASON rather than a payload. "resend 401" is the

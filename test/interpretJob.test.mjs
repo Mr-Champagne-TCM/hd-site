@@ -80,7 +80,8 @@ const FAKE_PROMPT = [
   ...SUMMARY_KEYS.map((k) => `${k}:`),
   ...HEADINGS,
   DISCLAIMER,
-].join("\n");
+].join("\n") +
+  "\nRULES: CENTRES HAVE THREE STATES: DEFINED, UNDEFINED and OPEN. The headings are copied EXACTLY.\nType: <one sentence>\nLine <n> (<name>), conscious: one sentence.\n";
 
 test("a reading is written, filed, and the buyer is told", async () => {
   const { store, id } = await readyReading();
@@ -157,9 +158,14 @@ test("A FAILED GENERATION IS REPORTED, because nobody else can see it", async ()
   });
   assert.equal(r.ok, false);
   const incidents = [...health.data.values()];
-  assert.equal(incidents.length, 1);
-  assert.equal(incidents[0].kind, "interpretation-malformed");
-  assert.equal(incidents[0].detail, "missing a section");
+  // Two: the first refusal, then the immediate retry's. Both must be on file
+  // -- the second used to overwrite the first when they shared a millisecond
+  // and a reason (audit F39).
+  assert.equal(incidents.length, 2);
+  for (const i of incidents) {
+    assert.equal(i.kind, "interpretation-malformed");
+    assert.equal(i.detail, "missing a section");
+  }
 });
 
 test("nothing about the chart reaches the incident", async () => {
@@ -218,10 +224,24 @@ test("the key travels in a header, never in the URL", async () => {
   assert.equal(headers["x-goog-api-key"], "SECRET-KEY");
 });
 
-test("a malformed answer is retried exactly once, and other failures are not", async () => {
-  // Measured by the app: over twelve generations the model dropped a required
-  // heading twice. A bad key fails identically the second time -- nothing to
-  // gain, and a second bill to pay.
+test("a malformed answer is asked for ONCE here -- interpretJob owns the retry -- and a busy model gets one more try", async () => {
+  // Two retry loops stacked (here and in interpretJob) meant four requests
+  // per stuck reading with only two on file (audit F40). This layer asks once
+  // for a malformed draft. The one thing it does retry is Google being busy:
+  // a 503 answered every draft for minutes on 2026-09-03 and each was counted
+  // as final.
+  let busyCalls = 0;
+  const busy = await generateReading(OUTPUT, {
+    apiKey: "k",
+    prompt: FAKE_PROMPT,
+    fetchImpl: async () => {
+      busyCalls += 1;
+      return { ok: false, status: 503, json: async () => ({}) };
+    },
+  });
+  assert.equal(busy.ok, false);
+  assert.equal(busyCalls, 2, "a 503 was not given one more try");
+
   let calls = 0;
   const bad = await generateReading(OUTPUT, {
     apiKey: "k",
@@ -233,7 +253,7 @@ test("a malformed answer is retried exactly once, and other failures are not", a
   });
   assert.equal(bad.ok, false);
   assert.equal(bad.reason, "malformed");
-  assert.equal(calls, 2, "a malformed reading was not retried once");
+  assert.equal(calls, 1, "this layer asked twice; interpretJob owns the retry");
 
   let httpCalls = 0;
   const refused = await generateReading(OUTPUT, {

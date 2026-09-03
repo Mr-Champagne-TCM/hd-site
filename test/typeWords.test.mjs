@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { typeProblem, typeWordProblem, centreCountProblem } from "../netlify/lib/interpretation.mjs";
+import { typeProblem, typeWordProblem, centreCountProblem, sanitize } from "../netlify/lib/interpretation.mjs";
 
 /**
  * FOUND LIVE, 2026-09-02, first buyer under the three-state prompt: a
@@ -39,7 +39,26 @@ test("SEVEN CENTRES IN ONE SENTENCE IS REFUSED", () => {
 
 test("three centres in a sentence is fine, and so is the same centre named twice", () => {
   assert.equal(centreCountProblem("Your Sacral, Root and Spleen are defined. Your Sacral is the engine."), null);
+  // Four is allowed: a Reflector has seven undefined centres to cover.
+  assert.equal(centreCountProblem("Because your Sacral, Root, Heart, and Solar Plexus are undefined, rooms change you."), null);
   assert.equal(centreCountProblem("Because your Solar Plexus is defined, and your Solar Plexus waves."), null);
+});
+
+test("'What is consistently yours' may list every defined centre, like the definition", () => {
+  const text = "\nWhat is consistently yours\n\nYour defined Head, Ajna, Throat, G, Sacral, Spleen and Root never change.\n\nWhat you take in from others\n\nlede.\n";
+  assert.equal(centreCountProblem(text), null);
+});
+
+test("the not-self line is found under every spelling the model uses", () => {
+  for (const label of ["Not-Self Theme:", "Not self:", "Not-Self:", "Not-self:"]) {
+    assert.match(typeWordProblem(`Signature: Peace.\n${label} Frustration flares.\n`, "Manifestor"), /Frustration/, label);
+  }
+});
+
+test("a paraphrased heading is read as the heading it stands for", () => {
+  const out = sanitize("IN_SHORT\n\nType: x.\n\nWhat is taken in from others\n\nBody.\n\nWhat is undefined centres\n\nBody.");
+  assert.match(out, /^IN SHORT$/m);
+  assert.equal((out.match(/^What you take in from others$/gm) ?? []).length, 2);
 });
 
 test("a cross name does not count as a centre", () => {
