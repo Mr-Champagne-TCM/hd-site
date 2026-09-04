@@ -242,6 +242,27 @@ test("N-04: a chart with nothing undefined is not told about its undefined space
   assert.match(problem, /but this chart has none/);
 });
 
+test("N-04: a negation IN FRONT of the phrase is not a claim", () => {
+  // Caught in review: this matches from "your" onwards, so the "None of" that
+  // makes it true sits outside the match and the rule refused honest prose.
+  for (const prose of [
+    "None of your centres is undefined, which is unusual.",
+    "You have no undefined centres at all on this chart.",
+    "Not one of your centres is undefined here.",
+  ]) {
+    assert.equal(
+      centreStateProblem(
+        reading({ [S5]: prose }),
+        ["Throat", "Sacral", "G", "Spleen", "Root", "Ajna", "Heart"],
+        [],
+        ["Head", "Solar Plexus"],
+      ),
+      null,
+      prose,
+    );
+  }
+});
+
 test("N-04: explaining the word is still allowed", () => {
   const prose = "A centre that is undefined carries gates without a full channel; none of yours is.";
   assert.equal(

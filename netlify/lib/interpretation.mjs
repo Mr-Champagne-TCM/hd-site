@@ -607,8 +607,14 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
    */
   if (!list(undefinedCenters).length) {
     const claim = /\b(?:your|you have|you've got)\s+(?:[a-z]+\s+){0,3}?undefined\b/i.exec(body);
-    if (claim && !/\b(?:no|none|not|without|zero)\b[^.]{0,40}$/i.test(claim[0])) {
-      return `The reading describes undefined centres ("${claim[0].trim()}"), but this chart has none.`;
+    // The negation is often in front of the match, not inside it: "None of
+    // your centres is undefined" matches from "your" onwards and looks like a
+    // claim unless the words before it are read too.
+    if (claim) {
+      const window = body.slice(Math.max(0, claim.index - 40), claim.index + claim[0].length);
+      if (!/\b(?:no|none|not|without|zero|never)\b/i.test(window)) {
+        return `The reading describes undefined centres ("${claim[0].trim()}"), but this chart has none.`;
+      }
     }
   }
   return null;
