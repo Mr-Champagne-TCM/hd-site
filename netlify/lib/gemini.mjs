@@ -180,7 +180,18 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }
 
   // The TYPE comes from the chart, never from the reading. The check exists to
   // catch the reading disagreeing with the chart it was written from.
-  const problem = firstProblem(clean, output?.type, output?.profile, output?.openCenters);
+  // All three centre lists travel, not just the open one: the undefined branch
+  // of openCentreProblem had never run in production because this call passed
+  // four arguments to a function that takes five, and centreStateProblem needs
+  // the defined list to catch a reading calling an undefined centre defined.
+  const problem = firstProblem(
+    clean,
+    output?.type,
+    output?.profile,
+    output?.openCenters,
+    output?.undefinedCenters,
+    output?.definedCenters,
+  );
   // The rejected text travels with the reason, so an incident can show WHAT
   // was refused -- without it a prompt regression is indistinguishable from
   // Google having a bad week.

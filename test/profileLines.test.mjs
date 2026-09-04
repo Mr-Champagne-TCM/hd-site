@@ -57,7 +57,13 @@ test("firstProblem carries the profile through", () => {
 /**
  * F38: W1's section 5 described both undefined centres and neither open one,
  * beside a margin that printed the open ones. If the chart has open centres,
- * the section names at least one, or at least says "open".
+ * the section NAMES at least one.
+ *
+ * The "or at least says open" half of this rule was removed in round two of
+ * the audit: the bare word is satisfied by "You are open to feedback" and by
+ * "Because it is undefined rather than open", neither of which names a centre,
+ * and a name-only rule refused none of the known-good readings on file. The
+ * counter-examples live in roundTwo.test.mjs.
  */
 const S5 = (body) => `IN SHORT\n\nType: x.\n\nWhat you take in from others\n\nlede.\n\n${body}\n\nWhen it is working, and when it is not\n\nlede.\n`;
 
@@ -67,9 +73,18 @@ test("A SECTION 5 THAT NEVER MENTIONS AN OPEN CENTRE IS REFUSED WHEN THE CHART H
   assert.match(p, /Head, Heart/);
 });
 
-test("naming one open centre, or the word open, is enough", () => {
+test("naming one open centre is enough", () => {
   assert.equal(openCentreProblem(S5("Your undefined Ajna borrows. Your Head takes in the whole room."), ["Head", "Heart"], ["Ajna"]), null);
-  assert.equal(openCentreProblem(S5("Your undefined Ajna borrows. Where you are open you take in the room whole."), ["Head"], ["Ajna"]), null);
+});
+
+test("THE BARE WORD 'OPEN' IS NO LONGER ENOUGH", () => {
+  // The sentence below names the undefined centre and then gestures at
+  // openness without naming either open centre -- which is exactly the shape
+  // W1 shipped in, and exactly what the word test let through.
+  assert.match(
+    openCentreProblem(S5("Your undefined Ajna borrows. Where you are open you take in the room whole."), ["Head"], ["Ajna"]),
+    /never names one of this chart's 1 open centres \(Head\)/,
+  );
 });
 
 test("a chart with no open centres is not asked to invent one, and vice versa", () => {

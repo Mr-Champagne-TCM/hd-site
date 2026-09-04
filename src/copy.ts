@@ -137,15 +137,28 @@ export const CREDIBILITY = {
   checks: [
     [
       "0.46″",
+      // "none of them decides a line" was false, and it was false in the copy
+      // this replaced too -- the disagreement anatomy across 100,000 charts
+      // records 531 activation diffs (449 line-only, 82 gate flips) and lays
+      // them at the slow movers: Neptune 138, nodes 146, Moon 54. Neptune's
+      // offset decides a line 138 times in the very file the numbers came from.
+      //
+      // The claim the paragraph is actually making is true one clause narrower.
+      // The same record gives the Sun 5, the Sun is what sets the profile, and
+      // that is where the 99.97% profile agreement comes from.
       "typical error (root mean square) in this engine's Sun position, measured against NASA's " +
         "Jet Propulsion Laboratory record, across 24 charts born between 1940 and 2022. That is " +
         "about eleven seconds of birth time, and the Sun is what sets your profile. Slower planets " +
-        "sit further out, Neptune by about 12″, and none of them decides a line",
+        "sit further out, Neptune by about 12″, and none of them decides your profile",
     ],
     [
       "2.6 million",
-      "activations computed and checked across 100,000 charts. No other Human Design service " +
-        "publishes an error rate at all",
+      // The hedge was recommended in round one and never written -- it appears
+      // nowhere in either repository. An unfalsifiable claim about every
+      // competitor sits badly on the one page whose whole argument is that it
+      // publishes numbers other people do not.
+      "activations computed and checked across 100,000 charts. As far as I can find, no other " +
+        "Human Design service publishes an error rate at all",
     ],
     [
       "15 of 15",

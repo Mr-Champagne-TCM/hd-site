@@ -146,7 +146,14 @@ function canonicalHeading(line) {
  *
  * Returns a sentence describing the FIRST problem, or null when it is sound.
  */
-export function firstProblem(raw, type = null, profile = null, openCenters = null) {
+export function firstProblem(
+  raw,
+  type = null,
+  profile = null,
+  openCenters = null,
+  undefinedCenters = null,
+  definedCenters = null,
+) {
   const reading = String(raw ?? "");
   if (!reading.includes(DISCLAIMER)) {
     return "The reading came back without the required disclaimer.";
@@ -161,9 +168,10 @@ export function firstProblem(raw, type = null, profile = null, openCenters = nul
   }
   return (
     structureProblem(reading) ??
-    typeProblem(reading, type) ??
+    typeProblem(reading, type, undefinedCenters) ??
     profileLineProblem(reading, profile) ??
-    openCentreProblem(reading, openCenters)
+    openCentreProblem(reading, openCenters, undefinedCenters) ??
+    centreStateProblem(reading, definedCenters, undefinedCenters, openCenters)
   );
 }
 
@@ -171,10 +179,26 @@ export function firstProblem(raw, type = null, profile = null, openCenters = nul
  * THE SECTION THE SPLIT EXISTS FOR MUST SHOW BOTH HALVES. W1's "What you take
  * in from others" described both undefined centres and neither open one,
  * while the margin beside it printed "OPEN CENTRES Head, Heart" (audit F38).
- * If the chart has open centres, that section must name at least one of them
- * -- by name, or by the word "open" -- and if it has undefined centres, at
- * least one of those. A Reflector with seven undefined and two open gets the
- * same rule; a chart with none of one kind is not asked to invent it.
+ * If the chart has open centres, that section must NAME at least one of them,
+ * and if it has undefined centres, at least one of those. A Reflector with
+ * seven undefined and two open gets the same rule; a chart with none of one
+ * kind is not asked to invent it.
+ *
+ * THE WORD TEST IS GONE (audit F38, round two). This rule used to accept the
+ * bare word "open" anywhere in the section as a substitute for naming a
+ * centre. That is satisfied by "You are open to feedback", by "Life keeps
+ * pushing open doors", and -- worst, because good readings actually write it
+ * -- by "Because it is undefined rather than open", none of which name a
+ * single centre. The undefined branch had the same hole with the bare word
+ * "undefined". A name-only rule was run against every known-good reading on
+ * file and refused none of them, so the escape hatch was buying nothing.
+ *
+ * THE UNDEFINED BRANCH HAD NEVER RUN. `firstProblem` called this function with
+ * two arguments, so `undefinedCenters` arrived undefined on every real
+ * invocation and the second half of the three-state check was dead code from
+ * the day it was written. That is why a delivered reading could call an
+ * undefined centre defined four times and pass. Both lists are threaded
+ * through now.
  */
 export function openCentreProblem(raw, openCenters, undefinedCenters) {
   const open = Array.isArray(openCenters) ? openCenters : [];
@@ -186,11 +210,11 @@ export function openCentreProblem(raw, openCenters, undefinedCenters) {
   const to = body.indexOf("\nWhen it is working, and when it is not\n", from);
   const section = to > from ? body.slice(from, to) : body.slice(from);
   const names = (list) => list.some((c) => new RegExp(`\\b${c}\\b`).test(section));
-  if (open.length && !names(open) && !/\bopen\b/i.test(section)) {
-    return `The reading's "What you take in from others" never mentions an open centre, and this chart has ${open.length} (${open.join(", ")}).`;
+  if (open.length && !names(open)) {
+    return `The reading's "What you take in from others" never names one of this chart's ${open.length} open centres (${open.join(", ")}).`;
   }
-  if (und.length && !names(und) && !/\bundefined\b/i.test(section)) {
-    return `The reading's "What you take in from others" never mentions an undefined centre, and this chart has ${und.length}.`;
+  if (und.length && !names(und)) {
+    return `The reading's "What you take in from others" never names one of this chart's ${und.length} undefined centres (${und.join(", ")}).`;
   }
   return null;
 }
@@ -278,6 +302,48 @@ const STRATEGY_WORDS = [
     says: "waiting for the invitation, which is the Projector strategy",
   },
   {
+    // AUDIT F45, ROUND TWO. The rule above needs a waiting VERB followed by a
+    // PREPOSITION, so it misses every shape where the invitation is the thing
+    // acting, or where the waiting is an idiom. Six phrasings got through, and
+    // two of them reached delivered readings on 3 September: "your Sacral will
+    // signal whether an invitation belongs to you", and "requires an external
+    // invitation or encounter to spark into motion". A Generator responds; it
+    // does not need an invitation.
+    //
+    // WHAT MUST STILL PASS, and was re-checked against both:
+    //   - the prompt's own "these are invitations to test against your own
+    //     experience" -- plural, no waiting verb, nothing possessed;
+    //   - the Line 2 sentence "until the right invitation draws you out" --
+    //     there the invitation is the SUBJECT of an active verb, and every
+    //     pattern below requires it to be waited on, needed, or required.
+    re: new RegExp(
+      [
+        // "asks to be invited", "waits to be invited"
+        String.raw`\b(?:ask|wait)(?:s|ing|ed)?\s+to\s+be\s+invited\b`,
+        // "sit tight for", "bide your time until", "hold out for", "stand by for"
+        String.raw`\b(?:sit(?:s|ting)?\s+tight|bid(?:e|es|ing)\s+(?:your|their|his|her)\s+time|hold(?:s|ing)?\s+out|stand(?:s|ing)?\s+by)\s+(?:for|until|till)\s+(?:an?\s+|the\s+|being\s+|you\s+are\s+)?(?:invitation|invite|invited)\b`,
+        // "until invited", "until you are invited" -- NOT "until the invitation draws"
+        String.raw`\buntil\s+(?:you\s+are\s+|you're\s+|being\s+)?invited\b`,
+        // "let the invitation come to you", "let an invitation find you"
+        String.raw`\blet\s+(?:an?|the)\s+(?:invitation|invite)\s+(?:come|find|arrive|reach)\b`,
+        // "the invitation must come first", "an invitation has to arrive"
+        String.raw`\b(?:an?|the)\s+(?:invitation|invite)\s+(?:must|has\s+to|have\s+to|needs?\s+to|should)\s+(?:come|arrive|be\b)`,
+        // "need recognition and an invitation", "needs an invitation".
+        // Filler is allowed on BOTH sides of the article: the live failure was
+        // "requires an EXTERNAL invitation", where the adjective sits between
+        // the article and the noun.
+        String.raw`\bneed(?:s|ing|ed)?\s+(?:[a-z]+\s+){0,4}?(?:an?|the)\s+(?:[a-z]+\s+){0,2}?(?:invitation|invite)\b`,
+        // "requires an external invitation or encounter to spark into motion"
+        String.raw`\brequir(?:e|es|ing|ed)\s+(?:[a-z]+\s+){0,4}?(?:an?|the)\s+(?:[a-z]+\s+){0,2}?(?:invitation|invite)\b`,
+        // "whether an invitation belongs to you", "if the invitation is yours"
+        String.raw`\b(?:an?|the)\s+(?:invitation|invite)\s+(?:belongs|is\s+yours|is\s+meant)\b`,
+      ].join("|"),
+      "i",
+    ),
+    only: ["Projector"],
+    says: "waiting for the invitation, which is the Projector strategy",
+  },
+  {
     re: /\blunar cycle\b|\b28[- ]day\b/i,
     only: ["Reflector"],
     says: "waiting a lunar cycle, which is the Reflector strategy",
@@ -295,7 +361,7 @@ const STRATEGY_WORDS = [
  * `type` comes from the CHART, never from the reading -- the whole point is to
  * catch the reading disagreeing with the chart it was written from.
  */
-export function typeProblem(raw, type) {
+export function typeProblem(raw, type, undefinedCenters = null) {
   const t = String(type ?? "").trim();
   if (!t) return null;
   const body = sanitize(raw);
@@ -305,7 +371,7 @@ export function typeProblem(raw, type) {
       return `The reading tells a ${t} about ${rule.says}.`;
     }
   }
-  return typeWordProblem(body, t) ?? centreCountProblem(body);
+  return typeWordProblem(body, t) ?? centreCountProblem(body, undefinedCenters);
 }
 
 /**
@@ -351,6 +417,30 @@ const TYPE_WORDS = {
 };
 const ALL_TYPE_WORDS = [...new Set(Object.values(TYPE_WORDS).flatMap((w) => [w.signature, w.notSelf]))];
 
+/**
+ * Does this line carry the given summary label, however the model spelled it?
+ *
+ * There are only two labels this matters for, so each is matched explicitly
+ * rather than by a general "Label: value" pattern. A general one has to guess
+ * where the label ends, and the guess is wrong in both directions: lazily, it
+ * reads "Not self: Frustration" as the label "Not"; greedily, it reads
+ * "Not-Self Theme Disappointment" as a label with no value.
+ *
+ * Accepted: a colon, a hyphen, an en or em dash, or NO separator at all, with
+ * an optional "Theme" trailing the label. The model writes all of these, and
+ * on 3 September it chose "Not-Self Theme:" on the very next generation after
+ * that one spelling was added (audit F43).
+ *
+ * WITH NO SEPARATOR THE VALUE MUST BE A SINGLE WORD. That is what keeps "Not
+ * self aware people tend to..." from reading as the not-self line: every value
+ * this check compares is one word (Bitterness, Frustration, Peace), and prose
+ * never is. With a separator present the value may be anything.
+ */
+const LABEL_LINE = {
+  signature: /^signature(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+\S.*|\s+\S+)\s*$/i,
+  notself: /^not[\s‐-―-]*self(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+\S.*|\s+\S+)\s*$/i,
+};
+
 export function typeWordProblem(body, type) {
   const own = TYPE_WORDS[type];
   if (!own) return null;
@@ -358,8 +448,18 @@ export function typeWordProblem(body, type) {
   for (const [label, key] of [["Signature:", "signature"], ["Not-self:", "notSelf"]]) {
     // "Not-Self:" and "Not-self:" are the same line; the model writes both.
     // "Not-self:", "Not-Self:", "Not self:", "Not-Self Theme:" -- one line.
+    //
+    // AUDIT F43, ROUND TWO: the old matcher required a COLON, so "Not-self —
+    // Bitterness", "Not-self - Bitterness" and a bare "Not-Self Theme
+    // Bitterness" found no line at all -- and a check that finds no line
+    // returns null, which reads exactly like a pass. This is the check that
+    // catches a Projector's not-self word on a Generator, so failing it open
+    // on a spelling is the expensive direction. Dashes of any width and a bare
+    // space are accepted here; `summaryRows` is deliberately stricter, because
+    // there a false match invents a row rather than skipping a check.
     const stem = label.slice(0, -1).toLowerCase().replace(/[^a-z]/g, "");
-    const line = lines.find((l) => l.trim().toLowerCase().replace(/[^a-z:]/g, "").replace(/theme:/, ":").startsWith(stem + ":"));
+    const re = LABEL_LINE[stem];
+    const line = lines.find((l) => re.test(l.trim()));
     if (!line) continue;
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
@@ -378,7 +478,7 @@ export function typeWordProblem(body, type) {
  * lists a whole state back to the reader is the enumeration the prompt forbids.
  */
 const CENTRE_RE = /\b(Head|Ajna|Throat|G|Heart|Sacral|Spleen|Solar Plexus|Root)\b/g;
-export function centreCountProblem(body) {
+export function centreCountProblem(body, undefinedCenters = null) {
   /**
    * "Your definition" is the one place a list is the answer: the prompt asks
    * how the DEFINED centres connect, and a Single definition with six defined
@@ -402,10 +502,113 @@ export function centreCountProblem(body) {
   };
   let judged = cut(text, "\nYour definition\n", "\nYour channels\n");
   judged = cut(judged, "\nWhat is consistently yours\n", "\nWhat you take in from others\n");
-  for (const sentence of judged.split(/(?<=[.!?])\s+|\n+/)) {
-    const named = new Set(sentence.match(CENTRE_RE) ?? []);
-    if (named.size > 4) {
-      return `The reading names ${named.size} centres in one sentence (the limit is four): "${sentence.trim().slice(0, 90)}..."`;
+
+  /**
+   * THE LIMIT IS THE CHART'S, NOT A CONSTANT (audit F44, round two).
+   *
+   * Raising the ceiling from three to four fixed the sentence in the finding
+   * and not the class it came from. The chart this rule keeps refusing is a
+   * REFLECTOR, which has seven undefined centres, and "What you take in from
+   * others" is the one section where naming all of them is the honest thing to
+   * write. Four cannot reach seven, and measuring it cost 4 writer invocations,
+   * ~8 drafts and 9 minutes on a live purchase -- 0 accepted in 13 offline
+   * attempts.
+   *
+   * The answer is not a bigger number. Seven-in-a-sentence is exactly the
+   * padding this rule was written to refuse, and a global seven would disarm it
+   * for the eight type-charts that are not Reflectors. So section 5 alone is
+   * allowed as many centres as the chart actually has undefined, and everywhere
+   * else the line stays at four.
+   */
+  const S5 = "\nWhat you take in from others\n";
+  const S5_END = "\nWhen it is working, and when it is not\n";
+  const und = Array.isArray(undefinedCenters) ? undefinedCenters.length : 0;
+  const from = judged.indexOf(S5);
+  const to = from >= 0 ? judged.indexOf(S5_END, from + 1) : -1;
+  const section5 = from < 0 ? "" : to > from ? judged.slice(from, to) : judged.slice(from);
+  const elsewhere = section5 ? judged.slice(0, from) + "\n" + judged.slice(from + section5.length) : judged;
+
+  const over = (chunk, limit) => {
+    for (const sentence of chunk.split(/(?<=[.!?])\s+|\n+/)) {
+      const named = new Set(sentence.match(CENTRE_RE) ?? []);
+      if (named.size > limit) {
+        return `The reading names ${named.size} centres in one sentence (the limit is ${limit}): "${sentence.trim().slice(0, 90)}..."`;
+      }
+    }
+    return null;
+  };
+
+  return over(elsewhere, 4) ?? over(section5, Math.max(4, und));
+}
+
+/**
+ * DOES THE PROSE AGREE WITH THE CHART IT WAS WRITTEN FROM?
+ *
+ * Every other check here reads the reading's SHAPE. This one reads its CLAIMS,
+ * and it exists because two paid readings shipped with facts that contradicted
+ * the chart printed in the margin beside them (audit N-01, N-04):
+ *
+ *   - bac485bd said "Your defined Heart center contributes a consistent thread
+ *     of willpower" and repeated "defined Heart" four times. Heart is
+ *     UNDEFINED on that chart. The margin note two inches away listed the
+ *     defined centres without it, and section 5 called it undefined correctly.
+ *   - 076327ca opened section 5 with "Open and undefined spaces..." on a chart
+ *     whose own values panel printed UNDEFINED CENTRES: None.
+ *
+ * Nothing looked. `openCentreProblem` only ever inspected section 5, so a
+ * contradiction anywhere in the other ten sections was invisible, and the three
+ * lists needed to catch it were already in memory. The check is a set lookup.
+ *
+ * DELIBERATELY TWO SHAPES ONLY -- "defined Heart" and "Heart is defined". The
+ * model has a hundred ways to describe a centre and only these two assert its
+ * state flatly enough to be judged. A rule that guessed at the rest would
+ * refuse honest prose, and every refusal costs the buyer a minute.
+ */
+const CENTRE_ALT = "Solar Plexus|Head|Ajna|Throat|Heart|Sacral|Spleen|Root|G";
+const STATE_BEFORE = new RegExp(`\\b(undefined|defined|open)\\s+(${CENTRE_ALT})\\b`, "gi");
+const STATE_AFTER = new RegExp(
+  `\\b(${CENTRE_ALT})\\s+(?:cent(?:er|re)\\s+)?is\\s+(undefined|defined|open)\\b`,
+  "gi",
+);
+
+export function centreStateProblem(raw, definedCenters, undefinedCenters, openCenters) {
+  const list = (v) => (Array.isArray(v) ? v : []);
+  const actual = new Map();
+  for (const c of list(definedCenters)) actual.set(c, "defined");
+  for (const c of list(undefinedCenters)) actual.set(c, "undefined");
+  for (const c of list(openCenters)) actual.set(c, "open");
+  if (!actual.size) return null;
+
+  const body = sanitize(raw);
+  const judge = (claimed, centre) => {
+    const truth = actual.get(centre);
+    if (!truth || truth === claimed) return null;
+    // "open" and "undefined" are both white on the drawing, and a reading that
+    // calls an undefined centre open is loose rather than wrong -- it is the
+    // DEFINED/not-defined confusion that misinforms. Only that is refused.
+    if (claimed !== "defined" && truth !== "defined") return null;
+    return `The reading calls the ${centre} centre "${claimed}", but on this chart it is ${truth}.`;
+  };
+
+  for (const m of body.matchAll(STATE_BEFORE)) {
+    const problem = judge(m[1].toLowerCase(), m[2]);
+    if (problem) return problem;
+  }
+  for (const m of body.matchAll(STATE_AFTER)) {
+    const problem = judge(m[2].toLowerCase(), m[1]);
+    if (problem) return problem;
+  }
+
+  /**
+   * N-04: a chart with nothing undefined must not be told about its undefined
+   * centres. Narrow on purpose -- only a possessive claim counts, so a reading
+   * may still explain what the word means, and a negation ("none of your
+   * centres is undefined") is left alone.
+   */
+  if (!list(undefinedCenters).length) {
+    const claim = /\b(?:your|you have|you've got)\s+(?:[a-z]+\s+){0,3}?undefined\b/i.exec(body);
+    if (claim && !/\b(?:no|none|not|without|zero)\b[^.]{0,40}$/i.test(claim[0])) {
+      return `The reading describes undefined centres ("${claim[0].trim()}"), but this chart has none.`;
     }
   }
   return null;
