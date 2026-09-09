@@ -29,3 +29,5 @@ Read this before searching or asking the owner where something lives.
 - Never ask the owner to look up something that exists in any of the repos above, in Google Drive, or in Gmail. Search first, then report.
 - A Google Doc titled "Claude Reference - Jeremy Champagne / TCM" in the owner's Drive mirrors this file and holds cross-repo notes and lessons learned. Update both when facts change.
 - thechampagnemethod.co and its subdomains are blocked by the cloud session egress proxy. Read the repo instead of fetching the live site.
+- Instagram, Facebook and other social platforms are UNREACHABLE from cloud sessions. The egress proxy blocks them, and an unauthenticated fetch would hit a login wall anyway. There is no Instagram or Facebook connector. To review a post or campaign, the owner must paste the caption text and attach the images; a link alone cannot be opened.
+- Campaign and post drafts have never been found in Drive, Gmail or the repos. If asked to review a live post, say plainly that it cannot be seen and ask for the text and images in one step.
