@@ -78,7 +78,19 @@ export default async (request, context) => {
   // answer that looks fresh is worse than no cache, and it is invisible — the
   // only reason this was caught is that a never-typed query returned something
   // different from a typed one.
-  const version = process.env.DEPLOY_ID || process.env.COMMIT_REF || "dev";
+  // NEITHER ENV VAR REACHES A FUNCTION AT RUNTIME, which defeated the whole
+  // paragraph above without ever saying so. Proof from production on
+  // 8 September: every key in the places-cache store reads `dev|<query>|<n>`,
+  // so the version has been a constant since the day it was added, and a stale
+  // answer could have outlived its code exactly as feared. DEPLOY_ID and
+  // COMMIT_REF are BUILD variables; a running function never sees them.
+  //
+  // The deploy id IS available, on the v2 context object this handler already
+  // receives. The env vars stay as fallbacks: they cost one line and this is
+  // strictly better than the constant it replaces, whatever the runtime hands
+  // over. Confirm after the next deploy by listing the store -- new keys must
+  // no longer begin `dev|`.
+  const version = context?.deploy?.id || process.env.DEPLOY_ID || process.env.COMMIT_REF || "dev";
   const cacheKey = `${version}|${raw.toLowerCase()}|${limit}`;
   const cache = getStore({ name: "places-cache", consistency: "eventual" });
 

@@ -56,6 +56,50 @@ import { warmEngine } from "./warm";
 export type Place = { label: string; zone: string; approximate?: boolean };
 
 /**
+ * THE TIMEZONE IS NOT SHOWN, AND THAT IS DELIBERATE.
+ *
+ * It used to sit beside every row: "Fairfax, Virginia  America/New_York". The
+ * zone is correct -- Virginia is Eastern, and Eastern's IANA name is
+ * America/New_York -- but a buyer in Fairfax reads it as the wrong state being
+ * offered, and on 8 September one said so. The same misread waits for every
+ * Texan (America/Chicago) and every Arizonan (America/Phoenix).
+ *
+ * The deeper reason not to print it: it advertises that the town is only ever
+ * used to derive a timezone, which invites "why not just ask my timezone?" --
+ * and the honest answer is that people know where they were born and do not
+ * know its zone, especially not its zone in 1974. Showing the machinery
+ * prompts a question the machinery cannot answer well.
+ *
+ * Nothing about the computation changes: the zone still travels with the pick
+ * and still decides the chart. It is simply not read out.
+ *
+ * WHAT REPLACES IT AS A SAFETY SIGNAL. The zone was doing one honest job --
+ * helping tell rows apart. Rows never actually collide: the engine returns
+ * distinct (label, zone) pairs, and probing the twelve most-duplicated US town
+ * names returned no repeated label at all. The real confusion is the opposite
+ * one -- typing "fairfax" also offers Fairfield, Fairbanks, Fairland and Las
+ * Matas de Farfán, with nothing to show that those are guesses rather than
+ * matches. Marking the part that matched makes a near-miss look like one.
+ */
+function Marked({ label, query }: { label: string; query: string }) {
+  // Compare on the leading term only: the typed string is often "fairfax, va"
+  // while the label reads "Fairfax, Virginia", and matching the whole query
+  // would highlight nothing on exactly the rows that did match best.
+  const term = query.split(",")[0].trim();
+  const at = term ? label.toLowerCase().indexOf(term.toLowerCase()) : -1;
+  if (at < 0) return <>{label}</>;
+  return (
+    <>
+      {label.slice(0, at)}
+      <mark className="bg-transparent font-semibold text-brand-paper">
+        {label.slice(at, at + term.length)}
+      </mark>
+      {label.slice(at + term.length)}
+    </>
+  );
+}
+
+/**
  * A per-session answer cache, and the reason the field felt slow.
  *
  * Measured against the live site: a lookup costs 340-1230ms warm, and even a
@@ -286,8 +330,7 @@ export default function PlaceField({
               (i === cursor ? "bg-white/[0.10]" : "hover:bg-white/[0.06]")
             }
           >
-            {p.label}
-            <span className="ml-2 text-[13px] text-brand-muted">{p.zone}</span>
+            <Marked label={p.label} query={query} />
             {p.approximate && (
               <span className="ml-2 text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                 whole state
@@ -388,7 +431,6 @@ export default function PlaceField({
         <div className="mt-2 rounded-xl border border-brand-teal/30 bg-brand-teal/[0.06] px-4 py-3">
           <p className="text-[15px] leading-snug text-brand-paper">
             Charting as <strong className="font-semibold">{chosen.label}</strong>
-            <span className="ml-2 text-[13px] text-brand-muted">{chosen.zone}</span>
           </p>
           <button
             type="button"
