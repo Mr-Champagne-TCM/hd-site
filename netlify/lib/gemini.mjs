@@ -1,4 +1,5 @@
 import { chartFactsOnly, firstProblem, sanitize } from "./interpretation.mjs";
+import { READING_SCHEMA, renderReading, structuredFacts } from "./structured.mjs";
 
 /**
  * Asking Gemini for the written interpretation.
@@ -99,7 +100,7 @@ const ATTEMPTS = 1;
  */
 export async function generateReading(
   output,
-  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000 } = {},
+  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text" } = {},
 ) {
   if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
   const instruction = typeof prompt === "string" && prompt.trim() ? prompt.trim() : null;
@@ -112,7 +113,7 @@ export async function generateReading(
 
   let last = { ok: false, reason: "unknown" };
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs });
+    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape });
     if (last.ok) return last;
     /**
      * A BUSY MODEL IS NOT A VERDICT. On 2026-09-03 Google answered 503 for a
@@ -123,7 +124,7 @@ export async function generateReading(
     const busy = last.reason === "http" && /\b(503|429)\b/.test(String(last.detail));
     if (busy) {
       await new Promise((r) => setTimeout(r, 5000));
-      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs });
+      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape });
       if (last.ok) return last;
     }
     if (last.reason !== "malformed") return last;
@@ -131,7 +132,10 @@ export async function generateReading(
   return last;
 }
 
-async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }) {
+async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape }) {
+  // "json": the model fills READING_SCHEMA and structured.mjs writes the
+  // document. "text": the original letter-shaped prompt. See structured.mjs.
+  const json = shape === "json";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
@@ -142,8 +146,17 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }
       body: JSON.stringify({
         system_instruction: { parts: [{ text: instruction }] },
         // THE ONLY THING THAT LEAVES. See interpretation.mjs.
-        contents: [{ role: "user", parts: [{ text: chartFactsOnly(output) }] }],
-        generationConfig: { temperature: 1, maxOutputTokens: 8192 },
+        contents: [
+          { role: "user", parts: [{ text: chartFactsOnly(output) + (json ? structuredFacts(output) : "") }] },
+        ],
+        generationConfig: json
+          ? {
+              temperature: 1,
+              maxOutputTokens: 8192,
+              responseMimeType: "application/json",
+              responseSchema: READING_SCHEMA,
+            }
+          : { temperature: 1, maxOutputTokens: 8192 },
       }),
       signal: controller.signal,
     });
@@ -173,6 +186,18 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs }
     text = body?.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "";
   } catch {
     return { ok: false, reason: "unreadable", detail: "gemini sent something that is not json" };
+  }
+
+  if (json) {
+    let filled;
+    try {
+      filled = JSON.parse(text);
+    } catch {
+      return { ok: false, reason: "malformed", detail: "the reading form came back unreadable", text };
+    }
+    const built = renderReading(filled, output);
+    if (built.problem) return { ok: false, reason: "malformed", detail: built.problem, text };
+    text = built.text;
   }
 
   const clean = sanitize(text);

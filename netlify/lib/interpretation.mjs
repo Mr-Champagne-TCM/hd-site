@@ -408,7 +408,7 @@ export function profileLineProblem(raw, profile) {
  * labelled lines are checked, because the body may fairly mention frustration
  * or peace in passing; the labelled line is the one that is a claim.
  */
-const TYPE_WORDS = {
+export const TYPE_WORDS = {
   Manifestor: { signature: "Peace", notSelf: "Anger" },
   Generator: { signature: "Satisfaction", notSelf: "Frustration" },
   "Manifesting Generator": { signature: "Satisfaction", notSelf: "Frustration" },
