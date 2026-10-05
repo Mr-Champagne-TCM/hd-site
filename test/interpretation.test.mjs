@@ -8,6 +8,7 @@ import {
   SUMMARY_KEYS,
   chartFactsOnly,
   firstProblem,
+  marginNotes,
   formattingProblem,
   parseReading,
   typeProblem,
@@ -291,4 +292,12 @@ test("no type means no opinion, rather than a guess", () => {
   // and refusing a reading on a missing field would fail the wrong thing.
   assert.equal(typeProblem("wait for the invitation", null), null);
   assert.equal(typeProblem("wait for the invitation", ""), null);
+});
+
+test("every authority the engine returns has its own margin line (Ego is named in full)", () => {
+  for (const authority of ["Emotional", "Sacral", "Splenic", "Ego Manifested", "Ego Projected", "Self-Projected", "Mental", "Lunar"]) {
+    const notes = marginNotes({ authority, definedCenters: [], type: "Projector" });
+    const row = notes[INTERPRETATION[1]][0];
+    assert.ok(row[1], `${authority}: blank margin`);
+  }
 });

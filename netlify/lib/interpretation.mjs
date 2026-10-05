@@ -861,6 +861,10 @@ export function marginNotes(c) {
     Sacral: "Answered in the moment, in the body.",
     Splenic: "Answered once, quietly, in the present.",
     Ego: "Decided by what there is will for.",
+    // The engine names the two Ego authorities in full; "Ego" alone matched
+    // neither, and their margin printed nothing (found 10/5).
+    "Ego Manifested": "Decided by what there is will for.",
+    "Ego Projected": "Decided by what there is will for.",
     "Self-Projected": "Heard by saying it out loud.",
     Mental: "Talked through with people you trust.",
     Lunar: "Decided over a full lunar cycle.",
