@@ -93,9 +93,9 @@ function Example() {
           href={SITE.hd101}
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
         >
-          Human Design, plainly
+          The Human Design library
         </a>
-        , free in the library.
+        , free.
       </p>
     </section>
   );
@@ -371,7 +371,7 @@ function Footer() {
           {[
             [SITE.home, "The Champagne Method"],
             [SITE.library, "The Library"],
-            [SITE.hd101, "Human Design, plainly"],
+            [SITE.hd101, "The Human Design library"],
             [SITE.bodygraph, "Reading your bodygraph"],
             [SITE.connect, "Start a conversation"],
             // Last in the row on purpose: it is the one a reader goes looking

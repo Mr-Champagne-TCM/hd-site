@@ -197,6 +197,35 @@ export default function ReadingPage({ token }: { token: string }) {
           A link that merely could not be opened gets none of this. There is
           nothing to send, and offering would imply we know who they are.
         */}
+        {/*
+          A LINK THAT COULD NOT BE OPENED (Jeremy 10/5, "5a"): nothing is sent
+          from here -- a bad link proves nothing about who holds it -- but the
+          way to a person and the way to the readings are both on the page.
+        */}
+        {!state.expired && (
+          <div className="mt-8 max-w-[60ch]">
+            <p className="text-[16px] leading-relaxed text-brand-muted">
+              If this link came with a purchase,{" "}
+              <a
+                href={`mailto:${CONTACT}`}
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+              >
+                {CONTACT}
+              </a>{" "}
+              is read by Jeremy.
+            </p>
+            <p className="mt-4 text-[16px] leading-relaxed text-brand-muted">
+              The readings, and what each one includes, are{" "}
+              <a
+                href="/"
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+              >
+                here
+              </a>
+              .
+            </p>
+          </div>
+        )}
         {state.expired && (
           <div className="mt-8 max-w-[60ch]">
             <p className="text-[16px] leading-relaxed text-brand-muted">

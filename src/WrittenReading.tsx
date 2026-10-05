@@ -187,9 +187,9 @@ export default function WrittenReading({
           rel="noreferrer"
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
         >
-          Human Design, plainly
+          The Human Design library
         </a>
-        , free in the library.
+        , free.
       </p>
     </div>
   );

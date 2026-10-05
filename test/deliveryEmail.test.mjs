@@ -74,7 +74,7 @@ test("each library link carries a line saying what it is for", () => {
   // Jeremy: "there should be a description after it".
   const { html, text } = build(1, "Jeremy");
   for (const body of [html, text]) {
-    assert.match(body, /What the system is, what it is not/);
+    assert.match(body, /Every part of a chart, one layer at a time/);
     assert.match(body, /what the shapes mean/);
   }
 });

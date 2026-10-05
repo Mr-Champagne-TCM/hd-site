@@ -200,8 +200,8 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
   const RESOURCES = [
     [
       links.hd101,
-      "Human Design, plainly",
-      "What the system is, what it is not, and every word in your reading explained.",
+      "The Human Design library",
+      "Every part of a chart, one layer at a time, and every word in your reading explained.",
     ],
     [
       links.bodygraph,

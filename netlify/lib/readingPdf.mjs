@@ -459,7 +459,7 @@ function glancePage(doc, { output, tier, links, written = null }) {
     .fontSize(9)
     .fillColor(GOLD)
     .text(
-      "Every word above is explained in Human Design, plainly  —  free in the library",
+      "Every word above is explained in The Human Design library  —  free",
       M,
       y + 10,
       { width: COL, link: hd101, underline: false },
@@ -853,7 +853,7 @@ function activationsPage(doc, { output, links, page }) {
     .fillColor(MUTED)
     .text(
       "Each number is a gate and the line within it — 6.2 is gate 6, line 2. What the gates " +
-        "mean is explained in Human Design, plainly, free in the library.",
+        "mean is explained in The Human Design library, free.",
       M,
       y,
       { width: COL, link: links?.hd101 ?? "https://thechampagnemethod.co/library/human-design/", underline: false, lineGap: 1 },

@@ -141,8 +141,8 @@ export default function ReadingActions({
         <div className="mt-4 space-y-3">
           <Resource
             href={SITE.hd101}
-            title="Human Design, plainly"
-            blurb="What the system is, what it is not, and every word in your reading explained."
+            title="The Human Design library"
+            blurb="Every part of a chart, one layer at a time, and every word in your reading explained."
           />
           <Resource
             href={SITE.bodygraph}

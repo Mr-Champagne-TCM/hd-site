@@ -77,10 +77,10 @@ export const RESOURCES = {
     {
       href: "https://thechampagnemethod.co/library/human-design/",
       tag: "Goes with the summary",
-      title: "Human Design, plainly",
+      title: "The Human Design library",
       blurb:
-        "What it is, what it is not, and the one thing it is actually useful for. Six minutes, " +
-        "no jargon you have to look up — and it explains every word in a summary.",
+        "Every part of a chart, one layer at a time: a line to start, more if it pulls at you. " +
+        "It explains every word in a summary.",
     },
     {
       href: "https://thechampagnemethod.co/library/bodygraph/",
