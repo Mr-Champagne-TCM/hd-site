@@ -34,7 +34,7 @@ test("SEVEN CENTRES IN ONE SENTENCE IS REFUSED", () => {
   const p = centreCountProblem(
     "Undefined centres like the Ajna, G, Heart, Sacral, and Root act as sponges, while open Head and Spleen centres drop your boundaries.",
   );
-  assert.match(p, /7 centres/);
+  assert.match(p, /7 centers/);
 });
 
 test("three centres in a sentence is fine, and so is the same centre named twice", () => {
@@ -81,7 +81,7 @@ test("THE DEFINITION PARAGRAPH MAY LIST EVERY DEFINED CENTRE", () => {
   assert.equal(centreCountProblem(text), null);
   assert.match(
     centreCountProblem(text + "\nHow you decide\n\nYour Ajna, Throat, G, Sacral, Spleen and Root all pull at once.\n"),
-    /6 centres/,
+    /6 centers/,
   );
 });
 

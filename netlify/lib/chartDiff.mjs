@@ -142,9 +142,9 @@ export function describeDifferences(fields) {
     signature: "Signature",
     notSelfTheme: "Not-Self Theme",
     incarnationCross: "Incarnation Cross",
-    definedCenters: "your defined centres",
-    undefinedCenters: "your undefined centres",
-    openCenters: "your open centres",
+    definedCenters: "your defined centers",
+    undefinedCenters: "your undefined centers",
+    openCenters: "your open centers",
     channels: "your channels",
   };
   const list = fields.map((f) => names[f] ?? f);

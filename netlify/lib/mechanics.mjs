@@ -40,7 +40,7 @@ export function describe(map, value) {
 
 export const TYPE_NOTES = {
   Generator:
-    "Your Sacral centre is defined, which means you carry a consistent, renewable kind of energy — the sort that builds over a day rather than arriving in bursts. It responds to what is already in front of you rather than initiating from nothing.",
+    "Your Sacral center is defined, which means you carry a consistent, renewable kind of energy — the sort that builds over a day rather than arriving in bursts. It responds to what is already in front of you rather than initiating from nothing.",
   "Manifesting Generator":
     "You have a Generator's consistent Sacral energy with a Manifestor's directness attached to it. That combination tends to move in several directions at once and to skip steps other people take in order.",
   Manifestor:
@@ -48,7 +48,7 @@ export const TYPE_NOTES = {
   Projector:
     "You have no defined Sacral, so your energy is not the consistent kind. What you have instead is the ability to see how other people's energy actually works, which is a different capacity and not a smaller one.",
   Reflector:
-    "None of your centres is defined, which is rare. You take on and reflect back the energy of whatever room you are in, so what you experience shifts with your company and your surroundings rather than staying fixed.",
+    "None of your centers is defined, which is rare. You take on and reflect back the energy of whatever room you are in, so what you experience shifts with your company and your surroundings rather than staying fixed.",
 };
 
 export const STRATEGY_NOTES = {
@@ -72,9 +72,9 @@ export const AUTHORITY_NOTES = {
   Splenic:
     "Your Spleen speaks once, quietly, and in the present tense. It does not repeat itself and it does not argue — which is why it is easy to talk yourself past, and why it is described as the quietest of the authorities.",
   Ego:
-    "Your Heart centre is defined and connected to the Throat. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should.",
+    "Your Heart center is defined and connected to the Throat. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should.",
   "Self-Projected":
-    "Your G centre reaches your Throat, so your direction becomes clear when you hear yourself say it. Talking it out with somebody who will listen without steering is the mechanism, not a preference.",
+    "Your G center reaches your Throat, so your direction becomes clear when you hear yourself say it. Talking it out with somebody who will listen without steering is the mechanism, not a preference.",
   Mental:
     "You have no inner authority that settles this on its own. Clarity comes from talking through a decision in the company of people you trust, using them as a sounding board rather than as advisors.",
   "Lunar":

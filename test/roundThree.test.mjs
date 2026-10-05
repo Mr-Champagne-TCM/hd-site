@@ -59,7 +59,7 @@ test("R-01: the wrong fact it was written for is still caught", () => {
   const prose = "Your defined Heart center contributes a consistent thread of willpower.";
   assert.match(
     centreStateProblem(reading({ "What is consistently yours": prose }), ["Sacral"], ["Heart"], ["Head"]),
-    /calls the Heart centre "defined", but on this chart it is undefined/,
+    /calls the Heart center "defined", but on this chart it is undefined/,
   );
 });
 
@@ -111,7 +111,7 @@ test("R-06: a defined-heavy chart is still held to four", () => {
   const prose = "Your Head, Ajna, Throat, Heart and Sacral all take in the room at once.";
   assert.match(
     centreCountProblem(reading({ [S5]: prose }), ["Heart"], ["Head"]),
-    /names 5 centres in one sentence \(the limit is 4\)/,
+    /names 5 centers in one sentence \(the limit is 4\)/,
   );
 });
 
@@ -120,6 +120,23 @@ test("R-06: padding OUTSIDE section 5 is still refused at four", () => {
   const prose = "Your Head, Ajna, Throat, Heart, Sacral, Spleen and Root all move together here.";
   assert.match(
     centreCountProblem(reading({ "When it is working, and when it is not": prose }), seven, []),
-    /names 7 centres in one sentence \(the limit is 4\)/,
+    /names 7 centers in one sentence \(the limit is 4\)/,
   );
+});
+
+/* ------------------------------------------- US spelling (10/5) */
+
+test("US SPELLING: both 'center' and 'centre' are judged the same, so stored readings still pass", () => {
+  for (const word of ["center", "centre"]) {
+    assert.match(
+      centreStateProblem(reading({ "What is consistently yours": `Your Heart ${word} is defined.` }), ["Sacral"], ["Heart"], ["Head"]),
+      /calls the Heart center "defined"/,
+      word,
+    );
+    assert.equal(
+      centreStateProblem(reading({ "What is consistently yours": `Your Sacral ${word} is defined.` }), ["Sacral"], ["Heart"], ["Head"]),
+      null,
+      word,
+    );
+  }
 });

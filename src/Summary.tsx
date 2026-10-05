@@ -100,12 +100,12 @@ export default function Summary({ data }: { data: SummaryData }) {
           count them; a row that silently vanished on a Reflector would read as
           something we failed to work out rather than as a fact about them.
         */}
-        <Row label="Defined centres">{data.definedCenters.join(" · ") || "None"}</Row>
+        <Row label="Defined centers">{data.definedCenters.join(" · ") || "None"}</Row>
         {/* Absent on readings stored before the third state existed -- see readingPdf. */}
         {Array.isArray(data.undefinedCenters) && (
-          <Row label="Undefined centres">{data.undefinedCenters.join(" · ") || "None"}</Row>
+          <Row label="Undefined centers">{data.undefinedCenters.join(" · ") || "None"}</Row>
         )}
-        <Row label="Open centres">{data.openCenters.join(" · ") || "None"}</Row>
+        <Row label="Open centers">{data.openCenters.join(" · ") || "None"}</Row>
         {/*
           THE CHANNELS, which the PDF had and this did not.
           Jeremy: "why does the PDF have channels but the web view doesn't?"

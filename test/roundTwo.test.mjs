@@ -62,7 +62,7 @@ test("F38: the bare word 'open' no longer stands in for naming a centre", () => 
   ]) {
     const problem = openCentreProblem(reading({ [S5]: prose }), CHART.openCenters, CHART.undefinedCenters);
     assert.ok(problem, `"${prose}" was accepted without naming a centre`);
-    assert.match(problem, /never names one of this chart's 2 open centres/);
+    assert.match(problem, /never names one of this chart's 2 open centers/);
   }
 });
 
@@ -77,7 +77,7 @@ test("F38: the undefined branch runs at all, which it never did in production", 
   const prose = "Your open Head and open Solar Plexus amplify whatever the room is carrying.";
   const problem = check(reading({ [S5]: prose }));
   assert.ok(problem, "a section naming no undefined centre was accepted");
-  assert.match(problem, /never names one of this chart's 1 undefined centres \(Heart\)/);
+  assert.match(problem, /never names one of this chart's 1 undefined centers \(Heart\)/);
 });
 
 /* ------------------------------------------------------------------ F45 */
@@ -170,13 +170,13 @@ test("F44: seven centres OUTSIDE section 5 are still refused", () => {
   const prose =
     "Your Head, Ajna, Throat, Heart, Sacral, Spleen and Root all move together here.";
   const problem = centreCountProblem(reading({ "When it is working, and when it is not": prose }), seven);
-  assert.match(problem, /names 7 centres in one sentence \(the limit is 4\)/);
+  assert.match(problem, /names 7 centers in one sentence \(the limit is 4\)/);
 });
 
 test("F44: the anti-padding rule still holds for a chart with few undefined", () => {
   const prose = "Your Head, Ajna, Throat, Heart and Sacral all take in the room at once.";
   const problem = centreCountProblem(reading({ [S5]: prose }), ["Heart"]);
-  assert.match(problem, /names 5 centres in one sentence \(the limit is 4\)/);
+  assert.match(problem, /names 5 centers in one sentence \(the limit is 4\)/);
 });
 
 /* ------------------------------------------------------- N-01 and N-04 */
@@ -189,7 +189,7 @@ test("N-01: a reading may not call an undefined centre defined", () => {
     CHART.undefinedCenters,
     CHART.openCenters,
   );
-  assert.match(problem, /calls the Heart centre "defined", but on this chart it is undefined/);
+  assert.match(problem, /calls the Heart center "defined", but on this chart it is undefined/);
 });
 
 test("N-01: the predicate form is caught too, and it is caught anywhere", () => {
@@ -200,7 +200,7 @@ test("N-01: the predicate form is caught too, and it is caught anywhere", () => 
     CHART.undefinedCenters,
     CHART.openCenters,
   );
-  assert.match(problem, /calls the Heart centre "defined"/);
+  assert.match(problem, /calls the Heart center "defined"/);
 });
 
 test("N-01: truthful prose about the same centres passes", () => {

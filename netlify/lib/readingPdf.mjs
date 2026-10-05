@@ -399,9 +399,9 @@ function glancePage(doc, { output, tier, links, written = null }) {
   const values = [
     ["Definition", output?.definition],
     ["Incarnation cross", output?.incarnationCross],
-    ["Defined centres", centres(output?.definedCenters)],
-    ...(threeState ? [["Undefined centres", centres(output.undefinedCenters)]] : []),
-    ["Open centres", centres(output?.openCenters)],
+    ["Defined centers", centres(output?.definedCenters)],
+    ...(threeState ? [["Undefined centers", centres(output.undefinedCenters)]] : []),
+    ["Open centers", centres(output?.openCenters)],
     ["Channels", (output?.channels ?? []).join("\n")],
   ].filter(([, v]) => v);
 
@@ -656,7 +656,7 @@ function channelKey(doc, top, links, qr) {
     .fontSize(7.5)
     .fillColor(MUTED)
     .text(
-      "In a centre left unfilled, a gate drawn in white or violet means undefined — all of them dark means open.",
+      "In a center left unfilled, a gate drawn in white or violet means undefined — all of them dark means open.",
       M,
       belowY + 5,
       { width: textW, align: "center" },

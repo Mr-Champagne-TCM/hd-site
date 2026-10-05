@@ -12,7 +12,7 @@ export const SUMMARY = {
   sku: "hd_summary",
   cents: 111,
   label: "The summary",
-  blurb: "Type, Strategy, Authority, Profile, Definition, your centres, your incarnation cross.",
+  blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your incarnation cross.",
 };
 
 export const CHART = {

@@ -102,7 +102,7 @@ test("two three-state charts still catch a moved white centre", () => {
   const a = { ...CHART, undefinedCenters: ["Ajna"], openCenters: ["Head"] };
   const b = { ...CHART, undefinedCenters: ["Head"], openCenters: ["Ajna"] };
   assert.deepEqual(chartDifferences(a, b).sort(), ["openCenters", "undefinedCenters"]);
-  assert.equal(describeDifferences(["undefinedCenters"]), "your undefined centres");
+  assert.equal(describeDifferences(["undefinedCenters"]), "your undefined centers");
 });
 
 test("nothing to compare against is silence, not a warning", () => {

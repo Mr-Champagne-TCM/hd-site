@@ -69,7 +69,7 @@ const S5 = (body) => `IN SHORT\n\nType: x.\n\nWhat you take in from others\n\nle
 
 test("A SECTION 5 THAT NEVER MENTIONS AN OPEN CENTRE IS REFUSED WHEN THE CHART HAS ONE", () => {
   const p = openCentreProblem(S5("Your undefined Ajna takes in fixed opinions. Your undefined Throat borrows the room's voice."), ["Head", "Heart"], ["Ajna", "Throat"]);
-  assert.match(p, /open centre/);
+  assert.match(p, /open center/);
   assert.match(p, /Head, Heart/);
 });
 
@@ -83,14 +83,14 @@ test("THE BARE WORD 'OPEN' IS NO LONGER ENOUGH", () => {
   // W1 shipped in, and exactly what the word test let through.
   assert.match(
     openCentreProblem(S5("Your undefined Ajna borrows. Where you are open you take in the room whole."), ["Head"], ["Ajna"]),
-    /never names one of this chart's 1 open centres \(Head\)/,
+    /never names one of this chart's 1 open centers \(Head\)/,
   );
 });
 
 test("a chart with no open centres is not asked to invent one, and vice versa", () => {
   assert.equal(openCentreProblem(S5("Your undefined Heart is a filter."), [], ["Heart"]), null);
   assert.equal(openCentreProblem(S5("Your open Head takes in everything."), ["Head"], []), null);
-  assert.match(openCentreProblem(S5("Your open Head takes in everything."), ["Head"], ["Ajna"]), /undefined centre/);
+  assert.match(openCentreProblem(S5("Your open Head takes in everything."), ["Head"], ["Ajna"]), /undefined center/);
 });
 
 /** F45: the passive and noun forms of the Projector strategy. */

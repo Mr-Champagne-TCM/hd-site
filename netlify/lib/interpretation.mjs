@@ -130,7 +130,7 @@ function canonicalHeading(line) {
   if (!l || l.length > 60 || /[.!?:]$/.test(l)) return line;
   if (/^IN[_ ]SHORT$/i.test(l)) return "IN SHORT";
   if (/^what\b.*\bothers$/i.test(l)) return "What you take in from others";
-  if (/^what\b.*\b(undefined|open)\b.*centres?$/i.test(l)) return "What you take in from others";
+  if (/^what\b.*\b(undefined|open)\b.*cent(?:er|re)s?$/i.test(l)) return "What you take in from others";
   return line;
 }
 
@@ -211,10 +211,10 @@ export function openCentreProblem(raw, openCenters, undefinedCenters) {
   const section = to > from ? body.slice(from, to) : body.slice(from);
   const names = (list) => list.some((c) => new RegExp(`\\b${c}\\b`).test(section));
   if (open.length && !names(open)) {
-    return `The reading's "What you take in from others" never names one of this chart's ${open.length} open centres (${open.join(", ")}).`;
+    return `The reading's "What you take in from others" never names one of this chart's ${open.length} open centers (${open.join(", ")}).`;
   }
   if (und.length && !names(und)) {
-    return `The reading's "What you take in from others" never names one of this chart's ${und.length} undefined centres (${und.join(", ")}).`;
+    return `The reading's "What you take in from others" never names one of this chart's ${und.length} undefined centers (${und.join(", ")}).`;
   }
   return null;
 }
@@ -546,7 +546,7 @@ export function centreCountProblem(body, undefinedCenters = null, openCenters = 
     for (const sentence of chunk.split(/(?<=[.!?])\s+|\n+/)) {
       const named = new Set(sentence.match(CENTRE_RE) ?? []);
       if (named.size > limit) {
-        return `The reading names ${named.size} centres in one sentence (the limit is ${limit}): "${sentence.trim().slice(0, 90)}..."`;
+        return `The reading names ${named.size} centers in one sentence (the limit is ${limit}): "${sentence.trim().slice(0, 90)}..."`;
       }
     }
     return null;
@@ -659,7 +659,7 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
     // confusion has never once occurred, so tolerating it costs nothing.
     if (claimed !== "defined" && truth !== "defined") return null;
     if (NOT_A_CLAIM.test(sentenceAround(body, at))) return null;
-    return `The reading calls the ${centre} centre "${claimed}", but on this chart it is ${truth}.`;
+    return `The reading calls the ${centre} center "${claimed}", but on this chart it is ${truth}.`;
   };
 
   for (const m of body.matchAll(STATE_BEFORE)) {
@@ -680,7 +680,7 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
   if (!list(undefinedCenters).length) {
     const claim = /\b(?:your|you have|you've got)\s+(?:[a-z]+\s+){0,3}?undefined\b/i.exec(body);
     if (claim && !NOT_A_CLAIM.test(sentenceAround(body, claim.index))) {
-      return `The reading describes undefined centres ("${claim[0].trim()}"), but this chart has none.`;
+      return `The reading describes undefined centers ("${claim[0].trim()}"), but this chart has none.`;
     }
   }
   return null;
@@ -859,20 +859,20 @@ export function marginNotes(c) {
     ],
     [INTERPRETATION[1]]: [
       [`${authority.toUpperCase()} AUTHORITY`.trim(), HOW[authority] || ""],
-      ["CENTRE", decidingCentre],
+      ["CENTER", decidingCentre],
     ],
     [INTERPRETATION[2]]: [
       [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
       ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
     ],
-    [INTERPRETATION[3]]: [["DEFINED CENTRES", defined.join(", ") || "None"]],
+    [INTERPRETATION[3]]: [["DEFINED CENTERS", defined.join(", ") || "None"]],
     [INTERPRETATION[4]]: [
       // Absent on readings stored before the third state existed; absent is
       // not empty, so no "None" is printed for a value that was never computed.
       ...(Array.isArray(c && c.undefinedCenters)
-        ? [["UNDEFINED CENTRES", c.undefinedCenters.join(", ") || "None"]]
+        ? [["UNDEFINED CENTERS", c.undefinedCenters.join(", ") || "None"]]
         : []),
-      ["OPEN CENTRES", ((c && c.openCenters) || []).join(", ") || "None"],
+      ["OPEN CENTERS", ((c && c.openCenters) || []).join(", ") || "None"],
     ],
     [INTERPRETATION[5]]: [
       ["SIGNATURE", (c && c.signature) || ""],
