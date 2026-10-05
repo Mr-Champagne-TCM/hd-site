@@ -142,6 +142,72 @@ export async function record(store, { kind, detail, excerpt, now = Date.now() } 
   return entry;
 }
 
+/**
+ * THE RATE ALARM FOR READINGS THAT WILL NOT WRITE (audit F53, approved 9/9 as
+ * "#8": an alarm, no change to generation).
+ *
+ * On 3 September every draft came back as an empty skeleton -- "Type: /
+ * Strategy: / ..." with nothing after the colons -- and two paid readings sat
+ * unwritten. The cause was on Google's side and is still unexplained: the old
+ * prompt filled 6 of 6 the same day, so the prompt was never the lever and no
+ * code change can be shown to prevent it. It can recur.
+ *
+ * What CAN be done is to notice. Each refused draft is already on file as an
+ * `interpretation-*` incident, but the immediate alert goes out only when a
+ * reading gives up after every ask, and only the first of a kind each hour.
+ * A spell where most drafts are refused and the fifth ask scrapes through is
+ * invisible: buyers wait minutes, and nothing says so until Monday's digest.
+ *
+ * So the sweep counts them. RATE_LIMIT refused drafts inside RATE_WINDOW_MS
+ * raises one `reading-failure-rate` alert, through the same hourly gate as
+ * every other kind, so an outage is one email an hour rather than one every
+ * fifteen minutes.
+ *
+ * SIX IN AN HOUR is one more than a single writing attempt can produce (five
+ * asks), so it takes two readings struggling at once, or one reading failing
+ * attempt after attempt -- never one unlucky draft. A normal hour has none or
+ * one (Seth's reading, 8 September: one refusal, then written).
+ */
+export const RATE_WINDOW_MS = 60 * 60 * 1000;
+export const RATE_LIMIT = 6;
+const RATE_KIND = "reading-failure-rate";
+
+export async function checkFailureRate(
+  store,
+  { now = Date.now(), send, site, window = RATE_WINDOW_MS, limit = RATE_LIMIT } = {},
+) {
+  if (!store) return { count: 0, alarmed: false };
+  let listed;
+  try {
+    listed = await store.list({ prefix: "incident/" });
+  } catch {
+    return { count: 0, alarmed: false };
+  }
+  let count = 0;
+  for (const blob of listed?.blobs ?? []) {
+    // The key starts with the moment it was filed, so anything older than the
+    // window is skipped without a read -- this runs every fifteen minutes.
+    const at = Number(/^incident\/(\d+)-/.exec(blob.key)?.[1]);
+    if (!Number.isFinite(at) || now - at > window || at > now) continue;
+    try {
+      const entry = await store.get(blob.key, { type: "json" });
+      if (entry && String(entry.kind).startsWith("interpretation-")) count += 1;
+    } catch {
+      /* one unreadable incident is not a reason to lose the count */
+    }
+  }
+  if (count < limit) return { count, alarmed: false };
+  const minutes = Math.round(window / 60000);
+  const r = await reportFailure(store, {
+    kind: RATE_KIND,
+    detail: `${count} reading drafts refused or failed in the last ${minutes} minutes (alarm at ${limit}). Readings may be stuck or slow; the incidents carry each draft's opening.`,
+    now,
+    send,
+    site,
+  }).catch(() => ({ alerted: false }));
+  return { count, alarmed: true, alerted: Boolean(r?.alerted) };
+}
+
 /** Everything still on file, newest first. */
 export async function incidents(store, { now = Date.now(), window = 24 * 60 * 60 * 1000 } = {}) {
   if (!store) return [];

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   ALERT_QUIET_SECONDS,
   INCIDENT_TTL_SECONDS,
+  RATE_LIMIT,
+  RATE_WINDOW_MS,
+  checkFailureRate,
   digest,
   incidents,
   record,
@@ -185,4 +188,72 @@ test("an alert that cannot be sent still leaves the incident on file", async () 
 test("with no mail key it records and says so, rather than throwing", async () => {
   const r = await reportFailure(fakeStore(), { kind: "k", detail: "d", now: 1 });
   assert.deepEqual(r, { recorded: true, alerted: false });
+});
+
+/* ------------------------------------------- the rate alarm (F53, "#8") */
+
+async function refusals(store, n, at, kind = "interpretation-malformed") {
+  for (let i = 0; i < n; i++) await record(store, { kind, detail: "blank summary", now: at + i });
+}
+
+test("A RUN OF REFUSED DRAFTS RAISES ONE ALARM, even when every reading got written in the end", async () => {
+  // 3 September: drafts came back as empty skeletons. The final-failure alert
+  // only fires when a reading gives up; a fifth ask that scrapes through
+  // leaves buyers waiting minutes and nobody told.
+  const store = fakeStore();
+  const sent = [];
+  const t = 10_000_000;
+  await refusals(store, RATE_LIMIT, t);
+  const r = await checkFailureRate(store, { now: t + 60_000, send: async (m) => sent.push(m), site: "https://x" });
+  assert.equal(r.alarmed, true);
+  assert.equal(r.count, RATE_LIMIT);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].subject, /reading-failure-rate failed/);
+  assert.match(sent[0].text, new RegExp(`${RATE_LIMIT} reading drafts refused`));
+});
+
+test("one reading's ordinary retries do not raise it", async () => {
+  // Five asks is the most one writing attempt can refuse; the alarm sits above.
+  const store = fakeStore();
+  const sent = [];
+  const t = 20_000_000;
+  await refusals(store, RATE_LIMIT - 1, t);
+  const r = await checkFailureRate(store, { now: t + 60_000, send: async (m) => sent.push(m) });
+  assert.equal(r.alarmed, false);
+  assert.equal(sent.length, 0);
+});
+
+test("only the last hour counts, and only interpretation failures", async () => {
+  const store = fakeStore();
+  const t = 30_000_000;
+  await refusals(store, RATE_LIMIT, t - RATE_WINDOW_MS - 10_000); // too old
+  await refusals(store, RATE_LIMIT, t, "ready-email"); // another kind
+  const r = await checkFailureRate(store, { now: t + 1000 });
+  assert.equal(r.count, 0);
+  assert.equal(r.alarmed, false);
+});
+
+test("an outage is one alarm an hour, not one every fifteen minutes", async () => {
+  const store = fakeStore();
+  const sent = [];
+  const send = async (m) => sent.push(m);
+  const t = 40_000_000;
+  await refusals(store, RATE_LIMIT + 4, t);
+  await checkFailureRate(store, { now: t + 60_000, send });
+  await checkFailureRate(store, { now: t + 15 * 60_000, send });
+  await checkFailureRate(store, { now: t + 30 * 60_000, send });
+  assert.equal(sent.length, 1);
+  // The alarm's own incident is not counted as another refusal.
+  const again = await checkFailureRate(store, { now: t + 45 * 60_000 });
+  assert.equal(again.count, RATE_LIMIT + 4);
+});
+
+test("THE RATE CHECK NEVER THROWS", async () => {
+  assert.deepEqual(await checkFailureRate(null), { count: 0, alarmed: false });
+  const broken = {
+    async list() {
+      throw new Error("blobs are down");
+    },
+  };
+  assert.deepEqual(await checkFailureRate(broken), { count: 0, alarmed: false });
 });
