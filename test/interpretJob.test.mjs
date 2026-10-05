@@ -398,3 +398,25 @@ test("THE PROMPT COMES FROM THE BLOB, because it does not fit anywhere else", as
   assert.equal(await loadPrompt({ store: angry }), null);
   assert.equal(await loadPrompt({}), null);
 });
+
+/* ------------------------------------------- form mode follows the stored prompt (10/5) */
+
+test("FORM MODE: a prompt that asks for the JSON form runs the job in form mode, letter prompts do not", async () => {
+  const { promptShape } = await import("../netlify/lib/interpretation.mjs");
+  const form = "CENTERS HAVE THREE STATES: DEFINED, UNDEFINED and OPEN.\nOUTPUT: fill the JSON form you are given.\nenergy, decide, meet, consistent, takeIn, working: six sections.\ntakeaways: FOUR.";
+  assert.equal(promptShape(form), "json");
+  assert.equal(promptShape(FAKE_PROMPT), "text");
+  assert.equal(promptProblem(form), null, "the form prompt is held to the letter prompt's headings");
+  assert.match(promptProblem(form.replace("takeaways", "x")), /takeaways/);
+
+  for (const [prompt, want] of [[form, "json"], [FAKE_PROMPT, "text"]]) {
+    const { store, id } = await readyReading();
+    const seen = [];
+    await interpretOne({
+      id, store, health: fakeStore(), apiKey: "k", prompt,
+      generate: async (_o, opts) => { seen.push(opts.shape); return { ok: false, reason: "malformed", detail: "x" }; },
+    });
+    assert.equal(seen.length, 5, "five asks");
+    assert.ok(seen.every((s) => s === want), `${want}: ${seen}`);
+  }
+});

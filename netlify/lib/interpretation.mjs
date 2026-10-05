@@ -231,9 +231,33 @@ export function openCentreProblem(raw, openCenters, undefinedCenters) {
  * before a single request is made. Cheaper than a unit test and it checks the
  * thing that is actually running rather than a copy of it.
  */
+/**
+ * WHICH SHAPE THE STORED PROMPT ASKS FOR. The form-mode prompt tells the model
+ * to "fill the JSON form"; the letter-mode prompt asks for the document itself.
+ * Production follows whichever prompt is uploaded, so switching modes is one
+ * blob upload and switching back is another -- no deploy either way.
+ */
+export function promptShape(prompt) {
+  return /fill the JSON form/i.test(String(prompt ?? "")) ? "json" : "text";
+}
+
 export function promptProblem(prompt) {
   const text = String(prompt ?? "");
   if (!text.trim()) return "No reading prompt is configured.";
+  /**
+   * FORM MODE: the code writes the headings, labels, summary rows and the
+   * disclaimer (structured.mjs), so the prompt is not asked for them. What it
+   * must still carry are the content rules a validator depends on.
+   */
+  if (promptShape(text) === "json") {
+    const formRules = [
+      ["the three center states", /DEFINED[\s\S]{0,400}UNDEFINED[\s\S]{0,400}OPEN/],
+      ["the four takeaways", /takeaways/],
+      ["the six section slots", /energy, decide, meet, consistent, takeIn, working/],
+    ];
+    const lost = formRules.filter(([, re]) => !re.test(text)).map(([name]) => name);
+    return lost.length ? `The configured form prompt no longer asks for ${lost.join("; ")}.` : null;
+  }
   const wants = [SUMMARY_MARKER, ...HEADINGS, DISCLAIMER];
   const missing = wants.filter((w) => !text.includes(w));
   if (missing.length) {

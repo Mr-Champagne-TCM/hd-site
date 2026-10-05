@@ -1,5 +1,6 @@
 import { fillInterpretation, loadReading, mintReadingLink } from "./reading.mjs";
 import { generateReading } from "./gemini.mjs";
+import { promptShape } from "./interpretation.mjs";
 import { reportFailure } from "./health.mjs";
 
 /**
@@ -49,7 +50,9 @@ export async function interpretOne({
   if (reading.pending) return { ok: false, reason: "no_chart_yet" };
   if (reading.reading) return { ok: false, reason: "already_written" };
 
-  let made = await generate(reading.output, { apiKey, prompt });
+  // The stored prompt decides the shape: form mode or letter mode.
+  const shape = promptShape(prompt);
+  let made = await generate(reading.output, { apiKey, prompt, shape });
   /**
    * UP TO FIVE ASKS ON A REFUSED DRAFT (Jeremy 9/9 + 10/4: refuse and re-ask,
    * five times, instead of rewriting). The first live buyer under the
@@ -64,7 +67,7 @@ export async function interpretOne({
       excerpt: made.text ?? null,
       now,
     }).catch(() => {});
-    made = await generate(reading.output, { apiKey, prompt });
+    made = await generate(reading.output, { apiKey, prompt, shape });
   }
   if (!made.ok) {
     /**
