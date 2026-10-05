@@ -456,9 +456,28 @@ const ALL_TYPE_WORDS = [...new Set(Object.values(TYPE_WORDS).flatMap((w) => [w.s
  * never is. With a separator present the value may be anything.
  */
 const LABEL_LINE = {
-  signature: /^signature(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+\S.*|\s+\S+)\s*$/i,
-  notself: /^not[\s‐-―-]*self(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+\S.*|\s+\S+)\s*$/i,
+  signature: /^signature(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
+  notself: /^not[\s‐-―-]*self(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
 };
+
+/**
+ * THE VALUE IS THE WORD THE LINE LEADS WITH, NOT EVERY WORD ON IT (audit R-09,
+ * approved 9/9 as "#2").
+ *
+ * The page prints the engine's own word in front of the model's sentence
+ * ("NOT-SELF Anger."), so the sentence after the label is commentary on a word
+ * the buyer is already shown correctly. Judging the whole line refused four
+ * delivered readings, and three of them used another type's word as ordinary
+ * English in passing: "Finding deep satisfaction through recognition..." on a
+ * Projector, "...a taste of resentment and frustration" on a Projector's
+ * bitterness. Only 3258185c was wrong in the way this rule exists for -- its
+ * not-self sentence OPENED with the wrong theme: "Frustration flares up..." on
+ * a Manifestor.
+ *
+ * So the line is judged on what it leads with: the first word after the label,
+ * past a "The" or "A". That is still the claim, and it is still caught.
+ */
+const LEAD_WORD = /^(?:(?:the|an?)\s+)?([a-z]+)/i;
 
 export function typeWordProblem(body, type) {
   const own = TYPE_WORDS[type];
@@ -480,9 +499,11 @@ export function typeWordProblem(body, type) {
     const re = LABEL_LINE[stem];
     const line = lines.find((l) => re.test(l.trim()));
     if (!line) continue;
+    const m = re.exec(line.trim());
+    const lead = LEAD_WORD.exec((m[1] ?? m[2] ?? "").trim())?.[1] ?? "";
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
-      if (new RegExp(`\\b${word}\\b`, "i").test(line)) {
+      if (lead.toLowerCase() === word.toLowerCase()) {
         return `The reading gives a ${type} the ${label.slice(0, -1).toLowerCase()} "${word}", which belongs to another type (theirs is ${own[key]}).`;
       }
     }
@@ -592,73 +613,47 @@ export function centreCountProblem(body, undefinedCenters = null, openCenters = 
  * contradiction anywhere in the other ten sections was invisible, and the three
  * lists needed to catch it were already in memory. The check is a set lookup.
  *
- * DELIBERATELY TWO SHAPES ONLY -- "defined Heart" and "Heart is defined". The
- * model has a hundred ways to describe a centre and only these two assert its
- * state flatly enough to be judged. A rule that guessed at the rest would
- * refuse honest prose, and every refusal costs the buyer a minute.
+ * DELIBERATELY TWO SHAPES ONLY -- "your defined Heart" and "your Heart is
+ * defined". The model has a hundred ways to describe a centre and only these
+ * two assert its state flatly enough to be judged. A rule that guessed at the
+ * rest would refuse honest prose, and every refusal costs the buyer a minute.
  */
 const CENTRE_ALT = "Solar Plexus|Head|Ajna|Throat|Heart|Sacral|Spleen|Root|G";
-const STATE_BEFORE = new RegExp(`\\b(undefined|defined|open)\\s+(${CENTRE_ALT})\\b`, "gi");
+const STATE_BEFORE = new RegExp(`\\byour\\s+(?:own\\s+)?(undefined|defined|open)\\s+(${CENTRE_ALT})\\b`, "gi");
 const STATE_AFTER = new RegExp(
-  `\\b(${CENTRE_ALT})\\s+(?:cent(?:er|re)\\s+)?is\\s+(undefined|defined|open)\\b`,
+  `\\byour\\s+(?:own\\s+)?(${CENTRE_ALT})\\s+(?:cent(?:er|re)\\s+)?is\\s+(undefined|defined|open)\\b`,
   "gi",
 );
 
 /**
- * A SENTENCE IS THE UNIT OF A CLAIM, NOT A CHARACTER COUNT.
+ * A CLAIM IS "YOUR defined Heart", NOT "A defined Heart" (audit R-07 and R-08,
+ * approved 9/9).
  *
- * The first version of this rule read a fixed 40 characters in front of a
- * match to look for a negation. That number was fitted to the three phrasings
- * I had written tests for, and round three broke it with a fourth: "Not one of
- * the nine energy centres drawn on your bodygraph is undefined at all" puts
- * its negation 43 characters out and was refused (audit R-02).
+ * Round three answered "is this sentence negated?" with a closed list of
+ * negating words read across the whole sentence (NOT_A_CLAIM), and round four
+ * broke it from both sides at once:
  *
- * A window can always be out-run by a longer subject. The sentence cannot --
- * it is the span the claim actually lives in.
+ *   R-07  honest prose still refused, because a list cannot hold every way of
+ *         saying "does not have": "your Projector type LACKS a defined Sacral
+ *         centre" (delivered, 8e5ff09e), "MISSING", "THE ABSENCE OF", "FREE
+ *         OF", "DEVOID OF", "SHORT OF".
+ *   R-08  wrong facts let through, because a negation anywhere in the sentence
+ *         disarmed it even when it negated something else: "There is NO doubt
+ *         your defined Heart drives you", "You NEVER lose access to your
+ *         defined Heart", "Someone with your defined Heart...". Nine of ten.
+ *
+ * Every word added to the list for R-07 is one more way for R-08 to slip, so
+ * the list is gone. What separates the two sets is the word in front of the
+ * state: "YOUR defined Heart" asserts something about this chart; "A defined
+ * Heart", "NO defined Head", "NEITHER defined Head" describe a kind of centre,
+ * a denial, or somebody else. Only the possessive is judged.
+ *
+ * Named residuals, accepted on the same trade as before (a missed wrong fact is
+ * one bad sentence; a false refusal is minutes of a buyer's wait): "Not everyone
+ * has a defined Heart like yours" and "The Heart centre is defined" are not
+ * judged. The one real error the rule was written for -- "Your defined Heart
+ * center contributes a consistent thread of willpower" -- still is.
  */
-function sentenceAround(text, index) {
-  const s = String(text);
-  const at = Math.max(0, Math.min(Number(index) || 0, s.length - 1));
-  let from = 0;
-  for (const mark of [".", "!", "?", "\n", ";"]) {
-    const found = s.lastIndexOf(mark, at);
-    if (found + 1 > from) from = found + 1;
-  }
-  let to = s.length;
-  for (const mark of [".", "!", "?", "\n", ";"]) {
-    const found = s.indexOf(mark, at);
-    if (found !== -1 && found < to) to = found;
-  }
-  return s.slice(from, to);
-}
-
-/**
- * A SENTENCE THAT MENTIONS A STATE IS NOT ALWAYS CLAIMING IT.
- *
- * This is the gap round three found (audit R-01), and it is the same bug class
- * I had already fixed once in the zero-undefined branch and failed to carry
- * across to the two branches doing the main work. Measured against the fourteen
- * readings already delivered, the rule scored 1 true positive and 2 FALSE
- * positives -- it refused honest prose to catch one real error, and every
- * refusal costs a buyer a retry.
- *
- * Three shapes are not claims about this chart:
- *   NEGATED     "not a defined Heart", "without a defined Heart", "no defined
- *               Head centre anywhere", "never", "neither ... nor"
- *   CONTRASTED  "rather than a defined Heart", "unlike a defined Heart",
- *               "instead of" -- the reader is being told what they are NOT
- *   HYPOTHETICAL "someone with a defined Heart will push", "if you had a
- *               defined Ajna" -- a different person, or a counterfactual
- *
- * Deliberately generous: a missed wrong fact is one bad sentence in a document,
- * and a false refusal is nine minutes of a buyer's time. The one real error
- * this rule was written for -- "Your defined Heart center contributes a
- * consistent thread of willpower" -- carries none of these markers and is
- * still caught.
- */
-const NOT_A_CLAIM =
-  /\b(?:not|no|none|neither|nor|never|without|unlike|rather\s+than|instead\s+of|as\s+opposed\s+to|someone\s+with|anyone\s+with|people\s+with|others\s+with|a\s+person\s+with|if\s+you\s+had|if\s+yours\s+were|would\s+have\s+been)\b/i;
-
 export function centreStateProblem(raw, definedCenters, undefinedCenters, openCenters) {
   const list = (v) => (Array.isArray(v) ? v : []);
   const actual = new Map();
@@ -668,7 +663,7 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
   if (!actual.size) return null;
 
   const body = sanitize(raw);
-  const judge = (claimed, centre, at) => {
+  const judge = (claimed, centre) => {
     const truth = actual.get(centre);
     if (!truth || truth === claimed) return null;
     // "open" and "undefined" are both white on the drawing, and a reading that
@@ -677,28 +672,30 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
     // Measured across 144 state-claims in 14 delivered readings: that looser
     // confusion has never once occurred, so tolerating it costs nothing.
     if (claimed !== "defined" && truth !== "defined") return null;
-    if (NOT_A_CLAIM.test(sentenceAround(body, at))) return null;
     return `The reading calls the ${centre} center "${claimed}", but on this chart it is ${truth}.`;
   };
 
   for (const m of body.matchAll(STATE_BEFORE)) {
-    const problem = judge(m[1].toLowerCase(), m[2], m.index);
+    const problem = judge(m[1].toLowerCase(), m[2]);
     if (problem) return problem;
   }
   for (const m of body.matchAll(STATE_AFTER)) {
-    const problem = judge(m[2].toLowerCase(), m[1], m.index);
+    const problem = judge(m[2].toLowerCase(), m[1]);
     if (problem) return problem;
   }
 
   /**
    * N-04: a chart with nothing undefined must not be told about its undefined
-   * centres. Narrow on purpose -- only a possessive claim counts, so a reading
-   * may still explain what the word means, and a negation ("none of your
-   * centres is undefined") is left alone.
+   * centres. The same possessive rule as above, and the one it was first
+   * written as: "YOUR undefined spaces" is a claim; "none of your centres is
+   * undefined", "you have no undefined centres" and "a centre that is
+   * undefined..." are not, because the word in front of "undefined" is not the
+   * reader's possessive. It used to allow three words between "your" and
+   * "undefined" and then lean on the negation list to clear what that let in.
    */
   if (!list(undefinedCenters).length) {
-    const claim = /\b(?:your|you have|you've got)\s+(?:[a-z]+\s+){0,3}?undefined\b/i.exec(body);
-    if (claim && !NOT_A_CLAIM.test(sentenceAround(body, claim.index))) {
+    const claim = /\b(?:your(?:\s+own)?|you\s+have|you've\s+got)\s+undefined\b/i.exec(body);
+    if (claim) {
       return `The reading describes undefined centers ("${claim[0].trim()}"), but this chart has none.`;
     }
   }
