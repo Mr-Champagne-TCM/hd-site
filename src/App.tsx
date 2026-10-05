@@ -572,8 +572,11 @@ export default function App({ upgradeToken = null }: { upgradeToken?: string | n
       <Nav />
       <main>
         <Hero />
-        <Example />
+        {/* Prices before the example. Jeremy, 2026-10-04: "They can't tell they
+            can buy anything unless they scroll." The library's "your chart"
+            links land here, so the buy buttons have to be on the first screen. */}
         <Tiers />
+        <Example />
         <Credibility />
         <Resources />
       </main>
