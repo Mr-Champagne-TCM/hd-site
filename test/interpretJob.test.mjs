@@ -158,10 +158,10 @@ test("A FAILED GENERATION IS REPORTED, because nobody else can see it", async ()
   });
   assert.equal(r.ok, false);
   const incidents = [...health.data.values()];
-  // Two: the first refusal, then the immediate retry's. Both must be on file
-  // -- the second used to overwrite the first when they shared a millisecond
-  // and a reason (audit F39).
-  assert.equal(incidents.length, 2);
+  // One per ask: five asks (Jeremy's ruling), every refusal on file -- they
+  // used to overwrite each other when they shared a millisecond and a reason
+  // (audit F39).
+  assert.equal(incidents.length, 5);
   for (const i of incidents) {
     assert.equal(i.kind, "interpretation-malformed");
     assert.equal(i.detail, "missing a section");

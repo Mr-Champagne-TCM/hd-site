@@ -28,6 +28,9 @@ import { reportFailure } from "./health.mjs";
  *   document that changes under a person quoting it back is worse than one that
  *   is merely imperfect.
  */
+/** Total asks for one reading when drafts are refused. */
+export const ASKS = 5;
+
 export async function interpretOne({
   id,
   store,
@@ -48,12 +51,13 @@ export async function interpretOne({
 
   let made = await generate(reading.output, { apiKey, prompt });
   /**
-   * ONE IMMEDIATE RETRY ON A REFUSED DRAFT. The first live buyer under the
-   * three-state prompt had two drafts refused (one wrong strategy, one missing
-   * heading) and then waited on a sweep that never came. A second ask costs
-   * thirty seconds; leaving it to the net costs the buyer the afternoon.
+   * UP TO FIVE ASKS ON A REFUSED DRAFT (Jeremy 9/9 + 10/4: refuse and re-ask,
+   * five times, instead of rewriting). The first live buyer under the
+   * three-state prompt had two drafts refused and then waited on a sweep that
+   * never came; another ask costs seconds, leaving it to the net costs the
+   * buyer the afternoon. Every refusal is reported with its excerpt.
    */
-  if (!made.ok && made.reason === "malformed") {
+  for (let ask = 1; ask < ASKS && !made.ok && made.reason === "malformed"; ask++) {
     await reportFailure(health, {
       kind: "interpretation-malformed",
       detail: made.detail ?? null,

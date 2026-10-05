@@ -98,40 +98,33 @@ export function chartFactsOnly(output) {
 }
 
 /**
- * Clean up what the model returned before a human ever sees it. A corrupted
- * character or a stray markdown asterisk in a paid deliverable reads as
- * carelessness, and one replacement glyph did come back in the app's testing.
+ * LINE ENDINGS ONLY (Jeremy, 9/9 "option 2 stricter" + 10/4: "Yes, clean up
+ * line endings and guard against that").
+ *
+ * This used to rewrite what the model wrote: a corrupted glyph became a dash,
+ * markdown bold and leading bullets were stripped, runs of blank lines were
+ * collapsed, and a paraphrased heading was renamed to the real one. Every one
+ * of those changed a paid document without anybody seeing it. Now the text is
+ * only normalised (CRLF is a transport artefact, not writing), and
+ * `formattingProblem` REFUSES a draft carrying any of those marks so the model
+ * is asked again. "check only for accuracy and then request the model to try
+ * again."
  */
 export function sanitize(s) {
-  return String(s)
-    .replace(/\r\n?/g, "\n")
-    .replace(/�/g, "-")
-    .replace(/\*\*/g, "")
-    .replace(/^[ \t]*[*•–-][ \t]+/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .split("\n")
-    .map(canonicalHeading)
-    .join("\n")
-    .trim();
+  return String(s).replace(/\r\n?/g, "\n").trim();
 }
 
 /**
- * THE HEADING THE MODEL KEEPS REWRITING. Across a day of live drafts the one
- * heading it would not copy was "What you take in from others" -- it came back
- * as "What is taken in from others", "What is through others", "What is
- * undefined centres", and IN SHORT once arrived as IN_SHORT. Every one of
- * those is unmistakably the section it stands for, and every one cost a paid
- * reading a refusal and a retry. A line that is nothing but a paraphrase of a
- * required heading becomes the heading; body text is untouched because it
- * never sits alone on a short line ending without punctuation.
+ * THE MARKS THAT USED TO BE QUIETLY REWRITTEN, now a reason to ask again.
+ * Same four the old sanitize removed; none of them is ever right in a reading.
  */
-function canonicalHeading(line) {
-  const l = line.trim();
-  if (!l || l.length > 60 || /[.!?:]$/.test(l)) return line;
-  if (/^IN[_ ]SHORT$/i.test(l)) return "IN SHORT";
-  if (/^what\b.*\bothers$/i.test(l)) return "What you take in from others";
-  if (/^what\b.*\b(undefined|open)\b.*cent(?:er|re)s?$/i.test(l)) return "What you take in from others";
-  return line;
+export function formattingProblem(raw) {
+  const t = sanitize(raw);
+  if (t.includes("\uFFFD")) return "The reading came back with a corrupted character in it.";
+  if (t.includes("**")) return "The reading came back with markdown bold marks (**) in it.";
+  if (/^[ \t]*[*\u2022\u2013-][ \t]+/m.test(t)) return "The reading came back with a bullet mark at the start of a line.";
+  if (/\n{3,}/.test(t)) return "The reading came back with runs of blank lines in it.";
+  return null;
 }
 
 /**
@@ -155,6 +148,8 @@ export function firstProblem(
   definedCenters = null,
 ) {
   const reading = String(raw ?? "");
+  const marks = formattingProblem(reading);
+  if (marks) return marks;
   if (!reading.includes(DISCLAIMER)) {
     return "The reading came back without the required disclaimer.";
   }

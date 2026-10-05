@@ -8,6 +8,7 @@ import {
   SUMMARY_KEYS,
   chartFactsOnly,
   firstProblem,
+  formattingProblem,
   parseReading,
   typeProblem,
   sanitize,
@@ -151,12 +152,24 @@ test("only the SENTENCE is taken from the summary, never the value", () => {
   assert.equal(rows.Type, "a sentence about the type.");
 });
 
-test("markdown the model was told not to use is stripped rather than printed", () => {
-  const messy = "**Bold** and\n* a bullet\n\n\n\ntoo much air";
-  const clean = sanitize(messy);
-  assert.ok(!clean.includes("**"), "asterisks survived into a paid document");
-  assert.ok(!/^\* /m.test(clean), "a bullet character survived");
-  assert.ok(!/\n{3,}/.test(clean), "blank lines were not collapsed");
+test("marks the model was told not to use are REFUSED, never quietly rewritten", () => {
+  for (const [messy, why] of [
+    ["**Bold** here.", /bold/],
+    ["Fine.\n* a bullet", /bullet/],
+    ["Fine.\n\u2022 a bullet", /bullet/],
+    ["One.\n\n\n\nToo much air.", /blank lines/],
+    ["A broken \uFFFD glyph.", /corrupted/],
+  ]) {
+    assert.equal(sanitize(messy), messy.trim(), "sanitize changed the model's words");
+    assert.match(formattingProblem(messy), why);
+    assert.match(firstProblem(messy), why, "firstProblem let a marked draft through");
+  }
+  assert.equal(formattingProblem("Plain prose - with a dash inside.\nLine 3 (Martyr), conscious: fine."), null);
+});
+
+test("CRLF is still normalised, and a CRLF draft is not refused for it", () => {
+  assert.equal(sanitize("One.\r\n\r\nTwo.\rThree."), "One.\n\nTwo.\nThree.");
+  assert.equal(formattingProblem("One.\r\n\r\nTwo."), null);
 });
 
 test("the reading parses into the blocks the document is laid out from", () => {

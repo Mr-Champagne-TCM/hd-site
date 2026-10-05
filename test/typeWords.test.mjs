@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { typeProblem, typeWordProblem, centreCountProblem, sanitize } from "../netlify/lib/interpretation.mjs";
+import { typeProblem, typeWordProblem, centreCountProblem, sanitize, structureProblem } from "../netlify/lib/interpretation.mjs";
 
 /**
  * FOUND LIVE, 2026-09-02, first buyer under the three-state prompt: a
@@ -55,10 +55,11 @@ test("the not-self line is found under every spelling the model uses", () => {
   }
 });
 
-test("a paraphrased heading is read as the heading it stands for", () => {
-  const out = sanitize("IN_SHORT\n\nType: x.\n\nWhat is taken in from others\n\nBody.\n\nWhat is undefined centres\n\nBody.");
-  assert.match(out, /^IN SHORT$/m);
-  assert.equal((out.match(/^What you take in from others$/gm) ?? []).length, 2);
+test("a paraphrased heading is NOT renamed any more: the draft is refused and asked again", () => {
+  const raw = "IN_SHORT\n\nType: x.\n\nWhat is taken in from others\n\nBody.";
+  const out = sanitize(raw);
+  assert.equal(out, raw, "sanitize rewrote the model's text");
+  assert.match(structureProblem(out), /missing/);
 });
 
 test("a cross name does not count as a centre", () => {
