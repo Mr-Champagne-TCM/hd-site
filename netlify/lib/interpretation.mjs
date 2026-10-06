@@ -49,10 +49,29 @@ export const INTERPRETATION = [
   "How you meet the world",
   "What is consistently yours",
   "What you take in from others",
-  "When it is working, and when it is not",
+  "When it's on track, and when it's off track",
 ];
 
 export const HEADINGS = [...MECHANICS, ...INTERPRETATION, TAKEAWAYS];
+
+/**
+ * ON TRACK / OFF TRACK (Jeremy 10/5, option C): readers see "When it's on
+ * track" and "When it's off track" where Human Design says Signature and
+ * Not-self. The keys stay Signature / Not-self inside the code, so every check
+ * keeps its meaning; only what is printed changes.
+ *
+ * Readings written before the change carry the old section heading. They are
+ * read as the new one, so they still display and print -- and nothing in them
+ * is rewritten.
+ */
+export const OLD_HEADINGS = { "When it is working, and when it is not": INTERPRETATION[5] };
+export const SUMMARY_LABELS = { Signature: "When it's on track", "Not-self": "When it's off track" };
+const S6_AT = /\n(?:When it is working, and when it is not|When it['\u2019]s on track, and when it['\u2019]s off track)\n/;
+/** Where section 6 starts in `body`, old or new heading, searching from `from`. -1 if absent. */
+function section6At(body, from = 0) {
+  const m = S6_AT.exec(body.slice(from));
+  return m ? from + m.index : -1;
+}
 
 /** Rows of the at-a-glance panel, in panel order. */
 export const SUMMARY_KEYS = ["Type", "Strategy", "Authority", "Profile", "Signature", "Not-self"];
@@ -202,7 +221,7 @@ export function openCentreProblem(raw, openCenters, undefinedCenters) {
   const body = sanitize(raw);
   const from = body.indexOf("\nWhat you take in from others\n");
   if (from < 0) return null; // structureProblem reports a missing heading
-  const to = body.indexOf("\nWhen it is working, and when it is not\n", from);
+  const to = section6At(body, from);
   const section = to > from ? body.slice(from, to) : body.slice(from);
   const names = (list) => list.some((c) => new RegExp(`\\b${c}\\b`).test(section));
   if (open.length && !names(open)) {
@@ -456,8 +475,8 @@ const ALL_TYPE_WORDS = [...new Set(Object.values(TYPE_WORDS).flatMap((w) => [w.s
  * never is. With a separator present the value may be anything.
  */
 const LABEL_LINE = {
-  signature: /^signature(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
-  notself: /^not[\s‐-―-]*self(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
+  signature: /^(?:signature|when it[’']?s on track)(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
+  notself: /^(?:not[\s‐-―-]*self|when it[’']?s off track)(?:\s+theme)?\s*(?:(?::|[-‐-―]+)\s+(\S.*)|\s+(\S+))\s*$/i,
 };
 
 /**
@@ -573,12 +592,11 @@ export function centreCountProblem(body, undefinedCenters = null, openCenters = 
    * undefined plus two open), and still holds a defined-heavy chart to four.
    */
   const S5 = "\nWhat you take in from others\n";
-  const S5_END = "\nWhen it is working, and when it is not\n";
   const white =
     (Array.isArray(undefinedCenters) ? undefinedCenters.length : 0) +
     (Array.isArray(openCenters) ? openCenters.length : 0);
   const from = judged.indexOf(S5);
-  const to = from >= 0 ? judged.indexOf(S5_END, from + 1) : -1;
+  const to = from >= 0 ? section6At(judged, from + 1) : -1;
   const section5 = from < 0 ? "" : to > from ? judged.slice(from, to) : judged.slice(from);
   const elsewhere = section5 ? judged.slice(0, from) + "\n" + judged.slice(from + section5.length) : judged;
 
@@ -743,15 +761,15 @@ export function summaryRows(raw) {
   const out = {};
   if (start < 0) return out;
   for (const line of lines.slice(start + 1)) {
-    if (HEADINGS.includes(line)) break;
+    if (HEADINGS.includes(line) || OLD_HEADINGS[line]) break;
     // "Not-Self Theme:", "Not self:", "Not-Self:" are all the Not-self line --
     // the model copies the label it was HANDED in the facts as often as the
     // one it was asked for, and refusing a filled line over its spelling cost
     // two paid readings a morning (2026-09-03).
-    const m = /^([A-Za-z][A-Za-z -]*?)(?:\s+theme)?:\s*(.+)$/i.exec(line);
+    const m = /^([A-Za-z][A-Za-z '\u2019-]*?)(?:\s+theme)?:\s*(.+)$/i.exec(line);
     if (!m) continue;
     const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, "");
-    const key = SUMMARY_KEYS.find((k) => norm(k) === norm(m[1]));
+    const key = SUMMARY_KEYS.find((k) => norm(k) === norm(m[1]) || norm(SUMMARY_LABELS[k] ?? "") === norm(m[1]));
     if (key && !(key in out)) out[key] = m[2].trim();
   }
   return out;
@@ -821,7 +839,7 @@ export function parseReading(raw) {
   };
 
   for (const line of body.split("\n")) {
-    const t = line.trim();
+    const t = OLD_HEADINGS[line.trim()] ?? line.trim();
     if (HEADINGS.includes(t)) {
       flush();
       current = t;
@@ -895,8 +913,9 @@ export function marginNotes(c) {
       ["OPEN CENTERS", ((c && c.openCenters) || []).join(", ") || "None"],
     ],
     [INTERPRETATION[5]]: [
-      ["SIGNATURE", (c && c.signature) || ""],
-      ["NOT-SELF", (c && c.notSelfTheme) || ""],
+      // The break keeps "IS" off a line of its own in the narrow PDF margin.
+      ["ON TRACK,\nTHE FEELING IS", (c && c.signature) || ""],
+      ["OFF TRACK,\nTHE FEELING IS", (c && c.notSelfTheme) || ""],
     ],
   };
 }

@@ -48,8 +48,9 @@ const ROWS: ReadonlyArray<readonly [string, keyof SummaryData]> = [
   ["Authority", "authority"],
   ["Profile", "profile"],
   ["Definition", "definition"],
-  ["Not-Self Theme", "notSelfTheme"],
-  ["Signature", "signature"],
+  // On track / off track (Jeremy 10/5, option C): on track first, as a feeling.
+  ["When it's on track", "signature"],
+  ["When it's off track", "notSelfTheme"],
   ["Incarnation Cross", "incarnationCross"],
 ];
 
@@ -86,7 +87,11 @@ export default function Summary({ data }: { data: SummaryData }) {
               Opportunist". A page and a PDF of the same chart disagreeing on
               the same row is the fault he already caught once over channels.
             */}
-            {field === "profile" ? profileWithNames(String(data[field])) : String(data[field])}
+            {field === "profile"
+              ? profileWithNames(String(data[field]))
+              : field === "signature" || field === "notSelfTheme"
+                ? `The feeling is ${String(data[field]).toLowerCase()}`
+                : String(data[field])}
             {provisional.has(field) && (
               <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                 provisional

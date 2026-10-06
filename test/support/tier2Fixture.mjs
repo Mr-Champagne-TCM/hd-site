@@ -125,7 +125,7 @@ const SECTIONS = [
     ],
   ],
   [
-    "When it is working, and when it is not",
+    "When it's on track, and when it's off track",
     "Satisfaction and frustration are two readings on the same instrument, and both are information.",
     [
       "Satisfaction is the signature of a Generator design, and it is bodily rather than mental — " +

@@ -25,6 +25,7 @@ import {
   INTERPRETATION,
   TAKEAWAYS,
   SUMMARY_KEYS,
+  SUMMARY_LABELS,
   TYPE_WORDS,
 } from "./interpretation.mjs";
 import { PROFILE_LINE_NAMES } from "./mechanics.mjs";
@@ -173,7 +174,7 @@ export function renderReading(json, output) {
   const sum = json.summary ?? {};
   const out = [SUMMARY_MARKER, ""];
   SUMMARY_KEYS.forEach((label, i) => {
-    out.push(`${label}: ${clean(sum[SUMMARY_SLOTS[i]])}`);
+    out.push(`${SUMMARY_LABELS[label] ?? label}: ${clean(sum[SUMMARY_SLOTS[i]])}`);
   });
   out.push("");
 

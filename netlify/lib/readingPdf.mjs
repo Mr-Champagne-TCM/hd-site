@@ -116,6 +116,17 @@ const PAGE = { w: 612, h: 792 };
 const M = 56;
 const COL = PAGE.w - M * 2;
 
+/** "Success" -> "The feeling is success". Empty stays empty, so the row is dropped. */
+export function feelingIs(word) {
+  return word ? `The feeling is ${String(word).toLowerCase()}` : word;
+}
+/** "The feeling of having been seen..." -> "Having been seen...". Other openings stay. */
+export function feelingNote(note) {
+  if (!note) return note;
+  const cut = String(note).replace(/^The (?:feeling|signal|sense) (?:of|that) /, "");
+  return cut.charAt(0).toUpperCase() + cut.slice(1);
+}
+
 export async function readingPdf({ tier, name, output, links, reading = null }) {
   /**
    * The QR, drawn as vector rather than raster so it stays crisp at any size
@@ -318,12 +329,17 @@ function glancePage(doc, { output, tier, links, written = null }) {
      * file somebody was pointed at.
      */
     ["PROFILE", output?.profile && profileWithNames(output.profile), profileNote(output?.profile)],
-    ["SIGNATURE", output?.signature, describe(SIGNATURE_NOTES, output?.signature)],
-    ["NOT-SELF", output?.notSelfTheme, describe(NOT_SELF_NOTES, output?.notSelfTheme)],
+    /**
+     * ON TRACK / OFF TRACK (Jeremy 10/5, option C): on track first, said as a
+     * feeling. The note keeps its own words minus the opening "The feeling
+     * of" / "The signal that", which the new value line already says.
+     */
+    ["WHEN IT'S ON TRACK", feelingIs(output?.signature), feelingNote(describe(SIGNATURE_NOTES, output?.signature))],
+    ["WHEN IT'S OFF TRACK", feelingIs(output?.notSelfTheme), feelingNote(describe(NOT_SELF_NOTES, output?.notSelfTheme))],
   ].filter(([, v]) => v);
 
   if (rows.length) {
-    const labelW = 92;
+    const labelW = 118; // fits "WHEN IT'S OFF TRACK" (104pt) on one line
     const textX = M + 14 + labelW;
     const textW = COL - 28 - labelW;
     const startY = y;

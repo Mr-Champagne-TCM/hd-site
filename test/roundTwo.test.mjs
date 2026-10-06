@@ -173,7 +173,7 @@ test("F44: a Reflector may name all seven undefined centres in section 5", () =>
 test("F44: seven centres OUTSIDE section 5 are still refused", () => {
   const prose =
     "Your Head, Ajna, Throat, Heart, Sacral, Spleen and Root all move together here.";
-  const problem = check(reading({ "When it is working, and when it is not": prose }, REFLECTOR), REFLECTOR);
+  const problem = check(reading({ "When it's on track, and when it's off track": prose }, REFLECTOR), REFLECTOR);
   assert.match(problem, /names 7 centers in one sentence \(the limit is 4\)/);
 });
 

@@ -122,7 +122,7 @@ test("R-06: padding OUTSIDE section 5 is still refused at four", () => {
   const chart = { type: "Reflector", definedCenters: [], undefinedCenters: SEVEN, openCenters: ["G", "Solar Plexus"] };
   const prose = "Your Head, Ajna, Throat, Heart, Sacral, Spleen and Root all move together here.";
   assert.match(
-    check(reading(chart, { "When it is working, and when it is not": prose }), chart),
+    check(reading(chart, { "When it's on track, and when it's off track": prose }), chart),
     /names 7 centers in one sentence \(the limit is 4\)/,
   );
 });
