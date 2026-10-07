@@ -27,6 +27,7 @@ import {
   SUMMARY_KEYS,
   SUMMARY_LABELS,
   TYPE_WORDS,
+  negatedAt,
 } from "./interpretation.mjs";
 import { PROFILE_LINE_NAMES } from "./mechanics.mjs";
 
@@ -35,6 +36,17 @@ const SECTION_SLOTS = ["energy", "decide", "meet", "consistent", "takeIn", "work
 const SUMMARY_SLOTS = ["type", "strategy", "authority", "profile", "signature", "notSelf"];
 
 const S = (description) => ({ type: "STRING", description });
+
+/**
+ * THE TWO SLOTS NAMED AFTER THE OLD WORDS (10/7). The slots are called
+ * "signature" and "notSelf", and on the first live run with the prompt rule
+ * against the old words, every draft that still wrote them (3 of 17) wrote them
+ * HERE: "Your signature feeling of satisfaction...". The note sits on the slot
+ * itself, where the model is writing. oldWordProblem refuses what still slips.
+ */
+const TRACK_SLOTS = ["signature", "notSelf"];
+const TRACK_SLOT =
+  'ONE sentence, at most 22 words, on how it feels. Never the words "signature" or "not-self": the page says "when it\'s on track" / "when it\'s off track".';
 const SECTION = {
   type: "OBJECT",
   properties: {
@@ -56,7 +68,9 @@ export const READING_SCHEMA = {
   properties: {
     summary: {
       type: "OBJECT",
-      properties: Object.fromEntries(SUMMARY_SLOTS.map((k) => [k, S("ONE sentence, at most 22 words.")])),
+      properties: Object.fromEntries(
+        SUMMARY_SLOTS.map((k) => [k, S(TRACK_SLOTS.includes(k) ? TRACK_SLOT : "ONE sentence, at most 22 words.")]),
+      ),
       required: SUMMARY_SLOTS,
       propertyOrdering: SUMMARY_SLOTS,
     },
@@ -152,12 +166,35 @@ export function strategyProblem(json, type) {
     ["How you decide", [decide.lede, ...(Array.isArray(decide.paragraphs) ? decide.paragraphs : [])].join(" ")],
   ];
   for (const [where, text] of places) {
-    if (/\binvit(?:e|es|ed|ing|ation|ations)\b/i.test(String(text ?? ""))) {
-      return `The reading's ${where} gives a ${type} the Projector's invitation strategy.`;
+    const t = String(text ?? "");
+    for (const re of INVITATION) {
+      for (const m of t.matchAll(re)) {
+        if (negatedAt(t, m.index, m.index + m[0].length, type)) continue;
+        return `The reading's ${where} gives a ${type} the Projector's invitation strategy.`;
+      }
     }
   }
   return null;
 }
+
+/**
+ * WHAT COUNTS AS "AN INVITATION" HERE (10/7, live refusals). The rule used to
+ * refuse any word starting "invit", so the VERB refused honest strategy
+ * lines: "Your strategy invites you to wait for something to respond to" on a
+ * Manifesting Generator (twice), "Your Lunar authority invites you to take
+ * your time" on a Reflector. Something inviting YOU to respond is not the
+ * Projector strategy; waiting for AN invitation is. So only the thing that is
+ * waited for counts:
+ *   - the noun: "invitation(s)", or "invite(s)" after an article or "for"
+ *     ("the right invite", "wait for invites") -- but not "invites you";
+ *   - being invited: "until you are invited", "wait to be invited", "once invited".
+ * And a denied mention passes ("without needing an invitation", negatedAt).
+ */
+const INVITATION = [
+  /\binvitations?\b/gi,
+  /\b(?:an?|the|your|their|any|for)\s+(?:[a-z]+\s+)?invites?\b(?!\s+(?:you|your|yourself|them|people|others|us|him|her|it|a|an|the)\b)/gi,
+  /\b(?:be|being|been|is|are|am|was|were|get|gets|getting|got|until|till|unless|once|when|you're|you\u2019re)\s+invited\b/gi,
+];
 
 const clean = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
 

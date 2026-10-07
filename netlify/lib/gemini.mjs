@@ -147,7 +147,7 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
         system_instruction: { parts: [{ text: instruction }] },
         // THE ONLY THING THAT LEAVES. See interpretation.mjs.
         contents: [
-          { role: "user", parts: [{ text: chartFactsOnly(output) + (json ? structuredFacts(output) : "") }] },
+          { role: "user", parts: [{ text: chartFactsOnly(output, { form: json }) + (json ? structuredFacts(output) : "") }] },
         ],
         generationConfig: json
           ? {

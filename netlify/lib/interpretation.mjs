@@ -83,7 +83,20 @@ export const SUMMARY_KEYS = ["Type", "Strategy", "Authority", "Profile", "Signat
  * safeguard rather than a convenience: a stored reading holds the buyer's name,
  * email and phone, and a function that never receives them cannot leak them.
  */
-export function chartFactsOnly(output) {
+/**
+ * FORM MODE SAYS "ON TRACK / OFF TRACK" ON THE WIRE TOO (10/7). The facts were
+ * the one place the model was still HANDED "Signature:" and "Not-Self Theme:",
+ * and drafts copied them into the sentences the reader sees. In form mode the
+ * model never writes a label (structured.mjs prints ours) and no check reads
+ * these lines, so renaming them changes what primes the model and nothing else.
+ *
+ * LETTER MODE KEEPS THE OLD LINES. There the model writes the summary labels
+ * itself and copies the label it was handed as often as the one it was asked
+ * for; "When it's off track, the feeling is:" has a comma in it, which
+ * `summaryRows` does not read as a label, so a copied one would be refused as a
+ * missing row. Same values either way: what goes over the wire is unchanged.
+ */
+export function chartFactsOnly(output, { form = false } = {}) {
   const list = (v) => (Array.isArray(v) && v.length ? v.join(", ") : "none");
   const acts = (v) =>
     Array.isArray(v)
@@ -95,8 +108,12 @@ export function chartFactsOnly(output) {
     `Inner Authority: ${output?.authority ?? ""}`,
     `Profile: ${output?.profile ?? ""}`,
     `Definition: ${output?.definition ?? ""}`,
-    `Signature: ${output?.signature ?? ""}`,
-    `Not-Self Theme: ${output?.notSelfTheme ?? ""}`,
+    form
+      ? `When it's on track, the feeling is: ${output?.signature ?? ""}`
+      : `Signature: ${output?.signature ?? ""}`,
+    form
+      ? `When it's off track, the feeling is: ${output?.notSelfTheme ?? ""}`
+      : `Not-Self Theme: ${output?.notSelfTheme ?? ""}`,
     `Incarnation Cross: ${output?.incarnationCross ?? ""}`,
     `Defined centers: ${list(output?.definedCenters)}`,
     `Undefined centers (white, but carrying gates): ${list(output?.undefinedCenters)}`,
@@ -448,11 +465,12 @@ const STRATEGY_WORDS = [
     // experience", and a model that writes "an invitation to test" in the
     // singular tripped this rule on three charts in one afternoon (W1, W5).
     // The strategy is the phrase, not the word.
-    // The verb may be wait, rest or hold back; the object may be an
+    // The verb may be wait, pause (live 10/7), rest or hold back; the object may be an
     // invitation, an invite, or "being invited" (audit F45).
-    re: /\b(?:wait(?:ing|s|ed)?|rest(?:ing|s)?|hold(?:ing|s)?\s+(?:back|off))\s+(?:for|on|until|to\s+be)\s+(?:an?\s+|the\s+|you\s+are\s+|you're\s+|being\s+)?(?:proper\s+|right\s+|formal\s+|genuine\s+)?(?:invitation|invite|invited)\b/i,
+    re: /\b(?:wait(?:ing|s|ed)?|paus(?:e|es|ed|ing)|rest(?:ing|s)?|hold(?:ing|s)?\s+(?:back|off))\s+(?:for|on|until|to\s+be)\s+(?:an?\s+|the\s+|you\s+are\s+|you're\s+|being\s+)?(?:proper\s+|right\s+|formal\s+|genuine\s+)?(?:invitation|invite|invited)\b/i,
     only: ["Projector"],
     says: "waiting for the invitation, which is the Projector strategy",
+    negatable: true,
   },
   {
     // AUDIT F45, ROUND TWO. The rule above needs a waiting VERB followed by a
@@ -495,6 +513,7 @@ const STRATEGY_WORDS = [
     ),
     only: ["Projector"],
     says: "waiting for the invitation, which is the Projector strategy",
+    negatable: true,
   },
   {
     re: /\blunar cycle\b|\b28[- ]day\b/i,
@@ -514,13 +533,78 @@ const STRATEGY_WORDS = [
  * `type` comes from the CHART, never from the reading -- the whole point is to
  * catch the reading disagreeing with the chart it was written from.
  */
+/**
+ * IS THIS MENTION OF AN INVITATION DENIED? (10/7, live refusals.)
+ *
+ * A Manifestor draft was refused for "an initiating force designed to move
+ * things forward WITHOUT NEEDING to wait for an external invitation" -- which
+ * is exactly right for a Manifestor. Telling a non-Projector it does NOT wait
+ * for invitations is the opposite of the error these rules exist for.
+ *
+ * Denied means: a negating word in the SAME CLAUSE, before the mention -- no
+ * comma, semicolon, colon, dash or full stop between them -- and no
+ * "until / unless / before / once / only" between the negation and the end of
+ * the mention, because "do not act UNTIL you are invited" denies the acting,
+ * not the waiting, and is still the Projector strategy.
+ *
+ * This is the R-07/R-08 trade again (centreStateProblem), so it is kept
+ * narrow: one clause, not the sentence. "There is no rush, so wait for the
+ * invitation" is still refused (the comma ends the denial). Named residual:
+ * "Instead of initiating wait for the invitation", with no comma, passes.
+ *
+ * "WITHOUT WAITING" AFTER A FORCING VERB IS A SCOLDING, NOT A DENIAL (same
+ * live run). "Irritation shows up when you push forward without waiting for a
+ * proper invitation" (a Generator) and "resistance when you try to force
+ * things without waiting for an invitation" (a Manifesting Generator) both say
+ * the reader SHOULD have waited -- the Projector strategy. But "initiate impact
+ * directly without waiting for an outside invitation" is exactly right for a
+ * Manifestor, and the model wrote it three times. So: "without", "instead of"
+ * and "rather than" after push / force / initiate / rush / jump / charge in the
+ * same clause do not deny, for anyone but a Manifestor.
+ */
+const NEGATOR = /\b(?:without|no|not|never|nor|neither|nothing|nobody|none|unlike|instead\s+of|rather\s+than|cannot)\b|n['\u2019]t\b/gi;
+const CONDITION = /\b(?:until|till|unless|before|once|only)\b/i;
+const SCOLD_NEGATOR = /^(?:without|instead\s+of|rather\s+than)$/i;
+const FORCING = /\b(?:push|pushes|pushing|pushed|forc\w*|initiat\w*|rush\w*|jump\w*|charg\w*)\b/i;
+export function negatedAt(text, start, end, type = null) {
+  const before = String(text).slice(0, start);
+  const cut = Math.max(...[",", ";", ":", ".", "!", "?", "\u2014", "\u2013", "(", ")", "\n"].map((c) => before.lastIndexOf(c)));
+  const clause = before.slice(cut + 1);
+  let neg = null;
+  for (const m of clause.matchAll(NEGATOR)) neg = m;
+  if (!neg) return false;
+  if (type !== "Manifestor" && SCOLD_NEGATOR.test(neg[0]) && FORCING.test(clause.slice(0, neg.index))) return false;
+  const last = neg.index + neg[0].length;
+  return !CONDITION.test(clause.slice(last) + String(text).slice(start, end));
+}
+
+/**
+ * THE 2 LINE IS CALLED OUT, WHATEVER THE TYPE (10/7, live). A Reflector 6/2
+ * takeaway read "(Profile 6/2) Watch what happens when you ... let your
+ * natural talents remain quiet until invited" -- the Hermit line, which is
+ * taught as waiting to be called out, and which F45 already protects in "until
+ * the right invitation draws you out". It was refused as the Projector
+ * strategy. A sentence that names the 2 line (Line 2, the second line, Hermit,
+ * a x/2 or 2/x profile) is about the line, not the type's strategy.
+ */
+const LINE_TWO = /\b(?:line\s*2|2(?:nd)?\s+line|second\s+line|hermit|profile\s+(?:2\/\d|\d\/2)|(?:2\/\d|\d\/2)\s+profile)\b/i;
+export function aboutLineTwo(text, at) {
+  const s = String(text);
+  const from = Math.max(s.lastIndexOf(".", at), s.lastIndexOf("!", at), s.lastIndexOf("?", at), s.lastIndexOf("\n", at)) + 1;
+  const ends = [".", "!", "?", "\n"].map((c) => s.indexOf(c, at)).filter((i) => i >= 0);
+  return LINE_TWO.test(s.slice(from, ends.length ? Math.min(...ends) : s.length));
+}
+
 export function typeProblem(raw, type, undefinedCenters = null, openCenters = null) {
   const t = String(type ?? "").trim();
   if (!t) return null;
   const body = sanitize(raw);
   for (const rule of STRATEGY_WORDS) {
     if (rule.only.includes(t)) continue;
-    if (rule.re.test(body)) {
+    const all = new RegExp(rule.re.source, rule.re.flags.replace("g", "") + "g");
+    for (const m of body.matchAll(all)) {
+      if (rule.negatable && negatedAt(body, m.index, m.index + m[0].length, t)) continue;
+      if (rule.negatable && aboutLineTwo(body, m.index)) continue;
       return `The reading tells a ${t} about ${rule.says}.`;
     }
   }
