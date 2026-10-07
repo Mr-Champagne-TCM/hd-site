@@ -89,3 +89,43 @@ test("THE DEFINITION PARAGRAPH MAY LIST EVERY DEFINED CENTRE", () => {
 test("the labelled lines are found whatever their capitalisation", () => {
   assert.match(typeWordProblem("Not-Self: Frustration flares.\n", "Manifestor"), /Frustration/);
 });
+
+/* ------------- live shop test #2 (10/7): the claim behind "Your" ------------- */
+
+test("10/7: a line that leads with 'Your frustration' is a Manifestor given the Generator's word", () => {
+  // verbatim, live shop test #2 (Manifestor, not-self Anger), and a 10/7 draft
+  const live = "When it's off track: Your frustration flares into sharp friction when your path meets interference or when you forget to let people know your moves.";
+  assert.match(typeWordProblem(live, "Manifestor") ?? "", /"Frustration".*theirs is Anger/);
+  assert.match(typeWordProblem("When it's off track: Your frustration flares hot and sharp whenever your momentum meets resistance.", "Manifestor") ?? "", /Frustration/);
+  // past "this" / "that" too, and under the old label
+  assert.match(typeWordProblem("Not-self: This bitterness creeps in.", "Generator") ?? "", /Bitterness/);
+  assert.match(typeWordProblem("When it's on track: That satisfaction settles in.", "Projector") ?? "", /Satisfaction/);
+});
+
+test("10/7: another type's word the reader is said to HAVE is refused anywhere in the two lines", () => {
+  assert.match(typeWordProblem("When it's off track: When plans stall, your frustration rises.", "Manifestor") ?? "", /Frustration/);
+  assert.match(typeWordProblem("When it's off track: Pushing ahead brings your sense of bitterness.", "Generator") ?? "", /Bitterness/);
+  assert.match(typeWordProblem("When it's on track: Things land and your feeling of peace returns.", "Generator") ?? "", /Peace/);
+});
+
+test("10/7: the 9/9 in-passing sentences and the type's own word still pass", () => {
+  // Jeremy's #2 ruling, verbatim from the audit
+  assert.equal(typeWordProblem("When it's on track: Finding deep satisfaction through recognition of your guidance.", "Projector"), null);
+  assert.equal(typeWordProblem("When it's off track: Pushing unasked leaves a taste of resentment and frustration.", "Projector"), null);
+  assert.equal(typeWordProblem("Signature: Finding deep satisfaction through recognition of your guidance.", "Projector"), null);
+  // the type's own word, possessed or leading
+  assert.equal(typeWordProblem("When it's off track: Your anger flares when you act without informing.", "Manifestor"), null);
+  assert.equal(typeWordProblem("When it's on track: Your sense of peace returns once people know.", "Manifestor"), null);
+  assert.equal(typeWordProblem("When it's off track: Your frustration builds when you skip the response.", "Generator"), null);
+  // other people's, not the reader's
+  assert.equal(typeWordProblem("When it's off track: Others' frustration may land on you; your anger follows.", "Manifestor"), null);
+  // the body is never judged by this rule
+  assert.equal(typeWordProblem("When it's off track: Anger flares.\nLater, your frustration with traffic is ordinary.\n", "Manifestor"), null);
+});
+
+test("10/7: through the form, as gemini.mjs runs it -- the slot is judged in the rendered line", async () => {
+  const { renderReading } = await import("../netlify/lib/structured.mjs");
+  const form = { summary: { type: "a.", strategy: "b.", authority: "c.", profile: "d.", signature: "Calm follows.", notSelf: "Your frustration flares into sharp friction." } };
+  const { text } = renderReading(form, { type: "Manifestor", profile: "1/3", channels: [] });
+  assert.match(typeWordProblem(text, "Manifestor") ?? "", /Frustration/);
+});

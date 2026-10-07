@@ -694,8 +694,22 @@ const LABEL_LINE = {
  *
  * So the line is judged on what it leads with: the first word after the label,
  * past a "The" or "A". That is still the claim, and it is still caught.
+ *
+ * PAST "YOUR", "THIS", "THAT" TOO (live shop test #2, 10/7). A Manifestor's line
+ * read "When it's off track: Your frustration flares into sharp friction..." --
+ * the lead word was "Your", so the Generator's word, the claim itself, passed.
+ * And within the two lines only, another type's word the reader is said to
+ * HAVE is a claim wherever it sits: "your frustration", "your sense of
+ * frustration". Swept against 72 stored readings and 42 live drafts before it
+ * went in: it refused only true errors (this one, and a 10/7 Manifestor draft
+ * "Your frustration flares hot and sharp..."); the 9/9 in-passing sentences
+ * above still pass.
  */
-const LEAD_WORD = /^(?:(?:the|an?)\s+)?([a-z]+)/i;
+const LEAD_WORD = /^(?:(?:the|an?|your|this|that)\s+)?([a-z]+)/i;
+
+/** "your frustration", "your sense of frustration": the reader is said to have it. */
+const possessed = (value, word) =>
+  new RegExp(String.raw`\byour\s+(?:(?:sense|feeling|state|experience)\s+of\s+)?${word}\b`, "i").test(value);
 
 export function typeWordProblem(body, type) {
   const own = TYPE_WORDS[type];
@@ -718,10 +732,11 @@ export function typeWordProblem(body, type) {
     const line = lines.find((l) => re.test(l.trim()));
     if (!line) continue;
     const m = re.exec(line.trim());
-    const lead = LEAD_WORD.exec((m[1] ?? m[2] ?? "").trim())?.[1] ?? "";
+    const value = (m[1] ?? m[2] ?? "").trim();
+    const lead = LEAD_WORD.exec(value)?.[1] ?? "";
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
-      if (lead.toLowerCase() === word.toLowerCase()) {
+      if (lead.toLowerCase() === word.toLowerCase() || possessed(value, word)) {
         return `The reading gives a ${type} the ${label.slice(0, -1).toLowerCase()} "${word}", which belongs to another type (theirs is ${own[key]}).`;
       }
     }
