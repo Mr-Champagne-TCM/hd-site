@@ -44,6 +44,10 @@ const S = (description) => ({ type: "STRING", description });
  * HERE: "Your signature feeling of satisfaction...". The note sits on the slot
  * itself, where the model is writing. oldWordProblem refuses what still slips.
  */
+/** profileLines: the model wrote "your first profile line" for the first DIGIT (10/7). */
+const PROFILE_LINE_SENTENCE =
+  "ONE sentence, at most 26 words. Name the line by its number (\"the 6 line\"), never as the \"first\" or \"second\" line.";
+
 const TRACK_SLOTS = ["signature", "notSelf"];
 const TRACK_SLOT =
   'ONE sentence, at most 22 words, on how it feels. Never the words "signature" or "not-self": the page says "when it\'s on track" / "when it\'s off track".';
@@ -94,7 +98,8 @@ export const READING_SCHEMA = {
         type: "OBJECT",
         properties: {
           line: { type: "INTEGER" },
-          sentence: S("ONE sentence, at most 26 words."),
+          // 10/7: "Your first profile line" under Line 6 -- every 6/2 draft that night.
+          sentence: S(PROFILE_LINE_SENTENCE),
         },
         required: ["line", "sentence"],
         propertyOrdering: ["line", "sentence"],

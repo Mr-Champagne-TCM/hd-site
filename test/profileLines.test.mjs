@@ -107,3 +107,42 @@ test("passive Projector phrasings are caught on a Generator", () => {
   assert.equal(typeProblem("These are offered as an invitation to test against your own experience.\n", "Generator"), null);
   assert.equal(typeProblem("Line 2 (Hermit): your gifts wait in solitude until the right invitation draws you out.\n", "Generator"), null);
 });
+
+/* ---------- 10/7: "your first profile line" under Line 3 (live phone) ---------- */
+
+import { profileOrdinalProblem } from "../netlify/lib/interpretation.mjs";
+import { READING_SCHEMA } from "../netlify/lib/structured.mjs";
+
+const rows = (a, b) => `IN SHORT\n\nYour profile lines\n\n${a}\n${b}\n\nYour energy, and how it starts\n\nx\n`;
+
+test("10/7: an ordinal naming another line is refused (both live phone rows, Projector 3/5)", () => {
+  assert.match(
+    profileOrdinalProblem(rows("Line 3 (Martyr), conscious: Your first profile line brings a trial-and-error experimental nature.", "Line 5 (Heretic), unconscious: Fine.")) ?? "",
+    /Line 3 "first profile line".*Line 1/,
+  );
+  assert.match(
+    profileOrdinalProblem(rows("Line 3 (Martyr), conscious: Fine.", "Line 5 (Heretic), unconscious: Your second profile line carries a universalizing tendency.")) ?? "",
+    /Line 5 "second profile line".*Line 2/,
+  );
+  // 10/7 drafts: "first line of your profile", "first conscious line", "first-line"
+  assert.ok(profileOrdinalProblem(rows("Line 3 (Martyr), conscious: Your first line of your profile experiments.", "Line 5 (Heretic), unconscious: x.")));
+  assert.ok(profileOrdinalProblem(rows("Line 6 (Role Model), conscious: The first conscious line is described as moving through phases.", "Line 2 (Hermit), unconscious: x.")));
+  assert.ok(profileOrdinalProblem(rows("Line 4 (Opportunist), conscious: Your first-line energy reaches out.", "Line 6 (Role Model), unconscious: x.")));
+});
+
+test("10/7: a matching ordinal, an ordinal that names no line, and a sentence that names the right line all pass", () => {
+  // shop test #2, verbatim shape
+  assert.equal(profileOrdinalProblem(rows("Line 1 (Investigator), conscious: Your first line profile energy builds a foundation.", "Line 3 (Martyr), unconscious: Your third line profile energy learns through trial.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 3 (Martyr), conscious: The first time something breaks, you learn.", "Line 5 (Heretic), unconscious: You are the first line of defence others reach for.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 3 (Martyr), conscious: Your first profile line is the third line, which bumps into what fails.", "Line 5 (Heretic), unconscious: Your second profile line is the fifth line.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 1 (Investigator), conscious: Fine.", "Line 3 (Martyr), unconscious: Your second profile line is the martyr, learning through trial.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 6 (Role Model), conscious: The 6 line moves through three phases, the first around thirty.", "Line 2 (Hermit), unconscious: The 2 line rests.")), null);
+  // outside the rows nothing is judged
+  assert.equal(profileOrdinalProblem("IN SHORT\n\nProfile: Your first line leads.\n\nYour profile lines\n\nLine 3 (Martyr), conscious: x.\n"), null);
+});
+
+test("10/7: the profileLines slot asks for the line by its number", () => {
+  const d = READING_SCHEMA.properties.profileLines.items.properties.sentence.description;
+  assert.match(d, /by its number/);
+  assert.match(d, /never as the "first" or "second" line/);
+});

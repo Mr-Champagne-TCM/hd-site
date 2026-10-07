@@ -201,6 +201,7 @@ export function firstProblem(
     structureProblem(reading) ??
     typeProblem(reading, type, undefinedCenters, openCenters) ??
     profileLineProblem(reading, profile) ??
+    profileOrdinalProblem(reading) ??
     openCentreProblem(reading, openCenters, undefinedCenters) ??
     centreStateProblem(reading, definedCenters, undefinedCenters, openCenters) ??
     oldWordProblem(reading)
@@ -618,6 +619,52 @@ export function typeProblem(raw, type, undefinedCenters = null, openCenters = nu
  * lines under "Your profile lines" are read and compared with the profile the
  * chart supplied; nothing about the names is judged, only the numbers.
  */
+/**
+ * "YOUR FIRST PROFILE LINE" UNDER "LINE 3" (live phone reading, Projector 3/5,
+ * 10/7; 1 of 19 that night). The model meant the first of the two digits;
+ * a reader takes "first line" as Line 1. In the profile-line rows only, an
+ * ordinal that names a line ("first line", "second profile line", "third
+ * line profile") must equal the row's own number. Ordinals that do not name a
+ * line ("the first time") are not judged, nor is "the first line of defence".
+ * Refused, never rewritten.
+ */
+const ORDINALS = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5, "6th": 6 };
+// "line of defence" is an idiom; "line of your profile" is the claim (a 10/7 draft).
+const ORDINAL_LINE =
+  /\b(first|second|third|fourth|fifth|sixth|1st|2nd|3rd|4th|5th|6th)(?:\s+|-)(?:[a-z-]+\s+){0,2}?line\b(?!\s+of\s+(?!(?:your|the|this)\s+profile\b))/gi;
+const ORDINAL_NAME = ["", "first", "second", "third", "fourth", "fifth", "sixth"];
+/**
+ * A SENTENCE THAT ALSO NAMES THE RIGHT LINE IS NOT MISLEADING. Swept against
+ * the stored readings and 42 live drafts before it went in: "Your first
+ * profile line is the third line, which..." and "Your second profile line is
+ * the martyr, learning through trial..." say which line they mean (the first
+ * of the two digits), so they pass. "Your first profile line brings a
+ * trial-and-error nature" under Line 3 names nothing else, and is refused.
+ */
+function namesItsOwnLine(sentence, n, name) {
+  const alts = [String.raw`line\s+${n}`, String.raw`${ORDINAL_NAME[n]}(?:\s+|-)(?:[a-z-]+\s+){0,2}?line`];
+  if (name) alts.push(name);
+  return new RegExp(String.raw`\b(?:${alts.join("|")})\b`, "i").test(sentence);
+}
+export function profileOrdinalProblem(raw) {
+  const lines = sanitize(raw).split("\n").map((l) => l.trim());
+  const at = lines.indexOf("Your profile lines");
+  if (at < 0) return null;
+  for (const l of lines.slice(at + 1)) {
+    if (HEADINGS.includes(OLD_HEADINGS[l] ?? l)) break;
+    const row = /^Line\s+(\d)\b\s*(?:\(([^)]*)\))?[^:]*:\s*(.*)$/i.exec(l);
+    if (!row) continue;
+    const n = Number(row[1]);
+    const name = (row[2] ?? "").replace(/[^A-Za-z ]/g, "").trim();
+    for (const m of row[3].matchAll(ORDINAL_LINE)) {
+      const said = ORDINALS[m[1].toLowerCase()];
+      if (said === n || namesItsOwnLine(row[3], n, name)) continue;
+      return `The reading calls Line ${row[1]} "${m[0]}", which a reader takes as Line ${said}.`;
+    }
+  }
+  return null;
+}
+
 export function profileLineProblem(raw, profile) {
   const m = /^(\d)\/(\d)/.exec(String(profile ?? "").trim());
   if (!m) return null;
