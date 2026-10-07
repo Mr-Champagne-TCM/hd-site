@@ -185,8 +185,123 @@ export function firstProblem(
     typeProblem(reading, type, undefinedCenters, openCenters) ??
     profileLineProblem(reading, profile) ??
     openCentreProblem(reading, openCenters, undefinedCenters) ??
-    centreStateProblem(reading, definedCenters, undefinedCenters, openCenters)
+    centreStateProblem(reading, definedCenters, undefinedCenters, openCenters) ??
+    oldWordProblem(reading)
   );
+}
+
+/**
+ * "SIGNATURE" AND "NOT-SELF" ARE NOT WORDS THE READER SEES ANY MORE (Jeremy
+ * 10/5, option C, and 10/7: "what we provided needs to be accurate... as long
+ * as it is effective and doesn't cause false rejections").
+ *
+ * The page says "When it's on track" / "When it's off track". A phone reading
+ * still slipped the old words into its on-track sentences, because the facts
+ * the model is handed say "Signature: Success" and "Not-Self Theme: ...".
+ * REFUSED, never rewritten: the draft is asked for again.
+ *
+ * ONLY WHAT THE MODEL WROTE AND THE READER SEES: the summary sentences (the
+ * value only -- the label in front is ours, and old stored readings carry
+ * "Signature:" there), the sections' prose, the takeaways. Never a heading,
+ * the disclaimer, or text outside the sections that nothing displays.
+ *
+ * WHERE, MEASURED (10/7, 72 stored readings: shop, phone, benchmark). 105 uses
+ * of the two words, every one the Human Design term, none ordinary English.
+ * 99 were in section 6. The other six were all "not-self" -- three in sections
+ * 1-3 ("your Not-Self theme of disappointment") and three in takeaway tags
+ * ("(Not-self theme) Pay attention..."). So:
+ *
+ *   - "NOT-SELF" IS REFUSED ANYWHERE the model writes. It has no English
+ *     meaning once the compounds below are set aside, and it leaked outside
+ *     section 6 in 5 of 72 readings.
+ *   - "SIGNATURE" IS REFUSED ONLY IN THE ON / OFF TRACK CONTENT: the two
+ *     summary sentences, section 6, and a takeaway's "(chart feature)" tag.
+ *     Elsewhere it is ordinary English -- a live 10/7 Reflector draft wrote
+ *     "you do not broadcast a persistent energetic signature" in section 4 --
+ *     and it never once appeared there as the term, so refusing it there would
+ *     buy nothing measured and cost a retry. Named residual: "because your
+ *     signature is satisfaction" in section 1 is not caught.
+ *
+ * HOW "NOT-SELF" IS TOLD FROM ENGLISH. Joined by any dash (hyphen, en, em,
+ * with or without spaces) or written as one word, it is always the term:
+ * "Not-Self Theme", "not–self", "notself", "not-selves". Written with a plain
+ * space it is ENGLISH as often as not -- the audit's own "Not self aware
+ * people..." (F43) must pass -- so the spaced form counts only where it can
+ * only be the noun: after "the/your/a/its/their/this...", before "theme" or
+ * punctuation, or with a capital S ("Not Self"). And "not self-conscious",
+ * "not self-aware" -- self joined by a hyphen to the next word -- is an English
+ * compound in every spelling, never the term.
+ *
+ * WHAT MUST STILL PASS: "you are not yourself", "not self-conscious", "not
+ * self aware", "self-trust", "selfless", "design", "sign", "signal", and "a
+ * signature move" outside the on / off track content.
+ *
+ * Old stored readings are not affected: this runs only on a new draft
+ * (`firstProblem`, from gemini.mjs); display, PDF and `structureProblem` never
+ * call it.
+ */
+const DASH = "[-\u00AD\u2010\u2011\u2012\u2013\u2014\u2015\u2212]";
+const NOT_COMPOUND = String.raw`(?![-\u00AD\u2010\u2011]\p{L})`;
+const SELF = String.raw`sel(?:f|ves)\b${NOT_COMPOUND}`;
+const SIGNATURE_WORD = /\bsignatures?\b/iu;
+const NOT_SELF_WORDS = [
+  // joined: not-self, not - self, en or em dash, notself
+  new RegExp(String.raw`\bnot(?:\s*${DASH}\s*)?${SELF}`, "iu"),
+  // spaced, as a noun: "your not self", "the not self"
+  new RegExp(String.raw`\b(?:the|your|a|an|its|their|this|that|his|her|our|my)\s+not\s+${SELF}`, "iu"),
+  // spaced, before "theme" or punctuation: "not self theme", "into not self."
+  new RegExp(String.raw`\bnot\s+sel(?:f|ves)(?=\s+themes?\b|\s*[.,;:!?)\]"\u201D]|\s*$)`, "iu"),
+  // spaced, capital S: "Not Self", "NOT SELF"
+  new RegExp(String.raw`\b[Nn][Oo][Tt]\s+S(?:ELF|elf|ELVES|elves)\b${NOT_COMPOUND}`, "u"),
+];
+/** The earliest old word in `text`, or null. "signature" only when `onTrack`. */
+function firstOldWord(text, onTrack) {
+  let best = null;
+  for (const re of onTrack ? [SIGNATURE_WORD, ...NOT_SELF_WORDS] : NOT_SELF_WORDS) {
+    const m = re.exec(text);
+    if (m && (!best || m.index < best.index)) best = m;
+  }
+  return best;
+}
+
+/**
+ * The model-written, reader-visible text, as [where, text, onTrack]. A
+ * takeaway is judged twice: whole for "not-self", and its "(chart feature)"
+ * tag alone as on / off track content.
+ */
+function writtenText(raw) {
+  const text = sanitize(raw);
+  const body = text.includes(DISCLAIMER) ? text.slice(0, text.indexOf(DISCLAIMER)) : text;
+  const out = Object.entries(summaryRows(body)).map(([k, v]) => [
+    `the "${SUMMARY_LABELS[k] ?? k}" line`,
+    v,
+    k in SUMMARY_LABELS,
+  ]);
+  let where = null;
+  for (const line of body.split("\n")) {
+    const t = line.trim();
+    const heading = OLD_HEADINGS[t] ?? t;
+    if (HEADINGS.includes(heading)) {
+      where = heading;
+      continue;
+    }
+    if (!where || !t) continue;
+    out.push([`"${where}"`, t, where === INTERPRETATION[5]]);
+    const tag = where === TAKEAWAYS ? /^\([^)]*\)/.exec(t) : null;
+    if (tag) out.push([`a takeaway's tag`, tag[0], true]);
+  }
+  return out;
+}
+
+export function oldWordProblem(raw) {
+  for (const [where, text, onTrack] of writtenText(raw)) {
+    const m = firstOldWord(text, onTrack);
+    if (!m) continue;
+    const from = Math.max(0, m.index - 50);
+    const quote = `${from > 0 ? "..." : ""}${text.slice(from, m.index + m[0].length + 40).trim()}...`;
+    return `The reading says "${m[0]}" in ${where}, where readers see "when it's on track" / "when it's off track": "${quote}"`;
+  }
+  return null;
 }
 
 /**

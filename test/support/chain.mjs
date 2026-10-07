@@ -28,10 +28,17 @@ export function whiteCentres(chart) {
 
 export const S5 = "What you take in from others";
 
+/**
+ * A summary row placeholder. Not "Signature value.": the old words are refused
+ * in the on / off track lines now (oldWordProblem), and a placeholder that
+ * repeats the label would trip it.
+ */
+export const row = (k) => `Row ${SUMMARY_KEYS.indexOf(k) + 1} value.`;
+
 /** A reading that passes the whole chain for `chart`, with named sections replaced. */
 export function reading(chart, overrides = {}) {
   const filler = "word ".repeat(70).trim();
-  const parts = ["IN SHORT", "", ...SUMMARY_KEYS.map((k) => `${k}: ${k} value.`), ""];
+  const parts = ["IN SHORT", "", ...SUMMARY_KEYS.map((k) => `${k}: ${row(k)}`), ""];
   for (const h of HEADINGS) {
     const first = overrides[h] ?? (h === S5 ? `${whiteCentres(chart)} ${filler}` : filler);
     parts.push(h, "", first, "", filler, "");

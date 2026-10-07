@@ -91,7 +91,7 @@ function wellFormed({ drop = null, question = false, short = false } = {}) {
   const parts = [
     "IN SHORT",
     "",
-    ...SUMMARY_KEYS.map((k) => `${k}: a sentence about the ${k.toLowerCase()}.`),
+    ...SUMMARY_KEYS.map((k) => `${k}: a sentence about the ${k.toLowerCase().replace("signature", "good days").replace("not-self", "bad days")}.`),
     "",
   ];
   for (const h of HEADINGS) {
@@ -141,7 +141,7 @@ test("sections out of order are caught, not silently reordered", () => {
 });
 
 test("a summary panel missing a row is caught", () => {
-  const text = wellFormed().replace("Signature: a sentence about the signature.", "");
+  const text = wellFormed().replace("Signature: a sentence about the good days.", "");
   assert.match(firstProblem(text), /summary panel came back missing Signature/);
 });
 

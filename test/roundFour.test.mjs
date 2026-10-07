@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { check, reading } from "./support/chain.mjs";
+import { check, reading, row } from "./support/chain.mjs";
 
 /**
  * ROUND FOUR (audit, 7 September; fixes approved by Jeremy 9/9).
@@ -92,7 +92,7 @@ test("R-08 residual, named when it was approved: no possessive, no judgement", (
 /* --------------------------- R-09 (#2): the word the line leads with */
 
 const withLine = (chart, label, line) =>
-  reading(chart).replace(`${label}: ${label} value.`, `${label}: ${line}`);
+  reading(chart).replace(`${label}: ${row(label)}`, `${label}: ${line}`);
 
 test("R-09: a not-self line that OPENS with another type's word is refused", () => {
   // 3258185c, a Manifestor (not-self Anger); the sentence as the audit quoted it.

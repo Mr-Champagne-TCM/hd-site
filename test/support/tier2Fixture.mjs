@@ -128,7 +128,7 @@ const SECTIONS = [
     "When it's on track, and when it's off track",
     "Satisfaction and frustration are two readings on the same instrument, and both are information.",
     [
-      "Satisfaction is the signature of a Generator design, and it is bodily rather than mental — " +
+      "Satisfaction is how a Generator design feels on track, and it is bodily rather than mental — " +
         "the settling at the end of a day whose energy went somewhere it belonged. It follows having " +
         "responded, not having achieved.",
       "Frustration is the other end of the same dial. It shows up when energy was committed to " +

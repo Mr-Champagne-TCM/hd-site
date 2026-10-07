@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { typeWordProblem } from "../netlify/lib/interpretation.mjs";
-import { S5, check, reading as build, whiteCentres } from "./support/chain.mjs";
+import { S5, check, reading as build, row, whiteCentres } from "./support/chain.mjs";
 
 /**
  * ROUND TWO OF THE THREE-STATE AUDIT.
@@ -150,7 +150,7 @@ test("F43: prose that merely opens with 'Not self' is not read as a label", () =
 });
 
 test("F43: through the chain, 'Not-Self Theme:' with another type's word is refused", () => {
-  const text = reading().replace("Not-self: Not-self value.", "Not-Self Theme: Bitterness settles in.");
+  const text = reading().replace(`Not-self: ${row("Not-self")}`, "Not-Self Theme: Bitterness settles in.");
   assert.match(check(text, CHART), /belongs to another type/);
 });
 
