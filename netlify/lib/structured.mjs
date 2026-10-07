@@ -46,11 +46,13 @@ const S = (description) => ({ type: "STRING", description });
  */
 /** profileLines: the model wrote "your first profile line" for the first DIGIT (10/7). */
 const PROFILE_LINE_SENTENCE =
-  "ONE sentence, at most 26 words. Name the line by its number (\"the 6 line\"), never as the \"first\" or \"second\" line.";
+  "ONE sentence, at most 26 words, about THIS line only. Call it by its own number, never \"first\" or \"second\" line.";
 
 const TRACK_SLOTS = ["signature", "notSelf"];
 const TRACK_SLOT =
-  'ONE sentence, at most 22 words, on how it feels. Never the words "signature" or "not-self": the page says "when it\'s on track" / "when it\'s off track".';
+  'ONE sentence, at most 22 words, on how it feels. Never the words "signature" or "not-self": the page says "when it\'s on track" / "when it\'s off track".' +
+  // 10/7: Manifestors kept writing "Your frustration..." (a Generator's word).
+  " Name the feeling only with the reader's own word from the facts, never another type's.";
 const SECTION = {
   type: "OBJECT",
   properties: {
@@ -190,14 +192,15 @@ export function strategyProblem(json, type) {
  * your time" on a Reflector. Something inviting YOU to respond is not the
  * Projector strategy; waiting for AN invitation is. So only the thing that is
  * waited for counts:
- *   - the noun: "invitation(s)", or "invite(s)" after an article or "for"
- *     ("the right invite", "wait for invites") -- but not "invites you";
+ *   - the noun: "invitation(s)", or "invite(s)" RIGHT after an article, "for"
+ *     or "any" ("the invite", "wait for invites") -- not "invites you";
  *   - being invited: "until you are invited", "wait to be invited", "once invited".
  * And a denied mention passes ("without needing an invitation", negatedAt).
  */
 const INVITATION = [
   /\binvitations?\b/gi,
-  /\b(?:an?|the|your|their|any|for)\s+(?:[a-z]+\s+)?invites?\b(?!\s+(?:you|your|yourself|them|people|others|us|him|her|it|a|an|the)\b)/gi,
+  // noun only, right after an article / for / any: "your process invites friction" is the verb (live 10/7)
+  /\b(?:an?|the|any|for)\s+invites?\b(?!\s+(?:you|your|yourself|them|people|others|us|him|her|it|a|an|the)\b)/gi,
   /\b(?:be|being|been|is|are|am|was|were|get|gets|getting|got|until|till|unless|once|when|you're|you\u2019re)\s+invited\b/gi,
 ];
 

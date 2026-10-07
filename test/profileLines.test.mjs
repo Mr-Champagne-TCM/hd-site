@@ -143,6 +143,23 @@ test("10/7: a matching ordinal, an ordinal that names no line, and a sentence th
 
 test("10/7: the profileLines slot asks for the line by its number", () => {
   const d = READING_SCHEMA.properties.profileLines.items.properties.sentence.description;
-  assert.match(d, /by its number/);
-  assert.match(d, /never as the "first" or "second" line/);
+  assert.match(d, /about THIS line only. Call it by its own number/);
+  assert.match(d, /never "first" or "second" line/);
+});
+
+test("10/7: a digit naming another line is the same error ('the 6 line' under Line 4, a live draft)", () => {
+  assert.match(
+    profileOrdinalProblem(rows("Line 2 (Hermit), conscious: The 2 line rests.", "Line 4 (Opportunist), unconscious: The 6 line is described as moving through roughly three phases.")) ?? "",
+    /Line 4 "6 line"/,
+  );
+  assert.ok(profileOrdinalProblem(rows("Line 3 (Martyr), conscious: As line 1 shows, you dig.", "Line 5 (Heretic), unconscious: x.")));
+  assert.equal(profileOrdinalProblem(rows("Line 2 (Hermit), conscious: Your 2 line rests.", "Line 4 (Opportunist), unconscious: Your 4 line builds a network.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 6 (Role Model), conscious: Your 6/2 profile line arc.", "Line 2 (Hermit), unconscious: Unlike line 6, your line 2 rests.")), null);
+  assert.equal(profileOrdinalProblem(rows("Line 1 (Investigator), conscious: In 2 lines of text you dig.", "Line 3 (Martyr), unconscious: x.")), null);
+});
+
+test("10/7: the on/off-track slots ask for the reader's own word, never another type's", () => {
+  for (const k of ["signature", "notSelf"]) {
+    assert.match(READING_SCHEMA.properties.summary.properties[k].description, /reader's own word from the facts, never another type's/);
+  }
 });

@@ -628,11 +628,14 @@ export function typeProblem(raw, type, undefinedCenters = null, openCenters = nu
  * line ("the first time") are not judged, nor is "the first line of defence".
  * Refused, never rewritten.
  */
-const ORDINALS = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5, "6th": 6 };
+const ORDINALS = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5, "6th": 6, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
 // "line of defence" is an idiom; "line of your profile" is the claim (a 10/7 draft).
 const ORDINAL_LINE =
-  /\b(first|second|third|fourth|fifth|sixth|1st|2nd|3rd|4th|5th|6th)(?:\s+|-)(?:[a-z-]+\s+){0,2}?line\b(?!\s+of\s+(?!(?:your|the|this)\s+profile\b))/gi;
+  /\b(first|second|third|fourth|fifth|sixth|1st|2nd|3rd|4th|5th|6th|(?<![\/\d])[1-6](?![\/\d]))(?:\s+|-)(?:[a-z-]+\s+){0,2}?line\b(?!\s+of\s+(?!(?:your|the|this)\s+profile\b))/gi;
 const ORDINAL_NAME = ["", "first", "second", "third", "fourth", "fifth", "sixth"];
+// "the 6 line" under Line 4 (a 10/7 Manifestor 2/4 draft, after the slot note
+// asked for numbers): a digit naming another line is the same error.
+const LINE_DIGIT = /\bline\s+([1-6])\b(?![\/\d])/gi;
 /**
  * A SENTENCE THAT ALSO NAMES THE RIGHT LINE IS NOT MISLEADING. Swept against
  * the stored readings and 42 live drafts before it went in: "Your first
@@ -656,7 +659,7 @@ export function profileOrdinalProblem(raw) {
     if (!row) continue;
     const n = Number(row[1]);
     const name = (row[2] ?? "").replace(/[^A-Za-z ]/g, "").trim();
-    for (const m of row[3].matchAll(ORDINAL_LINE)) {
+    for (const m of [...row[3].matchAll(ORDINAL_LINE), ...row[3].matchAll(LINE_DIGIT)]) {
       const said = ORDINALS[m[1].toLowerCase()];
       if (said === n || namesItsOwnLine(row[3], n, name)) continue;
       return `The reading calls Line ${row[1]} "${m[0]}", which a reader takes as Line ${said}.`;

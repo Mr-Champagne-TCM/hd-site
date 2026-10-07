@@ -20,7 +20,7 @@ test("#4 STILL REFUSES what it was built for: a non-Projector's strategy is to w
     ["Manifesting Generator", "x.", "You decide once the invitation arrives."], // the #4 test case
     ["Generator", "Do not act until you are invited."], // a denial of ACTING, not of waiting
     ["Reflector", "Wait to be invited before you commit."],
-    ["Manifestor", "Hold out for the right invite."],
+    ["Manifestor", "Hold out for the invite."],
     ["Generator", "There is no rush, so wait for the invitation."], // the comma ends the denial
     ["Generator", "Wait for invitations, then respond."],
     ["Generator", "Never move before the invitation arrives."], // "before" keeps it a condition
@@ -40,6 +40,9 @@ test("#4 NO LONGER REFUSES the verb or a denial (live 10/7)", () => {
     ["Manifestor", "You never need an invitation; inform, then act."],
     ["Manifestor", "Unlike a Projector, you do not wait for an invitation."],
     ["Generator", "Respond to what arrives without waiting for an invitation."],
+    // verbatim, live (final run): a Manifestor How you decide -- the verb, after a noun phrase
+    ["Manifestor", "x.", "Rushing your process invites friction, whereas honoring your emotional wave lets you step forward."],
+    ["Generator", "Your choices invite friction when the gut is skipped."],
     ["Projector", "Wait for the invitation."], // their own strategy
   ]) {
     assert.equal(slot(type, strategy, decide), null, `${type}: ${strategy} ${decide ?? ""}`);
