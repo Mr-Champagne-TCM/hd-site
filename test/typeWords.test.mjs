@@ -129,3 +129,23 @@ test("10/7: through the form, as gemini.mjs runs it -- the slot is judged in the
   const { text } = renderReading(form, { type: "Manifestor", profile: "1/3", channels: [] });
   assert.match(typeWordProblem(text, "Manifestor") ?? "", /Frustration/);
 });
+
+test("10/7 shop test #6: a feeling verb before another type's word is the claim, on the two lines only", () => {
+  // verbatim, live (Manifestor 5/1, not-self Anger)
+  assert.match(typeWordProblem("When it's off track: You burn with hot frustration and friction when your impact meets unexpected resistance.", "Manifestor") ?? "", /"Frustration".*theirs is Anger/);
+  assert.match(typeWordProblem("When it's on track: You feel a deep sense of satisfaction when your guidance lands.", "Projector") ?? "", /Satisfaction/);
+  assert.match(typeWordProblem("When it's off track: You slip into quiet bitterness when you push.", "Generator") ?? "", /Bitterness/);
+  assert.match(typeWordProblem("Not-self: Plans are met with frustration from all sides.", "Reflector") ?? "", /Frustration/);
+  // the 9/9 #2 sentences, the type's own word, and a comma between still pass
+  assert.equal(typeWordProblem("When it's on track: Finding deep satisfaction through recognition of your guidance.", "Projector"), null);
+  assert.equal(typeWordProblem("When it's off track: Pushing unasked leaves a taste of resentment and frustration.", "Projector"), null);
+  assert.equal(typeWordProblem("When it's off track: You burn with anger when blocked.", "Manifestor"), null);
+  assert.equal(typeWordProblem("When it's on track: You feel a deep and resonant satisfaction.", "Manifesting Generator"), null);
+  assert.equal(typeWordProblem("When it's off track: You feel stuck, and frustration builds.", "Generator"), null);
+  // the body is not judged
+  assert.equal(typeWordProblem("When it's off track: Anger flares.\nYou may feel frustration in traffic.\n", "Manifestor"), null);
+});
+
+test("10/7: the reader's OWN on-track word on the off-track line is not another type's", () => {
+  assert.equal(typeWordProblem("When it's off track: You feel satisfaction drain away when you push.", "Generator"), null);
+});

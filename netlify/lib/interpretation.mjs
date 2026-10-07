@@ -761,6 +761,19 @@ const LEAD_WORD = /^(?:(?:the|an?|your|this|that)\s+)?([a-z]+)/i;
 const possessed = (value, word) =>
   new RegExp(String.raw`\byour\s+(?:(?:sense|feeling|state|experience)\s+of\s+)?${word}\b`, "i").test(value);
 
+/**
+ * "YOU BURN WITH HOT FRUSTRATION" (live shop test #6, a Manifestor 5/1, 10/7):
+ * the lead word is "You" and nothing is possessed, but another type's word is
+ * the feeling the reader is told they have. On the two on/off-track lines
+ * only, a FEELING VERB followed within four words (no punctuation between) by
+ * another type's word is the claim. The 9/9 in-passing sentences have no such
+ * verb ("Finding deep satisfaction through recognition", "leaves a taste of
+ * resentment and frustration") and still pass.
+ */
+const FEELING_VERB = String.raw`\b(?:feel|feels|felt|feeling|burn|burns|burned|burning|experience|experiences|experienced|experiencing|sense|senses|sensing|rest\s+in|rests\s+in|sink\s+into|sinks\s+into|slip\s+into|slips\s+into|fill\s+with|fills\s+with|filled\s+with|(?:are|is)\s+met\s+with)`;
+const feltAs = (value, word) =>
+  new RegExp(String.raw`${FEELING_VERB}\s+(?:[a-z'\u2019-]+\s+){0,4}?${word}\b`, "i").test(value);
+
 export function typeWordProblem(body, type) {
   const own = TYPE_WORDS[type];
   if (!own) return null;
@@ -786,7 +799,10 @@ export function typeWordProblem(body, type) {
     const lead = LEAD_WORD.exec(value)?.[1] ?? "";
     for (const word of ALL_TYPE_WORDS) {
       if (word === own[key]) continue;
-      if (lead.toLowerCase() === word.toLowerCase() || possessed(value, word)) {
+      // feltAs skips the reader's own OTHER word too: "you feel satisfaction
+      // drain away" on a Generator's off-track line is theirs, not a wrong type.
+      const ownWord = word === own.signature || word === own.notSelf;
+      if (lead.toLowerCase() === word.toLowerCase() || possessed(value, word) || (!ownWord && feltAs(value, word))) {
         return `The reading gives a ${type} the ${label.slice(0, -1).toLowerCase()} "${word}", which belongs to another type (theirs is ${own[key]}).`;
       }
     }
