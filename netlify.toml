@@ -34,6 +34,10 @@
   schedule = "*/15 * * * *"
 [functions.watch]
   schedule = "0 13 * * 1"
+# Daily: deletes readings past their year, and health/counter records past
+# their stated lives. See netlify/lib/retention.mjs.
+[functions.retention]
+  schedule = "17 9 * * *"
 
 # The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
 

@@ -20,9 +20,10 @@ import { open as openSealed, seal } from "./sig.mjs";
  *
  * Same store, same record and same lifetime as the reading itself: written
  * once with the chart (`fillReading`), carried through `fillInterpretation`,
- * served for READING_TTL_SECONDS from the purchase by `loadReading`. NOTE:
- * nothing in this repo deletes a record after that year -- `loadReading` stops
- * serving it, but the blob stays in the store until removed by hand.
+ * served for READING_TTL_SECONDS from the purchase by `loadReading`, and
+ * DELETED once that year is up by the daily `retention` function
+ * (lib/retention.mjs), which asks `pastItsYear` below -- the same question
+ * `loadReading` asks, so "no longer served" and "deleted" cannot drift apart.
  *
  * Records written before 16 October 2026 have no `birth` block; they load
  * with `birth: null` and their PDF simply has no birth line.
@@ -230,7 +231,7 @@ export async function loadReading(store, id, now = Date.now()) {
   // written. The year belongs to what was bought; re-rendering a reading must
   // not quietly extend it, and must not shorten it either.
   const bought = raw.purchasedAt ?? raw.createdAt ?? 0;
-  if (Math.floor(now / 1000) - bought > READING_TTL_SECONDS) return null;
+  if (pastItsYear(bought, now)) return null;
 
   return {
     tier: raw.tier,
@@ -256,6 +257,33 @@ export async function loadReading(store, id, now = Date.now()) {
     /** The birth details the chart was cast from (16 Oct 2026 on); null before that. */
     birth: birthRecord(raw.birth),
   };
+}
+
+/**
+ * THE YEAR, ASKED ONE WAY.
+ *
+ * `loadReading` asks it to decide whether to SERVE a reading; the daily
+ * retention sweep asks it to decide whether to DELETE one. One function, so a
+ * reading is deleted on exactly the day it stops being served -- never while a
+ * buyer can still open it, and never left behind after.
+ *
+ * `boughtSeconds` is the record's `purchasedAt` (falling back to `createdAt`),
+ * in seconds, as stored.
+ */
+export function pastItsYear(boughtSeconds, now = Date.now()) {
+  return Math.floor(now / 1000) - boughtSeconds > READING_TTL_SECONDS;
+}
+
+/**
+ * When a stored record was bought, in seconds -- or null when that cannot be
+ * told. Same fields in the same order as `loadReading`. The sweep KEEPS a
+ * record this returns null for: a record whose age is unknown is never
+ * guessed old and deleted.
+ */
+export function readingBoughtAt(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const bought = raw.purchasedAt ?? raw.createdAt;
+  return typeof bought === "number" && Number.isFinite(bought) && bought > 0 ? bought : null;
 }
 
 /**

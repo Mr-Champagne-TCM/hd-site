@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { paidLevel } from "../lib/checkout.mjs";
 import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
-import { loadReading, mintReadingLink, nameCase, readingIdForSession, saveReading } from "../lib/reading.mjs";
+import { loadReading, mintReadingLink, nameCase, pastItsYear, readingIdForSession, saveReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { reportFailure } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
@@ -110,7 +110,19 @@ export default async (request) => {
    * that did.
    */
   let alreadyThere = false;
-  try {
+  /**
+   * A PURCHASE PAST ITS YEAR IS NOT RECORDED AGAIN.
+   *
+   * The daily retention sweep deletes a reading a year after purchase. Without
+   * this, posting that year-old session id here would find nothing, write the
+   * buyer's name, email and phone straight back into the store and email them
+   * a link to a reading that no longer exists -- undoing the deletion the
+   * privacy page promises. Same test as loadReading and the sweep.
+   */
+  const purchasedAt = typeof session?.created === "number" ? session.created * 1000 : Date.now();
+  const pastYear = pastItsYear(Math.floor(purchasedAt / 1000));
+  if (pastYear) console.log("POST /api/claim: purchase is past its year, nothing recorded or sent");
+  if (!pastYear) try {
     const store = getStore({ name: "readings", consistency: "strong" });
     const id = readingIdForSession(id0, grantSecret);
     const existing = await loadReading(store, id).catch(() => null);
@@ -126,7 +138,7 @@ export default async (request) => {
         email: buyer.email ?? null,
         phone: buyer.phone ?? null,
         sku: session?.metadata?.sku ?? null,
-        purchasedAt: typeof session?.created === "number" ? session.created * 1000 : Date.now(),
+        purchasedAt,
       });
     }
     url = `${new URL(request.url).origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;

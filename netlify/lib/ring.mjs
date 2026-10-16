@@ -21,6 +21,12 @@
 export const RING_AFTER_MS = 90_000;
 /** How long after one ring the next may follow. */
 export const RING_EVERY_MS = 120_000;
+/**
+ * How long a ring gate is worth keeping. Asked for as a blob `expiration`,
+ * which Netlify Blobs does not honour (the SDK has no such option), so the
+ * daily retention sweep (lib/retention.mjs) is what actually removes it.
+ */
+export const RING_GATE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Pure decision. `filledAtMs` is when the chart was filed (seconds in the
@@ -48,7 +54,7 @@ export async function ringIfDue({ id, filledAtMs, gate, ring, now = Date.now() }
   }
   if (!shouldRing({ filledAtMs, lastRingMs, now })) return { rang: false };
   try {
-    await gate.setJSON(`ring/${id}`, { at: now }, { expiration: new Date(now + 24 * 60 * 60 * 1000) });
+    await gate.setJSON(`ring/${id}`, { at: now }, { expiration: new Date(now + RING_GATE_TTL_MS) });
   } catch {
     /* if the gate cannot be written, still ring */
   }

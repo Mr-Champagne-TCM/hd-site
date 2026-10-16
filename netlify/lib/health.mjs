@@ -131,8 +131,11 @@ export async function record(store, { kind, detail, excerpt, now = Date.now() } 
   try {
     await store.setJSON(key, entry, {
       metadata: { kind: entry.kind },
-      // Netlify expires this for us, so nothing here needs a sweeper -- and a
-      // retention rule nobody has to remember is the only kind that holds.
+      // NOT HONOURED. This was written believing Netlify would expire the
+      // blob for us; the Blobs SDK has no `expiration` option and drops it
+      // silently, so incidents piled up from September on (75 on file on
+      // 16 Oct 2026). The daily retention sweep (lib/retention.mjs) is what
+      // enforces INCIDENT_TTL_SECONDS now. Kept as the statement of intent.
       expiration: new Date(now + INCIDENT_TTL_SECONDS * 1000),
     });
   } catch {
