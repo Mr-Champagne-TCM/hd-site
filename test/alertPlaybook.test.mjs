@@ -143,6 +143,9 @@ test("THE ALERT: brief (when + how many), which (Stripe + reading links), number
   // HTML has real links
   assert.match(html, /<a href="https:\/\/dashboard\.stripe\.com\/test\/checkout\/sessions\//);
   assert.match(html, /<ol[^>]*>.*<li/s);
+  // The note is copied to a buyer, so its link is shown whole -- never shortened.
+  const quote = html.match(/border-left:3px solid #c9a227[^>]*>(.*?)<\/div>/s)[1];
+  assert.ok(quote.includes(`>${link}</a>`), "the note's link was shortened");
 });
 
 test("a live session links to the live dashboard", () => {

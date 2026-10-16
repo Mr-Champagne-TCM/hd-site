@@ -226,8 +226,10 @@ export function renderAlert({ brief, which, options, fix, auto, details, footer,
 const LINK = "color:#1a4f8b";
 /** A long signed link reads as its start and an ellipsis; the href stays whole. */
 const shown = (u) => (u.length > 72 ? `${u.slice(0, 64)}...` : u);
-const linked = (t) =>
-  escHtml(t).replace(/https?:\/\/[^\s<"]+[^\s<".,)]/g, (u) => `<a href="${u}" style="${LINK};word-break:break-all">${shown(u)}</a>`);
+// `full`: inside a ready-made note the link is shown WHOLE, because the note is
+// copied and pasted to a buyer -- a shortened link there would be a broken one.
+const linked = (t, { full = false } = {}) =>
+  escHtml(t).replace(/https?:\/\/[^\s<"]+[^\s<".,)]/g, (u) => `<a href="${u}" style="${LINK};word-break:break-all">${full ? u : shown(u)}</a>`);
 const label = (t) =>
   `<p style="margin:18px 0 6px;font:600 12px/1.3 system-ui,sans-serif;letter-spacing:.08em;color:#6b5a1e">${t}</p>`;
 
@@ -246,7 +248,7 @@ export function alertHtml({ brief, which, options, fix, auto, details, footer, h
     .map((o) => {
       const [lead, ...rest] = o.split("\n");
       const quote = rest.length
-        ? `<div style="margin:6px 0 2px;padding:8px 12px;border-left:3px solid #c9a227;background:#faf6ea">${linked(rest.join(" "))}</div>`
+        ? `<div style="margin:6px 0 2px;padding:8px 12px;border-left:3px solid #c9a227;background:#faf6ea">${linked(rest.join(" "), { full: true })}</div>`
         : "";
       return `<li style="margin:0 0 10px;word-break:break-word">${linked(lead)}${quote}</li>`;
     })
