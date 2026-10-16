@@ -115,89 +115,95 @@ export const HERO = {
  * with a receipt rather than with adjectives: a low price reads as low value, a
  * checked number reads as confidence.
  *
- * Every figure here is from validation/RESULTS.md. None of it is rounded up.
+ * v3 (10/16, Jeremy: "get simpler, and then make the profound statements as we
+ * flow through the whys and get to the why us"): written for someone who knows
+ * nothing about planets or ephemerides. No arcseconds on the page; every number
+ * is said in a unit a buyer already has (seconds of birth time, charts in a
+ * thousand). Physics still holds the ruler, not another vendor.
+ *
+ * Every figure is from hd-reading-app validation/RESULTS.md, section "2026-10-16
+ * (evening) -- the shop's 'Measured against the sky' numbers, re-measured for
+ * engine 0.5.0" (script validation/accuracy_v050.py). None of it is rounded up.
  */
 export const CREDIBILITY = {
   title: "Measured against the sky",
+  // "around the time you were born", not "at the moment": the design half of a
+  // chart is taken about 88 days (88 degrees of Sun) before birth. "NASA's own
+  // record" = JPL Horizons; every body the engine computes was checked against
+  // it in the 10/15 survey (RESULTS.md, "every body vs JPL").
   body:
-    "Human Design calculators do not all agree with each other. So rather than pick one and match " +
-    "it, this engine is measured against the thing they are all approximating: where the planets " +
-    "actually were.",
+    "Your chart is worked out from where the Sun, the Moon and the planets were around the time " +
+    "you were born. If a calculator places one of them even slightly wrong, part of your chart " +
+    "can come out wrong with it. Human Design calculators do not all agree on those places, so " +
+    "this one doesn't copy any of them. It is checked against NASA's own record of where " +
+    "everything actually was.",
 
-  /**
-   * Physics is the authority here, not another vendor.
-   *
-   * The old framing had somebody else holding the ruler — "matched exactly",
-   * "checked against", "79 of 84". Every one of those sentences made Genetic
-   * Matrix the authority and this engine the student. The numbers have not
-   * changed; who they are measured against has.
-   *
-   * What is claimed about corrections, and no more: Jupiter, Saturn, Uranus,
-   * Neptune and Pluto ARE corrected against JPL (Neptune since engine 0.4.0 on
-   * 10/7, the other four since 0.5.0 on 10/16). The Sun, Moon, Mercury, Venus and
-   * Mars are not, so for them -- and for the profile, which the Sun sets --
-   * "measured against" is still the whole claim.
-   *
-   * Re-measured for 0.5.0 on 10/16 (validation/RESULTS.md, "the shop's 'Measured
-   * against the sky' numbers"): the old 0.46″ came from 9 charts, not 24, and
-   * 1,000 charts put the Sun at 0.58″. The bigger sample is the one quoted.
-   */
   checks: [
     [
-      "0.58″",
-      // "none of them decides a line" was false, and it was false in the copy
-      // this replaced too -- the disagreement anatomy across 100,000 charts
-      // records 531 activation diffs (449 line-only, 82 gate flips) and lays
-      // them at the slow movers: Neptune 138, nodes 146, Moon 54. Neptune's
-      // offset decides a line 138 times in the very file the numbers came from.
-      //
-      // The claim the paragraph is actually making is true one clause narrower.
-      // The same record gives the Sun 5, the Sun is what sets the profile, and
-      // that is where the 99.97% profile agreement comes from.
-      "typical error (root mean square) in this engine's Sun position, measured against NASA's " +
-        "Jet Propulsion Laboratory record, across 1,000 charts born between 1900 and 2030. That is " +
-        // "less than the rounding": a time written to the minute can be up to 30 s
-        // off, and 14 s is the typical (RMS) figure. "closer than the Sun": Jupiter
-        // to Pluto 0.074-0.095″ RMS against the Sun's 0.58″ (RESULTS.md, 10/16).
-        "about fourteen seconds of birth time, less than the rounding in a birth time recorded to " +
-        "the minute, and the Sun is what sets your profile. Jupiter, Saturn, Uranus, Neptune and " +
-        "Pluto are now corrected against that same record and sit closer to it than the Sun does. " +
-        "The Moon, Mercury, Venus and Mars sit further out, by up to about 3″, and none of them " +
-        "decides your profile",
+      // 14 s = the Sun's typical (RMS) error against JPL on 1,000 random births
+      // 1900-2030: 0.576″, at ~24.4 s of clock per ″ (the Sun moves 0.9856°/day).
+      // Mean error 11 s; worst 49 s. A time rounded to the nearest minute is off
+      // by up to 30 s (RMS 17 s, mean 15 s), so "less doubt than the clock" holds
+      // on either measure. The old 0.46″ came from 9 charts, not the 24 it said.
+      // The Sun is NOT corrected; it is the same as in every release since August.
+      "14 seconds",
+      "how closely this engine typically follows the Sun, checked against NASA's record across " +
+        "1,000 test charts and counted in birth time. The Sun sets your profile. A birth time " +
+        "written to the nearest minute can already be up to 30 seconds out, so the calculation " +
+        "adds less doubt than the clock did",
     ],
     [
+      // 2.6 million = 26 activations (13 bodies x personality + design; Earth and
+      // the nodes are "planets" in Human Design's own vocabulary) x 100,000 charts,
+      // every one compared with two other calculators (hdpy, dturk): 99.94% agree.
+      // Jupiter to Pluto are corrected against JPL (Neptune since 0.4.0 on 10/7,
+      // the other four since 0.5.0 on 10/16): 0.077-0.098″ against the Sun's
+      // 0.576″, so the chance of a wrong line is about 6x smaller than the Sun's.
+      // "places them more precisely" is about position. In birth-time seconds the
+      // slow planets are NOT closer (they move so slowly that 0.08″ is 22 s to
+      // 8 min of clock), which is why this does not say "follows" like card 1.
+      // No "too" after "record": the Sun is checked against NASA, not corrected.
       "2.6 million",
-      // The hedge was recommended in round one and never written -- it appears
-      // nowhere in either repository. An unfalsifiable claim about every
-      // competitor sits badly on the one page whose whole argument is that it
-      // publishes numbers other people do not.
-      "activations computed and checked across 100,000 charts. As far as I can find, no other " +
-        "Human Design service publishes an error rate at all",
+      "planet positions worked out and checked, across 100,000 test charts. The five slowest " +
+        "planets, Jupiter to Pluto, are now corrected against NASA's record, and this engine " +
+        "places them even more precisely than it places the Sun",
     ],
     [
+      // The 15 doctrine cases: this engine and an open-source calculator (dturk's
+      // humandesign_api) gave different Types for the same instant; Human Design
+      // Hub and Bodygraph each agreed with this engine 15 of 15 (Aug responses,
+      // re-scored against 0.5.0). Not "well-known calculators": one side of each
+      // split is this engine and the other an open-source library.
       "15 of 15",
-      "cases where established calculators contradict one another — two independent engines " +
-        "landed where this one does, on every single one",
+      "times that Human Design calculators gave different answers for the same birth, and two " +
+        "independent ones agreed with this engine on every one",
     ],
     [
-      // 18x = doctrine splits (619 in 100,000) over the profile's expected
-      // disagreement with JPL (2 x 0.58″ / 3,375″ = 0.034%). Against hdpy it is
-      // 19x, against dturk 23x; the lowest is the one printed. It compares the
-      // profile only -- counted over every line of every planet, this engine
-      // still differs from JPL on more charts than doctrine splits, so the
-      // caption says profile.
-      "18×",
-      "how much more often calculators split over doctrine than this engine's profile differs " +
-        "from the astronomical record",
+      // 1 in 3,000: profile depends only on the two Suns (birth and design), and
+      // the design Sun carries the birth Sun's error exactly. Expected profile
+      // change against JPL = 2 x |error| / 3,375″ = 1 in 2,932 (RMS) to 1 in 3,735
+      // (mean error); measured against another calculator 1 in 3,125.
+      // 6 in 1,000: 619 of 100,000 charts where this engine and dturk give a
+      // different Type with identical channels -- a split over the rules, not the
+      // sky. It is NOT "other calculators disagree with each other": that pair
+      // includes this engine, hence "over the rules themselves".
+      "1 in 3,000",
+      "roughly how often this engine's profile could differ from NASA's record, and only when the " +
+        "Sun sits right on the border between two profiles. Calculators disagree over the rules " +
+        "themselves on about 6 charts in every 1,000",
     ],
   ] as const,
 
+  // "the very same planet data", not "NASA data": hdpy and dturk both run Swiss
+  // Ephemeris in its Moshier mode (no .se1 files) and still differ on 83 of 2.6
+  // million activations. The hedge on the last sentence stays: it is a claim
+  // about every competitor, made only as far as can be checked.
   closing:
-    "That last number is the honest shape of it. Where calculators split over doctrine they " +
-    "disagree on roughly six charts in a thousand; this engine's own residual — a Sun-line profile " +
-    "sitting within a fraction of an arcsecond of a boundary — is about one in three thousand. Two " +
-    "engines built on the same ephemeris still disagree with each other. There is no perfect " +
-    "answer available to anyone, so the number is published rather than implied.",
+    "So why measure at all? Because a reading is only as good as the chart underneath it. No " +
+    "calculator is perfect: two built on the very same planet data still disagree now and then. " +
+    "So instead of promising perfection, this one is measured, and the result is published here " +
+    "for you to see. As far as I can find, no other Human Design service shows you its error " +
+    "rate at all.",
 };
 
 export const EXAMPLE = {
