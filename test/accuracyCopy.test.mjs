@@ -54,7 +54,10 @@ test("card 2: the slow planets are said to be PLACED more precisely, not FOLLOWE
 
 test("card 3 does not call the disagreeing pair well-known", () => {
   assert.ok(!/well-known/.test(card(2)));
-  assert.match(card(2), /two independent ones agreed with this engine on every one/);
+  // Jeremy 10/16: "tie-breaks" wording. Held to rule splits: on 5 Sun-line
+  // profile cases the same two services sided against this engine.
+  assert.match(card(2), /^tie-breaks this engine won\. Where it and another calculator read the rules differently for the same birth, two more independent calculators were asked to settle it, and both sided with this engine every time$/);
+  assert.ok(!/gave different answers/.test(card(2)), "too broad: profile tie-breaks went the other way");
 });
 
 test("card 4: profile residual vs NASA, and the rules split is not attributed to 'other calculators'", () => {
@@ -82,4 +85,11 @@ test("Jeremy's emphasis (10/16): the bold-italic clause and the NASA line on its
   assert.match(bodyText(), /do not all agree on those places, and this one doesn't copy any of them!$/);
   assert.equal(CREDIBILITY.standout, "It is checked against NASA's own record of where everything actually was.");
   assert.ok(!bodyText().includes("NASA"), "the NASA sentence lives only in the standout line");
+});
+
+test("the link preview speaks plainly: no 'ephemeris', NASA's record in words", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /ephemeris/i);
+  assert.match(html, /Checked against NASA's own record of where the planets were\./);
 });

@@ -182,14 +182,19 @@ export const CREDIBILITY = {
         "places them even more precisely than it places the Sun",
     ],
     [
-      // The 15 doctrine cases: this engine and an open-source calculator (dturk's
-      // humandesign_api) gave different Types for the same instant; Human Design
-      // Hub and Bodygraph each agreed with this engine 15 of 15 (Aug responses,
-      // re-scored against 0.5.0). Not "well-known calculators": one side of each
-      // split is this engine and the other an open-source library.
+      // The 15 doctrine cases (spot100.csv, category doctrine_type): this engine
+      // and an open-source calculator (dturk's humandesign_api) gave different
+      // Types for the same instant with the same channels, i.e. they read the
+      // motor-to-throat rule differently. Human Design Hub and Bodygraph were each
+      // asked (Aug 2026) and each sided with this engine 15 of 15 (re-scored
+      // against 0.5.0: unchanged).
+      // "read the rules differently", not "gave different answers": the same two
+      // services sided AGAINST this engine on 5 other cases (Sun-line profiles at
+      // a boundary, an ephemeris question), so the card is held to rule splits.
       "15 of 15",
-      "times that Human Design calculators gave different answers for the same birth, and two " +
-        "independent ones agreed with this engine on every one",
+      "tie-breaks this engine won. Where it and another calculator read the rules differently " +
+        "for the same birth, two more independent calculators were asked to settle it, and both " +
+        "sided with this engine every time",
     ],
     [
       // 1 in 3,000: profile depends only on the two Suns (birth and design), and
