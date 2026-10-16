@@ -61,6 +61,8 @@ import { drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textB
  *     label positions against. The phone draws its own with the same geometry.
  *   - The chart tier (1) has no reading, so its glance box keeps the approved
  *     library sentences it has always had, and it still offers the next tier.
+ *     Its onward note and that offer sit on a page 3 of their own, "Where to
+ *     go from here", every time (10/16, option B); the phone has no such page.
  */
 
 /* --------------------------------------------------------------- the print swap */
@@ -144,6 +146,14 @@ export const FOOTER = "The Champagne Method Coaching and Consulting · thechampa
 export const ONWARD_NOTE =
   "Every word above is explained in The Human Design library, and the drawing on " +
   "page 1 in “Reading your bodygraph.” Both are free, at thechampagnemethod.co/library/human-design.";
+
+/**
+ * The chart tier's last page, "Where to go from here" (Jeremy 10/16, item 12
+ * option B). On a page of its own the chart values are no longer "above" the
+ * note, so it names the page instead.
+ */
+export const NEXT_STEPS_HEAD = "Where to go from here";
+export const ONWARD_NOTE_PAGE = ONWARD_NOTE.replace("Every word above", "Every word on page 2");
 
 /** Page-2 note phrases that are links, and where they go. */
 export const ONWARD_LINKS = Object.freeze([
@@ -660,44 +670,82 @@ function glancePage(d, { output, tier, reading }) {
     if (Array.isArray(c.design) && c.design.length) activationRow("Design", c.design);
   }
 
+  // The tiers below the reading end on a calm page of their own (10/16,
+  // option B): the onward note and the offer used to spill onto page 3 as
+  // one stray block under a page-2 running head.
+  if (tier < 2) return nextStepsPage(d, tier);
+
   // The onward pointer: both free pages, in the voice of an invitation.
   const onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
   d.gap(14);
   d.need(onward.height);
   const noteTop = d.y;
   d.draw(onward);
+  linkOnward(d, onward, noteTop);
+}
+
+function linkOnward(d, layout, top) {
   for (const [phrase, uri] of ONWARD_LINKS) {
-    for (const r of phraseRects(pdf, onward, phrase)) {
-      d.link({ left: r.left + MARGIN, top: r.top + noteTop, right: r.right + MARGIN, bottom: r.bottom + noteTop }, uri);
+    for (const r of phraseRects(d.pdf, layout, phrase)) {
+      d.link({ left: r.left + MARGIN, top: r.top + top, right: r.right + MARGIN, bottom: r.bottom + top }, uri);
     }
   }
-
-  offer(d, tier);
 }
 
 /**
  * A soft line toward the next tier, on the tiers that can be offered more
  * (a shop-only block: the phone sells nothing). It says WHERE the credit
- * lives, and it is measured, never estimated: when it will not fit under the
- * values it starts the next page rather than overlapping anything.
+ * lives. Null when there is nothing sellable above this tier.
  */
-function offer(d, tier) {
-  if (tier >= 2) return;
+function offerLayouts(d, tier) {
+  if (tier >= 2) return null;
   const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
-  if (!next) return;
+  if (!next) return null;
   const label = (TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase();
-  const head = d.L(`IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim(), paint(7.5, GOLD, true, 0.17));
+  const head = `IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim();
   const body = d.L(
     `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
       "the price, and the link in your email is what proves it — so opening this from there " +
       "means the credit is already applied. Nobody pays twice for the same thing.",
     paint(10, INK),
   );
-  d.gap(22);
-  d.need(head.height + 6 + body.height);
-  d.draw(head);
-  d.gap(6);
-  d.draw(body);
+  return { head, body };
+}
+
+/** A small gold label over a gold rule, as YOUR CHART VALUES has on page 2. */
+function sectionLabel(d, text) {
+  drawText(d.pdf, text, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.17));
+  d.gap(13);
+  d.rule(RULE, 0.8);
+  d.gap(10);
+}
+
+/**
+ * The chart tier's last page (Jeremy 10/16, item 12 option B, mock page 13):
+ * the free library note, then the offer, each under its own label, on a page
+ * of their own every time. Measured, never estimated: if the chart values
+ * already ran onto page 3 and there is room under them, it follows them there
+ * and the note keeps "Every word above", which is then true.
+ */
+function nextStepsPage(d, tier) {
+  const o = offerLayouts(d, tier);
+  let onward = d.L(ONWARD_NOTE, paint(10, INK), CONTENT_W);
+  const total = 10 + 23 + onward.height + 34 + 23 + (o ? o.body.height : 0);
+  if (d.pageNo >= 3 && d.y + 40 + total <= d.bottom) {
+    d.gap(40);
+  } else {
+    onward = d.L(ONWARD_NOTE_PAGE, paint(10, INK), CONTENT_W);
+    d.start(NEXT_STEPS_HEAD);
+    d.gap(10);
+  }
+  sectionLabel(d, "FREE TO READ, EITHER WAY");
+  const noteTop = d.y;
+  d.draw(onward);
+  linkOnward(d, onward, noteTop);
+  if (!o) return;
+  d.gap(34);
+  sectionLabel(d, o.head);
+  d.draw(o.body);
 }
 
 function lowerFirst(s) {

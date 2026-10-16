@@ -19,29 +19,20 @@ import { customerText } from "../shared/customerMessages.mjs";
  */
 
 /**
- * THE HEADER WORDMARK, two proposals (Jeremy's brand calls, 10/16 -- "by"
- * lowercase, "Coaching and Consulting" is the business). NOT DECIDED: the
- * shop-brand branch carries both so the mock can show them side by side.
- *   A  the wordmark unchanged, a small "Coaching and Consulting" line under it
- *   B  the wordmark unchanged, a small "Human Design by" eyebrow above it
+ * THE HEADER WORDMARK (Jeremy's brand call 10/16, B2 = option B): the
+ * wordmark unchanged, with a small "Human Design by" eyebrow above it, so the
+ * header says whose Human Design readings these are. "by" stays lowercase in
+ * every brand line, so it is kept out of the eyebrow's uppercase.
  */
-export const HEADER_OPTION: "A" | "B" = "A";
-
-function Wordmark({ option }: { option: "A" | "B" }) {
-  const small = "block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]";
+function Wordmark() {
   return (
     <a href={SITE.home} className="group whitespace-nowrap leading-none">
-      {/* "by" stays lowercase in every brand line (Jeremy 10/16), so it is
-          kept out of the eyebrow's uppercase. */}
-      {option === "B" && (
-        <span className={small + " mb-1"}>
-          Human Design <span className="normal-case">by</span>
-        </span>
-      )}
+      <span className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]">
+        Human Design <span className="normal-case">by</span>
+      </span>
       <span className="block font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors group-hover:text-brand-gold sm:text-[26px]">
         The <span className="text-brand-gold">Champagne</span> Method
       </span>
-      {option === "A" && <span className={small + " mt-1"}>Coaching and Consulting</span>}
     </a>
   );
 }
@@ -53,7 +44,7 @@ function Nav() {
         {/* The brand is the way home, as it is on the main site. Two links on
             the right and no more: at 390px a third one starts colliding with
             the brand, which is the fault that had to be fixed on the library. */}
-        <Wordmark option={HEADER_OPTION} />
+        <Wordmark />
         <div className="flex shrink-0 items-center gap-5">
           <a
             href={SITE.library}

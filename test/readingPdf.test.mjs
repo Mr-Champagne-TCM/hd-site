@@ -68,7 +68,9 @@ test("it produces a real PDF: the chart, then the glance", async () => {
   assert.equal(buf.subarray(0, 5).toString(), "%PDF-", "not a PDF");
   const { heads } = await shape();
   assert.equal(heads[0], null);
-  assert.ok(heads.slice(1).every((h) => h === "Your chart at a glance"), String(heads));
+  // The chart tier ends on its own "Where to go from here" page (10/16, option B).
+  assert.equal(heads.at(-1), "Where to go from here", String(heads));
+  assert.ok(heads.slice(1, -1).every((h) => h === "Your chart at a glance"), String(heads));
   // Sized for the tiny fixture SVG above, not for a real chart. A real one is
   // about 400 KB; the point of the floor is to catch an EMPTY document, not to
   // assert a size this fixture was never going to reach.
