@@ -2,17 +2,10 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { TIERS } from "../../shared/pricing.mjs";
-import {
-  DISCLAIMER,
-  INTERPRETATION,
-  MECHANICS,
-  TAKEAWAYS,
-  marginNotes,
-  parseReading,
-} from "./interpretation.mjs";
+import { DISCLAIMER, TAKEAWAYS, marginNotes, structureProblem, summaryRows } from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
-import { activationLabel, planetName } from "../../shared/planets.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
+import { ROBOTO_400, ROBOTO_700 } from "./fonts/roboto.mjs";
 import {
   AUTHORITY_NOTES,
   NOT_SELF_NOTES,
@@ -21,80 +14,67 @@ import {
   STRATEGY_NOTES,
   TYPE_NOTES,
   describe,
-  profileWithNames,
 } from "./mechanics.mjs";
+import { buildReadingView, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView.mjs";
+import { birthLine } from "../../shared/birthLine.mjs";
+import {
+  AUTHORITY,
+  BODYGRAPH_GUIDE,
+  CENTERS,
+  CHANNELS,
+  DEFINITION,
+  LIBRARY,
+  SHOP,
+  SITE_URL,
+  channelLink,
+  crossLink,
+  lineLink,
+  profileLink,
+  typeLink,
+} from "../../shared/libraryLinks.mjs";
+import { drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
 
 /**
- * The chart tier's PDF, in the app's format.
+ * THE CLIENT PDF -- the SAME DOCUMENT the phone app makes (Jeremy 10/16: "All
+ * PDFs should look the same").
  *
- * REBUILT AGAINST THE APP'S CURRENT OUTPUT — `Jeremy-pdf-view.pdf`, and it took
- * three files to get there. The August sample in the repo draws the chart light
- * on a white page; a preliminary run he shared moved the legend to page two;
- * this is the one he called final. The lesson is cheap and worth keeping: ASK
- * WHICH FILE IS CURRENT before matching one, because every version of it looked
- * authoritative on its own.
+ * PORTED FROM hd-reading-app PdfExport.kt (main @ 0e8fcd4), which is the spec:
+ * the same pages in the same order, the same sizes, colours and positions, the
+ * same Roboto, the same branding lines, the same links to the same library
+ * anchors. Where this file differs from the phone it says so, at the place it
+ * differs.
  *
- *   A PAPER PAGE WITH A NAVY PANEL. The page is white and the chart stays dark,
- *   inset. Which is exactly what the website already does on screen — "the
- *   chart wears its navy as a panel on the violet page" — so there was never a
- *   second drawing to make. The screen SVG is the PDF's drawing.
+ *   1  the bodygraph, its key, the guide line and the QR
+ *   2  "Your chart at a glance": the gold-ruled box (the reading's OWN summary
+ *      sentences on the reading tier), the chart values, the 26 activations
+ *      (reading tier only -- the chart tier never bought them), the onward note
+ *   3-4 "Start here": centers, channels, profile, each with the library's
+ *      one-liner and a Takeaway of sentences the reading already holds
+ *   5+ "Your reading", decision first; the experiments; the disclaimer last
  *
- *   A GOLD-RULED BOX of value-plus-sentence rows, which is where the approved
- *   Type, Strategy and Authority sentences belong. The app already had the
- *   shape; this fills it with the same words the page shows.
+ * The old mechanics page and separate activations page are gone, exactly as
+ * on the phone (calls 1-8, 10/15-10/16).
  *
- *   A PLAIN VALUES TABLE under it — thin rules, no border — for the things that
- *   are values rather than explanations.
- *
- *   THE LEGEND IS ON PAGE ONE, under the drawing, and it is a key to the
- *   CHANNEL LINES — personality, design, both, open. Under the chart is where
- *   it belongs: it explains what is directly above it, and somebody who prints
- *   only the first page still has it.
- *
- *   A FOOTER of name and page number, and NO DATE. Jeremy asked for today's
- *   date off it, and he is right: a generation date on a document about a fixed
- *   birth moment only invites the question of whether it has changed.
- *
- * WHAT THE WEB CANNOT MATCH, and does not pretend to: the app prints the birth
- * moment under the name. We do not keep it, by his own ruling, so the heading
- * is the name alone.
- *
- * The personality and design activation grids are absent for a different
- * reason — they are the READING tier, and this document is the chart tier.
+ * WHAT CANNOT MATCH, and does not pretend to:
+ *   - The drawing is the ENGINE'S bodygraph (one drawing on the wire, D-10),
+ *     recoloured for print and labelled in Outfit, which the engine solved its
+ *     label positions against. The phone draws its own with the same geometry.
+ *   - The chart tier (1) has no reading, so its glance box keeps the approved
+ *     library sentences it has always had, and it still offers the next tier.
  */
 
-const PAPER = "#FCFBF8";
-const INK = "#2A2620";
-const MUTED = "#8A8272";
-const GOLD = "#C9A227";
-const RULE = "#E3DDCB";
-/** The hairline the app rules its glance box with. Measured off its own PDF. */
-const ROW_RULE = "#EFE6C8";
+/* --------------------------------------------------------------- the print swap */
 
 /**
- * THE DRAWING, RECOLOURED FOR PRINT — and only the two colours that carry the
+ * THE DRAWING, RECOLOURED FOR PRINT -- only the two colours that carry the
  * medium, measured off the app's own PDF rather than guessed:
  *
  *   panel ground   #0E1A2B -> #5B6576
  *   robed figure   #152744 -> #263E66
  *
- * The app runs its screen dark and its print light; this is the same departure,
- * and D-10 is intact — a CLIENT never chooses a scheme, and there is still one
- * bodygraph. What moves is the medium, chosen by us.
- *
- * Done here rather than in the engine because ONE drawing goes on the wire and
- * that stays true: a second render would be a second set of coordinates to keep
- * in step, and a bigger blob in storage, for two hex values.
- *
- * THE HALO MOVES WITH THE GROUND ON PURPOSE. `palette.halo` is the same navy,
- * and its whole job is to be the colour behind a label so the channels under it
- * are pushed back. If the ground moved and the halo did not, every centre name
- * would sit in a dark patch.
- *
- * The risk this carries is that it is a STRING SWAP against constants that live
- * in another repo. If the engine's palette moves, this quietly does nothing
- * rather than failing — so `printSwap` reports what it matched and the tests
- * assert both keys are hit.
+ * The halo moves with the ground on purpose (it is the colour behind a label).
+ * A string swap against constants that live in another repo, so `printSwap`
+ * reports what it matched and the tests assert both keys are hit.
  */
 const PRINT_SWAP = Object.freeze({
   "#0e1a2b": "#5B6576",
@@ -112,10 +92,6 @@ export function printSwap(svg) {
   return { svg: out, hits };
 }
 
-const PAGE = { w: 612, h: 792 };
-const M = 56;
-const COL = PAGE.w - M * 2;
-
 /** "Success" -> "The feeling is success". Empty stays empty, so the row is dropped. */
 export function feelingIs(word) {
   return word ? `The feeling is ${String(word).toLowerCase()}` : word;
@@ -127,945 +103,888 @@ export function feelingNote(note) {
   return cut.charAt(0).toUpperCase() + cut.slice(1);
 }
 
-export async function readingPdf({ tier, name, output, links, reading = null }) {
-  /**
-   * The QR, drawn as vector rather than raster so it stays crisp at any size
-   * and costs a few hundred bytes. The app has one beside the same link; a
-   * printed page cannot be clicked, and retyping a URL from paper is a thing
-   * nobody does.
-   */
-  const guide = links?.bodygraph ?? "https://thechampagnemethod.co/library/bodygraph/";
-  let qr = null;
-  try {
-    qr = await QRCode.toString(guide, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
-  } catch {
-    /* a missing QR is a page without a QR, never a failed download */
+/* ------------------------------------------------------------------- the page */
+
+// US Letter.
+export const W = 612;
+export const H = 792;
+const MARGIN = 54;
+const CONTENT_W = W - MARGIN * 2;
+
+// The reading runs in a narrow column with chart facts in the margin beside
+// it, all measured from the page edge: body 54..406, rule 420, notes 436..558.
+const BODY_W = 352;
+const RULE_X = MARGIN + 366;
+const NOTE_X = MARGIN + 382;
+const NOTE_W = 122;
+
+const INK = "#0E1A2B";
+const GOLD = "#8A6D0F"; // darkened for contrast on white
+const RULE = "#C9A227";
+const DIM = "#55636F";
+const HAIR = "#E3E7EB";
+const HAIR_WARM = "#EFE6C8";
+const MARK = "#A08A3E";
+const LIB_TEAL = "#3FA7A0"; // the library's own words, as in the Reading tab
+const BODY2 = "#33414F";
+const VALUE_RULE = "#EFF2F4";
+
+/**
+ * The running-head mark on every page after the first, and the page-one
+ * eyebrow above the name (Jeremy 10/16, his wording; "by" always lowercase).
+ */
+export const WORDMARK = "HUMAN DESIGN by THE CHAMPAGNE METHOD COACHING AND CONSULTING";
+export const WORDMARK_TRACKING = 0.18;
+export const TITLE_MARK = "HUMAN DESIGN INTERPRETATION by THE CHAMPAGNE METHOD";
+
+/** Footer on every page: the business name, then the site. The whole line goes home. */
+export const FOOTER = "The Champagne Method Coaching and Consulting · thechampagnemethod.co";
+
+/** Under the chart values on page 2: both free pages, the library and the bodygraph guide. */
+export const ONWARD_NOTE =
+  "Every word above is explained in The Human Design library, and the drawing on " +
+  "page 1 in “Reading your bodygraph.” Both are free, at thechampagnemethod.co/library/human-design.";
+
+/** Page-2 note phrases that are links, and where they go. */
+export const ONWARD_LINKS = Object.freeze([
+  ["The Human Design library", LIBRARY],
+  ["Reading your bodygraph", BODYGRAPH_GUIDE],
+  ["thechampagnemethod.co/library/human-design", LIBRARY],
+]);
+
+/** Under the bodygraph key, beside the QR. */
+export const GUIDE_URL = "thechampagnemethod.co/library/bodygraph";
+export const GUIDE_PROMPT = "How to read your bodygraph →";
+
+const NOON_NOTE =
+  "Birth time was not known, so this chart is cast at noon. Type, " +
+  "Authority and Profile should be treated as provisional.";
+
+const wordmarkPaint = () => paint(7, MARK, true, WORDMARK_TRACKING);
+
+/**
+ * A cursor down the page that starts a new one when a block will not fit --
+ * the phone's Doc. Everything is drawn through this so nothing has to know
+ * its own page number, and so a heading can be kept with the block under it:
+ * measure first, break first, draw second.
+ */
+class Doc {
+  constructor(pdf) {
+    this.pdf = pdf;
+    this.open = false;
+    this.y = 0;
+    this.pageNo = 0;
+    this.head = null;
+    /** Clickable areas, page by page -- also handed back for the tests. */
+    this.links = [];
   }
 
+  link(r, uri, pad = 1.5) {
+    const box = { page: this.pageNo, left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad, uri };
+    this.links.push(box);
+    this.pdf.link(box.left, box.top, box.right - box.left, box.bottom - box.top, uri);
+  }
+
+  linkText(text, x, baseline, p, uri) {
+    this.link(textBox(this.pdf, text, x, baseline, p), uri);
+  }
+
+  /** Link every line of `l`, drawn with its top-left at (x, top). */
+  linkLayout(l, x, top, uri) {
+    l.lines.forEach((line, i) => {
+      if (!line.text) return;
+      const base = top + l.baseline(i);
+      this.link(textBox(this.pdf, line.text, x, base, l.paint), uri);
+    });
+  }
+
+  get bottom() {
+    return H - MARGIN - 26;
+  }
+
+  start(runningHead = null) {
+    this.finish();
+    this.pageNo += 1;
+    if (this.pageNo > 1) this.pdf.addPage();
+    this.open = true;
+    this.y = MARGIN;
+    this.head = runningHead;
+    if (runningHead) this.drawHead(runningHead);
+  }
+
+  /**
+   * The wordmark is a letterhead mark, not a title: small, dim, on the right,
+   * so the page's own label reads as the heading.
+   */
+  drawHead(ctx) {
+    drawText(this.pdf, ctx, MARGIN, this.y + 9, paint(9.5, INK, true));
+    const mark = wordmarkPaint();
+    const w = measure(this.pdf, WORDMARK, mark);
+    drawText(this.pdf, WORDMARK, W - MARGIN - w, this.y + 9, mark);
+    this.linkText(WORDMARK, W - MARGIN - w, this.y + 9, mark, SHOP);
+    this.y += 15;
+    this.rect(MARGIN, this.y, W - MARGIN * 2, 0.7, HAIR);
+    this.y += 16;
+  }
+
+  rect(x, y, w, h, color, opacity = 1) {
+    this.pdf.save();
+    this.pdf.rect(x, y, w, h).fillOpacity(opacity).fill(color);
+    this.pdf.restore();
+  }
+
+  /** Break to a new page unless `h` still fits. */
+  need(h) {
+    if (this.y + h > this.bottom) this.start(this.head);
+  }
+
+  breakPage() {
+    this.start(this.head);
+  }
+
+  /** True at the top of a page, before anything has been drawn under the head. */
+  get atTop() {
+    return this.y <= MARGIN + 31 + 0.5;
+  }
+
+  drawLines(l, from, to, x = MARGIN) {
+    drawLayout(this.pdf, l, x, this.y, from, to);
+    this.y += l.lineTop(to) - l.lineTop(from);
+  }
+
+  gap(h) {
+    this.y += h;
+  }
+
+  draw(l, x = MARGIN) {
+    drawLayout(this.pdf, l, x, this.y);
+    this.y += l.height;
+  }
+
+  block(l, x = MARGIN, after = 0) {
+    this.need(l.height);
+    this.draw(l, x);
+    this.y += after;
+  }
+
+  rule(color, thickness = 0.7, from = MARGIN, to = W - MARGIN) {
+    this.rect(from, this.y, to - from, thickness, color);
+    this.y += thickness;
+  }
+
+  finish() {
+    if (!this.open) return;
+    // The whole footer line is the link home; the page number is not.
+    const p = paint(8, DIM);
+    const base = H - MARGIN + 14;
+    drawText(this.pdf, FOOTER, MARGIN, base, p);
+    drawText(this.pdf, String(this.pageNo), W - MARGIN - 8, base, p);
+    this.linkText(FOOTER, MARGIN, base, p, SITE_URL);
+    this.open = false;
+  }
+
+  L(text, p, width = CONTENT_W) {
+    return layout(this.pdf, text, p, width);
+  }
+}
+
+/**
+ * Builds the PDF. `birth` is the record's birth block (null on readings stored
+ * before 16 Oct 2026, which simply get no birth line). Resolves to the bytes,
+ * or -- with `inspect` set, for the tests -- to `{ bytes, links, runs }`: every
+ * link box and every run of text drawn, page by page.
+ */
+export async function readingPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false }) {
+  const qr = (() => {
+    try {
+      return QRCode.create(BODYGRAPH_GUIDE, { errorCorrectionLevel: "M" });
+    } catch {
+      return null; // a missing QR is a page without a QR, never a failed download
+    }
+  })();
+
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: [PAGE.w, PAGE.h],
+    const pdf = new PDFDocument({
+      size: [W, H],
       margin: 0,
       /**
-       * The initial font is ours, and this is the fix for a 500 that three
-       * local checks passed: PDFDocument loads Helvetica in its constructor by
-       * requiring a file the deployed bundle does not contain. A buffer also
-       * has no path to get wrong — the path version was right in the repo and
-       * wrong the moment esbuild moved the module.
+       * The initial font is ours: PDFDocument loads Helvetica in its
+       * constructor otherwise, from a file the deployed bundle does not have.
        */
-      font: OUTFIT_400,
+      font: ROBOTO_400,
       info: {
         Title: name ? `${name} — Human Design` : "Human Design",
         Author: "The Champagne Method",
         Creator: "thechampagnemethod.co",
       },
     });
-
     const chunks = [];
-    doc.on("data", (c) => chunks.push(c));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+    pdf.on("data", (c) => chunks.push(c));
+    pdf.on("error", reject);
 
-    doc.registerFont("body", OUTFIT_400);
-    doc.registerFont("bold", OUTFIT_600);
+    pdf.registerFont("body", ROBOTO_400);
+    pdf.registerFont("bold", ROBOTO_700);
+    pdf.registerFont("fallback", OUTFIT_400);
+    pdf.registerFont("svgBody", OUTFIT_400);
+    pdf.registerFont("svgBold", OUTFIT_600);
 
-    chartPage(doc, { name, output, links, qr });
-    doc.addPage();
-
+    const d = new Doc(pdf);
+    const runs = [];
+    if (inspect) hooks.onText = (r) => runs.push({ page: d.pageNo, ...r });
     /**
-     * THE WRITTEN INTERPRETATION, when there is one -- tier 2 and above.
-     *
-     * `reading` is the raw text the model returned, already checked by
-     * `firstProblem` before it was ever stored. Parsing it HERE rather than
-     * storing a parsed shape means the document is always built from the thing
-     * that was validated, never from a derivative of it.
+     * THE WRITTEN INTERPRETATION, on the reading tier. Parsed HERE from the
+     * stored, validated text, never from a stored derivative of it.
      */
-    const written = tier >= 2 && typeof reading === "string" ? parseReading(reading) : null;
+    const text = tier >= 2 && typeof reading === "string" && reading.trim() ? reading.replace(/\r\n?/g, "\n") : null;
 
-    glancePage(doc, { output, tier, links, written });
-    if (written) {
-      doc.addPage();
-      mechanicsPage(doc, written);
-      /**
-       * THE ACTIVATIONS, which the reading tier has always been sold with and
-       * has never once shipped. Page three, between the mechanics and the
-       * reading: they are chart facts, so they belong with the other chart
-       * facts rather than after the prose.
-       */
-      doc.addPage();
-      activationsPage(doc, { output, links, page: 4 });
-      interpretationPages(doc, { output, written });
+    bodygraphPage(d, { name, output, birth, qr });
+    glancePage(d, { output, tier, reading: text });
+    // Same gate as the phone: a reading that can be laid out in the new order
+    // gets the new order; anything else keeps its words as plain paragraphs.
+    const view = text && structureProblem(text) === null ? buildReadingView(output, text) : null;
+    if (view) {
+      startHere(d, view);
+      readingPages(d, output, view);
+    } else if (text) {
+      plainReading(d, text);
     }
+    d.finish();
+    if (inspect) hooks.onText = null;
 
-    doc.end();
+    pdf.on("end", () => {
+      const bytes = Buffer.concat(chunks);
+      resolve(inspect ? { bytes, links: d.links, runs } : bytes);
+    });
+    pdf.end();
   });
 }
 
-function paper(doc) {
-  doc.rect(0, 0, PAGE.w, PAGE.h).fill(PAPER);
+/* --------------------------------------------------------------------- page 1 */
+
+/** Width over height of the drawing's reference box (-120 -12 1090 1330). */
+const ASPECT = 1090 / 1330;
+/** The key strip: 900 x 138 reference units, drawn as wide as the chart. */
+const LEG_W = 900;
+const LEG_H = 138;
+const LEGEND_ASPECT = LEG_W / LEG_H;
+
+function profileWords(profile) {
+  const digits = String(profile ?? "").replace(/\D/g, "");
+  if (digits.length !== 2) return "";
+  return [...digits].map((x) => PROFILE_LINE_NAMES[x]).filter(Boolean).join(" / ");
 }
 
-const HOME = "https://thechampagnemethod.co";
+function bodygraphPage(d, { name, output, birth, qr }) {
+  const c = output ?? {};
+  const pdf = d.pdf;
+  d.start();
+  const eyebrow = paint(8, MARK, true, 0.19);
+  drawText(pdf, TITLE_MARK, MARGIN, d.y + 8, eyebrow);
+  d.linkText(TITLE_MARK, MARGIN, d.y + 8, eyebrow, SHOP);
+  d.gap(16);
+  drawText(pdf, name || "Your Human Design", MARGIN, d.y + 19, paint(24, INK, true));
+  d.gap(25);
+  const born = birthLine(birth);
+  if (born) {
+    drawText(pdf, born, MARGIN, d.y + 9, paint(9.5, DIM));
+    d.gap(14);
+  } else {
+    d.gap(4);
+  }
+  d.rule(RULE, 1.5);
+  d.gap(9);
+  const words = profileWords(c.profile);
+  drawText(
+    pdf,
+    [c.type, `Profile ${c.profile ?? ""}${words ? ` — ${words}` : ""}`, `${c.authority ?? ""} authority`]
+      .filter(Boolean)
+      .join("  ·  "),
+    MARGIN,
+    d.y + 9,
+    paint(10, DIM),
+  );
+  d.gap(13);
+
+  if (c.timeKnown === false) {
+    d.block(d.L(NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
+  }
+
+  // The chart is aspect-locked, the key is aspect-locked and as wide as the
+  // chart, so the whole block is a function of one unknown:
+  //   total = h + (h * ASPECT / LEGEND_ASPECT) + gap
+  const gap = 12;
+  const avail = d.bottom - d.y - 4;
+  const perHeight = 1 + ASPECT / LEGEND_ASPECT;
+  const chartH = Math.min(CONTENT_W / ASPECT, (avail - gap) / perHeight);
+  const chartW = chartH * ASPECT;
+  const legendH = chartW / LEGEND_ASPECT;
+  const left = MARGIN + (CONTENT_W - chartW) / 2;
+
+  const raw = typeof c.bodygraphSvg === "string" ? c.bodygraphSvg : null;
+  if (raw) {
+    try {
+      SVGtoPDF(pdf, printSwap(raw).svg, left, d.y, {
+        width: chartW,
+        height: chartH,
+        preserveAspectRatio: "xMidYMid meet",
+        fontCallback: (family, bold, italic, opts) =>
+          bold || Number(opts?.["font-weight"]) >= 500 ? "svgBold" : "svgBody",
+      });
+    } catch {
+      /* a drawing that will not draw is a page without it, never a failed download */
+    }
+  }
+  d.gap(chartH + gap);
+
+  const guideBox = drawLegend(d, { left, top: d.y, width: chartW, height: legendH });
+
+  // The QR lives in the gutter the chart leaves beside the key, so it costs
+  // no vertical space at all.
+  const gutter = left - MARGIN - 8;
+  const qrSide = Math.min(Math.min(legendH, gutter), 74);
+  if (qrSide > 34 && qr) {
+    const qx = left + chartW + 8;
+    const qy = d.y + (legendH - qrSide) / 2;
+    drawQr(pdf, qr, qx, qy, qrSide);
+    d.link({ left: qx, top: qy, right: qx + qrSide, bottom: qy + qrSide }, BODYGRAPH_GUIDE, 0);
+  }
+  d.link(guideBox, BODYGRAPH_GUIDE);
+  d.gap(legendH);
+}
+
+/** The QR as vector squares, black on the phone's pale ground, two-module margin. */
+function drawQr(pdf, qr, x, y, side) {
+  const n = qr.modules.size;
+  const total = n + 4;
+  const u = side / total;
+  pdf.save();
+  pdf.rect(x, y, side, side).fill("#F4F1EA");
+  pdf.fillColor("#000000");
+  for (let r = 0; r < n; r++) {
+    for (let col = 0; col < n; col++) {
+      if (qr.modules.get(r, col)) pdf.rect(x + (col + 2) * u, y + (r + 2) * u, u + 0.02, u + 0.02);
+    }
+  }
+  pdf.fill("#000000");
+  pdf.restore();
+}
 
 /**
- * What a purchase collects and what becomes of it.
- *
- * ON PAGE ONE ONLY, not in every footer. This document is read straight
- * through and often kept; a policy link repeated on all fourteen pages reads
- * as boilerplate and gets skipped everywhere. Once, on the page nobody misses,
- * is the placement that actually gets found.
+ * What the colours mean -- the phone's Bodygraph.drawLegend, on a white page.
+ * Two columns, two rows, a gold rule over, a pale one over the guide line,
+ * and the guide line right-aligned to end where the QR begins. The swatch
+ * colours are the ENGINE drawing's, because they are the key to the drawing
+ * printed above them. Returns the box around the guide line (one link).
  */
-const PRIVACY = "https://thechampagnemethod.co/readings/privacy/";
+function drawLegend(d, b) {
+  const pdf = d.pdf;
+  const titleInk = INK;
+  const subInk = DIM;
+  const ruleInk = GOLD;
+  const scale = Math.min(b.width / LEG_W, b.height / LEG_H);
+  const offX = b.left + (b.width - LEG_W * scale) / 2;
+  const offY = b.top + (b.height - LEG_H * scale) / 2;
+  const tx = (x) => offX + x * scale;
+  const ty = (y) => offY + y * scale;
+  const s = (v) => v * scale;
 
-/**
- * Name on the left, page number on the right. No date, by his instruction.
- *
- * THE NAME IS A LINK, which is what he asked for -- a PDF is read on a screen
- * far more often than it is printed, and a URL somebody has to retype is a URL
- * nobody follows. `link` and `underline` are pdfkit's own, so the annotation is
- * a real one rather than blue text pretending.
- */
-function footer(doc, page) {
-  const y = PAGE.h - 46;
-  doc.font("body").fontSize(8.5).fillColor(MUTED);
-  doc.text("The Champagne Method · thechampagnemethod.co", M, y, {
-    width: COL * 0.7,
-    link: HOME,
-    underline: false,
+  const KEY = [
+    ["Personality", "conscious — what you know", "#F0F3F9"],
+    ["Design", "unconscious — what the body knows", "#7C5BFF"],
+    ["Both", "held consciously AND unconsciously", "#F0F3F9", "#7C5BFF"],
+    ["Open", "not activated — open to others", "#1F3151"],
+  ];
+  const colW = LEG_W / 2;
+  const rowH = 48;
+  const barX = 16;
+  KEY.forEach(([title, sub, fill, second], i) => {
+    const x0 = (i % 2) * colW + barX;
+    const cy = 21 + Math.floor(i / 2) * rowH;
+    const side = 26;
+    const sx = tx(x0);
+    const sy = ty(cy - side / 2);
+    const sw = s(side);
+    pdf.save();
+    if (second) {
+      pdf.rect(sx, sy, sw / 2, sw).fill(fill);
+      pdf.rect(sx + sw / 2, sy, sw / 2, sw).fill(second);
+    } else {
+      pdf.rect(sx, sy, sw, sw).fill(fill);
+    }
+    pdf.rect(sx, sy, sw, sw).lineWidth(s(1.2)).strokeColor("#8A9099").stroke();
+    pdf.restore();
+    const textX = tx(x0 + 26 + 18);
+    drawText(pdf, title, textX, ty(cy + 1), paint(s(22), titleInk, true));
+    drawText(pdf, sub, textX, ty(cy + 22), paint(s(17), subInk));
   });
-  if (page === 1) {
-    doc.text("Privacy", M + COL * 0.7 + 8, y, {
-      width: COL * 0.25,
-      link: PRIVACY,
-      underline: true,
-    });
-  }
-  doc.fillColor(MUTED).text(String(page), PAGE.w - M - 40, y, { width: 40, align: "right" });
+
+  d.rect(tx(0), ty(0), tx(LEG_W) - tx(0), s(1.2), ruleInk, 150 / 255);
+  d.rect(tx(barX), ty(96), tx(LEG_W - barX) - tx(barX), s(0.8), ruleInk, 90 / 255);
+
+  const urlP = paint(s(18), ruleInk, true);
+  const promptP = paint(s(18), subInk);
+  const right = tx(LEG_W - barX);
+  const base = ty(122);
+  const urlW = drawText(pdf, GUIDE_URL, right, base, urlP, { align: "right" });
+  const promptRight = right - urlW - s(10);
+  const promptW = drawText(pdf, GUIDE_PROMPT, promptRight, base, promptP, { align: "right" });
+  return {
+    left: promptRight - promptW,
+    top: base - (1900 / 2048) * s(18),
+    right,
+    bottom: base + (500 / 2048) * s(18),
+  };
 }
 
-function chartPage(doc, { name, output, links, qr }) {
-  paper(doc);
+/* --------------------------------------------------------------------- page 2 */
 
-  doc
-    .font("body")
-    .fontSize(8.5)
-    .fillColor(GOLD)
-    .text("THE CHAMPAGNE METHOD · HUMAN DESIGN INTERPRETATION", M, M, {
-      characterSpacing: 1.7,
-    });
-  doc
-    .font("bold")
-    .fontSize(26)
-    .fillColor(INK)
-    .text(name || "Your Human Design", M, doc.y + 6, { width: COL });
+const SUMMARY_KEYS = ["Type", "Strategy", "Authority", "Profile", "Signature", "Not-self"];
 
-  const oneLine = [
-    output?.type,
-    output?.profile && `Profile ${profileWithNames(output.profile)}`,
-    output?.authority && `${output.authority} authority`,
-    // The one line everybody reads. Without a birth time these three are
-    // provisional, and the page-two note is not where a reader's eye lands.
-    output?.timeKnown === false && "birth time unknown — provisional",
-  ]
-    .filter(Boolean)
-    .join("  ·  ");
-  if (oneLine) {
-    doc.font("body").fontSize(11).fillColor(MUTED).text(oneLine, M, doc.y + 8, { width: COL });
-  }
-
-  const ruleY = doc.y + 12;
-  doc.moveTo(M, ruleY).lineTo(PAGE.w - M, ruleY).strokeColor(GOLD).lineWidth(1).stroke();
-
-  /**
-   * THE ENGINE'S DRAWING, recoloured for paper. It carries its own ground and
-   * border, so the panel comes for free: nothing here draws a rectangle.
-   */
-  const raw = typeof output?.bodygraphSvg === "string" ? output.bodygraphSvg : null;
-  const svg = raw ? printSwap(raw).svg : null;
-  // 166, not 150: the key gained a line explaining what a white centre's gate
-  // numbers mean, and the chart gives up those points rather than the footer.
-  const legendTop = PAGE.h - 166;
-  if (svg) {
-    const top = ruleY + 20;
-    SVGtoPDF(doc, svg, M, top, {
-      width: COL,
-      height: legendTop - top - 14,
-      preserveAspectRatio: "xMidYMid meet",
-      fontCallback: (family, bold, italic, opts) =>
-        bold || Number(opts?.["font-weight"]) >= 500 ? "bold" : "body",
-    });
-  }
-
-  channelKey(doc, legendTop, links, qr);
-  footer(doc, 1);
+/**
+ * The chart tier's sentences: it has no reading, so its glance box keeps the
+ * approved library sentences it has always carried (a shop-only case -- the
+ * phone always has a reading).
+ */
+function chartTierSentences(c) {
+  const m = /^(\d)\s*\/\s*(\d)/.exec(String(c.profile ?? ""));
+  const a = m && describe(PROFILE_NOTES, m[1]);
+  const b = m && describe(PROFILE_NOTES, m[2]);
+  return {
+    Type: describe(TYPE_NOTES, c.type),
+    Strategy: describe(STRATEGY_NOTES, c.strategy),
+    Authority: describe(AUTHORITY_NOTES, c.authority),
+    Profile: a && b ? `${a} ${b}` : null,
+    Signature: feelingNote(describe(SIGNATURE_NOTES, c.signature)),
+    "Not-self": feelingNote(describe(NOT_SELF_NOTES, c.notSelfTheme)),
+  };
 }
 
-function glancePage(doc, { output, tier, links, written = null }) {
-  paper(doc);
-
-  doc.font("body").fontSize(11).fillColor(INK).text("Your chart at a glance", M, M);
-  doc
-    .font("body")
-    .fontSize(8.5)
-    .fillColor(GOLD)
-    .text("THE CHAMPAGNE METHOD", PAGE.w / 2, M + 1, {
-      width: COL / 2,
-      align: "right",
-      characterSpacing: 1.7,
-    });
-
-  let y = M + 26;
-  /**
-   * The gold-ruled box: a value and a sentence about it, which is the app's
-   * shape and the reason the sentences were written.
-   */
+function glancePage(d, { output, tier, reading }) {
+  const c = output ?? {};
+  const pdf = d.pdf;
+  d.start("Your chart at a glance");
+  // Value from the chart, sentence from the model. Never the reverse.
+  const says = reading ? summaryRows(reading) : chartTierSentences(c);
+  const words = profileWords(c.profile);
   const rows = [
-    ["TYPE", output?.type, describe(TYPE_NOTES, output?.type)],
-    ["STRATEGY", output?.strategy, describe(STRATEGY_NOTES, output?.strategy)],
-    ["AUTHORITY", output?.authority, describe(AUTHORITY_NOTES, output?.authority)],
-    /**
-     * ALL SIX CARRY A SENTENCE NOW. The three added later were drafted and
-     * approved the same way as the first three: in the conversation, not in a
-     * file somebody was pointed at.
-     */
-    ["PROFILE", output?.profile && profileWithNames(output.profile), profileNote(output?.profile)],
-    /**
-     * ON TRACK / OFF TRACK (Jeremy 10/5, option C): on track first, said as a
-     * feeling. The note keeps its own words minus the opening "The feeling
-     * of" / "The signal that", which the new value line already says.
-     */
-    ["WHEN IT'S ON TRACK", feelingIs(output?.signature), feelingNote(describe(SIGNATURE_NOTES, output?.signature))],
-    ["WHEN IT'S OFF TRACK", feelingIs(output?.notSelfTheme), feelingNote(describe(NOT_SELF_NOTES, output?.notSelfTheme))],
-  ].filter(([, v]) => v);
+    ["TYPE", c.type],
+    ["STRATEGY", c.strategy],
+    ["AUTHORITY", c.authority],
+    ["PROFILE", `${c.profile ?? ""}${words ? ` — ${words}` : ""}`],
+    // On track / off track (Jeremy 10/5, option C), said as a feeling.
+    ["WHEN IT'S ON TRACK", c.signature ? `The feeling is ${String(c.signature).toLowerCase()}` : ""],
+    ["WHEN IT'S OFF TRACK", c.notSelfTheme ? `The feeling is ${String(c.notSelfTheme).toLowerCase()}` : ""],
+  ];
+  const labelPaint = paint(7.5, GOLD, true, 0.12);
+  const valuePaint = paint(10.5, INK);
+  // Each label opens its library entry; strategy and on/off track live in the
+  // type's own entry there.
+  const glanceHref = [typeLink(c.type), typeLink(c.type), AUTHORITY, profileLink(c.profile), typeLink(c.type), typeLink(c.type)];
 
-  if (rows.length) {
-    const labelW = 118; // fits "WHEN IT'S OFF TRACK" (104pt) on one line
-    const textX = M + 14 + labelW;
-    const textW = COL - 28 - labelW;
-    const startY = y;
+  const boxTop = d.y;
+  d.gap(9);
+  rows.forEach(([label, value], i) => {
+    const sentence = says[SUMMARY_KEYS[i]] ?? "";
+    const t = sentence ? `${value}. ${sentence}` : `${value}.`;
+    const l = d.L(t, valuePaint, CONTENT_W - 138);
+    if (i > 0) d.rect(MARGIN + 14, d.y, W - MARGIN * 2 - 28, 0.6, HAIR_WARM);
+    d.gap(6);
+    drawText(pdf, label, MARGIN + 16, d.y + 8, labelPaint);
+    d.linkText(label, MARGIN + 16, d.y + 8, labelPaint, glanceHref[i]);
+    // 122, not 90: "WHEN IT'S OFF TRACK" needs the room.
+    drawLayout(pdf, l, MARGIN + 122, d.y - 2);
+    d.gap(Math.max(l.height, 14) + 4);
+  });
+  d.gap(6);
+  d.rect(MARGIN, boxTop, CONTENT_W, 1, RULE);
+  d.rect(MARGIN, d.y, CONTENT_W, 1, RULE);
+  d.rect(MARGIN, boxTop, 1, d.y - boxTop, RULE);
+  d.rect(W - MARGIN - 1, boxTop, 1, d.y - boxTop, RULE);
+  d.gap(22);
 
-    /**
-     * A HAIRLINE BETWEEN EVERY ROW, and the value in the SAME WEIGHT as the
-     * sentence after it -- both of which are the app's, and both of which I had
-     * diverged from: no rules at all, and the value set bold.
-     *
-     * The bold read well on its own and it is still wrong here. This document
-     * is meant to be the app's document, and a reader who has both should not
-     * be able to tell which one made which.
-     */
-    let inner = y + 12;
-    rows.forEach(([label, value, note], i) => {
-      if (i) {
-        doc
-          .moveTo(M + 14, inner - 6)
-          .lineTo(PAGE.w - M - 14, inner - 6)
-          .strokeColor(ROW_RULE)
-          .lineWidth(0.5)
-          .stroke();
-      }
-      doc
-        .font("body")
-        .fontSize(8)
-        .fillColor(GOLD)
-        .text(label, M + 14, inner + 2, { width: labelW - 10, characterSpacing: 1.1 });
-      doc
-        .font("body")
-        .fontSize(10)
-        .fillColor(INK)
-        .text(note ? `${value}. ${note}` : `${value}.`, textX, inner, {
-          width: textW,
-          lineGap: 1,
-        });
-      inner = doc.y + 9;
-    });
-    doc.rect(M, startY, COL, inner - startY - 2).strokeColor(GOLD).lineWidth(1).stroke();
-    y = inner + 22;
-  }
+  drawText(pdf, "YOUR CHART VALUES", MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.17));
+  d.gap(13);
+  d.rule(RULE, 0.8);
+  d.gap(2);
 
-  doc
-    .font("body")
-    .fontSize(8.5)
-    .fillColor(GOLD)
-    .text("YOUR CHART VALUES", M, y, { characterSpacing: 1.3 });
-  y = doc.y + 8;
+  const valueRow = (label, value, href) => {
+    const l = d.L(value, paint(10, INK), CONTENT_W - 110);
+    d.need(l.height + 10);
+    d.gap(5);
+    const lp = paint(8, DIM, false, 0.06);
+    drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, lp);
+    d.linkText(label.toUpperCase(), MARGIN, d.y + 8, lp, href);
+    drawLayout(pdf, l, MARGIN + 110, d.y - 1);
+    d.gap(Math.max(l.height, 12) + 4);
+    d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
+  };
 
-  /**
-   * Channels arrive from the engine already named -- "20-34 (Charisma)" -- so
-   * one per line rather than run together, which is how the app prints them and
-   * the only way the names are readable.
-   */
-  /**
-   * THE THREE CENTRE ROWS ARE ALWAYS PRINTED, "None" included.
-   *
-   * They partition the nine centres exactly, so a reader can add them up. A
-   * Reflector has no defined centres and some charts have no open ones; under
-   * the old `.filter` those rows simply disappeared, which reads as a document
-   * that failed to work something out rather than as a fact about the chart.
-   */
-  const centres = (list) => (list ?? []).join(", ") || "None";
+  const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
+  valueRow("Definition", c.definition ?? "", DEFINITION);
+  valueRow("Incarnation cross", c.incarnationCross ?? "", crossLink(c.incarnationCross));
+  valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS);
   /**
    * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`
    * key at all, and its `openCenters` still means "everything not defined".
-   * Absent is not empty: printing "Undefined centres: None" on such a reading
-   * would be a false statement on a document somebody already holds. Those
-   * readings keep the two rows they were sold with; only charts cast by the
-   * three-state engine get the third row.
+   * Absent is not empty, so those readings keep the two rows they were sold
+   * with (a shop-only case: every phone chart has all three).
    */
-  const threeState = Array.isArray(output?.undefinedCenters);
-  const values = [
-    ["Definition", output?.definition],
-    ["Incarnation cross", output?.incarnationCross],
-    ["Defined centers", centres(output?.definedCenters)],
-    ...(threeState ? [["Undefined centers", centres(output.undefinedCenters)]] : []),
-    ["Open centers", centres(output?.openCenters)],
-    ["Channels", (output?.channels ?? []).join("\n")],
-  ].filter(([, v]) => v);
+  if (Array.isArray(c.undefinedCenters)) valueRow("Undefined centers", list(c.undefinedCenters, "None"), CENTERS);
+  valueRow("Open centers", list(c.openCenters, "None"), CENTERS);
+  valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS);
 
-  const lw = 150;
-  /**
-   * A LONG CHANNEL LIST GOES TWO ACROSS. Eleven channels one under another is
-   * what pushed the offer off the page on the densest chart in the sweep
-   * (one in 2,500 charts has ten or more). Two columns halve the height and
-   * the list is still read top to bottom, left column first.
-   */
-  const channelList = output?.channels ?? [];
-  for (const [label, value] of values) {
-    doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
-    doc
-      .font("body")
-      .fontSize(8.5)
-      .fillColor(MUTED)
-      .text(label.toUpperCase(), M, y + 8, { width: lw - 12, characterSpacing: 1.1 });
-    if (label === "Channels" && channelList.length > 6) {
-      const half = Math.ceil(channelList.length / 2);
-      const gap = 16;
-      const cw = (COL - lw - gap) / 2;
-      doc.font("body").fontSize(10.5).fillColor(INK);
-      doc.text(channelList.slice(0, half).join("\n"), M + lw, y + 6, { width: cw });
-      const yLeft = doc.y;
-      doc.text(channelList.slice(half).join("\n"), M + lw + cw + gap, y + 6, { width: cw });
-      y = Math.max(yLeft, doc.y) + 6;
-      continue;
-    }
-    doc
-      .font("body")
-      .fontSize(10.5)
-      .fillColor(INK)
-      .text(String(value), M + lw, y + 6, { width: COL - lw });
-    y = doc.y + 6;
-  }
-  doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
-
-  /**
-   * WHERE THE WORDS ARE EXPLAINED, as a real link annotation.
-   *
-   * Jeremy: "human design, plainly link in PDF missing. needed." He is right,
-   * and this page is exactly where it is missed -- it is where somebody meets
-   * "Manifesting Generator" and "incarnation cross" as bare values. The offer
-   * page and the reading page both offer the glossary at that moment; the
-   * document they keep did not.
-   *
-   * ONE LINE, ONE LINK. Not two fragments joined with `continued` -- that is
-   * the mistake the page-one guide line already made once, where each fragment
-   * re-centred over the same span and they landed on top of each other.
-   */
-  const hd101 = links?.hd101 ?? "https://thechampagnemethod.co/library/human-design/";
-  doc
-    .font("body")
-    .fontSize(9)
-    .fillColor(GOLD)
-    .text(
-      "Every word above is explained in The Human Design library  —  free",
-      M,
-      y + 10,
-      { width: COL, link: hd101, underline: false },
-    );
-  y = doc.y + 4;
-
-  if (output?.note) {
-    doc.font("body").fontSize(9).fillColor(MUTED).text(String(output.note), M, y + 12, {
-      width: COL,
+  // The activations, in a four-up grid -- the READING tier's, never sold with
+  // the chart tier.
+  const activationRow = (label, acts) => {
+    const cols = 4;
+    const rowsN = Math.ceil(acts.length / cols);
+    const h = rowsN * 13;
+    d.need(h + 10);
+    d.gap(5);
+    drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, paint(8, DIM, false, 0.06));
+    const colW = (CONTENT_W - 110) / cols;
+    const nameP = paint(9, BODY2);
+    const gateP = paint(9, INK, true);
+    acts.forEach((a, i) => {
+      const cx = MARGIN + 110 + (i % cols) * colW;
+      const cy = d.y + 8 + Math.floor(i / cols) * 13;
+      const nm = String(a.planet ?? "").toLowerCase().replace(/_/g, " ") + " ";
+      drawText(pdf, nm, cx, cy, nameP);
+      drawText(pdf, `${a.gate}.${a.line}`, cx + measure(pdf, nm, nameP), cy, gateP);
     });
-    y = doc.y;
+    d.gap(h + 4);
+    d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
+  };
+  if (tier >= 2) {
+    if (Array.isArray(c.personality) && c.personality.length) activationRow("Personality", c.personality);
+    if (Array.isArray(c.design) && c.design.length) activationRow("Design", c.design);
   }
 
-  /**
-   * A soft line toward the next tier — and it now says WHERE the credit lives,
-   * which is Jeremy's note and a money question, so it gets said plainly.
-   *
-   * REWRITTEN once the credit stopped depending on a browser tab. It used to
-   * say the offer was on "the page your chart came from" and that starting
-   * anywhere else begins at full -- which was true, and was the bug: credit
-   * came only from a grant held in the tab that paid, so the emailed link the
-   * sentence pointed at was exactly the case that did NOT work. Jeremy paid
-   * the full price to find that out.
-   *
-   * The credit travels with the signed link now, so this says what is true and
-   * useful in one breath: open it from the email and the discount is already
-   * on the price.
-   *
-   * THE GENERIC PURCHASE URL IS STILL DELIBERATELY ABSENT. A printed link that
-   * skips the token is a link that skips the credit.
-   *
-   * No imperative: it describes where the thing is and stops.
-   */
-  // Not for a tier that cannot be bought yet. A PDF is kept and re-read; an
-  // offer inside one outlives the moment it was true.
-  const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
-  /**
-   * NO CLAMP. `Math.min(y + 22, PAGE.h - 150)` did not make room when the page
-   * ran long -- it pulled the offer UP and printed it on top of the channels
-   * row and the glossary line. Adding the third centre row was enough to
-   * trigger it, and the result was three layers of overlapping text on a
-   * document somebody paid for.
-   *
-   * It is measured against the footer now, and simply left out when it will not
-   * fit. A missing upsell is a smaller fault than a broken page.
-   */
-  /**
-   * MEASURED, NOT ESTIMATED. A fixed 100pt allowance guessed this box's height
-   * and dropped it off a page it had ample room on -- by five points. The
-   * strings are built first and asked how tall they are, so the only thing that
-   * can leave the offer out is genuinely running out of page.
-   */
-  if (next) {
-    /**
-     * MORE THAN WHAT, EXACTLY. "If you would like more" leaves the reader to
-     * work out what they are holding and what is being offered; naming the
-     * tier they bought does that work for them, and makes the heading true on
-     * whichever document it lands.
-     */
-    const offerHead = `IF YOU WOULD LIKE MORE THAN THIS ${(TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase()}`.trim();
-    const offerBody =
-      `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
-      "the price, and the link in your email is what proves it — so opening this from there " +
-      "means the credit is already applied. Nobody pays twice for the same thing.";
-    const headH = doc.font("body").fontSize(8.5).heightOfString(offerHead, { width: COL, characterSpacing: 1.3 });
-    const bodyH = doc.font("body").fontSize(10).heightOfString(offerBody, { width: COL, lineGap: 1.5 });
-    const boxH = headH + 6 + bodyH;
-
-    /**
-     * TOP-ALIGNED WHEN THERE IS SLACK, BOTTOM-ALIGNED WHEN THERE IS NOT.
-     *
-     * A fixed `y + 22` put the offer 20pt past the footer on a chart with six
-     * defined centres and four channels -- so it was dropped, on a page showing
-     * ninety points of white space below it. Sliding it down to sit just above
-     * the footer keeps it on every page that can hold it at all; the guard is
-     * what stops the slide turning back into the overlap this replaced.
-     */
-    const boxY = Math.min(y + 22, PAGE.h - 60 - boxH);
-    if (boxY >= y + 8) {
-      doc.font("body").fontSize(8.5).fillColor(GOLD).text(offerHead, M, boxY, { characterSpacing: 1.3 });
-      doc.font("body").fontSize(10).fillColor(INK).text(offerBody, M, doc.y + 6, { width: COL, lineGap: 1.5 });
-      footer(doc, 2);
-    } else {
-      /**
-       * AND WHEN EVEN THAT WILL NOT FIT, A THIRD PAGE -- never a dropped offer
-       * and never an overlap. Jeremy, on seeing the densest chart lose the
-       * box: "I don't like this." The glance page is the last page of every
-       * tier that can be offered more, so a page after it disturbs nothing.
-       */
-      footer(doc, 2);
-      doc.addPage();
-      paper(doc);
-      doc.font("body").fontSize(8.5).fillColor(GOLD).text(offerHead, M, M, { characterSpacing: 1.3 });
-      doc.font("body").fontSize(10).fillColor(INK).text(offerBody, M, doc.y + 6, { width: COL, lineGap: 1.5 });
-      footer(doc, 3);
+  // The onward pointer: both free pages, in the voice of an invitation.
+  const onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
+  d.gap(14);
+  d.need(onward.height);
+  const noteTop = d.y;
+  d.draw(onward);
+  for (const [phrase, uri] of ONWARD_LINKS) {
+    for (const r of phraseRects(pdf, onward, phrase)) {
+      d.link({ left: r.left + MARGIN, top: r.top + noteTop, right: r.right + MARGIN, bottom: r.bottom + noteTop }, uri);
     }
-  } else {
-    footer(doc, 2);
   }
+
+  offer(d, tier);
 }
 
 /**
- * A profile is a PAIR -- "2/4 -- Hermit / Opportunist" -- and there are twelve
- * of them. Rather than write twelve, each LINE is described and the pair reads
- * as its two halves, which is how the app names them too.
+ * A soft line toward the next tier, on the tiers that can be offered more
+ * (a shop-only block: the phone sells nothing). It says WHERE the credit
+ * lives, and it is measured, never estimated: when it will not fit under the
+ * values it starts the next page rather than overlapping anything.
  */
-function profileNote(profile) {
-  const m = /^(\d)\s*\/\s*(\d)/.exec(String(profile ?? ""));
-  if (!m) return null;
-  const first = describe(PROFILE_NOTES, m[1]);
-  const second = describe(PROFILE_NOTES, m[2]);
-  if (!first || !second) return null;
-  return `${first} ${second}`;
+function offer(d, tier) {
+  if (tier >= 2) return;
+  const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
+  if (!next) return;
+  const label = (TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase();
+  const head = d.L(`IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim(), paint(7.5, GOLD, true, 0.17));
+  const body = d.L(
+    `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
+      "the price, and the link in your email is what proves it — so opening this from there " +
+      "means the credit is already applied. Nobody pays twice for the same thing.",
+    paint(10, INK),
+  );
+  d.gap(22);
+  d.need(head.height + 6 + body.height);
+  d.draw(head);
+  d.gap(6);
+  d.draw(body);
 }
 
 function lowerFirst(s) {
   return typeof s === "string" && s ? s[0].toLowerCase() + s.slice(1) : "";
 }
 
+/* ----------------------------------------------------------------- Start here */
+
+const START_HERE = "Start here";
+const LIST_W = 470;
+
 /**
- * THE CHANNEL KEY, under the drawing it explains.
- *
- * Four ways a line between two gates can be drawn, and without this a reader is
- * looking at a picture full of them with no way to tell them apart. Under the
- * chart rather than on the next page, so somebody who prints only page one
- * still has it.
- *
- * The swatches are DRAWN rather than described, because "violet means design"
- * is useless beside a line whose violet you cannot check. Every one is
- * outlined: the personality line is near-white by design — it reads on navy and
- * would disappear on paper without a border.
+ * Pages 3 and 4, "Start here": centers on page 3, channels and profile from
+ * page 4 (call 1: two pages, never one crowded one). The profile Takeaway is
+ * the two profile-line sentences ONLY -- the glance box keeps its Profile
+ * sentence (call 4).
  */
-function channelKey(doc, top, links, qr) {
-  const KEY = [
-    ["#F0F3F9", "Personality", "conscious — what you know"],
-    ["#7C5BFF", "Design", "unconscious — what the body knows"],
-    ["#F0F3F9", "Both", "held consciously AND unconsciously", "#7C5BFF"],
-    ["#1F3151", "Open", "not activated — open to others"],
-  ];
+function startHere(d, v) {
+  d.start(START_HERE);
+  const firstPage = d.pageNo;
 
-  /**
-   * A GOLD RULE ABOVE AND A PALE ONE BELOW, which is what the app draws and
-   * what makes this read as a key rather than as four stray captions. Measured
-   * off its PDF: 1pt gold over, 0.5pt over the guide line under.
-   */
-  doc.moveTo(M, top).lineTo(PAGE.w - M, top).strokeColor(GOLD).lineWidth(1).stroke();
+  const defined = v.definedCenters.map((it) => itemBlock(d, it, false));
+  const other = v.otherCenters.map((it) => itemBlock(d, it, true));
+  sectionHead(d, 1, "Your centers", "", 15 + (defined[0]?.h ?? 20));
+  subLabel(d, `Colored in (${v.definedCenters.length}) · steady, yours`, defined[0]?.h ?? 20);
+  if (!defined.length) plainLine(d, "None colored in.");
+  else itemList(d, defined, () => CENTERS);
+  if (other.length) {
+    d.gap(4);
+    subLabel(d, `Not colored in (${other.length}) · taken in from others`, other[0].h);
+    itemList(d, other, () => CENTERS);
+  }
+  takeaway(d, v.centersTakeaway);
 
-  /** The QR takes the right end, so the four entries share what is left. */
-  const QR = 46;
-  const textW = COL - QR - 18;
-  const half = textW / 2;
-  const rowsY = top + 11;
-  const ROW = 27;
-  const SW = 13;
+  if (d.pageNo === firstPage) d.start(START_HERE);
+  const chans = v.channels.map((it) => itemBlock(d, it, false));
+  sectionHead(d, 2, "Your channels", `(${v.channels.length})`, chans[0]?.h ?? 20);
+  if (!chans.length) plainLine(d, NO_CHANNELS);
+  else itemList(d, chans, (it) => channelLink(it.title));
+  takeaway(d, v.channelsTakeaway);
 
-  doc.lineWidth(0.5);
-  KEY.forEach(([colour, label, blurb, second], i) => {
-    const cx = M + (i % 2) * half;
-    const cy = rowsY + Math.floor(i / 2) * ROW;
-    /**
-     * A SQUARE, not a pill. The app draws a filled square with a hairline
-     * outline, and the outline is not decoration: the personality swatch is
-     * near-white by design and would be an invisible hole on paper without it.
-     * "Both" is the square split down the middle, because that is literally
-     * what the channel is — one half each.
-     */
-    doc.rect(cx, cy + 1, SW, SW).fillAndStroke(colour, MUTED);
-    if (second) {
-      doc.rect(cx + SW / 2, cy + 1, SW / 2, SW).fill(second);
-      doc.rect(cx, cy + 1, SW, SW).strokeColor(MUTED).stroke();
+  const lines = v.profileLines.map((it) => itemBlock(d, it, false));
+  sectionHead(d, 3, "Your profile", v.profile, lines[0]?.h ?? 20);
+  itemList(d, lines, (it) => lineLink(it.title));
+  takeaway(d, v.profileLinesTakeaway);
+}
+
+/** A gold-ringed number, the section title, and a dim count beside it. */
+function sectionHead(d, n, title, count, keep) {
+  const pdf = d.pdf;
+  const h = 24;
+  d.need(22 + h + keep);
+  d.gap(d.y > MARGIN + 40 ? 22 : 2);
+  const cy = d.y + 9;
+  pdf.save();
+  pdf.circle(MARGIN + 8, cy, 8).lineWidth(0.9).strokeColor(RULE).stroke();
+  pdf.restore();
+  const np = paint(9, GOLD, true);
+  drawText(pdf, String(n), MARGIN + 8 - measure(pdf, String(n), np) / 2, cy + 3.2, np);
+  const tp = paint(13, GOLD, true);
+  drawText(pdf, title, MARGIN + 24, cy + 4.6, tp);
+  if (count) drawText(pdf, count, MARGIN + 24 + measure(pdf, title, tp) + 8, cy + 4.6, paint(9.5, DIM));
+  d.gap(h);
+}
+
+function subLabel(d, text, keep) {
+  d.need(15 + keep);
+  d.gap(2);
+  drawText(d.pdf, text.toUpperCase(), MARGIN, d.y + 8, paint(7.5, DIM, false, 0.12));
+  d.gap(13);
+}
+
+function plainLine(d, text) {
+  d.block(d.L(text, paint(10.5, INK), LIST_W), MARGIN, 4);
+}
+
+/** One list row, measured before it is drawn so it never splits across pages. */
+function itemBlock(d, item, dim) {
+  const line = item.line ? d.L(item.line, paint(dim ? 9.5 : 10, dim ? DIM : INK), LIST_W - 12) : null;
+  return { item, dim, line, h: 6 + 13 + (line ? 3 + line.height : 0) + 6 };
+}
+
+/** "Throat · how you speak and act" over the library line on a teal bar. */
+function itemList(d, items, href) {
+  const pdf = d.pdf;
+  items.forEach((b, i) => {
+    d.need(b.h + 1);
+    if (i > 0) d.rect(MARGIN, d.y, LIST_W, 0.5, HAIR);
+    d.gap(6);
+    const base = d.y + 10;
+    const size = b.dim ? 10 : 10.5;
+    let x = MARGIN;
+    const titleP = paint(size, b.dim ? DIM : GOLD, true);
+    x += drawText(pdf, b.item.title, x, base, titleP);
+    if (!b.dim && b.item.name && b.item.name !== b.item.title) {
+      x += drawText(pdf, " " + b.item.name, x, base, paint(size, INK, true));
     }
-    doc.font("bold").fontSize(9.5).fillColor(INK).text(label, cx + SW + 8, cy, {
-      width: half - SW - 14,
-    });
-    doc.font("body").fontSize(7.5).fillColor(MUTED).text(blurb, cx + SW + 8, doc.y + 1, {
-      width: half - SW - 14,
-    });
+    // The item's own words (title and name, not the dim tag) open its library entry.
+    d.link({ left: MARGIN, top: base - (1900 / 2048) * size, right: x, bottom: base + (500 / 2048) * size }, href(b.item));
+    if (b.item.tag) drawText(pdf, " · " + b.item.tag, x, base, paint(9, DIM));
+    d.gap(13);
+    if (b.line) {
+      d.gap(3);
+      d.rect(MARGIN + 1, d.y - 1, 1.6, b.line.height + 2, LIB_TEAL);
+      drawLayout(pdf, b.line, MARGIN + 12, d.y);
+      d.gap(b.line.height);
+    }
+    d.gap(6);
   });
+}
 
-  const belowY = rowsY + ROW * 2 - 3;
-  doc.moveTo(M, belowY).lineTo(M + textW, belowY).strokeColor(RULE).lineWidth(0.5).stroke();
-
-  /**
-   * WHAT A WHITE CENTRE'S GATE NUMBERS MEAN.
-   *
-   * The drawing already carries this and always has -- a centre with lit gates
-   * is undefined, one with none is open -- but nothing on the page said so, so
-   * a reader had no way to tell the two apart. NO THIRD COLOUR: adding one
-   * would put this chart out of agreement with every reference calculator, for
-   * information the picture is already showing.
-   */
-  doc
-    .font("body")
-    .fontSize(7.5)
-    .fillColor(MUTED)
-    .text(
-      "In a center left unfilled, a gate drawn in white or violet means undefined — all of them dark means open.",
-      M,
-      belowY + 5,
-      { width: textW, align: "center" },
-    );
-
-  /**
-   * THE QR, beside the guide line it encodes. It was built at the top of this
-   * module and then never drawn -- passed in, unused, and absent from the page
-   * for a whole review round. Vector, so it stays crisp at any size.
-   *
-   * A printed page cannot be clicked, and retyping a URL off paper is a thing
-   * nobody does.
-   */
-  if (qr) {
-    try {
-      SVGtoPDF(doc, qr, PAGE.w - M - QR, rowsY, { width: QR, height: QR });
-    } catch {
-      /* a missing QR is a page without a QR, never a failed download */
-    }
+/** "TAKEAWAY" on a gold bar, then the reading's own sentences. Kept whole. */
+function takeaway(d, lines) {
+  if (!lines.length) return;
+  const ls = lines.map((t) => d.L(t, paint(10.5, INK), LIST_W - 14));
+  const h = 14 + ls.reduce((n, l) => n + l.height + 5, 0);
+  d.gap(8);
+  d.need(h + 4);
+  const top = d.y;
+  drawText(d.pdf, "TAKEAWAY", MARGIN + 14, d.y + 8, paint(7.5, GOLD, true, 0.14));
+  d.gap(14);
+  for (const l of ls) {
+    d.draw(l, MARGIN + 14);
+    d.gap(5);
   }
-
-  const guide = links?.bodygraph ?? "https://thechampagnemethod.co/library/bodygraph/";
-  /**
-   * ONE CENTRED LINE, not two joined with `continued`.
-   *
-   * The first version drew the sentence and the URL as two calls so the URL
-   * could be gold, and they landed on top of each other -- `continued` carries
-   * the pen position, and `align: "center"` re-centres each fragment
-   * independently, so both were centred over the same span. The whole line is
-   * the link now, which is also the larger tap target.
-   */
-  doc
-    .font("body")
-    .fontSize(9)
-    .fillColor(GOLD)
-    .text("How to understand your bodygraph chart  →  thechampagnemethod.co/library/bodygraph",
-      M, belowY + 19, { width: textW, align: "center", link: guide, underline: false });
+  d.rect(MARGIN, top, 2.5, d.y - 3 - top, RULE);
 }
 
-/* ==========================================================================
- * TIER 2 -- the written interpretation, laid out as the app lays it out.
- *
- * Measured off `Jeremy-pdf-view.pdf` rather than invented: a mechanics page of
- * gold-labelled blocks, then the six interpretation sections as a two-column
- * spread -- the writing on the left, chart facts in the right margin against a
- * gold rule. Two sections to a page, and a section is never split across one.
- * ========================================================================== */
+/* -------------------------------------------------------------------- reading */
 
-/** Where the writing stops and the margin begins. */
-/**
- * Measured off the app's page 4, not chosen: its writing column runs 55pt to
- * 405pt and its margin starts at 435pt. A narrower column was the reason the
- * first attempt put ONE section on a page where the app fits two -- the layout
- * was right and the measurements were mine.
- */
-const BODY_W = 350;
-const NOTE_GAP = 30;
-const NOTE_X = M + BODY_W + NOTE_GAP;
-const NOTE_W = COL - BODY_W - NOTE_GAP;
-const FOOT = PAGE.h - 70;
+/** No widows or orphans: a paragraph splits only with at least this many lines each side. */
+const MIN_SPLIT_LINES = 2;
 
-/** A running head, so a loose page still says what it belongs to. */
-function runningHead(doc, title) {
-  doc.font("body").fontSize(11).fillColor(INK).text(title, M, M);
-  doc
-    .font("body")
-    .fontSize(8.5)
-    .fillColor(GOLD)
-    .text("THE CHAMPAGNE METHOD", PAGE.w / 2, M + 1, {
-      width: COL / 2,
-      align: "right",
-      characterSpacing: 1.7,
-    });
-  const y = M + 20;
-  doc.moveTo(M, y).lineTo(PAGE.w - M, y).strokeColor(RULE).lineWidth(0.5).stroke();
-  return y + 16;
+const firstLinesHeight = (l) => (l.lineCount >= MIN_SPLIT_LINES * 2 ? l.lineTop(MIN_SPLIT_LINES) : l.height);
+
+/** The library entry behind a margin label, by what the label names. */
+function noteHref(label, c) {
+  if (label.endsWith("AUTHORITY")) return AUTHORITY;
+  if (label === "CENTER") return CENTERS;
+  if (label === "DEFINITION") return DEFINITION;
+  if (label.startsWith("PROFILE")) return profileLink(c.profile);
+  if (label === "INCARNATION CROSS") return crossLink(c.incarnationCross);
+  if (label.includes("TRACK") || label === String(c.type ?? "").toUpperCase()) return typeLink(c.type);
+  return null;
 }
 
-function sectionLabel(doc, text, x, y, width) {
-  doc
-    .font("body")
-    .fontSize(8.5)
-    .fillColor(GOLD)
-    .text(String(text).toUpperCase(), x, y, { width, characterSpacing: 1.3 });
-  return doc.y + 4;
-}
+function readingPages(d, c, v) {
+  const pdf = d.pdf;
+  d.start("Your reading");
+  const notes = marginNotes(c);
 
-/**
- * PAGE THREE: the mechanics.
- *
- * Four blocks. Two are paragraphs; two are lists whose lines the model was told
- * to write in a fixed shape -- "20-34 (Charisma), Throat to Sacral: ..." -- so
- * they are split on the FIRST colon and set as a term beside its sentence.
- *
- * A line that carries no colon is printed whole rather than dropped. A reading
- * that came back slightly off should LOOK slightly off; silently discarding a
- * channel would leave a document that is wrong and looks finished.
- */
-/**
- * THE TWENTY-SIX ACTIVATIONS.
- *
- * SOLD AND NOT SHIPPED, until now. Every price table, the offer page and every
- * delivery email describe the reading tier as "All twenty-six activations with
- * the planet behind each, and the written interpretation." The written
- * interpretation arrived. The activations never existed anywhere -- not in this
- * document, not on the page -- and a comment further up this very file said
- * they belonged to the reading tier, which is as close as code gets to a note
- * saying "not built yet".
- *
- * Jeremy bought his own reading with a real card and it was missing. That is
- * the kind of gap that only a real purchase finds, and the kind that matters
- * most: it is the difference between what was paid for and what was handed
- * over.
- *
- * PERSONALITY AND DESIGN, SIDE BY SIDE, because that is what they are -- the
- * same thirteen bodies read at two moments, and the comparison is the point.
- * The planet names arrive SCREAMING_SNAKE from the engine and are turned into
- * words here; "NORTH_NODE" on a document somebody paid for reads as a leak of
- * the machinery.
- */
-/**
- * PAGE: the activations, in two columns.
- *
- * Design is drawn FIRST in reading order on the left because it comes first in
- * time -- roughly three months before birth -- and the document says so rather
- * than assuming anybody knows.
- */
-function activationsPage(doc, { output, links, page }) {
-  paper(doc);
-  let y = runningHead(doc, "Your twenty-six activations");
+  for (const section of v.reading) {
+    const h = section.heading;
+    const head = d.L(h.toUpperCase(), paint(9, GOLD, true, 0.16), BODY_W);
+    const ledeL = section.lede ? d.L(section.lede, paint(13, INK, true), BODY_W) : null;
+    const bodyLs = section.paragraphs.map((p) => d.L(p, paint(10.5, INK), BODY_W));
 
-  const personality = Array.isArray(output?.personality) ? output.personality : [];
-  const design = Array.isArray(output?.design) ? output.design : [];
+    // Chart facts for the margin, always from the chart; beside the FIRST
+    // part of the section only.
+    const noteLs = (notes[h] ?? []).map(([k, val]) => [
+      k ? d.L(k, paint(8.5, GOLD, true, 0.09), NOTE_W) : null,
+      d.L(String(val ?? ""), paint(8.5, DIM), NOTE_W),
+      k,
+    ]);
+    const notesH = noteLs.reduce((n, [kl, vl]) => n + (kl?.height ?? 0) + vl.height + 9, 0);
 
-  doc
-    .font("body")
-    .fontSize(10)
-    .fillColor(MUTED)
-    .text(
-      "Every gate your chart activates, and the planet behind each one. The personality " +
-        "side is the moment you were born and is what you are conscious of. The design side " +
-        "is about three months earlier and is what the body knows without being told.",
-      M,
-      y,
-      { width: COL, lineGap: 1.5 },
-    );
-  y = doc.y + 16;
+    // What must stay together: the label, the bold lead, and the first two
+    // body lines -- the whole first paragraph if it is too short to split.
+    const lead = head.height + 6 + (ledeL ? ledeL.height + 8 : 0);
+    const firstMin = bodyLs[0] ? firstLinesHeight(bodyLs[0]) : 0;
+    d.need(16 + Math.max(lead + firstMin, notesH));
+    d.gap(d.atTop ? 0 : 16);
 
-  const colW = (COL - 24) / 2;
-  const right = M + colW + 24;
-  const head = (x, label, count) => {
-    sectionLabel(doc, label, x, y, colW);
-    doc
-      .font("body")
-      .fontSize(8.5)
-      .fillColor(MUTED)
-      .text(`${count} activations`, x, y + 12, { width: colW });
-  };
-  head(M, "Personality — conscious", personality.length);
-  head(right, "Design — unconscious", design.length);
-  y += 30;
-
-  const rows = Math.max(personality.length, design.length);
-  const startY = y;
-  const ROW = 17;
-
-  const column = (list, x) => {
-    let ry = startY;
-    for (const a of list) {
-      doc.font("body").fontSize(10).fillColor(INK).text(planetName(a.planet), x, ry, { width: colW - 54 });
-      doc
-        .font("bold")
-        .fontSize(10)
-        .fillColor(INK)
-        .text(activationLabel(a), x + colW - 54, ry, { width: 54, align: "right" });
-      doc
-        .moveTo(x, ry + ROW - 5)
-        .lineTo(x + colW, ry + ROW - 5)
-        .strokeColor(ROW_RULE)
-        .lineWidth(0.5)
-        .stroke();
-      ry += ROW;
-    }
-    return ry;
-  };
-
-  const endLeft = column(personality, M);
-  const endRight = column(design, right);
-  y = Math.max(endLeft, endRight) + 14;
-
-  doc
-    .font("body")
-    .fontSize(9)
-    .fillColor(MUTED)
-    .text(
-      "Each number is a gate and the line within it — 6.2 is gate 6, line 2. What the gates " +
-        "mean is explained in The Human Design library, free.",
-      M,
-      y,
-      { width: COL, link: links?.hd101 ?? "https://thechampagnemethod.co/library/human-design/", underline: false, lineGap: 1 },
-    );
-
-  footer(doc, page);
-}
-
-function mechanicsPage(doc, written) {
-  paper(doc);
-  let y = runningHead(doc, "The mechanics of your chart");
-
-  for (const heading of MECHANICS) {
-    const section = written.sections.find((s) => s.heading === heading);
-    if (!section || !section.paragraphs.length) continue;
-
-    if (y > FOOT - 90) {
-      footer(doc, 3);
-      doc.addPage();
-      paper(doc);
-      y = runningHead(doc, "The mechanics of your chart");
-    }
-
-    y = sectionLabel(doc, heading, M, y, COL);
-    const listy = heading === MECHANICS[2] || heading === MECHANICS[3];
-
-    for (const para of section.paragraphs) {
-      const at = listy ? para.indexOf(":") : -1;
-      if (at > 0) {
-        const top = y;
-        doc.font("body").fontSize(9.5).fillColor(INK).text(para.slice(0, at).trim(), M, top, {
-          width: 168,
-        });
-        const afterTerm = doc.y;
-        doc.font("body").fontSize(10.5).fillColor(MUTED).text(para.slice(at + 1).trim(), M + 180, top, {
-          width: COL - 180,
-          lineGap: 1,
-        });
-        y = Math.max(afterTerm, doc.y) + 8;
-        continue;
+    let ny = d.y;
+    for (const [kl, vl, k] of noteLs) {
+      if (kl) {
+        drawLayout(pdf, kl, NOTE_X, ny);
+        const href = noteHref(k, c);
+        if (href) d.linkLayout(kl, NOTE_X, ny, href);
+        ny += kl.height;
       }
-      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, { width: COL, lineGap: 1.5 });
-      y = doc.y + 10;
+      drawLayout(pdf, vl, NOTE_X, ny);
+      ny += vl.height + 9;
     }
-    y += 8;
+
+    // The gold rule follows the section onto each page it occupies.
+    let partTop = d.y;
+    const rule = (bottom) => d.rect(RULE_X, partTop + 2, 0.8, bottom - 4 - (partTop + 2), RULE);
+
+    d.draw(head, MARGIN);
+    d.gap(6);
+    if (ledeL) {
+      d.draw(ledeL, MARGIN);
+      d.gap(8);
+    }
+    for (const l of bodyLs) {
+      flowParagraph(d, l, () => rule(d.y + 9), () => {
+        partTop = d.y;
+      });
+      d.gap(9);
+    }
+    rule(d.y);
   }
 
-  footer(doc, 3);
+  takeaways(d, v.takeaways, disclaimerLayout(d).height + 28);
+  disclaimer(d);
 }
 
 /**
- * PAGES FOUR ONWARD: the reading itself.
- *
- * A SECTION IS NEVER SPLIT. Its height is measured before anything is drawn,
- * and a page without room starts a new one instead. A lede stranded at the foot
- * of a page with its two paragraphs overleaf is the fault this avoids -- and it
- * is a fault only a real reading shows, never a fixture.
+ * One paragraph, carried onto the next page between lines when it does not
+ * fit -- never leaving fewer than two lines at the foot of a page or at the
+ * head of the next. A paragraph that cannot split that way moves whole.
  */
-function interpretationPages(doc, { output, written }) {
-  const notes = marginNotes(output);
-  doc.addPage();
-  paper(doc);
-  let y = runningHead(doc, "Your reading");
-  // Five, not four: the activations took page four. A footer that disagrees
-  // with the page it is printed on is the kind of small wrongness that makes a
-  // paid document feel unchecked.
-  let page = 5;
-
-  const measure = (section) => {
-    let h = 16;
-    h += doc
-      .font("body")
-      .fontSize(8.5)
-      .heightOfString(section.heading.toUpperCase(), { width: BODY_W });
-    if (section.lede) {
-      h += 8 + doc.font("bold").fontSize(13).heightOfString(section.lede, { width: BODY_W, lineGap: 1 });
+function flowParagraph(d, l, onBreak, onNewPage) {
+  const n = l.lineCount;
+  let from = 0;
+  while (from < n) {
+    const avail = d.bottom - d.y;
+    let fit = 0;
+    while (from + fit < n && l.lineTop(from + fit + 1) - l.lineTop(from) <= avail) fit++;
+    if (from + fit === n) {
+      if (from === 0) d.draw(l);
+      else d.drawLines(l, from, n);
+      return;
     }
-    for (const para of section.paragraphs) {
-      h += 10 + doc.font("body").fontSize(10.5).heightOfString(para, { width: BODY_W, lineGap: 1.5 });
+    let take = Math.min(fit, n - from - MIN_SPLIT_LINES);
+    if (take < MIN_SPLIT_LINES) take = 0;
+    if (take === 0 && d.atTop) take = Math.max(fit, 1); // taller than a page
+    if (take > 0) {
+      d.drawLines(l, from, from + take);
+      from += take;
     }
-    return h;
-  };
-
-  for (const heading of INTERPRETATION) {
-    const section = written.sections.find((s) => s.heading === heading);
-    if (!section) continue;
-
-    if (y + measure(section) > FOOT) {
-      footer(doc, page);
-      page += 1;
-      doc.addPage();
-      paper(doc);
-      y = runningHead(doc, "Your reading");
-    }
-
-    const top = y;
-    y = sectionLabel(doc, heading, M, y, BODY_W);
-    if (section.lede) {
-      doc.font("bold").fontSize(13).fillColor(INK).text(section.lede, M, y, {
-        width: BODY_W,
-        lineGap: 1,
-      });
-      y = doc.y + 8;
-    }
-    for (const para of section.paragraphs) {
-      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, {
-        width: BODY_W,
-        lineGap: 1.5,
-      });
-      y = doc.y + 10;
-    }
-
-    /**
-     * THE MARGIN, AND EVERY WORD OF IT COMES FROM THE CHART.
-     *
-     * Not from the model. This is the column a reader checks the writing
-     * against, so a value here must be one the engine produced. A paraphrase
-     * that drifted would be indistinguishable from the chart being wrong.
-     */
-    let ny = top;
-    for (const [k, v] of notes[heading] || []) {
-      if (!k) continue;
-      doc.font("body").fontSize(8.5).fillColor(GOLD).text(k, NOTE_X, ny, {
-        width: NOTE_W,
-        characterSpacing: 0.8,
-      });
-      doc.font("body").fontSize(9).fillColor(MUTED).text(String(v ?? ""), NOTE_X, doc.y + 1, {
-        width: NOTE_W,
-        lineGap: 1,
-      });
-      ny = doc.y + 8;
-    }
-
-    // The rule runs the height of whichever column is taller, so it reads as
-    // this section's own edge rather than as a fixed decoration.
-    const bottom = Math.max(y, ny) - 6;
-    doc
-      .moveTo(NOTE_X - 16, top)
-      .lineTo(NOTE_X - 16, bottom)
-      .strokeColor(GOLD)
-      .lineWidth(0.75)
-      .stroke();
-
-    y = bottom + 22;
+    onBreak();
+    d.breakPage();
+    onNewPage();
   }
+}
 
-  const takeaways = written.sections.find((s) => s.heading === TAKEAWAYS);
-  if (takeaways && takeaways.paragraphs.length) {
-    if (y > FOOT - 130) {
-      footer(doc, page);
-      page += 1;
-      doc.addPage();
-      paper(doc);
-      y = runningHead(doc, "Your reading");
-    }
-    y = sectionLabel(doc, TAKEAWAYS, M, y, COL);
-    /**
-     * EACH TAKEAWAY IS MEASURED BEFORE IT IS DRAWN. The 130pt allowance above
-     * only guarded the START of the block; a fifth paragraph, or four long
-     * ones, walked straight into the footer -- the geometry check caught it on
-     * every tier-2 render the day the fixture's fifth section grew by a line.
-     * A real reading's takeaways are whatever length the model wrote them.
-     */
-    for (const para of takeaways.paragraphs) {
-      const h = doc.font("body").fontSize(10.5).heightOfString(para, { width: COL, lineGap: 1.5 });
-      if (y + h > FOOT) {
-        footer(doc, page);
-        page += 1;
-        doc.addPage();
-        paper(doc);
-        y = runningHead(doc, "Your reading");
-      }
-      doc.font("body").fontSize(10.5).fillColor(INK).text(para, M, y, { width: COL, lineGap: 1.5 });
-      y = doc.y + 10;
-    }
-  }
-
-  /**
-   * THE DISCLAIMER IS OURS, NOT THE MODEL'S.
-   *
-   * The prompt asks for it and the validator refuses a reading without it, but
-   * what is PRINTED is the constant from `interpretation.mjs` -- so a model
-   * that reworded it cannot reword what a reader is handed.
-   */
-  const disclaimerH = doc.font("body").fontSize(8.5).heightOfString(DISCLAIMER, { width: COL, lineGap: 1 });
-  if (y + 8 + disclaimerH > FOOT) {
-    footer(doc, page);
-    page += 1;
-    doc.addPage();
-    paper(doc);
-    y = runningHead(doc, "Your reading");
-  }
-  doc.font("body").fontSize(8.5).fillColor(MUTED).text(DISCLAIMER, M, y + 8, {
-    width: COL,
-    lineGap: 1,
+/**
+ * The takeaways, as a list. Each opens with the chart feature it comes from,
+ * in parentheses, lifted out and set in gold. The heading, the intro and the
+ * first item travel together; the last item travels with the disclaimer.
+ */
+function takeaways(d, paras, keepWith = 0) {
+  if (!paras.length) return;
+  const head = d.L(TAKEAWAYS.toUpperCase(), paint(9, GOLD, true, 0.16), 470);
+  const intro = paras[0] ? d.L(paras[0], paint(10.5, INK), 470) : null;
+  const feature = /^\((.+?)\)\s*(.+)$/s;
+  const items = paras.slice(1).map((p) => {
+    const m = feature.exec(p);
+    const lead = m?.[1] ?? "";
+    const l = d.L(m?.[2] ?? p, paint(11, INK), 470 - 16);
+    return [lead ? d.L(lead, paint(11, GOLD, true), 470 - 16) : null, l];
   });
-
-  footer(doc, page);
+  const firstItem = items[0] ? 12 + (items[0][0]?.height ?? 0) + items[0][1].height : 0;
+  d.need(18 + head.height + 8 + (intro ? intro.height + 4 : 0) + firstItem + (items.length <= 1 ? keepWith : 0));
+  d.gap(d.atTop ? 0 : 18);
+  d.draw(head);
+  d.gap(8);
+  if (intro) d.block(intro, MARGIN, 4);
+  items.forEach(([leadL, l], i) => {
+    const h = (leadL?.height ?? 0) + l.height;
+    d.need(h + 12 + (i === items.length - 1 ? keepWith : 0));
+    d.gap(9);
+    d.rect(MARGIN, d.y + 6, 8, 1.5, RULE);
+    if (leadL) d.draw(leadL, MARGIN + 16);
+    d.draw(l, MARGIN + 16);
+  });
 }
+
+const disclaimerLayout = (d) => d.L(DISCLAIMER, paint(8.5, DIM));
+
+function disclaimer(d) {
+  const l = disclaimerLayout(d);
+  d.need(l.height + 22);
+  d.gap(20);
+  d.rule("#DEE3E8", 0.6);
+  d.gap(7);
+  d.draw(l);
+}
+
+/** Fallback when the structure gate did not pass but there are still words. */
+function plainReading(d, reading) {
+  d.start("Your reading");
+  for (const para of reading.split("\n\n").map((p) => p.trim()).filter(Boolean)) {
+    d.block(d.L(para, paint(10.5, INK), 470), MARGIN, 9);
+  }
+}
+
+export { lineMetrics };

@@ -9,3 +9,7 @@ tools/private-terms.local.txt
 
 # Anything holding what must never be published. See tools/leak-scan.mjs.
 *.local.txt
+
+# Phone-app parity fixtures: real model readings for made-up clients, copied
+# from the PRIVATE phone repo by tools/phone-parity-sync.mjs. Never published.
+test/fixtures/phone-parity.local/

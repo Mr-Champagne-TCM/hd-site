@@ -52,18 +52,46 @@ const ACTIVATIONS = [
 const make = (over = {}) =>
   readingPdf({ tier: 1, name: "Jeremy Champagne", output: OUTPUT, ...over });
 
-test("it produces a real, two-page PDF", async () => {
+/** Page count, and the running head of each page (null on page 1). */
+async function shape(over = {}) {
+  const r = await readingPdf({ tier: 1, name: "Jeremy Champagne", output: OUTPUT, ...over, inspect: true });
+  const pages = Number(/\/Count (\d+)/.exec(r.bytes.toString("latin1"))?.[1]);
+  const heads = Array.from({ length: pages }, (_, i) =>
+    r.runs.find((x) => x.page === i + 1 && x.size === 9.5 && x.bold && x.y > 61 && x.y < 64)?.text ?? null,
+  );
+  return { ...r, pages, heads };
+}
+
+test("it produces a real PDF: the chart, then the glance", async () => {
   const buf = await make();
   assert.ok(Buffer.isBuffer(buf));
   assert.equal(buf.subarray(0, 5).toString(), "%PDF-", "not a PDF");
-  assert.match(buf.toString("latin1"), /\/Count 2/, "expected two pages");
+  const { heads } = await shape();
+  assert.equal(heads[0], null);
+  assert.ok(heads.slice(1).every((h) => h === "Your chart at a glance"), String(heads));
   // Sized for the tiny fixture SVG above, not for a real chart. A real one is
   // about 400 KB; the point of the floor is to catch an EMPTY document, not to
   // assert a size this fixture was never going to reach.
   assert.ok(buf.length > 8_000, `suspiciously small: ${buf.length} bytes`);
 });
 
-test("THE FONT IS EMBEDDED, which is not cosmetic", async () => {
+test("THE PDF IS SET IN ROBOTO, the phone's face (Jeremy 10/16)", async () => {
+  const pdf = (await make()).toString("latin1");
+  assert.match(pdf, /Roboto/, "Roboto is not embedded in the PDF");
+  const dir = fileURLToPath(new URL("../netlify/lib/fonts/", import.meta.url));
+  for (const f of ["Roboto-Regular.ttf", "Roboto-Bold.ttf"]) {
+    const bytes = readFileSync(dir + f);
+    assert.ok(bytes.length > 100_000, `${f} is too small to be a font`);
+    assert.equal(bytes.readUInt32BE(0), 0x00010000, `${f} is not a TrueType font`);
+  }
+  // Every run of words is Roboto: the only other face is Outfit, inside the
+  // drawing and for the one arrow Roboto has no glyph for.
+  const { ROBOTO_400, ROBOTO_700 } = await import("../netlify/lib/fonts/roboto.mjs");
+  assert.ok(ROBOTO_400.equals(readFileSync(dir + "Roboto-Regular.ttf")), "roboto.mjs is stale -- run tools/build-fonts.mjs");
+  assert.ok(ROBOTO_700.equals(readFileSync(dir + "Roboto-Bold.ttf")), "roboto.mjs is stale -- run tools/build-fonts.mjs");
+});
+
+test("THE DRAWING'S FONT IS EMBEDDED, which is not cosmetic", async () => {
   // The label positions were solved against Outfit at 16 with 0.19em of
   // tracking, and the tightest clears a gate disc by six units. A fallback to
   // Helvetica puts different metrics under solved positions -- the exact
@@ -208,7 +236,6 @@ test("a row with no approved sentence shows its value and stops", async () => {
 
 test("the document has the structure the layout depends on", async () => {
   const pdf = (await make()).toString("latin1");
-  assert.match(pdf, /\/Count 2/, "expected exactly two pages");
   // A real link annotation, not blue text pretending -- the footer and the
   // upgrade line both carry one.
   assert.match(pdf, /\/Subtype \/Link/, "no link annotation in the document");
@@ -286,17 +313,19 @@ test("the profile is named the way the app names it", async () => {
 
 // --- tier 2, the written interpretation -------------------------------------
 
-test("tier 1 gets two pages; a tier-2 reading gets the app's seven", async () => {
-  const buf = await make({ tier: 1 });
-  assert.match(buf.toString("latin1"), /\/Count 2/, "the chart tier grew pages");
+test("tier 1 gets the chart and the glance, and nothing of the reading tier", async () => {
+  const { heads, runs } = await shape({ tier: 1 });
+  assert.ok(!heads.includes("Start here") && !heads.includes("Your reading"), String(heads));
+  // The offer for the next tier is the chart tier's last word.
+  assert.ok(runs.some((r) => /^IF YOU WOULD LIKE MORE THAN THIS CHART/.test(r.text)));
 });
 
 test("A READING IS ONLY LAID OUT WHEN THE TIER PAID FOR ONE", async () => {
   // Passing reading text at tier 1 must not quietly hand over the reading
   // tier's pages. The tier is the entitlement; the text is just data.
   const { TEXT } = await import("./support/tier2Fixture.mjs");
-  const one = await make({ tier: 1, reading: TEXT });
-  assert.match(one.toString("latin1"), /\/Count 2/, "tier 1 was given the reading pages");
+  const { heads } = await shape({ tier: 1, reading: TEXT });
+  assert.ok(!heads.includes("Start here") && !heads.includes("Your reading"), "tier 1 was given the reading pages");
 });
 
 test("the reading's pages are built from the text, and only from valid text", async () => {
@@ -328,39 +357,22 @@ test("a tier-2 purchase with no reading text yet still produces the chart", asyn
  * His Android app had them all along, which is what the app is for: the web
  * has to match it or beat it.
  */
-test("A READING-TIER PDF CARRIES THE ACTIVATIONS PAGE", async () => {
+test("A READING-TIER PDF CARRIES THE ACTIVATIONS, on the glance page as the phone has them", async () => {
   const { TEXT } = await import("./support/tier2Fixture.mjs");
-  // The text inside is glyph indices under a subset font, so it cannot be
-  // string-searched. The PAGE COUNT is the honest assertion: the activations
-  // are a whole page, so the document is one longer than it used to be.
-  const withActs = await make({
+  const { runs } = await shape({
     tier: 2,
     reading: TEXT,
     output: { ...OUTPUT, personality: ACTIVATIONS, design: ACTIVATIONS },
   });
-  const withNone = await make({
-    tier: 2,
-    reading: TEXT,
-    output: { ...OUTPUT, personality: [], design: [] },
-  });
-  const count = (b) => Number(/\/Count (\d+)/.exec(b.toString("latin1"))?.[1]);
-  assert.ok(count(withActs) > 0, "no pages at all");
-  assert.equal(
-    count(withActs),
-    count(withNone),
-    "the activations page must exist either way, so an empty chart is not a missing page",
-  );
-  assert.ok(count(withActs) >= 8, `expected eight-ish pages with activations, got ${count(withActs)}`);
+  const page2 = runs.filter((r) => r.page === 2).map((r) => r.text);
+  assert.ok(page2.includes("PERSONALITY") && page2.includes("DESIGN"), "no activation rows on page 2");
+  assert.ok(page2.includes("north node "), "planet names are not words");
+  assert.equal(page2.filter((t) => /^\d+\.\d$/.test(t)).length, 26, "expected all twenty-six gate.line values");
 });
 
 test("the chart tier is NOT given the activations, because it did not buy them", async () => {
-  // Two pages: the chart and the glance. No activations, no reading.
-  const buf = await make({ tier: 1, output: { ...OUTPUT, personality: ACTIVATIONS, design: ACTIVATIONS } });
-  assert.match(
-    buf.toString("latin1"),
-    /\/Count 2/,
-    "the chart tier grew a page it did not pay for",
-  );
+  const { runs } = await shape({ tier: 1, output: { ...OUTPUT, personality: ACTIVATIONS, design: ACTIVATIONS } });
+  assert.ok(!runs.some((r) => r.text === "PERSONALITY"), "the chart tier was handed the activations");
 });
 
 test("planet names are turned into words, including one the map does not know", async () => {

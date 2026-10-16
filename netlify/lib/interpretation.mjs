@@ -1181,17 +1181,15 @@ export function marginNotes(c) {
     ],
     [INTERPRETATION[2]]: [
       [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
-      ["INCARNATION CROSS", (c && c.incarnationCross) || ""],
+      // "(11/12 | 6/36)" kept on one line in the narrow margin, as the phone
+      // has it: no-break spaces around the bar.
+      ["INCARNATION CROSS", ((c && c.incarnationCross) || "").replace(" | ", " | ")],
     ],
-    [INTERPRETATION[3]]: [["DEFINED CENTERS", defined.join(", ") || "None"]],
-    [INTERPRETATION[4]]: [
-      // Absent on readings stored before the third state existed; absent is
-      // not empty, so no "None" is printed for a value that was never computed.
-      ...(Array.isArray(c && c.undefinedCenters)
-        ? [["UNDEFINED CENTERS", c.undefinedCenters.join(", ") || "None"]]
-        : []),
-      ["OPEN CENTERS", ((c && c.openCenters) || []).join(", ") || "None"],
-    ],
+    // No center lists beside "What is consistently yours" / "What you take in
+    // from others" (Jeremy 10/16, call 5 -- trim repeats in the MARGINS
+    // only): Start here already lists every center with its meaning, and the
+    // glance page has them as values. Nor a margin on the cross or the
+    // definition sections: both values are already in the margins earlier.
     [INTERPRETATION[5]]: [
       // The break keeps "IS" off a line of its own in the narrow PDF margin.
       ["ON TRACK,\nTHE FEELING IS", (c && c.signature) || ""],

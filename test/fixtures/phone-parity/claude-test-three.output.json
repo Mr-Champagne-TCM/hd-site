@@ -1,0 +1,184 @@
+{
+ "type": "Reflector",
+ "strategy": "Wait a lunar cycle",
+ "authority": "Lunar",
+ "profile": "3/5",
+ "definition": "None",
+ "notSelfTheme": "Disappointment",
+ "signature": "Surprise",
+ "incarnationCross": "Right Angle Cross of The Vessel of Love (25/46 | 10/15)",
+ "definedCenters": [],
+ "undefinedCenters": [
+  "Head",
+  "Ajna",
+  "G",
+  "Heart",
+  "Sacral",
+  "Solar Plexus",
+  "Root"
+ ],
+ "openCenters": [
+  "Throat",
+  "Spleen"
+ ],
+ "engineVersion": "0.4.0",
+ "timeKnown": true,
+ "channels": [],
+ "channelLines": [],
+ "activatedGates": [
+  1,
+  2,
+  10,
+  15,
+  17,
+  21,
+  25,
+  30,
+  36,
+  38,
+  39,
+  40,
+  42,
+  46,
+  49,
+  52,
+  54,
+  58,
+  60,
+  64
+ ],
+ "personality": [
+  {
+   "planet": "SUN",
+   "gate": 25,
+   "line": 3
+  },
+  {
+   "planet": "EARTH",
+   "gate": 46,
+   "line": 3
+  },
+  {
+   "planet": "MOON",
+   "gate": 15,
+   "line": 3
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 52,
+   "line": 4
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 58,
+   "line": 4
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 17,
+   "line": 5
+  },
+  {
+   "planet": "VENUS",
+   "gate": 2,
+   "line": 2
+  },
+  {
+   "planet": "MARS",
+   "gate": 36,
+   "line": 1
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 42,
+   "line": 5
+  },
+  {
+   "planet": "SATURN",
+   "gate": 30,
+   "line": 6
+  },
+  {
+   "planet": "URANUS",
+   "gate": 40,
+   "line": 2
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 1,
+   "line": 5
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 64,
+   "line": 2
+  }
+ ],
+ "design": [
+  {
+   "planet": "SUN",
+   "gate": 10,
+   "line": 5
+  },
+  {
+   "planet": "EARTH",
+   "gate": 15,
+   "line": 5
+  },
+  {
+   "planet": "MOON",
+   "gate": 21,
+   "line": 6
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 39,
+   "line": 2
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 38,
+   "line": 2
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 54,
+   "line": 6
+  },
+  {
+   "planet": "VENUS",
+   "gate": 60,
+   "line": 6
+  },
+  {
+   "planet": "MARS",
+   "gate": 38,
+   "line": 6
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 21,
+   "line": 1
+  },
+  {
+   "planet": "SATURN",
+   "gate": 49,
+   "line": 1
+  },
+  {
+   "planet": "URANUS",
+   "gate": 40,
+   "line": 5
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 1,
+   "line": 4
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 64,
+   "line": 4
+  }
+ ]
+}

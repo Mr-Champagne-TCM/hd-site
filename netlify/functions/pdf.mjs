@@ -98,6 +98,12 @@ export default async (request) => {
        * nothing tested was the ONE LINE that hands the text over.
        */
       reading: reading.reading ?? null,
+      /**
+       * THE BIRTH LINE under the name (Jeremy 10/16). Kept with paid charts
+       * filled from 16 October 2026; older records have none, and their PDF
+       * simply has no birth line.
+       */
+      birth: reading.birth ?? null,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e.message})`);

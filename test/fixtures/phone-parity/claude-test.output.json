@@ -1,0 +1,190 @@
+{
+ "type": "Projector",
+ "strategy": "Wait for the invitation",
+ "authority": "Splenic",
+ "profile": "1/4",
+ "definition": "Single",
+ "notSelfTheme": "Bitterness",
+ "signature": "Success",
+ "incarnationCross": "Right Angle Cross of Eden (36/6 | 11/12)",
+ "definedCenters": [
+  "G",
+  "Heart",
+  "Spleen"
+ ],
+ "undefinedCenters": [
+  "Head",
+  "Ajna",
+  "Throat",
+  "Sacral",
+  "Solar Plexus",
+  "Root"
+ ],
+ "openCenters": [],
+ "engineVersion": "0.4.0",
+ "timeKnown": true,
+ "channels": [
+  "25-51 (Initiation)",
+  "26-44 (Surrender)"
+ ],
+ "channelLines": [
+  "25-51 (Initiation), G to Heart",
+  "26-44 (Surrender), Heart to Spleen"
+ ],
+ "activatedGates": [
+  2,
+  5,
+  6,
+  9,
+  11,
+  12,
+  13,
+  21,
+  25,
+  26,
+  30,
+  36,
+  39,
+  44,
+  48,
+  51,
+  57,
+  58,
+  63,
+  64
+ ],
+ "personality": [
+  {
+   "planet": "SUN",
+   "gate": 36,
+   "line": 1
+  },
+  {
+   "planet": "EARTH",
+   "gate": 6,
+   "line": 1
+  },
+  {
+   "planet": "MOON",
+   "gate": 64,
+   "line": 2
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 21,
+   "line": 3
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 48,
+   "line": 3
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 30,
+   "line": 6
+  },
+  {
+   "planet": "VENUS",
+   "gate": 13,
+   "line": 1
+  },
+  {
+   "planet": "MARS",
+   "gate": 2,
+   "line": 2
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 25,
+   "line": 5
+  },
+  {
+   "planet": "SATURN",
+   "gate": 26,
+   "line": 5
+  },
+  {
+   "planet": "URANUS",
+   "gate": 11,
+   "line": 5
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 58,
+   "line": 5
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 44,
+   "line": 3
+  }
+ ],
+ "design": [
+  {
+   "planet": "SUN",
+   "gate": 11,
+   "line": 4
+  },
+  {
+   "planet": "EARTH",
+   "gate": 12,
+   "line": 4
+  },
+  {
+   "planet": "MOON",
+   "gate": 39,
+   "line": 2
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 51,
+   "line": 4
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 57,
+   "line": 4
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 9,
+   "line": 6
+  },
+  {
+   "planet": "VENUS",
+   "gate": 44,
+   "line": 6
+  },
+  {
+   "planet": "MARS",
+   "gate": 63,
+   "line": 4
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 63,
+   "line": 5
+  },
+  {
+   "planet": "SATURN",
+   "gate": 5,
+   "line": 3
+  },
+  {
+   "planet": "URANUS",
+   "gate": 11,
+   "line": 1
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 58,
+   "line": 2
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 44,
+   "line": 2
+  }
+ ]
+}
