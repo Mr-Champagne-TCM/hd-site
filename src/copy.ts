@@ -156,10 +156,14 @@ export const CREDIBILITY = {
       // that is where the 99.97% profile agreement comes from.
       "typical error (root mean square) in this engine's Sun position, measured against NASA's " +
         "Jet Propulsion Laboratory record, across 1,000 charts born between 1900 and 2030. That is " +
-        "about fourteen seconds of birth time, and the Sun is what sets your profile. Jupiter, " +
-        "Saturn, Uranus, Neptune and Pluto are now corrected against that same record and " +
-        "typically sit within a tenth of an arcsecond of it. The Moon, Mercury, Venus and Mars sit " +
-        "further out, by up to about 3″, and none of them decides your profile",
+        // "less than the rounding": a time written to the minute can be up to 30 s
+        // off, and 14 s is the typical (RMS) figure. "closer than the Sun": Jupiter
+        // to Pluto 0.074-0.095″ RMS against the Sun's 0.58″ (RESULTS.md, 10/16).
+        "about fourteen seconds of birth time, less than the rounding in a birth time recorded to " +
+        "the minute, and the Sun is what sets your profile. Jupiter, Saturn, Uranus, Neptune and " +
+        "Pluto are now corrected against that same record and sit closer to it than the Sun does. " +
+        "The Moon, Mercury, Venus and Mars sit further out, by up to about 3″, and none of them " +
+        "decides your profile",
     ],
     [
       "2.6 million",

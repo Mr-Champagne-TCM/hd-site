@@ -42,3 +42,13 @@ test("the corrected bodies are named, and only those", () => {
   assert.match(sun, /The Moon, Mercury, Venus and Mars sit further out/);
   assert.ok(!/Sun[^.]*corrected/.test(sun), "the Sun is not corrected");
 });
+
+test("the numbers carry the context a buyer needs (v2, 10/16)", () => {
+  const sun = CREDIBILITY.checks[0][1];
+  // 14 s typical vs up to 30 s of rounding in a time written to the minute.
+  assert.match(sun, /fourteen seconds of birth time, less than the rounding in a birth time recorded to the minute/);
+  // Jupiter-Pluto 0.074-0.095″ vs the Sun's 0.58″.
+  assert.match(sun, /sit closer to it than the Sun does/);
+  // the weaker bodies are still named straight after the strong claim
+  assert.ok(sun.indexOf("closer to it than the Sun") < sun.indexOf("The Moon, Mercury, Venus and Mars"));
+});
