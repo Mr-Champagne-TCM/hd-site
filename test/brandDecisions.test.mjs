@@ -35,12 +35,14 @@ test("B1: tab title and preview title say whose readings these are", () => {
   assert.equal(meta(html, "property", "og:site_name"), "The Champagne Method Coaching and Consulting");
 });
 
-test("the link preview carries a large picture, at the path the final picture will replace", () => {
+test("the link preview carries a large picture: option 6, chosen 10/16, with its alt text", () => {
   const html = read("index.html");
   assert.equal(meta(html, "name", "twitter:card"), "summary_large_image");
   assert.equal(meta(html, "property", "og:image"), "https://humandesign.thechampagnemethod.co/og-preview.png");
   assert.equal(meta(html, "property", "og:image:width"), "1200");
   assert.equal(meta(html, "property", "og:image:height"), "630");
+  assert.equal(meta(html, "property", "og:image:alt"), "Human Design by The Champagne Method: an example bodygraph");
+  assert.doesNotMatch(html, /TEMPORARY copy/, "the placeholder note outlived the placeholder");
   // The file the tags point at is served from public/ at the site root.
   const png = readFileSync(new URL("public/og-preview.png", root));
   assert.deepEqual([...png.subarray(1, 4)].map((c) => String.fromCharCode(c)).join(""), "PNG");
