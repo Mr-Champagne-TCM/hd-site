@@ -18,6 +18,34 @@ import { customerText } from "../shared/customerMessages.mjs";
  * asked to pay for something they have not seen the shape of.
  */
 
+/**
+ * THE HEADER WORDMARK, two proposals (Jeremy's brand calls, 10/16 -- "by"
+ * lowercase, "Coaching and Consulting" is the business). NOT DECIDED: the
+ * shop-brand branch carries both so the mock can show them side by side.
+ *   A  the wordmark unchanged, a small "Coaching and Consulting" line under it
+ *   B  the wordmark unchanged, a small "Human Design by" eyebrow above it
+ */
+export const HEADER_OPTION: "A" | "B" = "A";
+
+function Wordmark({ option }: { option: "A" | "B" }) {
+  const small = "block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]";
+  return (
+    <a href={SITE.home} className="group whitespace-nowrap leading-none">
+      {/* "by" stays lowercase in every brand line (Jeremy 10/16), so it is
+          kept out of the eyebrow's uppercase. */}
+      {option === "B" && (
+        <span className={small + " mb-1"}>
+          Human Design <span className="normal-case">by</span>
+        </span>
+      )}
+      <span className="block font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors group-hover:text-brand-gold sm:text-[26px]">
+        The <span className="text-brand-gold">Champagne</span> Method
+      </span>
+      {option === "A" && <span className={small + " mt-1"}>Coaching and Consulting</span>}
+    </a>
+  );
+}
+
 function Nav() {
   return (
     <nav className="border-b border-brand-gold/15">
@@ -25,12 +53,7 @@ function Nav() {
         {/* The brand is the way home, as it is on the main site. Two links on
             the right and no more: at 390px a third one starts colliding with
             the brand, which is the fault that had to be fixed on the library. */}
-        <a
-          href={SITE.home}
-          className="whitespace-nowrap font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors hover:text-brand-gold sm:text-[26px]"
-        >
-          The <span className="text-brand-gold">Champagne</span> Method
-        </a>
+        <Wordmark option={HEADER_OPTION} />
         <div className="flex shrink-0 items-center gap-5">
           <a
             href={SITE.library}
@@ -371,7 +394,7 @@ function Footer() {
         </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-brand-gold/10 pt-6">
           {[
-            [SITE.home, "The Champagne Method"],
+            [SITE.home, "The Champagne Method Coaching and Consulting"],
             [SITE.library, "The Library"],
             [SITE.hd101, "The Human Design library"],
             [SITE.bodygraph, "Reading your bodygraph"],

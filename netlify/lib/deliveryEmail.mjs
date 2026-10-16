@@ -232,7 +232,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
           "open it then and it offers you a fresh one, as many times as you need.",
           "",
         ]),
-    "— The Champagne Method",
+    "— The Champagne Method Coaching and Consulting",
     links.home,
     "",
     // The plain-text alternative is a real body, not a courtesy copy: it is what
@@ -288,7 +288,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     reaches Jeremy directly.</td></tr>
 
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
-    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>
+    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method Coaching and Consulting</a>
     <div style="font-size:14px;color:${MUTED};padding-top:2px">Coaching, and the rest of the library.</div>
   </td></tr>
 
