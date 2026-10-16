@@ -4,34 +4,39 @@ import { open as openSealed, seal } from "./sig.mjs";
 /**
  * The kept reading, and the one link that reaches it.
  *
- * WHAT IS KEPT, AND WHAT IS NOT. Jeremy's ruling, and it is the whole design:
- * "They enter birth data, we compute with it and discard, then we keep the
- * engine outputs (ALL) and store that." So what lands here is the engine's own
- * response -- type, profile, centres, channels, the drawing -- and no birth
- * date, no time, no place, no coordinates. Those are used to compute and then
- * they are gone.
+ * WHAT IS KEPT. Jeremy's first ruling was "They enter birth data, we compute
+ * with it and discard, then we keep the engine outputs (ALL) and store that."
+ * On 16 October 2026 he changed it -- "a veer from our initial approach" -- so
+ * the PDF can print the birth line under the name, as the phone's PDF does:
  *
- * A kept reading therefore cannot say what MOMENT it was cast for, and it does
- * not need to. It is labelled by the buyer's name, which came from the purchase
- * and not from the chart. "Jeremy's reading" needs no birthday attached to it.
+ *   A PAID CHART (the chart tier and the reading tier) now also keeps the
+ *   birth details it was cast from -- the date, the local time (or that it
+ *   was unknown), the place as it was picked, and the time zone -- in their
+ *   own `birth` block, beside the engine's output and never inside it.
  *
- * The activations in a stored reading are, in principle, invertible back to a
- * birth moment of about fifteen minutes -- not a place. That is why the privacy
- * copy says the details are discarded and never claims the moment is
- * unrecoverable. Storing the outputs is not the same as storing the inputs, and
- * it is not the same as storing nothing either.
+ * Nothing else about the birth is kept: no coordinates, no UTC instant. The
+ * summary tier (0) still keeps none of it -- it has no PDF to print it on, and
+ * its privacy sentence still promises that nothing is stored.
+ *
+ * Same store, same record and same lifetime as the reading itself: written
+ * once with the chart (`fillReading`), carried through `fillInterpretation`,
+ * served for READING_TTL_SECONDS from the purchase by `loadReading`. NOTE:
+ * nothing in this repo deletes a record after that year -- `loadReading` stops
+ * serving it, but the blob stays in the store until removed by hand.
+ *
+ * Records written before 16 October 2026 have no `birth` block; they load
+ * with `birth: null` and their PDF simply has no birth line.
  *
  * WHAT IS KEPT ABOUT THE BUYER, named by Jeremy and kept complete rather than
  * whittled down: name, email, phone, the time of the purchase and what was
- * purchased. Nothing else, and specifically nothing about the birth moment.
+ * purchased.
  *
  * That list is not an oversight to be trimmed later -- each entry has a job. The
  * email is where a re-send goes (D-9, and never to an address supplied in a
  * request). The phone is where a text goes when texting exists. The name is how
- * the page can say whose reading this is WITHOUT keeping a birthday, which is
- * the whole reason the labelling problem is not a problem. The time and the
- * purchase type are the receipt: what was bought, when, so that an upgrade
- * knows what has already been paid for.
+ * the page says whose reading this is. The time and the purchase type are the
+ * receipt: what was bought, when, so that an upgrade knows what has already
+ * been paid for.
  *
  * TWO CLOCKS, and they are different on purpose (D-9d). The LINK is short --
  * six days -- because a link is a bearer token and anyone holding it is the
@@ -248,6 +253,8 @@ export async function loadReading(store, id, now = Date.now()) {
      */
     reading: typeof raw.reading === "string" ? raw.reading : null,
     writtenAt: raw.writtenAt ?? 0,
+    /** The birth details the chart was cast from (16 Oct 2026 on); null before that. */
+    birth: birthRecord(raw.birth),
   };
 }
 
@@ -286,11 +293,35 @@ export function readReadingLink(token, secret, now = Date.now()) {
   return { ok: true, id: p.r, tier: p.t };
 }
 
-/** Birth details are used to compute and then discarded. Nothing here keeps one. */
+/**
+ * THE ENGINE'S OUTPUT NEVER CARRIES BIRTH FIELDS. The birth details a paid
+ * chart keeps live in their own `birth` block (see `birthRecord`), so a birth
+ * field turning up INSIDE the output is still a bug upstream and is refused.
+ */
 function refuseBirthData(output) {
   for (const forbidden of ["date", "time", "zone", "utc", "birth", "place", "lat", "lon"]) {
     if (forbidden in output) throw new Error(`saveReading: output carries birth data (${forbidden})`);
   }
+}
+
+/**
+ * The birth details a paid chart keeps, as five fields and no more:
+ * { date, time, timeKnown, place, zone }. Built field by field rather than
+ * copied, so nothing else a request carried (coordinates, a UTC instant, a
+ * stray field) can ride along into the store. Anything unusable becomes null:
+ * a reading without a birth line is fine, a wrong one is not.
+ */
+export function birthRecord(b) {
+  if (!b || typeof b !== "object") return null;
+  const date = typeof b.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.date.trim()) ? b.date.trim() : null;
+  const zone = typeof b.zone === "string" && /^[A-Za-z][A-Za-z0-9_+\-/]{1,63}$/.test(b.zone.trim()) ? b.zone.trim() : null;
+  if (!date || !zone) return null;
+  const timeKnown = b.timeKnown !== false;
+  const time =
+    timeKnown && typeof b.time === "string" && /^\d{1,2}:\d{2}(:\d{2})?$/.test(b.time.trim()) ? b.time.trim() : null;
+  if (timeKnown && !time) return null;
+  const place = typeof b.place === "string" ? b.place.trim().replace(/\s+/g, " ").slice(0, 120) || null : null;
+  return { date, time, timeKnown, place, zone };
 }
 
 /**
@@ -305,7 +336,7 @@ function refuseBirthData(output) {
  * not fillable, because "already done" is an ordinary thing for a double-
  * submitted form to be.
  */
-export async function fillReading(store, id, output, now = Date.now()) {
+export async function fillReading(store, id, output, now = Date.now(), birth = null) {
   if (!output || typeof output !== "object") throw new Error("fillReading: no output");
   refuseBirthData(output);
 
@@ -324,6 +355,9 @@ export async function fillReading(store, id, output, now = Date.now()) {
     // When the chart was computed, which is NOT when it was bought. The year
     // runs from the purchase either way; this is only ever for looking at.
     filledAt: Math.floor(now / 1000),
+    // The birth details it was cast from -- paid charts only (tier 1 and up),
+    // and only the five fields `birthRecord` allows (Jeremy 10/16).
+    ...(existing.tier >= 1 && birthRecord(birth) ? { birth: birthRecord(birth) } : {}),
   });
   return { ok: true, tier: existing.tier };
 }
@@ -364,6 +398,8 @@ export async function fillInterpretation(store, id, text, now = Date.now()) {
     purchasedAt: existing.purchasedAt,
     createdAt: existing.createdAt,
     filledAt: existing.filledAt || Math.floor(now / 1000),
+    // Carried through: rebuilding the record field by field must not drop it.
+    ...(existing.birth ? { birth: existing.birth } : {}),
     reading: text,
     // When it was written -- neither when it was bought nor when the chart was
     // cast. Kept for looking at, never for expiry.

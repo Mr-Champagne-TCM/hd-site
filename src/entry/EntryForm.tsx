@@ -245,6 +245,9 @@ export default function EntryForm({
           birth: {
             date,
             zone: place.zone,
+            // Kept with a PAID chart for the PDF's birth line (Jeremy 10/16);
+            // never sent on to the engine, which needs only the zone.
+            place: place.label,
             timeKnown: timeKnown !== false,
             ...(timeKnown !== false ? { time } : {}),
           },
@@ -308,8 +311,8 @@ export default function EntryForm({
       setState({
         at: "failed",
         message:
-          "The connection dropped before that finished. Nothing was charged, and your details " +
-          "were not stored.",
+          "The connection dropped before that finished. Nothing was charged, and trying again " +
+          "usually works.",
       });
     }
   }

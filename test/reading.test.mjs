@@ -4,6 +4,8 @@ import { randomBytes } from "node:crypto";
 import {
   LINK_TTL_SECONDS,
   READING_TTL_SECONDS,
+  birthRecord,
+  fillInterpretation,
   fillReading,
   loadReading,
   mintReadingLink,
@@ -19,8 +21,9 @@ import {
  *
  * The assertions that matter here are not "does it round-trip". They are the
  * three promises this layer makes to somebody who paid: their birth details
- * are NOT in the store, a stranger cannot reach their reading, and a link that
- * has died does not take the reading with it.
+ * are kept only as the five fields the PDF prints, never inside the engine's
+ * output (Jeremy 10/16, see the end of this file), a stranger cannot reach
+ * their reading, and a link that has died does not take the reading with it.
  */
 
 /**
@@ -543,4 +546,61 @@ test("saveReading refuses an id that is not the right shape", async () => {
     () => saveReading(store, { id: "nope", tier: 0, output: null }),
     /bad id/,
   );
+});
+
+// --- the birth details a paid chart keeps (Jeremy 10/16) ----------------------
+//
+// "A veer from our initial approach": a paid chart now keeps the birth details
+// it was cast from, so the PDF can print the birth line. Five fields, in their
+// own block, never inside the engine's output; the summary tier keeps none.
+
+const KEPT = { date: "1976-12-14", time: "18:18", timeKnown: true, place: "Chicago, Illinois", zone: "America/Chicago" };
+
+test("a paid chart keeps its birth details, exactly five fields, beside the output", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 2, output: null, name: "Claude Test" });
+  await fillReading(store, id, OUTPUT, Date.now(), { ...KEPT, utc: "1976-12-15T00:18:00Z", lat: 41.8, lon: -87.6, extra: "x" });
+  const r = await loadReading(store, id);
+  assert.deepEqual(r.birth, KEPT);
+  assert.deepEqual(r.output, OUTPUT, "the output was changed");
+  const raw = JSON.stringify(await store.get(id));
+  for (const leak of ["utc", "lat", "lon", "extra"]) assert.ok(!raw.includes(`"${leak}"`), `${leak} was stored`);
+});
+
+test("an unknown time is kept as unknown, never as noon", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null });
+  await fillReading(store, id, OUTPUT, Date.now(), { ...KEPT, timeKnown: false, time: "12:00" });
+  assert.deepEqual((await loadReading(store, id)).birth, { ...KEPT, timeKnown: false, time: null });
+});
+
+test("the summary tier keeps no birth details at all", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 0, output: null });
+  await fillReading(store, id, OUTPUT, Date.now(), KEPT);
+  assert.equal((await loadReading(store, id)).birth, null);
+  assert.ok(!JSON.stringify(await store.get(id)).includes("1976-12-14"));
+});
+
+test("writing the interpretation keeps the birth details it was cast from", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 2, output: null });
+  await fillReading(store, id, OUTPUT, Date.now(), KEPT);
+  await fillInterpretation(store, id, "IN SHORT\nType: x");
+  assert.deepEqual((await loadReading(store, id)).birth, KEPT);
+});
+
+test("a reading from before 16 Oct has no birth details, and loads as null", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 2, output: null });
+  await fillReading(store, id, OUTPUT);
+  assert.equal((await loadReading(store, id)).birth, null);
+});
+
+test("unusable birth details are not kept, rather than kept wrong", () => {
+  for (const bad of [null, "x", {}, { ...KEPT, date: "14/12/1976" }, { ...KEPT, zone: "" }, { ...KEPT, time: "6pm" }]) {
+    assert.equal(birthRecord(bad), null, JSON.stringify(bad));
+  }
+  assert.equal(birthRecord({ ...KEPT, place: "  " }).place, null);
+  assert.equal(birthRecord({ ...KEPT, place: "x".repeat(500) }).place.length, 120);
 });

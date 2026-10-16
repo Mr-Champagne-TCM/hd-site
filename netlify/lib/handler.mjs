@@ -13,7 +13,16 @@ import { chartDifferences, describeDifferences, previousChart } from "./chartDif
  * thing that quietly stops being true after a refactor unless a test watches it.
  */
 
-/** Birth data is never written down. Only these leave the request object. */
+/**
+ * Only these travel on to the ENGINE. The place NAME never does: the engine
+ * needs the zone, not the town.
+ *
+ * Since 16 October 2026 (Jeremy: "a veer from our initial approach") a PAID
+ * chart keeps its birth details with the reading -- date, time or unknown,
+ * the place as picked, the zone -- so the PDF can print the birth line. That
+ * is `fillReading`'s job and `birthRecord` decides the fields; nothing here
+ * writes them anywhere else, and a refused or free request keeps nothing.
+ */
 const ALLOWED_BIRTH_FIELDS = ["date", "time", "zone", "timeKnown", "utc"];
 
 export async function handleChart({
@@ -229,7 +238,13 @@ export async function handleChart({
 
   if (readingLink.ok && readings) {
     try {
-      const filled = await fillReading(readings, readingLink.id, upstream.payload, now);
+      const filled = await fillReading(readings, readingLink.id, upstream.payload, now, {
+        date: birth.date,
+        time: birth.time,
+        timeKnown: birth.timeKnown,
+        zone: birth.zone,
+        place: birth.place,
+      });
       if (!filled.ok) {
         console.log(`chart: reading not filled (${filled.reason})`);
       } else if (deliver) {

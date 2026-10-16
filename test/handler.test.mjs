@@ -405,3 +405,43 @@ test("a failed send does not fail the chart - the person is looking at it", asyn
   assert.equal(res.status, 200, "a failed email took the chart down with it");
   assert.equal((await loadReading(readings, id)).pending, false, "and it must still be stored");
 });
+
+// --- a paid chart keeps its birth details for the PDF (Jeremy 10/16) ---------
+
+test("a paid chart is filed with its birth details; the engine still gets no place", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 2, output: null, name: "Claude Test" });
+  const link = mintReadingLink({ id, tier: 2 }, secret);
+  const engine = fakeEngine({ ok: true, status: 200, payload: { type: "Manifestor", profile: "1/3" } });
+  const birth = { date: "1976-12-14", time: "18:18", timeKnown: true, zone: "America/Chicago", place: "Chicago, Illinois" };
+  const res = await handleChart({
+    body: JSON.stringify({ reading: link, birth }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine,
+    grantSecret: secret,
+    paywall: true,
+    readings,
+  });
+  assert.equal(res.status, 200, res.body);
+  assert.deepEqual(Object.keys(engine.calls[0].birth).sort(), ["date", "time", "timeKnown", "zone"]);
+  assert.deepEqual((await loadReading(readings, id)).birth, birth);
+});
+
+test("a refused (unpaid) chart keeps nothing", async () => {
+  const readings = memoryStore();
+  const res = await handleChart({
+    body: JSON.stringify({ birth: { ...BIRTH, place: "Chicago, Illinois" } }),
+    ip: "1.2.3.5",
+    now: T0,
+    store: counterStore(),
+    engine: fakeEngine(),
+    grantSecret: randomBytes(32).toString("hex"),
+    paywall: true,
+    readings,
+  });
+  assert.equal(res.status, 402);
+  assert.equal(readings.m.size, 0);
+});
