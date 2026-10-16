@@ -30,7 +30,13 @@ function Wordmark({ option }: { option: "A" | "B" }) {
   const small = "block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]";
   return (
     <a href={SITE.home} className="group whitespace-nowrap leading-none">
-      {option === "B" && <span className={small + " mb-1"}>Human Design by</span>}
+      {/* "by" stays lowercase in every brand line (Jeremy 10/16), so it is
+          kept out of the eyebrow's uppercase. */}
+      {option === "B" && (
+        <span className={small + " mb-1"}>
+          Human Design <span className="normal-case">by</span>
+        </span>
+      )}
       <span className="block font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors group-hover:text-brand-gold sm:text-[26px]">
         The <span className="text-brand-gold">Champagne</span> Method
       </span>
