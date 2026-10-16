@@ -304,7 +304,18 @@ function Credibility() {
         {CREDIBILITY.title}
       </h2>
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
-        {CREDIBILITY.body}
+        {CREDIBILITY.body.map((part) =>
+          part.emphasis ? (
+            <strong key={part.text} className="text-[1.08em] font-semibold italic text-brand-paper">
+              {part.text}
+            </strong>
+          ) : (
+            <span key={part.text}>{part.text}</span>
+          ),
+        )}
+      </p>
+      <p className="mt-4 max-w-[62ch] font-display text-[1.2rem] italic leading-snug text-brand-gold/90">
+        {CREDIBILITY.standout}
       </p>
 
       <dl className="mt-7 grid gap-4 sm:grid-cols-2">

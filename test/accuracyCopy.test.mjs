@@ -15,7 +15,8 @@ const { CREDIBILITY } = await importTs("src", "copy.ts");
  */
 const figures = () => CREDIBILITY.checks.map((c) => c[0]);
 const card = (i) => CREDIBILITY.checks[i][1];
-const all = () => [CREDIBILITY.title, CREDIBILITY.body, ...CREDIBILITY.checks.flat(), CREDIBILITY.closing].join(" ");
+const bodyText = () => CREDIBILITY.body.map((p) => p.text).join("");
+const all = () => [CREDIBILITY.title, bodyText(), CREDIBILITY.standout, ...CREDIBILITY.checks.flat(), CREDIBILITY.closing].join(" ");
 
 test("same shape as before: title, body, four cards, closing", () => {
   assert.equal(CREDIBILITY.title, "Measured against the sky");
@@ -39,6 +40,7 @@ test("card 1: the Sun in birth time, on the 1,000-chart sample, against the cloc
   assert.match(card(0), /counted in birth time/);
   assert.match(card(0), /up to 30 seconds out/);
   assert.match(card(0), /The Sun sets your profile/);
+  assert.match(card(0), /adds less doubt than the birth record imposed$/); // Jeremy's words, 10/16
 });
 
 test("card 2: the slow planets are said to be PLACED more precisely, not FOLLOWED (birth-time) more closely", () => {
@@ -62,7 +64,7 @@ test("card 4: profile residual vs NASA, and the rules split is not attributed to
 });
 
 test("body and closing say only what was measured", () => {
-  assert.match(CREDIBILITY.body, /around the time you were born/); // design half is ~88 days earlier
+  assert.match(bodyText(), /around the time you were born/); // design half is ~88 days earlier
   assert.match(CREDIBILITY.closing, /the very same planet data/); // Moshier mode, not raw NASA files
   assert.match(CREDIBILITY.closing, /As far as I can find/); // the hedge stays
 });
@@ -72,4 +74,12 @@ test("retired claims stay retired", () => {
     /none of them decides a line/, /within half an arcsecond/, /closer to it than the Sun/]) {
     assert.ok(!gone.test(all()), `retired claim is back: ${gone}`);
   }
+});
+
+test("Jeremy's emphasis (10/16): the bold-italic clause and the NASA line on its own", () => {
+  const emphasised = CREDIBILITY.body.filter((p) => p.emphasis).map((p) => p.text);
+  assert.deepEqual(emphasised, ["and this one doesn't copy any of them!"]);
+  assert.match(bodyText(), /do not all agree on those places, and this one doesn't copy any of them!$/);
+  assert.equal(CREDIBILITY.standout, "It is checked against NASA's own record of where everything actually was.");
+  assert.ok(!bodyText().includes("NASA"), "the NASA sentence lives only in the standout line");
 });

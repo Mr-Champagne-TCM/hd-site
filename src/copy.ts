@@ -131,12 +131,23 @@ export const CREDIBILITY = {
   // chart is taken about 88 days (88 degrees of Sun) before birth. "NASA's own
   // record" = JPL Horizons; every body the engine computes was checked against
   // it in the 10/15 survey (RESULTS.md, "every body vs JPL").
-  body:
-    "Your chart is worked out from where the Sun, the Moon and the planets were around the time " +
-    "you were born. If a calculator places one of them even slightly wrong, part of your chart " +
-    "can come out wrong with it. Human Design calculators do not all agree on those places, so " +
-    "this one doesn't copy any of them. It is checked against NASA's own record of where " +
-    "everything actually was.",
+  //
+  // Jeremy's edits on v3 (10/16), his words exactly: the "and this one doesn't
+  // copy any of them!" clause carries emphasis (bold, italic, a little larger),
+  // and the NASA sentence stands on its own line as a calm pull-line (italic
+  // Fraunces, gold -- the site's pull-line vocabulary). The body is therefore a
+  // list of parts with an emphasis flag, rendered by Credibility() in App.tsx.
+  body: [
+    {
+      text:
+        "Your chart is worked out from where the Sun, the Moon and the planets were around the " +
+        "time you were born. If a calculator places one of them even slightly wrong, part of your " +
+        "chart can come out wrong with it. Human Design calculators do not all agree on those " +
+        "places, ",
+    },
+    { text: "and this one doesn't copy any of them!", emphasis: true },
+  ] as ReadonlyArray<{ text: string; emphasis?: boolean }>,
+  standout: "It is checked against NASA's own record of where everything actually was.",
 
   checks: [
     [
@@ -144,13 +155,15 @@ export const CREDIBILITY = {
       // 1900-2030: 0.576″, at ~24.4 s of clock per ″ (the Sun moves 0.9856°/day).
       // Mean error 11 s; worst 49 s. A time rounded to the nearest minute is off
       // by up to 30 s (RMS 17 s, mean 15 s), so "less doubt than the clock" holds
-      // on either measure. The old 0.46″ came from 9 charts, not the 24 it said.
+      // on either measure. "than the birth record imposed" (Jeremy's words, 10/16): the
+      // birth record's own rounding to the minute. The old 0.46″ came from 9
+      // charts, not the 24 it said.
       // The Sun is NOT corrected; it is the same as in every release since August.
       "14 seconds",
       "how closely this engine typically follows the Sun, checked against NASA's record across " +
         "1,000 test charts and counted in birth time. The Sun sets your profile. A birth time " +
         "written to the nearest minute can already be up to 30 seconds out, so the calculation " +
-        "adds less doubt than the clock did",
+        "adds less doubt than the birth record imposed",
     ],
     [
       // 2.6 million = 26 activations (13 bodies x personality + design; Earth and
