@@ -186,7 +186,7 @@ export const CREDIBILITY = {
 export const EXAMPLE = {
   title: "What the summary looks like",
   caption:
-    "An example, not a real person — 25 June 1985, Chicago, birth time unknown. " +
+    "An example, not a real person — June 25, 1985, Chicago, birth time unknown. " +
     "Yours would be your own, and would say so if the time were missing.",
 };
 

@@ -97,7 +97,8 @@ test("years outside a human lifetime are refused", () => {
 test("months are named, never numbered", () => {
   assert.equal(MONTHS[0], "January");
   assert.equal(MONTHS[5], "June");
-  assert.equal(humanDate("1983-09-17"), "17 September 1983");
+  // The PDF's order (Jeremy 10/16), not "17 September 1983".
+  assert.equal(humanDate("1983-09-17"), "September 17, 1983");
   // The whole point: the ambiguity that 06/07 creates cannot arise here.
   assert.match(humanDate("1983-06-07"), /June/);
 });

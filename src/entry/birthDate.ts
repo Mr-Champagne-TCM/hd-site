@@ -88,9 +88,13 @@ export const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ] as const;
 
-/** How a chosen date reads back to the person who chose it. */
+/**
+ * How a chosen date reads back to the person who chose it: "July 22, 1991",
+ * the PDF's order (Jeremy 10/16: one date style everywhere a person reads one).
+ * It was "22 July 1991".
+ */
 export function humanDate(iso: string): string {
   const [y, m, d] = splitDate(iso, 0);
   if (!y) return "";
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
 }

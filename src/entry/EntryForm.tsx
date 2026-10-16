@@ -6,6 +6,7 @@ import Summary, { type SummaryData } from "../Summary";
 import Bodygraph from "../Bodygraph";
 import { ENTRY, privacyFor, SITE } from "../copy";
 import { humanDate } from "./birthDate";
+import { birthLine } from "../../shared/birthLine.mjs";
 import { displayTime } from "./time";
 import ReadingActions from "../ReadingActions";
 import { TIERS } from "../../shared/pricing.mjs";
@@ -414,7 +415,21 @@ export default function EntryForm({
      * component's state, and none of them was stored. Reload this link and the
      * heading is their name instead, because by then we genuinely do not know.
      */
+    /*
+     * In the PDF's words (Jeremy 10/16: "no unreadable birth data... these are
+     * ppl"): "July 22, 1991 · 5:40 PM · Denver, Colorado · Timezone: UTC-06:00",
+     * the same line the reading page and the PDF print. It was "22 July 1991
+     * at 5:40 PM, Denver, Colorado". The older sentence stays only as the
+     * fallback for details the shared line cannot read.
+     */
     const born =
+      birthLine({
+        date,
+        time: timeKnown === false ? null : time,
+        timeKnown: timeKnown !== false,
+        place: place?.label ?? "",
+        zone: place?.zone ?? "",
+      }) ??
       humanDate(date) +
       (timeKnown === false
         ? ", time unknown"
