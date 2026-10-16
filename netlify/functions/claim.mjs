@@ -4,7 +4,7 @@ import { getSession } from "../lib/stripe.mjs";
 import { mintGrant } from "../lib/grant.mjs";
 import { loadReading, mintReadingLink, nameCase, readingIdForSession, saveReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
-import { reportFailure } from "../lib/health.mjs";
+import { record, reportFailure } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
