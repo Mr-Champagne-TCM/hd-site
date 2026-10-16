@@ -1,6 +1,8 @@
 import { loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
-import { marginNotes, parseReading } from "./interpretation.mjs";
+import { marginNotes, parseReading, structureProblem } from "./interpretation.mjs";
+import { buildReadingView } from "./readingView.mjs";
+import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 
 /**
@@ -161,6 +163,20 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
      * chart and none of their reading. Answered here in a field of its own,
      * because a page that quietly shows less than was paid for reads as broken.
      */
+    /**
+     * THE PDF'S ORDER, FOR THE PAGE (Jeremy 10/16): the glance sentences,
+     * Start here (centers, channels, profile, each with the library's
+     * one-liner and a Takeaway), then the reading decision-first. Built by
+     * the SAME function the PDF uses, so the page and the document cannot
+     * disagree. Null for a reading that cannot be laid out that way (letter
+     * mode), which keeps the old shape.
+     */
+    view:
+      reading.tier >= 2 && typeof reading.reading === "string" && structureProblem(reading.reading) === null
+        ? buildReadingView(reading.output, reading.reading)
+        : null,
+    /** The PDF's birth line, when the record keeps birth details (16 Oct 2026 on). */
+    birthLine: birthLine(reading.birth),
     writing: reading.tier >= 2 && !reading.pending && !reading.reading,
     /**
      * D-11: no upgrade offered at the top tier, because there is nothing above

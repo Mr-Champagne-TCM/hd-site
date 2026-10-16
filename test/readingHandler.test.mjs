@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { handleReading } from "../netlify/lib/readingHandler.mjs";
-import { LINK_TTL_SECONDS, mintReadingLink, newReadingId, saveReading } from "../netlify/lib/reading.mjs";
+import { LINK_TTL_SECONDS, fillReading, mintReadingLink, newReadingId, saveReading } from "../netlify/lib/reading.mjs";
 
 /**
  * Opening a reading link.
@@ -76,11 +76,28 @@ test("a reading with no email says a re-send is not possible", async () => {
   assert.equal(parse(await open(store, token)).canResend, false);
 });
 
-test("no birth data can reach the page, because none was ever stored", async () => {
+test("a reading stored without birth details sends none, and no birth line", async () => {
   const { store, token } = await seed(1);
   const raw = await open(store, token).then((r) => r.body);
-  for (const leak of ["1985", "birth", "Chicago", '"date"', '"utc"']) {
+  for (const leak of ["1985", "Chicago", '"date"', '"utc"', '"zone"', '"place"']) {
     assert.doesNotMatch(raw, new RegExp(leak, "i"), `${leak} appeared in a reading response`);
+  }
+  assert.equal(JSON.parse(raw).birthLine, null);
+});
+
+test("kept birth details reach the page only as the PDF's birth line (Jeremy 10/16)", async () => {
+  // The raw fields stay on the server; the page gets the one sentence the PDF
+  // prints under the name.
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, ...BUYER });
+  await fillReading(store, id, OUTPUT, Date.now(), {
+    date: "1976-12-14", time: "18:18", timeKnown: true, place: "Chicago, Illinois", zone: "America/Chicago",
+  });
+  const token = mintReadingLink({ id, tier: 1 }, SECRET);
+  const raw = await open(store, token).then((r) => r.body);
+  assert.equal(JSON.parse(raw).birthLine, "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00");
+  for (const leak of ['"date"', '"zone"', '"place"', "America/Chicago", '"18:18"']) {
+    assert.doesNotMatch(raw, new RegExp(leak), `${leak} appeared in a reading response`);
   }
 });
 

@@ -1,4 +1,6 @@
 import { SITE } from "./copy";
+import type { ReadingView } from "./StartHere";
+import { AUTHORITY, CENTERS, DEFINITION, LIBRARY, crossLink, profileLink, typeLink } from "../shared/libraryLinks.mjs";
 
 /**
  * The written interpretation, on the page.
@@ -190,6 +192,122 @@ export default function WrittenReading({
           The Human Design library
         </a>
         , free.
+      </p>
+    </div>
+  );
+}
+
+/* ==========================================================================
+ * THE READING IN THE PDFs' ORDER (Jeremy 10/16) -- used whenever the server
+ * sends a `view` (a reading that lays out the new way). Decision first, then
+ * energy, how you meet the world, on/off track, the cross, the definition,
+ * then the two center sections; the experiments; the disclaimer; the onward
+ * note. Each section keeps its bold lead line; its chart facts follow it,
+ * every label opening its library entry as the PDF margin's labels do.
+ * ========================================================================== */
+
+
+/** The library entry behind a margin label -- the phone's noteHref. */
+function noteHref(label: string, chart: { type?: string; profile?: string; incarnationCross?: string }) {
+  if (label.endsWith("AUTHORITY")) return AUTHORITY;
+  if (label === "CENTER") return CENTERS;
+  if (label === "DEFINITION") return DEFINITION;
+  if (label.startsWith("PROFILE")) return profileLink(chart.profile);
+  if (label === "INCARNATION CROSS") return crossLink(chart.incarnationCross);
+  if (label.includes("TRACK") || label === String(chart.type ?? "").toUpperCase()) return typeLink(chart.type);
+  return null;
+}
+
+export function ReadingInOrder({
+  v,
+  notes,
+  chart,
+}: {
+  v: ReadingView;
+  notes: Record<string, Array<[string, string]>>;
+  chart: { type?: string; profile?: string; incarnationCross?: string };
+}) {
+  const feature = /^\((.+?)\)\s*([\s\S]+)$/;
+  const [intro, ...items] = v.takeaways;
+  return (
+    <div className="space-y-12">
+      <section aria-labelledby="your-reading">
+        <h2 id="your-reading" className="font-display text-[clamp(1.3rem,3vw,1.6rem)] font-medium tracking-tight text-brand-paper">
+          Your reading
+        </h2>
+        <div className="mt-6 space-y-10">
+          {v.reading.map((s) => (
+            <article key={s.heading} className="border-l-2 border-brand-gold/40 pl-5">
+              <Label>{s.heading}</Label>
+              {s.lede && <p className="mt-2 text-[19px] font-semibold leading-snug text-brand-paper">{s.lede}</p>}
+              <div className="mt-3 space-y-3">
+                {s.paragraphs.map((p, i) => (
+                  <p key={i} className="text-[16px] leading-relaxed text-brand-paper/85">
+                    {p}
+                  </p>
+                ))}
+              </div>
+              {(notes[s.heading]?.length ?? 0) > 0 && (
+                <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2">
+                  {notes[s.heading].map(([k, val]) => {
+                    const href = noteHref(k, chart);
+                    const label = k.replace(/\n/g, " ");
+                    return (
+                      <div key={k}>
+                        <dt className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-gold/90">
+                          {href ? (
+                            <a href={href} rel="noreferrer" className="transition-colors hover:text-brand-teal">
+                              {label}
+                            </a>
+                          ) : (
+                            label
+                          )}
+                        </dt>
+                        <dd className="text-[14px] leading-snug text-brand-muted">{val}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {v.takeaways.length > 0 && (
+        <section aria-labelledby="experiments">
+          <h2 id="experiments" className="font-display text-[clamp(1.3rem,3vw,1.6rem)] font-medium tracking-tight text-brand-gold">
+            {TAKEAWAYS}
+          </h2>
+          {intro && <p className="mt-3 text-[16px] leading-relaxed text-brand-paper/85">{intro}</p>}
+          <ul className="mt-4 space-y-4">
+            {items.map((p, i) => {
+              const m = feature.exec(p);
+              return (
+                <li key={i} className="relative pl-6">
+                  <span aria-hidden className="absolute left-0 top-[0.8em] h-[2px] w-3 bg-brand-gold" />
+                  {m && <p className="text-[17px] font-semibold text-brand-gold">{m[1]}</p>}
+                  <p className="text-[17px] leading-relaxed text-brand-paper/90">{m ? m[2] : p}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <p className="border-t border-white/10 pt-4 text-[14px] leading-relaxed text-brand-muted">{v.disclaimer}</p>
+
+      {/* The PDFs' onward note: both free pages, as an invitation. */}
+      <p className="text-[15px] leading-relaxed text-brand-muted">
+        Every word above is explained in{" "}
+        <a href={LIBRARY} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+          The Human Design library
+        </a>
+        , and the drawing at the top in{" "}
+        <a href={SITE.bodygraph} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+          “Reading your bodygraph.”
+        </a>{" "}
+        Both are free.
       </p>
     </div>
   );

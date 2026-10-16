@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import Summary, { type SummaryData } from "./Summary";
+import { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
-import Activations from "./Activations";
+import ChartKey from "./ChartKey";
+import Glance from "./Glance";
+import StartHere, { type ReadingView } from "./StartHere";
+import type { Activation } from "./Activations";
 
 /** The forwarding address, never the personal inbox (D-12). */
 const CONTACT = "hd-readings@thechampagnemethod.co";
 import EntryForm from "./entry/EntryForm";
 import ReadingActions, { Resend } from "./ReadingActions";
-import WrittenReading, { type Written } from "./WrittenReading";
+import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 
 /**
  * What a delivery link opens.
@@ -33,11 +36,15 @@ type Reading = {
   label: string | null;
   name: string | null;
   purchasedAt: number;
-  output: SummaryData;
+  output: SummaryData & { personality?: Activation[]; design?: Activation[] };
   upgrade: { level: number; label: string; available?: boolean } | null;
   canResend: boolean;
   written: Written | null;
   notes: Record<string, Array<[string, string]>> | null;
+  /** The PDFs' order, when the reading lays out that way (Jeremy 10/16). */
+  view?: ReadingView | null;
+  /** "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00", when kept. */
+  birthLine?: string | null;
   /** Paid for words the sweeper has not written yet. */
   writing: boolean;
 };
@@ -289,12 +296,25 @@ export default function ReadingPage({ token }: { token: string }) {
           {reading.label}
         </p>
       )}
+      {/*
+        THE BIRTH LINE, as both PDFs print it under the name (Jeremy 10/16).
+        Only when the reading keeps birth details -- every paid chart filled
+        from 16 October 2026; older readings simply have none.
+      */}
+      {reading.birthLine && (
+        <p className="mt-2 text-[15px] text-brand-muted">{reading.birthLine}</p>
+      )}
 
       {/*
+        THE NEW ORDER, the PDFs' order (Jeremy 10/16: "All PDFs should look
+        the same", and the page follows them): the chart and its key; the
+        glance box with the reading's own sentences, the chart values and the
+        activations; Start here; the reading, decision first; the
+        experiments; then the PDF and the resources.
+
         The picture first, when there is one -- it is what somebody recognises
-        as their chart, and the summary reads as its caption. Absent on the
-        summary tier, where nothing renders here at all: no placeholder, no
-        greyed frame. A locked box is an advert wearing a product's clothes.
+        as their chart. Absent on the summary tier, where nothing renders here
+        at all: no placeholder, no greyed frame.
       */}
       {reading.output?.bodygraphSvg !== undefined && (
         <div className="mt-8">
@@ -304,41 +324,30 @@ export default function ReadingPage({ token }: { token: string }) {
               reading.name ? `${reading.name}’s bodygraph` : "Your bodygraph"
             }
           />
+          <ChartKey />
         </div>
       )}
 
-      <div className="mt-8">
-        <Summary data={reading.output} />
+      <div className="mt-10">
+        <Glance
+          data={reading.output}
+          says={reading.view?.summary ?? reading.written?.summary ?? null}
+          showActivations={reading.tier >= 2}
+        />
       </div>
 
-      {/*
-        THE READING ITSELF, ON THE PAGE.
-
-        Jeremy, looking at a tier-2 link that showed only the chart: "Should
-        have PDF content, in the page, then PDF'able when they need." A reading
-        whose only form is a download is one nobody opens on a phone, and it
-        turns the PDF from the thing they keep into a thing they must fetch
-        before they can read anything at all.
-
-        Above the actions, because the actions are what to do NEXT and this is
-        what they bought.
-      */}
-      {/*
-        THE ACTIVATIONS, on the reading tier only.
-        Sold as part of it and never built until now. Above the written
-        interpretation because they are chart facts, the same order the PDF
-        puts them in -- and gated on the tier because the summary and chart
-        tiers were never sold them.
-      */}
-      {reading.tier >= 2 && (
-        <Activations
-          personality={reading.output?.personality}
-          design={reading.output?.design}
-        />
-      )}
-
-      {reading.written && (
-        <WrittenReading written={reading.written} notes={reading.notes ?? {}} />
+      {reading.view ? (
+        <>
+          <div className="mt-14">
+            <StartHere v={reading.view} />
+          </div>
+          <div className="mt-14">
+            <ReadingInOrder v={reading.view} notes={reading.notes ?? {}} chart={reading.output} />
+          </div>
+        </>
+      ) : (
+        /* A reading that cannot be laid out the new way (letter mode) keeps its old shape. */
+        reading.written && <WrittenReading written={reading.written} notes={reading.notes ?? {}} />
       )}
 
       {/*
