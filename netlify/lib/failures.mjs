@@ -56,6 +56,10 @@ export const KINDS = {
   "checkout-stripe-failed": { severity: F, customer: "checkout-unavailable", status: 502, code: "checkout_unavailable" },
   "checkout-bad-request": { severity: I, customer: "checkout-not-offered", status: 400, code: "bad_tier" },
   "checkout-not-sellable": { severity: I, customer: "checkout-not-yet", status: 409, code: "not_yet" },
+  // The tier's Stripe product could not be had, so this sale went ahead with an
+  // inline one -- and a free retry code (held to the tier's product) will not
+  // reach it. The buyer sees nothing.
+  "checkout-product-missing": { severity: F, customer: null, status: 200, code: null },
 
   // --- claim (the money has moved, or might have) ---------------------------
   "claim-misconfigured": { severity: P, customer: "claim-confirm-later", status: 503, code: "misconfigured" },

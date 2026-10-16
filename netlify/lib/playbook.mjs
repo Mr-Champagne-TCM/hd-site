@@ -24,7 +24,8 @@ import { DASHBOARD_STEPS } from "./retryCode.mjs";
  *              resend-when-written (a) the same, once the reading is written
  *              note:<key>          (b) a ready-made note in Jeremy's voice
  *                                      (lib/alertNotes.mjs)
- *              code                (c) a one-use 100%-off retry code
+ *              code                (c) a one-use 100%-off retry code, held to
+ *                                      the tier they bought
  *                                      (lib/retryCode.mjs)
  *            NEVER a refund. The test beside this file holds that.
  *
@@ -286,7 +287,7 @@ export function optionLines(entry, { link, retryLink, shop } = {}) {
     }
     if (o === "code") {
       return (
-        "Give a free retry code (one use, 100% off) to send with the note: " +
+        "Give a free retry code (one use, 100% off the tier they bought) to send with the note: " +
         (retryLink
           ? `one tap -> ${retryLink} (opens a page with a "Make the code" button; works once, for 7 days). Or by hand: `
           : "") +

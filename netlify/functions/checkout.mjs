@@ -1,5 +1,5 @@
-import { creditFor, sessionParams } from "../lib/checkout.mjs";
-import { createSession } from "../lib/stripe.mjs";
+import { checkoutProduct, creditFor, sessionParams } from "../lib/checkout.mjs";
+import { createSession, ensureProduct } from "../lib/stripe.mjs";
 import { readGrant } from "../lib/grant.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
@@ -97,9 +97,18 @@ export default guard("checkout", async (request) => {
 
   const origin = new URL(request.url).origin;
 
+  // The tier's own Stripe product, so a free retry code can be held to it
+  // (lib/retryCode.mjs). Without it the sale still goes ahead, inline as before.
+  const product = await checkoutProduct({
+    level,
+    mode: /^[sr]k_live_/.test(key.trim()) ? "live" : "test",
+    ensure: (p) => ensureProduct(key, p),
+    note: (detail) => noteFailure(health(), "checkout-product-missing", { detail }),
+  });
+
   try {
-    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin }));
-    console.log(`POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents})`);
+    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product }));
+    console.log(`POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${product ? "" : ", inline product"})`);
     return json(200, { url: session.url });
   } catch (e) {
     // Stripe's message is for a developer; the visitor gets one written for a

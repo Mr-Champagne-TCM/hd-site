@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { open as openSealed, seal } from "./sig.mjs";
+import { paidLevel, tierAt, tierProduct } from "./checkout.mjs";
 
 /**
  * A FREE RETRY CODE, ONE TAP FROM THE ALERT (Jeremy 10/16: "No refunds
@@ -21,6 +22,14 @@ import { open as openSealed, seal } from "./sig.mjs";
  *   GET IS SAFE  opening the link only shows a button. Mail scanners fetch
  *              links before a person does, and a GET that minted would spend
  *              the code on a robot. Only the button's POST makes it.
+ *   THEIR TIER ONLY  (Jeremy 10/16: limit it "to the tier they bought".) The
+ *              coupon carries `applies_to.products` = the tier's own Stripe
+ *              product (checkout.mjs `tierProduct`; the checkout prices every
+ *              sale against it). The tier comes from the incident: the link
+ *              carries it when the alert knew it, otherwise the incident on
+ *              file names it, otherwise its Stripe checkout session does
+ *              (`metadata.level`, paid). When none of those can say, NOTHING
+ *              is made -- never an unrestricted code -- and the page says why.
  *
  * Without STRIPE_SECRET_KEY at runtime the alert does not carry the link at
  * all; it gives the dashboard steps (lib/playbook.mjs). If the key is a
@@ -36,6 +45,7 @@ export const RETRY_PATH = "/api/admin/retry-code";
 /** The dashboard route, for when the one-tap link is not there or not allowed. */
 export const DASHBOARD_STEPS =
   'Stripe dashboard -> Product catalogue -> Coupons -> "+ Create coupon": Percentage, 100% off, Duration "Once", ' +
+  'tick "Apply to specific products" and pick only the one they bought (The summary, The chart or The reading), ' +
   'tick "Limit the total number of times this coupon can be redeemed" = 1 -> "Create coupon" -> ' +
   'in the coupon, "+ Add promotion code": tick "Limit to 1 redemption" -> make it. The buyer types the code on ' +
   'Stripe\'s checkout page ("Add promotion code").';
@@ -55,14 +65,31 @@ export function codeFor(nonce, secret) {
   return `RETRY${out}`;
 }
 
+/** The tier an incident names, or null. */
+function incidentTier(incident) {
+  const t = incident?.ref?.tier;
+  return Number.isInteger(t) && tierAt(t) ? t : null;
+}
+
 /**
  * The link for one incident, or null when it cannot be protected (no secret,
- * no origin, no incident id) or there is no Stripe key to make it with.
+ * no origin, no incident id), there is no Stripe key to make it with, or
+ * nothing on the incident can say which tier was bought (no tier, no checkout
+ * session) -- the code is held to that tier, so without it the alert gives
+ * the dashboard steps instead.
  */
 export function retryLink({ incident, now = Date.now() }, { secret, origin, stripeKey } = {}) {
   if (!secret || !origin || !stripeKey || !incident?.id || !NONCE.test(String(incident.id))) return null;
+  const tier = incidentTier(incident);
+  if (tier === null && !incident?.ref?.session) return null;
   const token = seal(
-    { p: "retry-code", n: String(incident.id), k: String(incident.kind ?? "").slice(0, 40), exp: now + RETRY_LINK_TTL_MS },
+    {
+      p: "retry-code",
+      n: String(incident.id),
+      k: String(incident.kind ?? "").slice(0, 40),
+      ...(tier !== null ? { t: tier } : {}),
+      exp: now + RETRY_LINK_TTL_MS,
+    },
     purposeKey(secret),
   );
   return `${origin}${RETRY_PATH}?t=${token}`;
@@ -76,7 +103,34 @@ export function readRetryToken(token, secret, now = Date.now()) {
   const p = opened.payload ?? {};
   if (p.p !== "retry-code" || !NONCE.test(String(p.n)) || !Number.isFinite(p.exp)) return { ok: false, reason: "malformed" };
   if (now > p.exp) return { ok: false, reason: "expired" };
-  return { ok: true, nonce: p.n, kind: String(p.k ?? ""), exp: p.exp };
+  const tier = Number.isInteger(p.t) && tierAt(p.t) ? p.t : null;
+  return { ok: true, nonce: p.n, kind: String(p.k ?? ""), tier, exp: p.exp };
+}
+
+/**
+ * WHICH TIER THEY BOUGHT: the link's own word, then the incident on file,
+ * then the incident's Stripe checkout session (paid, `metadata.level`).
+ * `{ tier }` or `{ tier: null, why }`. Never throws.
+ */
+export async function buyerTier({ read, store, stripe }) {
+  if (Number.isInteger(read.tier)) return { tier: read.tier };
+  let incident = null;
+  try {
+    incident = await store.get(`incident/${read.nonce}`, { type: "json" });
+  } catch {
+    /* the session is the last word anyway */
+  }
+  const fromIncident = incidentTier(incident);
+  if (fromIncident !== null) return { tier: fromIncident };
+  const session = incident?.ref?.session;
+  if (!session) return { tier: null, why: incident ? "the incident names no purchase" : "the incident is no longer on file" };
+  if (!stripe?.getSession) return { tier: null, why: "there is no Stripe key here to look up their checkout" };
+  try {
+    const level = paidLevel(await stripe.getSession(session));
+    return level === null ? { tier: null, why: "their checkout does not show a paid tier" } : { tier: level };
+  } catch (e) {
+    return { tier: null, why: `Stripe did not answer about their checkout (${e?.status ?? e?.name ?? "error"})` };
+  }
 }
 
 /**
@@ -102,13 +156,25 @@ export async function handleRetryCode({ method, token, store, secret, stripe, no
   } catch {
     return page(503, "The store did not answer", "<p>Nothing was made. Opening the link again in a minute usually works.</p>");
   }
-  if (made?.code) return page(200, "Already made", codeBlock(made.code, made.at, "This link has already made its one code:"));
+  if (made?.code) return page(200, "Already made", codeBlock(made.code, made.at, "This link has already made its one code:", made.label));
+
+  // Held to the tier they bought, or not made at all.
+  const bought = await buyerTier({ read, store, stripe });
+  if (bought.tier === null) {
+    return page(
+      409,
+      "Which tier they bought is not known",
+      `<p>Nothing was made: the code only covers the tier the buyer bought, and ${esc(bought.why)}. ` +
+        `Their Stripe payment shows what they bought; the code can then be made by hand:</p><p>${esc(DASHBOARD_STEPS)}</p>`,
+    );
+  }
+  const product = tierProduct(bought.tier);
 
   if (method !== "POST") {
     return page(
       200,
       "One free retry code",
-      `<p>For the buyer in the alert (${esc(read.kind || "incident")}). One use, 100% off, redeemable for 60 days.</p>
+      `<p>For the buyer in the alert (${esc(read.kind || "incident")}). One use, 100% off ${esc(product.name)} only (the tier they bought), redeemable for 60 days.</p>
 <form method="POST"><input type="hidden" name="t" value="${esc(token)}"><button type="submit">Make the code</button></form>
 <p class="small">Opening this page made nothing. The button makes the code, once.</p>`,
     );
@@ -125,20 +191,25 @@ export async function handleRetryCode({ method, token, store, secret, stripe, no
 
   const code = codeFor(read.nonce, secret);
   const until = Math.floor((now + RETRY_CODE_TTL_MS) / 1000);
+  const metadata = { made_for: read.kind || "incident", tier: String(bought.tier), product: product.id };
   try {
+    // The product has to exist before a coupon can name it. It already does
+    // once any checkout has run with this key; this makes sure.
+    await stripe.ensureProduct(product);
     const coupon = await stripe.createCoupon(
       {
         percent_off: 100,
         duration: "once",
         max_redemptions: 1,
         redeem_by: until,
-        name: "Free retry (one use)",
-        metadata: { made_for: read.kind || "incident" },
+        applies_to: { products: [product.id] },
+        name: `Free retry: ${product.name} (one use)`,
+        metadata,
       },
       { idempotencyKey: `retry-coupon-${read.nonce}` },
     );
     await stripe.createPromotionCode(
-      { coupon: coupon.id, code, max_redemptions: 1, expires_at: until, metadata: { made_for: read.kind || "incident" } },
+      { coupon: coupon.id, code, max_redemptions: 1, expires_at: until, metadata },
       { idempotencyKey: `retry-promo-${read.nonce}` },
     );
   } catch (e) {
@@ -158,15 +229,16 @@ export async function handleRetryCode({ method, token, store, secret, stripe, no
   }
 
   try {
-    await store.setJSON(marker, { state: "made", code, at: now }, { expiration: new Date(read.exp + RETRY_CODE_TTL_MS) });
+    await store.setJSON(marker, { state: "made", code, at: now, label: product.name }, { expiration: new Date(read.exp + RETRY_CODE_TTL_MS) });
   } catch {
     /* The code exists in Stripe either way; Stripe's idempotency returns it again. */
   }
-  return page(200, "Made", codeBlock(code, now, "One use, 100% off, for the next 60 days:"));
+  return page(200, "Made", codeBlock(code, now, "One use, 100% off, for the next 60 days:", product.name));
 }
 
-function codeBlock(code, at, lead) {
+function codeBlock(code, at, lead, label) {
   return `<p>${esc(lead)}</p><p class="code">${esc(code)}</p>
+${label ? `<p>It covers ${esc(label)} only, the tier they bought.</p>` : ""}
 <p class="small">Made ${esc(new Date(at).toISOString().slice(0, 16).replace("T", " "))} UTC. The buyer types it on Stripe's checkout page under "Add promotion code".</p>`;
 }
 

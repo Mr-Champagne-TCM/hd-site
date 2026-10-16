@@ -1,12 +1,13 @@
 import { getStore } from "@netlify/blobs";
 import { handleRetryCode } from "../lib/retryCode.mjs";
-import { createCoupon, createPromotionCode } from "../lib/stripe.mjs";
+import { createCoupon, createPromotionCode, ensureProduct, getSession } from "../lib/stripe.mjs";
 
 /**
  * GET/POST /api/admin/retry-code -- the one-tap free retry code from an alert.
  *
- * The thin half; every rule (signed, expiring, one use per incident, GET makes
- * nothing) lives in ../lib/retryCode.mjs, tested with a fake Stripe.
+ * The thin half; every rule (signed, expiring, one use per incident, held to
+ * the tier the buyer bought, GET makes nothing) lives in ../lib/retryCode.mjs,
+ * tested with a fake Stripe.
  *
  * Nothing here is reachable without a link this site signed. A stranger who
  * finds the path gets "Not a working link" and nothing else.
@@ -32,6 +33,10 @@ export default async (request) => {
         ? {
             createCoupon: (params, opts) => createCoupon(stripeKey, params, opts),
             createPromotionCode: (params, opts) => createPromotionCode(stripeKey, params, opts),
+            // Which tier they bought, when the link itself does not say.
+            getSession: (id) => getSession(stripeKey, id),
+            // The tier's product, so the coupon can be held to it.
+            ensureProduct: (product) => ensureProduct(stripeKey, product),
           }
         : null,
       now: Date.now(),

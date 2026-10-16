@@ -139,7 +139,7 @@ test("THE ALERT: brief (when + how many), which (Stripe + reading links), number
   assert.match(text, /OPTIONS TO RESOLVE\n  1\. Resend their link: open their reading link/);
   assert.match(text, /  2\. Reply with a ready-made note/);
   assert.ok(text.includes(`"Your purchase went through and your reading is safe. Here is your link: ${link}`));
-  assert.match(text, /  3\. Give a free retry code \(one use, 100% off\).*one tap -> https:\/\/shop\.example\/api\/admin\/retry-code\?t=/);
+  assert.match(text, /  3\. Give a free retry code \(one use, 100% off the tier they bought\).*one tap -> https:\/\/shop\.example\/api\/admin\/retry-code\?t=/);
   assert.match(text, /Severity: page-jeremy \(money was taken\)/);
   // HTML has real links
   assert.match(html, /<a href="https:\/\/dashboard\.stripe\.com\/test\/checkout\/sessions\//);
@@ -249,10 +249,19 @@ test("claim: an email that did not go pages with the session, the reading id and
 
 // --- the free retry code ---------------------------------------------------------------------
 
-function fakeStripe({ fail = null } = {}) {
+function fakeStripe({ fail = null, session = null } = {}) {
   const calls = [];
   return {
     calls,
+    async getSession(id) {
+      calls.push(["session", id]);
+      if (!session) throw Object.assign(new Error("no such session"), { status: 404 });
+      return session;
+    },
+    async ensureProduct(product) {
+      calls.push(["product", product]);
+      return { id: product.id, active: true };
+    },
     async createCoupon(params, opts) {
       calls.push(["coupon", params, opts]);
       if (fail) throw Object.assign(new Error("no"), { status: fail });
@@ -264,7 +273,8 @@ function fakeStripe({ fail = null } = {}) {
     },
   };
 }
-const INCIDENT = { id: `${NOW}-12345`, kind: "claim-email" };
+const INCIDENT = { id: `${NOW}-12345`, kind: "claim-email", ref: { reading: READING, tier: 1 } };
+const minted = (stripe) => stripe.calls.filter(([what]) => what === "coupon" || what === "promo");
 const tokenOf = (link) => new URL(link).searchParams.get("t");
 
 test("RETRY LINK: only made when it can be protected (secret, origin, Stripe key, incident id)", () => {
@@ -272,6 +282,10 @@ test("RETRY LINK: only made when it can be protected (secret, origin, Stripe key
   assert.equal(retryLink({ incident: INCIDENT, now: NOW }, { secret: SECRET, origin: ORIGIN }), null);
   assert.equal(retryLink({ incident: INCIDENT, now: NOW }, { origin: ORIGIN, stripeKey: STRIPE }), null);
   assert.equal(retryLink({ incident: { kind: "x" }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }), null);
+  // Nothing on the incident can say which tier was bought: no one-tap link.
+  assert.equal(retryLink({ incident: { id: INCIDENT.id, kind: "checkout-crash" }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }), null);
+  // A checkout session can say it, so the link is made.
+  assert.ok(retryLink({ incident: { id: INCIDENT.id, kind: "claim-not-recorded", ref: { session: SESSION } }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
 });
 
 test("RETRY LINK: signed for its purpose alone -- a reading link is not one, and tampering fails", () => {
@@ -298,10 +312,13 @@ test("RETRY CODE: opening the link makes nothing; the button makes one code, onc
   assert.equal(made.status, 200);
   const code = codeFor(INCIDENT.id, SECRET);
   assert.match(made.html, new RegExp(code));
-  const [[, coupon, copts], [, promo, popts]] = stripe.calls;
+  assert.match(made.html, /covers The chart only/);
+  const [[, coupon, copts], [, promo, popts]] = minted(stripe);
   assert.equal(coupon.percent_off, 100);
   assert.equal(coupon.duration, "once");
   assert.equal(coupon.max_redemptions, 1);
+  // Held to the tier they bought (tier 1, the chart) -- and only that one.
+  assert.deepEqual(coupon.applies_to, { products: ["hd_chart"] });
   assert.equal(promo.max_redemptions, 1);
   assert.equal(promo.code, code);
   assert.equal(copts.idempotencyKey, `retry-coupon-${INCIDENT.id}`);
@@ -314,7 +331,7 @@ test("RETRY CODE: opening the link makes nothing; the button makes one code, onc
     assert.match(again.html, /already made its one code/);
     assert.match(again.html, new RegExp(code));
   }
-  assert.equal(stripe.calls.length, 2, "a second press made a second code");
+  assert.equal(minted(stripe).length, 2, "a second press made a second code");
 });
 
 test("RETRY CODE: expired, forged, no key, Stripe refusing -- each says so, with the dashboard steps", async () => {
@@ -334,6 +351,85 @@ test("RETRY CODE: expired, forged, no key, Stripe refusing -- each says so, with
   assert.match(denied.html, /not allowed to make coupons/);
   assert.equal(s.data.size, 0, "a failed mint left the link spent");
   for (const r of [expired, forged, noKey, denied]) assert.doesNotMatch(r.html, /refund/i);
+});
+
+test("RETRY CODE: the coupon names the tier's product, which is made sure of first, for every tier", async () => {
+  for (const [tier, product] of [[0, "hd_summary"], [1, "hd_chart"], [2, "hd_reading"]]) {
+    const stripe = fakeStripe();
+    const incident = { id: `${NOW}-${tier + 7}`, kind: "gemini-503", ref: { reading: READING, tier } };
+    const t = tokenOf(retryLink({ incident, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
+    const r = await handleRetryCode({ method: "POST", token: t, store: store(), secret: SECRET, stripe, now: NOW });
+    assert.equal(r.status, 200, `tier ${tier}`);
+    const order = stripe.calls.map(([what]) => what);
+    assert.deepEqual(order, ["product", "coupon", "promo"], "the product is made sure of before the coupon names it");
+    assert.equal(stripe.calls[0][1].id, product);
+    const coupon = stripe.calls[1][1];
+    assert.deepEqual(coupon.applies_to.products, [product]);
+    assert.equal(coupon.percent_off, 100);
+    assert.equal(coupon.max_redemptions, 1);
+    assert.equal(stripe.calls[2][1].max_redemptions, 1);
+    assert.equal(stripe.calls[2][1].coupon, "coupon_x");
+  }
+});
+
+test("RETRY CODE: an older link without a tier finds it on the incident on file, then on their Stripe checkout", async () => {
+  const id = `${NOW}-555`;
+  // A link sealed before tiers travelled in it (no `t`), from a session-only incident.
+  const t = tokenOf(retryLink({ incident: { id, kind: "claim-not-recorded", ref: { session: SESSION } }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
+  assert.equal(readRetryToken(t, SECRET, NOW).tier, null);
+
+  // 1. The incident on file names the tier.
+  const s1 = store();
+  await s1.setJSON(`incident/${id}`, { id, kind: "claim-not-recorded", ref: { session: SESSION, tier: 2 } });
+  const st1 = fakeStripe();
+  const r1 = await handleRetryCode({ method: "POST", token: t, store: s1, secret: SECRET, stripe: st1, now: NOW });
+  assert.equal(r1.status, 200);
+  assert.deepEqual(minted(st1)[0][1].applies_to, { products: ["hd_reading"] });
+  assert.ok(!st1.calls.some(([w]) => w === "session"), "Stripe was asked when the incident already said");
+
+  // 2. Only the session: Stripe's paid checkout says which tier.
+  const s2 = store();
+  await s2.setJSON(`incident/${id}`, { id, kind: "claim-not-recorded", ref: { session: SESSION } });
+  const st2 = fakeStripe({ session: { payment_status: "paid", metadata: { level: "0", sku: "hd_summary" } } });
+  const r2 = await handleRetryCode({ method: "POST", token: t, store: s2, secret: SECRET, stripe: st2, now: NOW });
+  assert.equal(r2.status, 200);
+  assert.deepEqual(st2.calls.find(([w]) => w === "session"), ["session", SESSION]);
+  assert.deepEqual(minted(st2)[0][1].applies_to, { products: ["hd_summary"] });
+});
+
+test("RETRY CODE: AN UNKNOWN TIER IS REFUSED -- nothing is made, never an unrestricted code", async () => {
+  const id = `${NOW}-777`;
+  const t = tokenOf(retryLink({ incident: { id, kind: "claim-not-recorded", ref: { session: SESSION } }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
+  const cases = [
+    // the incident has expired out of the store
+    { s: store(), stripe: fakeStripe() },
+    // the session is not paid
+    { s: store(), stripe: fakeStripe({ session: { payment_status: "unpaid", metadata: { level: "1" } } }), file: true },
+    // the session names a tier that does not exist
+    { s: store(), stripe: fakeStripe({ session: { payment_status: "paid", metadata: { level: "7" } } }), file: true },
+    // Stripe does not answer about the session
+    { s: store(), stripe: fakeStripe(), file: true },
+  ];
+  for (const [n, c] of cases.entries()) {
+    if (c.file) await c.s.setJSON(`incident/${id}`, { id, kind: "claim-not-recorded", ref: { session: SESSION } });
+    for (const method of ["GET", "POST"]) {
+      const r = await handleRetryCode({ method, token: t, store: c.s, secret: SECRET, stripe: c.stripe, now: NOW });
+      assert.equal(r.status, 409, `case ${n} ${method}`);
+      assert.match(r.html, /Which tier they bought is not known/);
+      assert.match(r.html, /Nothing was made/);
+      assert.match(r.html, /Apply to specific products/, "the by-hand steps say to hold it to their tier");
+      assert.doesNotMatch(r.html, /Make the code/);
+    }
+    assert.equal(minted(c.stripe).length, 0, `case ${n}: a code was made without a tier`);
+    assert.ok(!c.stripe.calls.some(([w]) => w === "product"), `case ${n}`);
+    assert.ok(![...c.s.data.keys()].some((k) => k.startsWith("retry-code/")), `case ${n}: the link was spent`);
+  }
+});
+
+test("RETRY CODE: the page says which tier the code covers before the button is pressed", async () => {
+  const t = tokenOf(retryLink({ incident: INCIDENT, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
+  const look = await handleRetryCode({ method: "GET", token: t, store: store(), secret: SECRET, stripe: fakeStripe(), now: NOW });
+  assert.match(look.html, /100% off The chart only \(the tier they bought\)/);
 });
 
 // --- the digest -------------------------------------------------------------------------------

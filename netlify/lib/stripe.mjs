@@ -1,11 +1,12 @@
 import { formEncode } from "./checkout.mjs";
 
 /**
- * The whole Stripe client, which is two functions.
+ * The whole Stripe client, a handful of functions.
  *
- * No SDK. This makes exactly two API calls -- create a session, read a session
- * back -- and a package that ships its own HTTP stack, retry logic and type
- * definitions to do that is weight without benefit. `fetch` is in the runtime.
+ * No SDK. This makes a few plain API calls -- sessions, the tier products, the
+ * retry coupon -- and a package that ships its own HTTP stack, retry logic and
+ * type definitions to do that is weight without benefit. `fetch` is in the
+ * runtime.
  *
  * The key never leaves this file's arguments. It is read from the environment
  * by the function that calls in, passed here, and used in one header.
@@ -146,4 +147,41 @@ export function createCoupon(key, params, { idempotencyKey, fetchImpl } = {}) {
 
 export function createPromotionCode(key, params, { idempotencyKey, fetchImpl } = {}) {
   return call("/promotion_codes", key, { method: "POST", params, idempotencyKey, fetchImpl });
+}
+
+/**
+ * A TIER'S PRODUCT, made the first time it is needed (10/16).
+ *
+ * Each tier is one Stripe product under an id we choose (checkout.mjs
+ * `tierProduct`), so a free retry code can be held to the tier the buyer
+ * bought (`applies_to.products`). Asked for first, made only when Stripe says
+ * there is none; two first-ever checkouts racing to make it both end up with
+ * it (`resource_already_exists` is success).
+ *
+ * An ARCHIVED product is refused rather than quietly brought back: archiving
+ * is a decision made in the dashboard, and the caller falls back instead.
+ */
+export async function ensureProduct(key, { id, name, description }, { fetchImpl } = {}) {
+  try {
+    const found = await call(`/products/${encodeURIComponent(id)}`, key, { fetchImpl });
+    if (found?.active === false) {
+      const err = new Error(`stripe: product ${id} is archived`);
+      err.code = "product_archived";
+      throw err;
+    }
+    return found;
+  } catch (e) {
+    if (e?.status !== 404) throw e;
+  }
+  try {
+    return await call("/products", key, {
+      method: "POST",
+      params: { id, name, description, metadata: { made_by: "hd-site checkout" } },
+      idempotencyKey: `product-${id}`,
+      fetchImpl,
+    });
+  } catch (e) {
+    if (e?.code === "resource_already_exists") return { id };
+    throw e;
+  }
 }

@@ -79,7 +79,58 @@ export function creditFor({ grantTier = -1, linkTier = -1, level }) {
   return TIERS[owned]?.cents ?? 0;
 }
 
-export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
+/**
+ * EACH TIER IS ONE STRIPE PRODUCT, under an id we choose (10/16).
+ *
+ * Jeremy: the free retry code is "limited to the tier they bought". Stripe can
+ * only hold a coupon to a PRODUCT (`applies_to.products`), and until now every
+ * checkout made a fresh, nameless product of its own from `product_data` --
+ * there was nothing for a coupon to point at. So each tier now has a product
+ * whose id is its sku (`hd_summary`, `hd_chart`, `hd_reading`), made the first
+ * time it is needed (stripe.mjs `ensureProduct`), and the checkout prices
+ * against it. The AMOUNT is still computed here, per session; only the
+ * product is shared.
+ */
+export function tierProduct(level) {
+  const tier = tierAt(level);
+  if (!tier) return null;
+  return { id: tier.sku, name: tier.label, description: tier.blurb };
+}
+
+/**
+ * The tier's product id, made sure of once per warm instance (and per Stripe
+ * mode, so a test key's product is never taken for a live one). `ensure` is
+ * stripe.mjs `ensureProduct` with the key bound; `note` records why it could
+ * not be had. Returns the id, or null to fall back. Never throws: a sale is
+ * worth more than a retry code's reach.
+ */
+export async function checkoutProduct({ level, mode, ensure, note, ready = READY }) {
+  const product = tierProduct(level);
+  if (!product) return null;
+  const mark = `${mode}:${product.id}`;
+  if (ready.has(mark)) return product.id;
+  try {
+    await ensure(product);
+    ready.add(mark);
+    return product.id;
+  } catch (e) {
+    try {
+      await note?.(`tier ${level} product ${product.id}: stripe ${e?.status ?? e?.name ?? "error"}${e?.code ? ` ${e.code}` : ""}`);
+    } catch {
+      /* the sale goes on either way */
+    }
+    return null;
+  }
+}
+const READY = new Set();
+
+/**
+ * `product` is the tier's product id when it is known to exist in Stripe. When
+ * it is not (the key could not make it), the session falls back to the old
+ * inline product so a sale is never lost over it -- a retry code then does not
+ * reach that one purchase, and the checkout says so to Jeremy.
+ */
+export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null }) {
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);
   const due = priceFor(tier, alreadyPaidCents);
@@ -160,7 +211,7 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin }) {
         price_data: {
           currency: "usd",
           unit_amount: due,
-          product_data: { name: tier.label, description: tier.blurb },
+          ...(product ? { product } : { product_data: { name: tier.label, description: tier.blurb } }),
         },
       },
     ],
