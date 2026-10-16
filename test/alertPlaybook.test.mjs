@@ -94,7 +94,8 @@ test("NO OPTION, NOTE OR BRIEF EVER MENTIONS A REFUND", () => {
 });
 
 test("the ready-made notes are in Jeremy's voice: warm, no command, no blame, no jargon", () => {
-  for (const [key, words] of Object.entries(NOTES)) {
+  for (const key of Object.keys(NOTES)) {
+    const words = fillNote(key, { kind: "claim-email" });
     assert.doesNotMatch(words, /\bplease\b/i, `${key}: a plea`);
     assert.doesNotMatch(words, /^(Try|Check|Enter|Click|Reload|Refresh|Contact|Email|Wait|Open|Use)\b/, `${key}: opens with a command`);
     assert.doesNotMatch(words, /\b(error|exception|stripe|gemini|engine|blob|server|500|502|503|invalid)\b/i, `${key}: jargon`);
