@@ -4,6 +4,7 @@ import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
 import { startCheckout } from "./purchase";
 import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
+import MailtoText from "./MailtoText";
 import { claimIfReturning } from "./purchase";
 
 /**
@@ -365,7 +366,7 @@ function Footer() {
           copy.ts for why the wording is what it is.
         */}
         <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-          {FOOTER.terms}
+          <MailtoText text={FOOTER.terms} />
         </p>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-brand-gold/10 pt-6">
           {[
@@ -445,7 +446,7 @@ function PaidReturn() {
         {problem ? "Your purchase is safe" : "Payment received, thank you"}
       </h1>
       <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
-        {problem ?? "Opening your reading…"}
+        {problem ? <MailtoText text={problem} /> : "Opening your reading…"}
       </p>
     </div>
   );

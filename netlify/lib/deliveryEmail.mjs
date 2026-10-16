@@ -282,7 +282,10 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
   </td></tr>`
   }
 
-  <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">${esc(askLine)}</td></tr>
+  <!-- The address is a mailto link (link audit, 10/16): one tap opens a reply. -->
+  <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">If anything here is unclear,
+    <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline">${esc(links.contact)}</a>
+    reaches Jeremy directly.</td></tr>
 
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
     <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method</a>

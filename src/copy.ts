@@ -34,6 +34,9 @@ export const NAV = {
  * each landing where it is genuinely wanted, and none of them duplicated in
  * three places.
  */
+/** The readings address, written to by buyers -- never the personal inbox (D-12). */
+export const CONTACT = "hd-readings@thechampagnemethod.co";
+
 export const SITE = {
   home: "https://thechampagnemethod.co",
   /**
@@ -272,11 +275,22 @@ export const PRIVACY_NOTE =
   "Your birth details are used to compute the chart and then discarded. They are not stored, " +
   "not logged, and not written to disk at any point.";
 
+/**
+ * KEPT, SINCE 16 OCTOBER 2026 (Jeremy: "a veer from our initial approach.
+ * Update Ts and Cs/privacy as needed"). A paid chart now keeps the birth
+ * details it was cast from -- date, time or unknown, place, time zone -- with
+ * the reading, for the reading's own year, so the PDF can print the birth line
+ * under the name the way the phone's PDF does. Said plainly, before the form.
+ */
 export const PRIVACY_NOTE_PAID =
-  "Your birth details are used to make your reading and then discarded. The reading itself is " +
-  "saved so it can be delivered to you — your link is active for 6 days.";
+  "Your birth details are kept with your reading, so your PDF can show when and where you " +
+  "were born. Your reading is saved for a year so it can be delivered to you — your link is " +
+  "active for 6 days.";
 
-/** Tier 0 is the free summary; anything above it is bought and is kept. */
+/**
+ * Tier 0 (the summary) keeps no birth details at all, so it keeps the stronger
+ * sentence; the chart and the reading keep them for the PDF's birth line.
+ */
 export function privacyFor(tier: number): string {
   return tier > 0 ? PRIVACY_NOTE_PAID : PRIVACY_NOTE;
 }
