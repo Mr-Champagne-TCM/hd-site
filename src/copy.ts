@@ -132,14 +132,19 @@ export const CREDIBILITY = {
    * Matrix the authority and this engine the student. The numbers have not
    * changed; who they are measured against has.
    *
-   * What is deliberately NOT claimed: that positions are corrected to JPL. The
-   * Neptune correction is measured, works, and is parked until it can go through
-   * the full release gate. "Measured against" is true today; "adapted to" would
-   * be a claim about code that is not running.
+   * What is claimed about corrections, and no more: Jupiter, Saturn, Uranus,
+   * Neptune and Pluto ARE corrected against JPL (Neptune since engine 0.4.0 on
+   * 10/7, the other four since 0.5.0 on 10/16). The Sun, Moon, Mercury, Venus and
+   * Mars are not, so for them -- and for the profile, which the Sun sets --
+   * "measured against" is still the whole claim.
+   *
+   * Re-measured for 0.5.0 on 10/16 (validation/RESULTS.md, "the shop's 'Measured
+   * against the sky' numbers"): the old 0.46″ came from 9 charts, not 24, and
+   * 1,000 charts put the Sun at 0.58″. The bigger sample is the one quoted.
    */
   checks: [
     [
-      "0.46″",
+      "0.58″",
       // "none of them decides a line" was false, and it was false in the copy
       // this replaced too -- the disagreement anatomy across 100,000 charts
       // records 531 activation diffs (449 line-only, 82 gate flips) and lays
@@ -150,9 +155,11 @@ export const CREDIBILITY = {
       // The same record gives the Sun 5, the Sun is what sets the profile, and
       // that is where the 99.97% profile agreement comes from.
       "typical error (root mean square) in this engine's Sun position, measured against NASA's " +
-        "Jet Propulsion Laboratory record, across 24 charts born between 1940 and 2022. That is " +
-        "about eleven seconds of birth time, and the Sun is what sets your profile. Slower planets " +
-        "sit further out, Neptune by about 12″, and none of them decides your profile",
+        "Jet Propulsion Laboratory record, across 1,000 charts born between 1900 and 2030. That is " +
+        "about fourteen seconds of birth time, and the Sun is what sets your profile. Jupiter, " +
+        "Saturn, Uranus, Neptune and Pluto are now corrected against that same record and " +
+        "typically sit within a tenth of an arcsecond of it. The Moon, Mercury, Venus and Mars sit " +
+        "further out, by up to about 3″, and none of them decides your profile",
     ],
     [
       "2.6 million",
@@ -169,16 +176,22 @@ export const CREDIBILITY = {
         "landed where this one does, on every single one",
     ],
     [
-      "20×",
-      "how much more the field disagrees with itself than this engine differs from the " +
-        "astronomical record",
+      // 18x = doctrine splits (619 in 100,000) over the profile's expected
+      // disagreement with JPL (2 x 0.58″ / 3,375″ = 0.034%). Against hdpy it is
+      // 19x, against dturk 23x; the lowest is the one printed. It compares the
+      // profile only -- counted over every line of every planet, this engine
+      // still differs from JPL on more charts than doctrine splits, so the
+      // caption says profile.
+      "18×",
+      "how much more often calculators split over doctrine than this engine's profile differs " +
+        "from the astronomical record",
     ],
   ] as const,
 
   closing:
     "That last number is the honest shape of it. Where calculators split over doctrine they " +
     "disagree on roughly six charts in a thousand; this engine's own residual — a Sun-line profile " +
-    "sitting within half an arcsecond of a boundary — is about one in three thousand. Two " +
+    "sitting within a fraction of an arcsecond of a boundary — is about one in three thousand. Two " +
     "engines built on the same ephemeris still disagree with each other. There is no perfect " +
     "answer available to anyone, so the number is published rather than implied.",
 };
