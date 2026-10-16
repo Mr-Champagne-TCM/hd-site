@@ -301,7 +301,7 @@ export default function ReadingActions({
             rel="noreferrer"
             className="text-brand-gold underline decoration-brand-gold/40 underline-offset-4"
           >
-            The Champagne Method
+            The Champagne Method Coaching and Consulting
           </a>
           , if you would like to look around.
         </p>

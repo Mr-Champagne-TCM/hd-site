@@ -43,7 +43,7 @@
  * environment variable is one that gets changed by accident on one deploy and
  * not another.
  */
-export const FROM = "The Champagne Method <hd-readings@thechampagnemethod.co>";
+export const FROM = "The Champagne Method Coaching and Consulting <hd-readings@thechampagnemethod.co>";
 export const REPLY_TO = "hd-readings@thechampagnemethod.co";
 
 const ENDPOINT = "https://api.resend.com/emails";
