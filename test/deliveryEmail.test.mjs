@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deliveryEmail } from "../netlify/lib/deliveryEmail.mjs";
+import { deliveryEmail, SIGN_OFF } from "../netlify/lib/deliveryEmail.mjs";
 import { FROM, REPLY_TO, sendMail } from "../netlify/lib/mail.mjs";
 import { randomBytes } from "node:crypto";
 
@@ -275,6 +275,24 @@ test("an unknown tier still produces a sendable email", () => {
   for (const tier of [-1, 7, undefined, null, "1"]) {
     const { subject, html, text } = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS });
     assert.ok(subject && html && text, `tier ${JSON.stringify(tier)} produced nothing`);
+  }
+});
+
+test("it ends '— Human Design by The Champagne Method', 'by' lowercase (Jeremy 10/16)", () => {
+  assert.equal(SIGN_OFF, "— Human Design by The Champagne Method");
+  for (const tier of [0, 1, 2]) {
+    for (const pending of [false, true]) {
+      const { html, text } = build(tier, "Jeremy", pending);
+      // The sign-off is the last line before the home link and the policy line.
+      const lines = text.split("\n");
+      const at = lines.indexOf(SIGN_OFF);
+      assert.ok(at > 0, `tier ${tier} lost the sign-off`);
+      assert.equal(lines[at + 1], LINKS.home);
+      assert.match(html, />Human Design by The Champagne Method<\/a>/);
+      assert.doesNotMatch(text, /Coaching and Consulting/, "the business name is for non-HD mail");
+      assert.doesNotMatch(html, /Coaching and Consulting/, "the business name is for non-HD mail");
+      assert.doesNotMatch(text + html, /Human Design By /, "'by' is always lowercase");
+    }
   }
 });
 

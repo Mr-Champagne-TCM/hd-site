@@ -44,6 +44,14 @@ import { sellable } from "../../shared/availability.mjs";
  * different things.
  */
 
+/**
+ * THE LAST LINE (Jeremy 10/16): "— Human Design by The Champagne Method", the
+ * same words as the sender name, "by" always lowercase. Exported so the test
+ * holds the plain-text and HTML endings to it.
+ */
+export const SIGN_OFF_NAME = "Human Design by The Champagne Method";
+export const SIGN_OFF = `— ${SIGN_OFF_NAME}`;
+
 /** "The summary" -> "summary". The label carries an article the sentence supplies. */
 function tierWord(tier) {
   const label = TIERS[tier]?.label;
@@ -232,7 +240,9 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
           "open it then and it offers you a fresh one, as many times as you need.",
           "",
         ]),
-    "— The Champagne Method Coaching and Consulting",
+    // The sign-off is the HD brand, as the sender is (Jeremy 10/16): "by" is
+    // always lowercase. The business in full is for non-HD mail.
+    SIGN_OFF,
     links.home,
     "",
     // The plain-text alternative is a real body, not a courtesy copy: it is what
@@ -288,7 +298,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     reaches Jeremy directly.</td></tr>
 
   <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
-    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">The Champagne Method Coaching and Consulting</a>
+    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">${esc(SIGN_OFF_NAME)}</a>
     <div style="font-size:14px;color:${MUTED};padding-top:2px">Coaching, and the rest of the library.</div>
   </td></tr>
 
