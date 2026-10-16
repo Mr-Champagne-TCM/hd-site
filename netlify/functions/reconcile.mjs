@@ -3,7 +3,7 @@ import { LOOK_BACK_MS, reconcile } from "../lib/reconcile.mjs";
 import { listSessions } from "../lib/stripe.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { sendMail } from "../lib/mail.mjs";
-import { reportFailure } from "../lib/health.mjs";
+import { alertSender, noteFailure } from "../lib/failures.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
 /**
@@ -50,12 +50,11 @@ export default async () => {
    * exactly the silence this function exists to break.
    */
   if (page.more) {
-    await reportFailure(health, {
-      kind: "reconcile-truncated",
+    await noteFailure(health, "reconcile-truncated", {
       detail: "more than one page of sessions in the window; some were not checked",
       send: alertSender(mailKey),
       site: origin,
-    }).catch(() => {});
+    });
   }
 
   const acting = process.env.RECONCILE_DELIVER === "1";
@@ -74,8 +73,7 @@ export default async () => {
      * same whether or not the problem was fixed is an alert that gets skimmed.
      */
     report: (incident) =>
-      reportFailure(health, {
-        ...incident,
+      noteFailure(health, incident.kind, {
         detail:
           `${incident.detail}${
             acting
@@ -113,18 +111,6 @@ function sendDelivery(apiKey) {
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`reconcile: delivery ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
     if (!sent.ok) throw new Error(sent.reason || "send failed");
-  };
-}
-
-/** How an incident reaches Jeremy the moment it happens. */
-function alertSender(apiKey) {
-  if (!apiKey) return undefined;
-  return async ({ subject, text }) => {
-    const html =
-      '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
-      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-      "</pre>";
-    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
   };
 }
 

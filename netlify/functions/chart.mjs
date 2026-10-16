@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { handleChart } from "../lib/handler.mjs";
 import { loadReading, mintReadingLink } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
-import { reportFailure } from "../lib/health.mjs";
+import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
@@ -18,7 +18,26 @@ import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
  * only the hash is kept, so the counter works without this becoming a log of
  * who visited and when.
  */
-export default async (request, context) => {
+const health = () => getStore({ name: "health", consistency: "strong" });
+
+/** Every failure on this path, at its severity (netlify/lib/failures.mjs). */
+const note = (kind, { detail, paid = false } = {}) =>
+  noteFailure(health(), kind, {
+    detail,
+    paid,
+    send: alertSender(process.env.RESEND_API_KEY),
+    site: process.env.URL,
+  });
+
+/**
+ * THE ENGINE'S DEADLINE. A synchronous function is cut off at ten seconds, and
+ * when that happens the buyer gets Netlify's own error page -- which the form
+ * cannot read, so it guessed "the connection dropped". Stopping at eight
+ * leaves time to answer them ourselves, in words, and to say it was slow.
+ */
+const ENGINE_TIMEOUT_MS = 8000;
+
+export default guard("chart", async (request, context) => {
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ error: { code: "method", message: "Use POST." } }), {
       status: 405,
@@ -36,15 +55,13 @@ export default async (request, context) => {
   const salt = process.env.RATE_SALT;
   if (!salt) {
     console.log("POST /api/chart -> 503 (RATE_SALT is not set)");
-    return new Response(
-      JSON.stringify({
-        error: {
-          code: "misconfigured",
-          message: "Charts are briefly unavailable. Nothing was charged. Please try again shortly.",
-        },
-      }),
-      { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
-    );
+    // Every chart fails while this is so, paid ones included: page.
+    await note("chart-misconfigured", { detail: "RATE_SALT is not set" });
+    const { status, payload } = customerError("chart-misconfigured");
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
   }
 
   const store = {
@@ -61,15 +78,26 @@ export default async (request, context) => {
   };
 
   const engine = async (payload) => {
-    const res = await fetch(`${process.env.ENGINE_URL}/v1/chart`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Engine-Key": process.env.ENGINE_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
-    return { ok: res.ok, status: res.status, payload: await res.json() };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ENGINE_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${process.env.ENGINE_URL}/v1/chart`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Engine-Key": process.env.ENGINE_KEY,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      // A proxy in front of a stopped machine answers in HTML. That is a
+      // failed answer with a status, not a crash.
+      const body = await res.json().catch(() => null);
+      if (res.ok && body === null) return { ok: false, status: 502, payload: null };
+      return { ok: res.ok, status: res.status, payload: body };
+    } finally {
+      clearTimeout(timer);
+    }
   };
 
   const ip = context?.ip || request.headers.get("x-nf-client-connection-ip") || "unknown";
@@ -105,10 +133,9 @@ export default async (request, context) => {
       const to = reading?.buyer?.email;
       if (!to) {
         console.log("chart: no address on the purchase, nothing sent");
-        await record(getStore({ name: "health", consistency: "strong" }), {
-          kind: "ready-email-no-address",
-          detail: `tier ${tier}`,
-        });
+        // 10/16: this called `record` without importing it, so the incident
+        // was never filed -- the ReferenceError was swallowed by the caller.
+        await note("ready-email-no-address", { detail: `tier ${tier}`, paid: true });
         return;
       }
 
@@ -140,10 +167,7 @@ export default async (request, context) => {
       console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
       // The second email. Nobody notices it missing except the buyer.
       if (!sent.ok) {
-        await record(getStore({ name: "health", consistency: "strong" }), {
-          kind: "ready-email",
-          detail: `${sent.reason} (tier ${tier})`,
-        });
+        await note("ready-email", { detail: `${sent.reason} (tier ${tier})`, paid: true });
       }
     },
     // The launch switch. Absent or anything but "1" means open, which is how
@@ -155,17 +179,11 @@ export default async (request, context) => {
     paywall: process.env.PAYWALL === "1",
 
     /**
-     * A PAID CHART THAT THE ENGINE REFUSED. Nobody else can see this one: the
-     * buyer gets a message, the log gets a line, and the money has already
-     * moved. It cost a real purchase to learn that.
+     * EVERY FAILURE ON THIS PATH, at its severity. A paid chart the engine
+     * refused pages Jeremy (it cost a real purchase to learn that); a
+     * stranger's typo is counted as noise.
      */
-    report: async ({ kind, detail }) =>
-      reportFailure(getStore({ name: "health", consistency: "strong" }), {
-        kind,
-        detail,
-        send: alertSender(process.env.RESEND_API_KEY),
-        site: process.env.URL,
-      }),
+    report: ({ kind, detail, paid }) => note(kind, { detail, paid }),
   });
 
   // Status only. The request body carries birth data and is never logged, at
@@ -174,25 +192,9 @@ export default async (request, context) => {
   console.log(`POST /api/chart -> ${result.status}`);
 
   return new Response(result.body, { status: result.status, headers: result.headers });
-};
+}, { health });
 
 export const config = { path: "/api/chart" };
-
-/**
- * How an incident reaches Jeremy the moment it happens. Passed into
- * `reportFailure` rather than imported by it, so the health module stays
- * testable without a network.
- */
-function alertSender(apiKey) {
-  if (!apiKey) return undefined;
-  return async ({ subject, text }) => {
-    const html =
-      '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
-      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-      "</pre>";
-    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
-  };
-}
 
 /**
  * The writer's doorbell.

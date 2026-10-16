@@ -4,6 +4,21 @@ import { readGrant } from "../lib/grant.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
+import { getStore } from "@netlify/blobs";
+import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+
+const health = () => getStore({ name: "health", consistency: "strong" });
+
+/** Nothing has been charged on this path, ever -- every message says so. */
+async function failWith(kind, detail) {
+  await noteFailure(health(), kind, {
+    detail,
+    send: alertSender(process.env.RESEND_API_KEY),
+    site: process.env.URL,
+  });
+  const { status, payload } = customerError(kind);
+  return json(status, payload);
+}
 
 /**
  * POST /api/checkout -- start a purchase.
@@ -16,28 +31,27 @@ import { sellable } from "../../shared/availability.mjs";
  * get the reading at the after-the-chart price. A checkout that trusts a
  * client-supplied credit is a checkout whose prices are suggestions.
  */
-export default async (request) => {
+export default guard("checkout", async (request) => {
   if (request.method !== "POST") return json(405, { error: { code: "method", message: "POST only." } });
 
   const key = process.env.STRIPE_SECRET_KEY;
   const grantSecret = process.env.GRANT_SECRET;
   if (!key || !grantSecret) {
     console.log("POST /api/checkout -> 503 (missing configuration)");
-    return json(503, {
-      error: { code: "misconfigured", message: "Checkout is briefly unavailable. Nothing was charged." },
-    });
+    // Nobody can buy anything while this is so: page.
+    return failWith("checkout-misconfigured", "STRIPE_SECRET_KEY or GRANT_SECRET is not set");
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json(400, { error: { code: "bad_json", message: "That request was not readable." } });
+    return failWith("checkout-bad-request", "body is not json");
   }
 
   const level = Number(body?.level);
   if (!Number.isInteger(level) || level < 0 || level >= TIERS.length) {
-    return json(400, { error: { code: "bad_tier", message: "That is not something on offer." } });
+    return failWith("checkout-bad-request", `level ${String(body?.level).slice(0, 10)}`);
   }
 
   /**
@@ -50,13 +64,7 @@ export default async (request) => {
    */
   if (!sellable(level)) {
     console.log(`POST /api/checkout -> 409 (tier ${level} not sellable yet)`);
-    return json(409, {
-      error: {
-        code: "not_yet",
-        message:
-          "That one is not ready to buy yet. Nothing was charged — the summary is available now.",
-      },
-    });
+    return failWith("checkout-not-sellable", `tier ${level}`);
   }
 
   /**
@@ -97,14 +105,9 @@ export default async (request) => {
     // Stripe's message is for a developer; the visitor gets one written for a
     // visitor. The detail goes to the log, where it is useful and not alarming.
     console.log(`POST /api/checkout -> 502 (${e.code || e.message})`);
-    return json(502, {
-      error: {
-        code: "checkout_unavailable",
-        message: "The payment page did not open just now. Nothing was charged — another try usually works.",
-      },
-    });
+    return failWith("checkout-stripe-failed", `stripe ${e?.status ?? e?.name ?? "error"}${e?.code ? ` ${e.code}` : ""}`);
   }
-};
+}, { health });
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {

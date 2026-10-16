@@ -10,6 +10,8 @@ import { displayTime } from "./time";
 import ReadingActions from "../ReadingActions";
 import { TIERS } from "../../shared/pricing.mjs";
 import { warmEngine } from "./warm";
+import MailtoText from "../MailtoText";
+import { customerText } from "../../shared/customerMessages.mjs";
 import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
 
 /**
@@ -253,7 +255,15 @@ export default function EntryForm({
           },
         }),
       });
-      const body = await res.json();
+      /**
+       * AN ANSWER THAT IS NOT JSON IS OURS (10/16). When the function was cut
+       * off, Netlify answered with its own page; `res.json()` threw, and the
+       * catch below told a PAID buyer "nothing was charged" about a connection
+       * that had not dropped. Now the body is read leniently and a missing one
+       * gets the catalogue's "something on our side is slow" -- the paid
+       * wording when this form came from a paid link.
+       */
+      const body = await res.json().catch(() => null);
       /**
        * THE CHART IS NOT THE ONE THEY HAD LAST TIME.
        *
@@ -279,9 +289,7 @@ export default function EntryForm({
         // read, so they are shown rather than reworded.
         setState({
           at: "failed",
-          message:
-            body?.error?.message ??
-            "That did not go through. Nothing was charged — another try usually works.",
+          message: body?.error?.message ?? customerText(readingToken ? "chart-slow-paid" : "chart-slow-free"),
         });
         return;
       }
@@ -310,9 +318,11 @@ export default function EntryForm({
     } catch {
       setState({
         at: "failed",
-        message:
-          "The connection dropped before that finished. Nothing was charged, and trying again " +
-          "usually works.",
+        message: readingToken
+          ? "The connection dropped before that finished. Your purchase is safe and your details are " +
+            "still in the form — another try usually works."
+          : "The connection dropped before that finished. Nothing was charged, and trying again " +
+            "usually works.",
       });
     }
   }
@@ -561,7 +571,7 @@ export default function EntryForm({
 
         {state.at === "failed" && (
           <p className="mt-6 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
-            {state.message}
+            <MailtoText text={state.message} />
           </p>
         )}
 

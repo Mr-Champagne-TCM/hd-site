@@ -3,6 +3,11 @@ import { createHash } from "node:crypto";
 import { handleResend } from "../lib/resendHandler.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
+import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+
+const health = () => getStore({ name: "health", consistency: "strong" });
+const note = (kind, { detail } = {}) =>
+  noteFailure(health(), kind, { detail, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL });
 
 /**
  * POST /api/resend -- send a reading again, to the address on the purchase.
@@ -15,7 +20,7 @@ import { SITE } from "../lib/siteLinks.mjs";
  * buyer's own address plus `{"sent":true}`, which is why rate limiting is the
  * right defence rather than more authentication.
  */
-export default async (request, context) => {
+export default guard("resend", async (request, context) => {
   if (request.method !== "POST") {
     return json(405, { error: { code: "method", message: "Use POST." } });
   }
@@ -33,9 +38,11 @@ export default async (request, context) => {
         !salt && "RATE_SALT",
       ].filter(Boolean).join(", ")})`,
     );
-    return json(503, {
-      error: { code: "misconfigured", message: "That could not be sent just now. Please try again shortly." },
+    await note("resend-misconfigured", {
+      detail: `missing ${[!secret && "GRANT_SECRET", !apiKey && "RESEND_API_KEY", !salt && "RATE_SALT"].filter(Boolean).join(", ")}`,
     });
+    const { status, payload } = customerError("resend-misconfigured");
+    return json(status, payload);
   }
 
   const blobs = getStore({ name: "resend-rate", consistency: "strong" });
@@ -69,13 +76,14 @@ export default async (request, context) => {
     origin: new URL(request.url).origin,
     links: SITE,
     now: Date.now(),
+    note,
   });
 
   // Status only. Never the token, never the reading id, never the address.
   console.log(`POST /api/resend -> ${result.status}`);
 
   return new Response(result.body, { status: result.status, headers: result.headers });
-};
+}, { health });
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {

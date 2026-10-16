@@ -1,3 +1,5 @@
+import { customerText } from "../../shared/customerMessages.mjs";
+
 /**
  * NO SILENT FAILING.
  *
@@ -66,8 +68,11 @@ export const ALERT_QUIET_SECONDS = 60 * 60;
  * failing a purchase in order to report that a purchase was not reported is
  * not a trade worth making.
  */
-export async function reportFailure(store, { kind, detail, excerpt, now = Date.now(), send, site } = {}) {
-  const entry = await record(store, { kind, detail, excerpt, now });
+export async function reportFailure(
+  store,
+  { kind, detail, excerpt, now = Date.now(), send, site, severity, customer } = {},
+) {
+  const entry = await record(store, { kind, detail, excerpt, now, severity, customer });
   if (!entry || typeof send !== "function") return { recorded: Boolean(entry), alerted: false };
 
   const gate = `alerted/${entry.kind}`;
@@ -99,6 +104,8 @@ export function alert(entry, { site } = {}) {
     text: [
       `${entry.kind} failed at ${new Date(entry.at).toISOString()}.`,
       entry.detail ? `Reason: ${entry.detail}` : "No reason was reported.",
+      ...(entry.severity ? [`Severity: ${entry.severity}`] : []),
+      `Customer saw: ${sawLine(entry)}`,
       "",
       "Sent the moment it happened. Repeats of the same kind within the hour",
       "are held back and counted in the weekly report instead.",
@@ -113,7 +120,7 @@ export function alert(entry, { site } = {}) {
 /** Never let a broken monitor break the thing it monitors. */
 let sequence = 0;
 
-export async function record(store, { kind, detail, excerpt, now = Date.now() } = {}) {
+export async function record(store, { kind, detail, excerpt, now = Date.now(), severity, customer } = {}) {
   if (!store || !kind) return null;
   // A counter in the hash: two refusals for the same reason in one invocation
   // used to write one key, and the second overwrote the first (audit F39).
@@ -126,6 +133,11 @@ export async function record(store, { kind, detail, excerpt, now = Date.now() } 
     // A refused reading's opening, so the refusal can be read back. Chart
     // prose only -- the writer is never given a name, address or birth moment.
     ...(excerpt ? { excerpt: String(excerpt).slice(0, 600) } : {}),
+    // Who needs to know, and which sentence the customer was shown -- a KEY
+    // from shared/customerMessages.mjs, never words with anything filled in.
+    // Both come from netlify/lib/failures.mjs; older callers leave them out.
+    ...(severity ? { severity: String(severity).slice(0, 20) } : {}),
+    ...(customer ? { customer: String(customer).slice(0, 40) } : {}),
     at: now,
   };
   try {
@@ -191,7 +203,9 @@ export async function checkFailureRate(
     if (!Number.isFinite(at) || now - at > window || at > now) continue;
     try {
       const entry = await store.get(blob.key, { type: "json" });
-      if (entry && String(entry.kind).startsWith("interpretation-")) count += 1;
+      // `gemini-*` since 10/16 (failures.mjs); `interpretation-*` before, and
+      // still on file for a fortnight after the rename.
+      if (entry && /^(interpretation|gemini)-/.test(String(entry.kind))) count += 1;
     } catch {
       /* one unreadable incident is not a reason to lose the count */
     }
@@ -200,6 +214,9 @@ export async function checkFailureRate(
   const minutes = Math.round(window / 60000);
   const r = await reportFailure(store, {
     kind: RATE_KIND,
+    // As failures.mjs files it: buyers are waiting longer than they should.
+    severity: "page-jeremy",
+    customer: "reading-writing-long",
     detail: `${count} reading drafts refused or failed in the last ${minutes} minutes (alarm at ${limit}). Readings may be stuck or slow; the incidents carry each draft's opening.`,
     now,
     send,
@@ -238,7 +255,6 @@ export async function incidents(store, { now = Date.now(), window = 24 * 60 * 60
  * count -- and the count is in the subject line where a phone shows it.
  */
 export function digest({ found, days = 7, site }) {
-  const clear = found.length === 0;
   const span = `${days}d`;
   /**
    * THE WEEKLY REPORT, and it goes out either way.
@@ -249,37 +265,101 @@ export function digest({ found, days = 7, site }) {
    * watcher that had stopped, and the second is the more likely of the two
    * because nothing exercises it.
    */
-  const subject = clear
-    ? `HD readings: all clear (${span})`
-    : `HD readings: ${found.length} problem${found.length === 1 ? "" : "s"} to follow up (${span})`;
+  /**
+   * GROUPED BY SEVERITY, THEN KIND (Jeremy 10/16: "so we know what to present
+   * to the customer and what is internal only"). Internal-only noise -- an
+   * expired link, a mistyped birth date the customer fixed -- is counted but
+   * never makes the subject line look like trouble. An incident filed before
+   * severities existed counts as follow-up, which is how it was treated then.
+   */
+  const sev = (i) => i.severity ?? "needs-follow-up";
+  const problems = found.filter((i) => sev(i) !== "internal-only");
+  const internal = found.length - problems.length;
+  const clear = problems.length === 0;
+  const noise = internal ? `, ${internal} internal-only` : "";
 
-  const byKind = new Map();
-  for (const i of found) byKind.set(i.kind, (byKind.get(i.kind) ?? 0) + 1);
+  const subject = clear
+    ? `HD readings: all clear${noise} (${span})`
+    : `HD readings: ${problems.length} problem${problems.length === 1 ? "" : "s"} to follow up${noise} (${span})`;
+
+  const section = (title, list, { detailLines = false } = {}) => {
+    if (!list.length) return [];
+    const byKind = new Map();
+    for (const i of list) {
+      const row = byKind.get(i.kind) ?? { n: 0, saw: i };
+      row.n += 1;
+      byKind.set(i.kind, row);
+    }
+    const width = Math.min(30, Math.max(...[...byKind.keys()].map((k) => k.length)));
+    return [
+      title,
+      ...[...byKind]
+        .sort((a, b) => b[1].n - a[1].n)
+        .map(([kind, { n, saw }]) => `  ${String(n).padStart(3)} x ${kind.padEnd(width)}  customer saw: ${sawKey(saw)}`),
+      ...(detailLines
+        ? [
+            "",
+            "  Most recent first:",
+            ...list.slice(0, 20).map((i) => `    ${new Date(i.at).toISOString()}  ${i.kind}  ${i.detail ?? ""}`),
+          ]
+        : []),
+      "",
+    ];
+  };
+
+  // What customers actually read, counted by sentence. The point of the split.
+  const seen = new Map();
+  for (const i of found) if (i.customer) seen.set(i.customer, (seen.get(i.customer) ?? 0) + 1);
 
   const lines = clear
     ? [
-        `Nothing failed in the last ${days} days.`,
+        `Nothing failed in the last ${days} days${internal ? ` (${internal} internal-only, listed below)` : ""}.`,
         "",
         "This message arrives whether or not anything went wrong. If it stops",
         "arriving, the watcher itself is down -- that is the point of it.",
+        "",
+        ...section("INTERNAL ONLY (noise, nothing to do)", found),
       ]
     : [
-        `${found.length} thing${found.length === 1 ? "" : "s"} failed in the last ${days} days.`,
-        "You were emailed when the first of each kind happened; this is the",
-        "follow-up list.",
+        `${problems.length} thing${problems.length === 1 ? "" : "s"} failed in the last ${days} days.`,
+        "You were emailed when the first of each page-Jeremy kind happened; this",
+        "is the follow-up list.",
         "",
-        ...[...byKind].map(([kind, n]) => `  ${n} x ${kind}`),
-        "",
-        "Most recent first:",
-        "",
-        ...found.slice(0, 20).map((i) => `  ${new Date(i.at).toISOString()}  ${i.kind}  ${i.detail ?? ""}`),
-        "",
+        ...section("PAGED YOU (emailed at the time)", problems.filter((i) => sev(i) === "page-jeremy"), { detailLines: true }),
+        ...section("TO FOLLOW UP", problems.filter((i) => sev(i) !== "page-jeremy"), { detailLines: true }),
+        ...section("INTERNAL ONLY (noise, nothing to do)", found.filter((i) => sev(i) === "internal-only")),
+        ...(seen.size
+          ? [
+              "WHAT CUSTOMERS WERE SHOWN",
+              ...[...seen]
+                .sort((a, b) => b[1] - a[1])
+                .map(([key, n]) => `  ${String(n).padStart(3)} x ${key}: "${short(customerText(key))}"`),
+              "",
+            ]
+          : []),
         "No buyer details are recorded here, by design. The function logs have",
         "the request that failed.",
       ];
 
   if (site) lines.push("", site);
   return { subject, text: lines.join("\n") };
+}
+
+/** The customer's side of an incident, as a key -- or that they saw nothing. */
+function sawKey(entry) {
+  if (entry.customer) return entry.customer;
+  return entry.severity ? "nothing (invisible to them)" : "(not recorded)";
+}
+
+/** The customer's side of an incident, in their words, for an alert. */
+function sawLine(entry) {
+  if (!entry.customer) return entry.severity ? "nothing -- this is invisible to them." : "(not recorded for this kind)";
+  return `"${customerText(entry.customer)}" (${entry.customer})`;
+}
+
+function short(text) {
+  const t = String(text ?? "");
+  return t.length > 90 ? `${t.slice(0, 87)}...` : t;
 }
 
 /** Small, stable, and not a security boundary -- only a key suffix. */

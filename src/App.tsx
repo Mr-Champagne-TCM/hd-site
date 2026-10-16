@@ -6,6 +6,7 @@ import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
 import MailtoText from "./MailtoText";
 import { claimIfReturning } from "./purchase";
+import { customerText } from "../shared/customerMessages.mjs";
 
 /**
  * The offer page.
@@ -428,12 +429,9 @@ function PaidReturn() {
         window.location.replace(r.url);
         return;
       }
-      setProblem(
-        r.ok
-          ? "Your payment went through and your link is on its way by email. If it has not " +
-            "arrived in a few minutes, hd-readings@thechampagnemethod.co is read by Jeremy."
-          : r.message,
-      );
+      // No link back means the purchase could not be filed on our side; the
+      // server says so in the catalogue's words (and Jeremy has been paged).
+      setProblem(r.ok ? (r.notice ?? customerText("purchase-safe-setup-pending")) : r.message);
     });
     return () => {
       alive = false;

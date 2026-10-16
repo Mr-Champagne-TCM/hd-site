@@ -162,10 +162,13 @@ test("A FAILED GENERATION IS REPORTED, because nobody else can see it", async ()
   // used to overwrite each other when they shared a millisecond and a reason
   // (audit F39).
   assert.equal(incidents.length, 5);
-  for (const i of incidents) {
-    assert.equal(i.kind, "interpretation-malformed");
-    assert.equal(i.detail, "missing a section");
-  }
+  // 10/16 taxonomy: four refused drafts are noise on their own; the fifth,
+  // which gives up, pages Jeremy under its own name.
+  const kinds = incidents.map((i) => i.kind).sort();
+  assert.deepEqual(kinds, ["gemini-refused", "gemini-refused", "gemini-refused", "gemini-refused", "gemini-refused-5x"]);
+  for (const i of incidents) assert.equal(i.detail, "missing a section");
+  assert.equal(incidents.find((i) => i.kind === "gemini-refused-5x").severity, "page-jeremy");
+  assert.equal(incidents.find((i) => i.kind === "gemini-refused").severity, "internal-only");
 });
 
 test("nothing about the chart reaches the incident", async () => {

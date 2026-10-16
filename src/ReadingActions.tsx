@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SITE } from "./copy";
 import { startCheckout } from "./purchase";
+import MailtoText from "./MailtoText";
 import { TIERS } from "../shared/pricing.mjs";
 import {
   AUTHORITY_NOTES,
@@ -354,6 +355,12 @@ function Resend({ token }: { token: string }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">(
     "idle",
   );
+  /**
+   * The server's own sentence for why (10/16): "sent a few times just now"
+   * is not "did not go through", and the second invited another press that
+   * the limit would refuse again.
+   */
+  const [why, setWhy] = useState<string | null>(null);
 
   async function send() {
     setState("sending");
@@ -363,8 +370,13 @@ function Resend({ token }: { token: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setWhy(typeof body?.error?.message === "string" ? body.error.message : null);
+      }
       setState(res.ok ? "sent" : "failed");
     } catch {
+      setWhy(null);
       setState("failed");
     }
   }
@@ -394,8 +406,12 @@ function Resend({ token }: { token: string }) {
       )}
       {state === "failed" && (
         <p className="mt-3 text-[15px] text-brand-muted">
-          That did not go through just now. Nothing has changed about your
-          reading, and trying again usually works.
+          <MailtoText
+            text={
+              why ??
+              "That did not go through just now. Nothing has changed about your reading, and trying again usually works."
+            }
+          />
         </p>
       )}
     </section>

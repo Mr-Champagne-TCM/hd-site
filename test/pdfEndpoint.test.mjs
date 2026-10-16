@@ -21,7 +21,8 @@ import { fileURLToPath } from "node:url";
 const source = (p) => readFileSync(fileURLToPath(new URL(`../${p}`, import.meta.url)), "utf8");
 
 test("THE PDF ENDPOINT HANDS OVER THE WRITTEN READING", () => {
-  const pdf = source("netlify/functions/pdf.mjs");
+  // The hand-over moved into the testable half on 10/16 (lib/pdfHandler.mjs).
+  const pdf = source("netlify/lib/pdfHandler.mjs");
   assert.match(
     pdf,
     /reading:\s*reading\.reading/,
@@ -42,7 +43,7 @@ test("the summary tier is refused rather than sent an empty document", async () 
   // `readingPdf` will happily build two pages for tier 0 -- it is the ENDPOINT
   // that decides the summary was never sold a download. If that check were
   // dropped, the page has no button but the URL is guessable.
-  const pdf = source("netlify/functions/pdf.mjs");
+  const pdf = source("netlify/lib/pdfHandler.mjs");
   assert.match(pdf, /link\.tier < 1/, "the tier gate on the download is gone");
 });
 

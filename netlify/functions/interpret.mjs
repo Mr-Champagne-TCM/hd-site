@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { interpretOne } from "../lib/interpretJob.mjs";
 import { promptProblem } from "../lib/interpretation.mjs";
 import { PROMPT_STORE, loadPrompt } from "../lib/gemini.mjs";
-import { reportFailure } from "../lib/health.mjs";
+import { alertSender, noteFailure } from "../lib/failures.mjs";
 import { loadReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { sendMail } from "../lib/mail.mjs";
@@ -96,12 +96,11 @@ export default async (request) => {
   const wrong = promptProblem(prompt);
   if (wrong) {
     console.log(`interpret: ${wrong}`);
-    await reportFailure(health, {
-      kind: "reading-prompt",
+    await noteFailure(health, "reading-prompt", {
       detail: wrong,
       send: alertSender(mailKey),
       site: origin,
-    }).catch(() => {});
+    });
     return new Response(null, { status: 204 });
   }
 
@@ -139,6 +138,7 @@ export default async (request) => {
     waiting = (await pending(store)).filter((id) => !done.has(id));
   } catch (e) {
     console.log(`interpret: could not read the store (${e.message})`);
+    await noteFailure(health, "interpret-store", { detail: `list failed (${e?.name ?? "Error"})` });
     return new Response(null, { status: 204 });
   }
 
@@ -199,18 +199,9 @@ function readyEmail(apiKey) {
     const { subject, html, text } = deliveryEmail({ tier, name, url, links: SITE, pending: false });
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`interpret: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
-  };
-}
-
-/** How a failed generation reaches Jeremy the moment it happens. */
-function alertSender(apiKey) {
-  if (!apiKey) return undefined;
-  return async ({ subject, text }) => {
-    const html =
-      '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
-      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-      "</pre>";
-    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
+    // Thrown so interpretJob files it as reading-ready-email (10/16: this
+    // failure used to be a log line nobody read). The reason, never the address.
+    if (!sent.ok) throw new Error(`ready-email ${sent.reason}`);
   };
 }
 

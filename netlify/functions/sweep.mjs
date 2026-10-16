@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { checkFailureRate } from "../lib/health.mjs";
-import { sendMail } from "../lib/mail.mjs";
+import { alertSender } from "../lib/failures.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
 /**
@@ -58,17 +58,5 @@ export default async () => {
   }
   return new Response(null, { status: 204 });
 };
-
-/** The same plain alert the writer sends, to the forwarding address (D-12). */
-function alertSender(apiKey) {
-  if (!apiKey) return undefined;
-  return async ({ subject, text }) => {
-    const html =
-      '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
-      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-      "</pre>";
-    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
-  };
-}
 
 export const config = { schedule: "*/15 * * * *" };

@@ -184,7 +184,11 @@ test("a store that is down is a failure, never an empty reading", async () => {
   const angry = { async setJSON() {}, async get() { throw new Error("blobs are down"); } };
   const token = mintReadingLink({ id: newReadingId(), tier: 1 }, SECRET);
   const res = await handleReading({ body: JSON.stringify({ token }), store: angry, secret: SECRET });
-  assert.equal(res.status, 404);
+  // 10/16: still a failure, never an empty reading -- but OURS. It used to be
+  // the 404 "that link could not be opened", which told a buyer holding a good
+  // link that their link was the problem.
+  assert.equal(res.status, 503);
+  assert.equal(JSON.parse(res.body).error.key, "reading-unavailable");
 });
 
 // --- caching ----------------------------------------------------------------

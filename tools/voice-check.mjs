@@ -7,7 +7,9 @@
  * shapes that give a command, plus the scarcity and urgency vocabulary that has
  * no place on this site at all.
  *
- * It reads src/copy.ts, which is where every word on the page lives.
+ * It reads src/copy.ts, which is where every word on the page lives, and
+ * shared/customerMessages.mjs, the words a customer reads when something did
+ * not go to plan (10/16).
  *
  *   node tools/voice-check.mjs
  *
@@ -17,7 +19,7 @@
  */
 import { readFileSync } from "node:fs";
 
-const text = readFileSync("src/copy.ts", "utf8");
+const text = [readFileSync("src/copy.ts", "utf8"), readFileSync("shared/customerMessages.mjs", "utf8")].join("\n");
 
 /** Never, under any circumstances. W-2 and W-3. */
 const BANNED = [

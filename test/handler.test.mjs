@@ -136,9 +136,10 @@ test("nothing but the named birth fields reaches the engine", async () => {
 test("an unreachable engine says so plainly, and says nothing was charged", async () => {
   const engine = async () => { throw new Error("ECONNREFUSED"); };
   const res = await handleChart({ body: JSON.stringify({ birth: BIRTH }), ip: "4.4.4.4", now: T0, store: fakeStore(), engine });
-  assert.equal(res.status, 502);
+  assert.equal(res.status, 503);
   const payload = JSON.parse(res.body);
   assert.match(payload.error.message, /nothing was charged/i);
+  assert.equal(payload.error.key, "chart-slow-free");
   // The upstream fault must not travel. Checked against what a real leak looks
   // like -- an errno, a stack frame, a file path -- not against the word
   // "error", which is the name of the field this response is supposed to have.
@@ -266,13 +267,22 @@ test("A SECOND SUBMISSION CANNOT REPLACE A CHART ALREADY DELIVERED", async () =>
   assert.deepEqual((await loadReading(readings, id)).output, first, "a stored chart was overwritten");
 });
 
-test("a storage failure does not fail the request - the person is waiting", async () => {
+/**
+ * 10/16, A CHANGED RULING. This used to assert a 200: "the person is waiting",
+ * so a paid chart that could not be filed was handed over anyway. But since
+ * the form sends a paid buyer straight on to their reading link, that 200
+ * landed them on a still-pending reading -- an EMPTY form, no explanation.
+ * Now the store gets one more try, and if that fails too they stay on the
+ * form with what they typed, told their purchase is safe; Jeremy is paged.
+ */
+test("a storage failure keeps the buyer on the form, purchase safe, Jeremy paged", async () => {
   const secret = randomBytes(32).toString("hex");
   const readings = memoryStore();
   const id = await saveReading(readings, { tier: 1, output: null });
   const link = mintReadingLink({ id, tier: 1 }, secret);
 
   const broken = { ...readings, async setJSON() { throw new Error("blobs are down"); } };
+  const seen = [];
   const res = await handleChart({
     body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
     ip: "1.2.3.4",
@@ -282,8 +292,40 @@ test("a storage failure does not fail the request - the person is waiting", asyn
     grantSecret: secret,
     paywall: true,
     readings: broken,
+    report: async (i) => seen.push(i),
   });
-  assert.equal(res.status, 200, "a storage failure was turned into a failed chart");
+  assert.equal(res.status, 503);
+  const body = JSON.parse(res.body);
+  assert.equal(body.error.key, "chart-not-saved");
+  assert.match(body.error.message, /purchase is safe/i);
+  assert.doesNotMatch(res.body, /blobs are down/);
+  assert.deepEqual(seen.map((i) => [i.kind, i.paid]), [["chart-not-saved", true]]);
+});
+
+test("a storage BLIP is absorbed by the second try", async () => {
+  const secret = randomBytes(32).toString("hex");
+  const readings = memoryStore();
+  const id = await saveReading(readings, { tier: 1, output: null });
+  const link = mintReadingLink({ id, tier: 1 }, secret);
+  let failures = 1;
+  const flaky = {
+    ...readings,
+    async setJSON(k, v) {
+      if (failures-- > 0) throw new Error("blip");
+      return readings.setJSON(k, v);
+    },
+  };
+  const res = await handleChart({
+    body: JSON.stringify({ reading: link, birth: { utc: "1985-06-25T17:00:00Z" } }),
+    ip: "1.2.3.4",
+    now: Date.now(),
+    store: counterStore(),
+    engine: async () => ({ ok: true, status: 200, payload: { type: "Generator" } }),
+    grantSecret: secret,
+    paywall: true,
+    readings: flaky,
+  });
+  assert.equal(res.status, 200);
 });
 
 test("a FORGED reading link does not entitle anything", async () => {

@@ -3,6 +3,11 @@ import { handleReading } from "../lib/readingHandler.mjs";
 import { loadReading, readReadingLink } from "../lib/reading.mjs";
 import { ringIfDue } from "../lib/ring.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
+import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+
+const health = () => getStore({ name: "health", consistency: "strong" });
+const note = (kind, { detail } = {}) =>
+  noteFailure(health(), kind, { detail, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL });
 
 /**
  * POST /api/reading -- open a signed reading link.
@@ -18,7 +23,7 @@ import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
  * history sync. The address bar still carries it -- that is unavoidable, it is
  * how somebody arrives -- but nothing downstream of that has to.
  */
-export default async (request) => {
+export default guard("reading", async (request) => {
   if (request.method !== "POST") {
     return json(405, { error: { code: "method", message: "Use POST." } });
   }
@@ -29,9 +34,9 @@ export default async (request) => {
     // mistaken for working -- unlike a fallback, which would serve nothing and
     // look exactly like a link that had expired.
     console.log("POST /api/reading -> 503 (GRANT_SECRET is not set)");
-    return json(503, {
-      error: { code: "misconfigured", message: "Readings are briefly unavailable. Please try again shortly." },
-    });
+    await note("reading-misconfigured", { detail: "GRANT_SECRET is not set" });
+    const { status, payload } = customerError("reading-misconfigured");
+    return json(status, payload);
   }
 
   const rawBody = await request.text();
@@ -44,6 +49,7 @@ export default async (request) => {
     store: getStore({ name: "readings", consistency: "strong" }),
     secret,
     now: Date.now(),
+    note,
   });
 
   // Status only. Never the token, never the reading id, never the name -- a log
@@ -63,7 +69,7 @@ export default async (request) => {
   }
 
   return new Response(result.body, { status: result.status, headers: result.headers });
-};
+}, { health });
 
 async function nudgeIfStuck(rawBody, answer, secret, request) {
   let parsed;

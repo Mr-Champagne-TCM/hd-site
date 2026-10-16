@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { warmEngine } from "./warm";
+import { customerText } from "../../shared/customerMessages.mjs";
 
 /**
  * A birth place, and the faults that cost the most building it.
@@ -182,6 +183,13 @@ export default function PlaceField({
   const [cursor, setCursor] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [searching, setSearching] = useState(false);
+  /**
+   * THE SEARCH ITSELF IS DOWN (10/16). An empty list used to read "No town by
+   * that name yet -- another spelling may find it", sending somebody hunting
+   * for a spelling of their own birthplace while the fault was ours. The
+   * server now says `unavailable`, and so does a request that never landed.
+   */
+  const [down, setDown] = useState<string | null>(null);
   const [box, setBox] = useState<Box | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -222,11 +230,21 @@ export default function PlaceField({
         // An answer that arrived late must not overwrite a newer one.
         if (mine !== seq.current) return;
         const places = Array.isArray(body?.places) ? body.places : [];
+        if (body?.unavailable) {
+          // Not remembered: the next keystroke should ask again.
+          setDown(typeof body.message === "string" ? body.message : customerText("places-unavailable"));
+          if (!guess) setResults([]);
+          return;
+        }
+        setDown(null);
         answers.set(q.toLowerCase(), places);
         setResults(places);
       } catch {
         // A failed request must not wipe a provisional list off the screen.
-        if (mine === seq.current && !guess) setResults([]);
+        if (mine === seq.current) {
+          setDown(customerText("places-unavailable"));
+          if (!guess) setResults([]);
+        }
       } finally {
         if (mine === seq.current) setSearching(false);
       }
@@ -341,7 +359,7 @@ export default function PlaceField({
       ))}
       {results.slice(0, 8).length === 0 && (
         <li className="px-4 py-3 text-[15px] text-brand-muted">
-          {searching ? "Looking…" : "No town by that name yet — another spelling may find it."}
+          {searching ? "Looking…" : (down ?? "No town by that name yet — another spelling may find it.")}
         </li>
       )}
     </ul>

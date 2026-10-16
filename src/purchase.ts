@@ -18,6 +18,8 @@
  * remember a purchase should still render.
  */
 
+import { customerText } from "../shared/customerMessages.mjs";
+
 const KEY = "hd.grant";
 
 export function heldGrant(): string | null {
@@ -79,10 +81,7 @@ export async function startCheckout(
   });
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.url) {
-    return (
-      body?.error?.message ??
-      "The payment page did not open just now. Nothing was charged — another try usually works."
-    );
+    return body?.error?.message ?? customerText("checkout-unavailable");
   }
   window.location.href = body.url;
   return null;
@@ -99,14 +98,28 @@ export async function startCheckout(
  * not re-claim and a shared link does not carry somebody's purchase.
  */
 export async function claimIfReturning(): Promise<
-  { ok: true; level: number; url: string | null } | { ok: false; message: string } | null
+  | { ok: true; level: number; url: string | null; notice: string | null }
+  | { ok: false; message: string; heading: string | null }
+  | null
 > {
   const url = new URL(window.location.href);
   const id = url.searchParams.get("paid");
   if (!id) return null;
 
-  url.searchParams.delete("paid");
-  window.history.replaceState({}, "", url.toString());
+  /**
+   * THE ?paid= PARAMETER IS KEPT UNTIL THERE IS AN ANSWER (10/16).
+   *
+   * It used to be stripped BEFORE asking, so when the confirm failed on our
+   * side -- Stripe slow, a store blip -- the page said "reloading usually
+   * finds it" and a reload found nothing: the id was already gone from the
+   * address bar. Now it is dropped only once the server has given a final
+   * answer (confirmed, or definitely not paid). A failure on our side leaves
+   * it there, so the reload the message invites actually retries.
+   */
+  const spend = () => {
+    url.searchParams.delete("paid");
+    window.history.replaceState({}, "", url.toString());
+  };
 
   try {
     const res = await fetch("/api/claim", {
@@ -116,13 +129,14 @@ export async function claimIfReturning(): Promise<
     });
     const body = await res.json().catch(() => null);
     if (!res.ok || !body?.grant) {
+      if (res.status < 500 && body?.error) spend();
       return {
         ok: false,
-        message:
-          body?.error?.message ??
-          "That purchase could not be confirmed just now. It is safe — try reloading in a moment.",
+        message: body?.error?.message ?? customerText("claim-confirm-later"),
+        heading: body?.error?.heading ?? null,
       };
     }
+    spend();
     holdGrant(body.grant);
     /**
      * THE READING LINK COMES BACK WITH THE GRANT, and it is the thing that
@@ -134,12 +148,19 @@ export async function claimIfReturning(): Promise<
      * NOT a reason to fall back to a form on this page. There is no longer one
      * to fall back to, on purpose.
      */
-    return { ok: true, level: Number(body.level), url: typeof body.url === "string" ? body.url : null };
+    return {
+      ok: true,
+      level: Number(body.level),
+      url: typeof body.url === "string" ? body.url : null,
+      notice: typeof body.notice?.message === "string" ? body.notice.message : null,
+    };
   } catch {
+    // The parameter is still in the address bar, so this sentence is true.
     return {
       ok: false,
       message:
         "The connection dropped before that could be confirmed. Your purchase is safe — reloading usually finds it.",
+      heading: null,
     };
   }
 }

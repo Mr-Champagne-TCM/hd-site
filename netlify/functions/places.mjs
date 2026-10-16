@@ -1,4 +1,35 @@
 import { getStore } from "@netlify/blobs";
+import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+
+const health = () => getStore({ name: "health", consistency: "strong" });
+
+/**
+ * A LOOKUP RUNS ON EVERY KEYSTROKE, so an engine outage would file one
+ * incident per letter typed. One per instance per minute is plenty to see it.
+ */
+const NOTE_EVERY_MS = 60_000;
+const lastNoted = new Map();
+async function note(kind, detail) {
+  const now = Date.now();
+  if (now - (lastNoted.get(kind) ?? 0) < NOTE_EVERY_MS) return;
+  lastNoted.set(kind, now);
+  await noteFailure(health(), kind, { detail, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL });
+}
+
+/**
+ * THE TOWN SEARCH IS DOWN, SAID AS SUCH (10/16). An empty list used to be the
+ * whole answer, and the field then said "No town by that name yet -- another
+ * spelling may find it": the customer was sent hunting for a spelling of
+ * their own birthplace while the fault was ours. `unavailable` lets the
+ * field say what is actually true. Never cached: an outage must not outlive
+ * itself at the edge.
+ */
+function unavailable(kind) {
+  const { payload } = customerError(kind);
+  return json(200, { places: [], unavailable: true, message: payload.error.message, key: payload.error.key }, {
+    "Cache-Control": "no-store",
+  });
+}
 
 /**
  * GET /api/places?q=... — town lookup for the birth-place field.
@@ -48,7 +79,7 @@ function remember(key, places) {
 const PER_HOUR = 600;
 const WINDOW_MS = 60 * 60 * 1000;
 
-export default async (request, context) => {
+export default guard("places", async (request, context) => {
   const url = new URL(request.url);
   const raw = (url.searchParams.get("q") || "").trim();
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 8, 1), 40);
@@ -62,12 +93,8 @@ export default async (request, context) => {
   const salt = process.env.RATE_SALT;
   if (!key || !engineUrl || !salt) {
     console.log("GET /api/places -> 503 (missing configuration)");
-    return json(503, {
-      error: {
-        code: "misconfigured",
-        message: "Place search is briefly unavailable. The rest of the page still works.",
-      },
-    });
+    await note("places-misconfigured", "ENGINE_KEY, ENGINE_URL or RATE_SALT is not set");
+    return unavailable("places-misconfigured");
   }
 
   // The deploy id is part of the key, and that is not decoration.
@@ -122,38 +149,42 @@ export default async (request, context) => {
     const raw = await counters.get(who, { type: "json" });
     if (Array.isArray(raw)) hits = raw;
   } catch {
-    /* treated as empty */
+    /* treated as empty: the counter fails open */
+    await note("places-rate-store", "counter read failed");
   }
   const now = Date.now();
   hits = hits.filter((t) => now - t < WINDOW_MS);
   if (hits.length >= PER_HOUR) {
-    return json(429, {
-      error: {
-        code: "rate_limited",
-        message:
-          "That is a great many place searches in an hour. Nothing is wrong and nothing was " +
-          "charged — it clears on its own shortly.",
-      },
-    });
+    await note("places-rate-limited", `${PER_HOUR} an hour`);
+    const { status, payload } = customerError("places-rate-limited");
+    return json(status, payload);
   }
-  await counters.setJSON(who, [...hits, now]);
+  try {
+    await counters.setJSON(who, [...hits, now]);
+  } catch {
+    // A counter that cannot be written used to throw, and the field showed
+    // nothing at all. The lookup is what the person is waiting for.
+    await note("places-rate-store", "counter write failed");
+  }
 
   let payload;
   try {
     const res = await fetch(
       `${engineUrl}/v1/places?q=${encodeURIComponent(raw)}&limit=${limit}`,
-      { headers: { "X-Engine-Key": key } },
+      // A deadline of our own, so a stuck engine is answered in words rather
+      // than by the platform cutting the function off.
+      { headers: { "X-Engine-Key": key }, signal: AbortSignal.timeout(6000) },
     );
     if (!res.ok) {
-      // A place lookup failing is not worth an error state on the page: the
-      // field simply finds nothing, and typing continues.
       console.log(`GET /api/places -> upstream ${res.status}`);
-      return json(200, { places: [] });
+      await note("places-engine-down", `engine ${res.status}`);
+      return unavailable("places-engine-down");
     }
     payload = await res.json();
-  } catch {
+  } catch (e) {
     console.log("GET /api/places -> upstream unreachable");
-    return json(200, { places: [] });
+    await note("places-engine-down", `engine ${e?.name ?? "unreachable"}`);
+    return unavailable("places-engine-down");
   }
 
   const places = Array.isArray(payload?.places) ? payload.places : [];
@@ -167,7 +198,12 @@ export default async (request, context) => {
   // The query is never logged. Somebody's birth town is birth data.
   console.log(`GET /api/places -> 200 (${places.length})`);
   return json(200, { places }, { "X-Cache": "miss" });
-};
+}, {
+  health,
+  // Even the net answers in the shape the field reads.
+  page: (e) =>
+    json(200, { places: [], unavailable: true, message: e.message, key: e.key }, { "Cache-Control": "no-store" }),
+});
 
 async function sha256(text) {
   const bytes = new TextEncoder().encode(text);

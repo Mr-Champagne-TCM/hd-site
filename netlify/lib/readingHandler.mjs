@@ -4,6 +4,7 @@ import { marginNotes, parseReading, structureProblem } from "./interpretation.mj
 import { buildReadingView } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
+import { customerError } from "./failures.mjs";
 
 /**
  * Opening a reading link, with the store passed in.
@@ -36,12 +37,26 @@ import { sellable } from "../../shared/availability.mjs";
  * The NAME is returned, because it is what labels the page as theirs, and it is
  * the thing that makes keeping a birthday unnecessary.
  */
-export async function handleReading({ body, store, secret, now = Date.now() }) {
+export async function handleReading({ body, store, secret, now = Date.now(), note = async () => {} }) {
+  /**
+   * Every failure is noted at its severity (failures.mjs) and answered with
+   * the catalogue's words. `note` never throws into this path.
+   */
+  const fail = async (kind, detail, opts) => {
+    try {
+      await note(kind, { detail });
+    } catch {
+      /* the reader is waiting; the record is ours to lose */
+    }
+    const { status, payload } = customerError(kind, opts);
+    return json(status, payload);
+  };
+
   let request;
   try {
     request = JSON.parse(body);
   } catch {
-    return json(400, { error: { code: "bad_json", message: "That request was not readable." } });
+    return fail("reading-link-bad", "body is not json", { code: "bad_json", status: 400 });
   }
 
   const token = request?.token;
@@ -51,31 +66,26 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
     // a real person can act on. A forged signature and a reading that does not
     // exist must be indistinguishable, or the endpoint becomes a way to ask
     // whether a given reading exists.
-    if (link.reason === "expired") {
-      return json(410, {
-        error: {
-          code: "link_expired",
-          message:
-            "This link has expired — they last six days. Your reading is kept for a year, so it can be sent to you again.",
-        },
-      });
-    }
-    if (link.reason === "misconfigured") {
-      return json(503, {
-        error: { code: "misconfigured", message: "Readings are briefly unavailable. Please try again shortly." },
-      });
-    }
-    return json(404, {
-      error: { code: "not_found", message: "That link could not be opened." },
-    });
+    if (link.reason === "expired") return fail("reading-link-expired", "link expired");
+    if (link.reason === "misconfigured") return fail("reading-misconfigured", "GRANT_SECRET unusable");
+    return fail("reading-link-bad", `link ${link.reason ?? "bad"}`);
   }
 
-  const reading = await loadReading(store, link.id, now);
+  /**
+   * A STORE THAT DOES NOT ANSWER IS NOT A BAD LINK. This used to throw, and
+   * the buyer -- holding a perfectly good link -- was shown "That link could
+   * not be opened", which reads as their problem and has no next step. It is
+   * ours: say the reading is safe, and that reloading usually finds it.
+   */
+  let reading;
+  try {
+    reading = await loadReading(store, link.id, now, { strict: true });
+  } catch (e) {
+    return fail("reading-store-unavailable", `load failed (${e?.name ?? "Error"})`);
+  }
   // Same message as a bad signature, deliberately. A reading past its year and
   // a reading that never existed look identical from outside.
-  if (!reading) {
-    return json(404, { error: { code: "not_found", message: "That link could not be opened." } });
-  }
+  if (!reading) return fail("reading-link-bad", "no reading for a valid link");
 
   /**
    * THE LINK'S TIER AND THE STORED TIER MUST AGREE.
@@ -92,7 +102,7 @@ export async function handleReading({ body, store, secret, now = Date.now() }) {
    */
   if (link.tier !== reading.tier) {
     console.log(`reading: tier mismatch, link ${link.tier} vs stored ${reading.tier}`);
-    return json(404, { error: { code: "not_found", message: "That link could not be opened." } });
+    return fail("reading-tier-mismatch", `link ${link.tier} vs stored ${reading.tier}`);
   }
 
   /**

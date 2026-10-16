@@ -2,6 +2,7 @@ import { check, record } from "./ratelimit.mjs";
 import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
 import { chartDifferences, describeDifferences, previousChart } from "./chartDiff.mjs";
+import { customerError, engineKind } from "./failures.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -41,41 +42,75 @@ export async function handleChart({
    */
   deliver = null,
   /**
-   * How a paid request that FAILED reaches somebody. Injected for the same
-   * reason `deliver` is: the whole path stays testable without a network, and
-   * the free path simply does not pass one.
+   * How a failure reaches the record: `{ kind, detail, paid }`, with `kind`
+   * from netlify/lib/failures.mjs. Every failure on this path is noted --
+   * the severity decides whether anybody is emailed -- and the customer gets
+   * the catalogue's sentence for that kind, never the engine's own words.
+   * Injected so the whole path stays testable without a network.
    */
   report = null,
 }) {
+  const note = async (kind, detail, paid = false) => {
+    if (typeof report !== "function") return;
+    try {
+      await report({ kind, detail, paid });
+    } catch {
+      /* a reporter that fails must never fail the person waiting */
+    }
+  };
+  const fail = (kind, { paid = false, ...opts } = {}, headers = {}) => {
+    const { status, payload } = customerError(kind, { paid, ...opts });
+    return json(status, payload, headers);
+  };
+
   let request;
   try {
     request = JSON.parse(body);
   } catch {
-    return json(400, { error: { code: "bad_json", message: "That request was not readable. Please try again." } });
+    await note("chart-bad-request", "body is not json");
+    return fail("chart-bad-request", { code: "bad_json" });
   }
 
   const birth = request?.birth;
   if (!birth || typeof birth !== "object") {
-    return json(400, {
-      error: { code: "no_birth", message: "A birth date, timezone, and whether the time is known are needed." },
-    });
+    await note("chart-bad-request", "no birth object");
+    return fail("chart-bad-request", { code: "no_birth" });
   }
 
-  const key = await store.keyFor(ip);
-  const hits = await store.load(key);
+  /**
+   * THE COUNTER FAILS OPEN. It protects the engine from strangers; a counter
+   * store that will not answer is our problem, and turning the customer away
+   * for it would make it theirs.
+   */
+  let key = null;
+  let hits = [];
+  try {
+    key = await store.keyFor(ip);
+    hits = await store.load(key);
+  } catch (e) {
+    key = null;
+    await note("chart-rate-store", `counter read failed (${e?.name ?? "Error"})`);
+  }
 
   const verdict = check(hits, now);
   if (!verdict.allowed) {
     // Nothing reaches the engine. No container starts, no chart is computed,
     // and no compute is spent on a request that was always going to be refused.
-    return json(
-      429,
-      { error: { code: "rate_limited", message: verdict.message } },
+    await note("chart-rate-limited", `limit ${verdict.limit?.name ?? "?"}`);
+    return fail(
+      "chart-rate-limited",
+      { message: verdict.message },
       { "Retry-After": String(verdict.retryAfter) },
     );
   }
 
-  await store.save(key, record(hits, now));
+  if (key !== null) {
+    try {
+      await store.save(key, record(hits, now));
+    } catch (e) {
+      await note("chart-rate-store", `counter write failed (${e?.name ?? "Error"})`);
+    }
+  }
 
   // Only the named fields travel on. A caller cannot smuggle an extra field
   // through this into the engine, and nothing else is ever read off the object.
@@ -111,25 +146,26 @@ export async function handleChart({
     ? { tier: readingLink.tier, via: "link" }
     : tierFor({ token: request?.grant, paywall, secret: grantSecret, now });
   if (entitled.tier === null) {
-    return json(402, {
-      error: {
-        code: "payment_required",
-        message:
-          "This one needs to be paid for first. Nothing was charged just now, and your birth details were not stored.",
-      },
-    });
+    await note("chart-payment-required", `grant ${entitled.reason ?? "missing"}`);
+    return fail("chart-payment-required");
   }
+
+  /** Money has been taken for this one, so every failure below weighs more. */
+  const paid = readingLink.ok;
+  const tierNote = `tier ${entitled.tier}${paid ? ", paid link" : ""}`;
 
   let upstream;
   try {
     upstream = await engine({ birth: scrubbed, tier: entitled.tier });
-  } catch {
-    return json(502, {
-      error: {
-        code: "engine_unreachable",
-        message: "The chart service did not answer just now. Nothing was charged. Trying again usually works.",
-      },
-    });
+  } catch (e) {
+    /**
+     * SLOW AND DOWN ARE TOLD APART. The engine call carries its own deadline
+     * (chart.mjs), so a cold or stuck engine is answered by us -- calmly --
+     * instead of by Netlify's function timeout, which the page cannot read.
+     */
+    const kind = e?.name === "AbortError" || e?.name === "TimeoutError" ? "engine-timeout" : "engine-unreachable";
+    await note(kind, `${tierNote}: ${e?.name ?? "Error"}`, paid);
+    return fail(kind, { paid });
   }
 
   if (!upstream.ok) {
@@ -143,21 +179,21 @@ export async function handleChart({
      * money was taken and nothing was delivered, and the only reason anybody
      * found out is that he was the buyer.
      *
-     * Reported the moment it happens, and only for a request that arrived on a
-     * PAID LINK. A stranger poking at the endpoint is not an incident; somebody
-     * who has paid and been refused is.
+     * Now noted for EVERY request, at a severity that depends on whether money
+     * was taken (netlify/lib/failures.mjs): a paid buyer refused pages Jeremy,
+     * a stranger's typo is counted as noise.
      *
      * The upstream status and code travel. The birth moment does not.
+     *
+     * AND THE ENGINE'S OWN WORDS NO LONGER REACH THE CUSTOMER. They were
+     * written for a developer -- "This key reaches tier 1. Tier 2 was asked
+     * for.", "Use HH:MM in 24-hour time" -- and the buyer read them verbatim.
+     * A typo the customer can fix gets a plain request to check that one
+     * field; anything on our side gets "something on our side is slow".
      */
-    if (readingLink.ok && typeof report === "function") {
-      await report({
-        kind: `chart-refused-${upstream.status}`,
-        detail: `tier ${readingLink.tier}: ${upstream.payload?.error?.code ?? "unknown"}`,
-      }).catch(() => {});
-    }
-    // The engine's own message is already written for a person to read, and
-    // its codes are stable, so it is passed through rather than reworded.
-    return json(upstream.status, upstream.payload);
+    const kind = engineKind(upstream.status, upstream.payload?.error?.code);
+    await note(kind, `${tierNote}: engine ${upstream.status} ${upstream.payload?.error?.code ?? "unknown"}`, paid);
+    return fail(kind, { paid });
   }
 
   /**
@@ -168,9 +204,8 @@ export async function handleChart({
    * so a double-submitted form cannot replace a chart somebody has already
    * been sent.
    *
-   * A storage failure does not fail the request. The person is waiting and the
-   * chart is computed; handing it over is the thing that matters, and a
-   * reading that was never stored can be recomputed from the same form.
+   * A storage failure is retried once and then answered honestly (below): the
+   * buyer keeps the form as they filled it, and is told their purchase is safe.
    */
   /**
    * IS THIS THE SAME CHART THEY HAD LAST TIME?
@@ -209,12 +244,23 @@ export async function handleChart({
    * the alternative -- crying wolf at everybody buying a gift -- costs more.
    */
   if (readingLink.ok && readings && request?.accept !== true) {
-    const previous = await previousChart(readings, {
-      email: (await loadReading(readings, readingLink.id, now))?.buyer?.email ?? null,
-      excludeId: readingLink.id,
-      loadReading,
-      now,
-    }).catch(() => null);
+    /**
+     * A COMPARISON THAT CANNOT BE MADE IS SKIPPED, not failed. Today neither
+     * call throws (both swallow store errors), but this is a courtesy check on
+     * a paid path: if that ever changes, a throw here must cost the buyer the
+     * comparison, never the chart.
+     */
+    let previous = null;
+    try {
+      previous = await previousChart(readings, {
+        email: (await loadReading(readings, readingLink.id, now))?.buyer?.email ?? null,
+        excludeId: readingLink.id,
+        loadReading,
+        now,
+      });
+    } catch (e) {
+      await note("chart-previous-lookup", `${tierNote}: ${e?.name ?? "Error"}`, paid);
+    }
 
     const isUpgrade = previous ? readingLink.tier > previous.tier : false;
     const changed = isUpgrade ? chartDifferences(previous.output, upstream.payload) : [];
@@ -237,40 +283,61 @@ export async function handleChart({
   }
 
   if (readingLink.ok && readings) {
-    try {
-      const filled = await fillReading(readings, readingLink.id, upstream.payload, now, {
-        date: birth.date,
-        time: birth.time,
-        timeKnown: birth.timeKnown,
-        zone: birth.zone,
-        place: birth.place,
-      });
-      if (!filled.ok) {
-        console.log(`chart: reading not filled (${filled.reason})`);
-      } else if (deliver) {
-        /**
-         * THE SECOND EMAIL, and the one that is actually worth keeping.
-         *
-         * The first goes out when the card clears and contains a door to a
-         * FORM -- there is no chart in it, because there is no chart yet.
-         * Jeremy, having just made one: "as soon as the bodygraph is shown, an
-         * email should be in flight with link/code, right? I didn't get one."
-         *
-         * Right. So one goes now, and because the reading is filled it says
-         * "Access your Human Design chart" rather than "Create and view".
-         *
-         * Sent only on a FIRST fill. `fillReading` is write-once, so a second
-         * submission returns `already_filled` and lands in the branch above --
-         * which means a double-tapped form cannot send a second email either.
-         *
-         * A failure here does not fail the chart. The person is looking at it.
-         */
-        await deliver({ id: readingLink.id, tier: filled.tier }).catch((e) =>
-          console.log(`chart: ready-email failed (${e.message})`),
-        );
+    /**
+     * ONE MORE TRY, THEN SAY SO (10/16). A paid chart that could not be filed
+     * used to be logged and handed over anyway -- and the page then sent the
+     * buyer to their reading link, which, still pending, showed them an EMPTY
+     * form to fill in again. Now the store gets a second chance, and if that
+     * fails too the buyer stays on the form with everything they typed, is
+     * told their purchase is safe, and Jeremy is paged.
+     */
+    const birthKept = {
+      date: birth.date,
+      time: birth.time,
+      timeKnown: birth.timeKnown,
+      zone: birth.zone,
+      place: birth.place,
+    };
+    let filled;
+    let lastError = null;
+    for (let attempt = 0; attempt < 2 && !filled; attempt++) {
+      try {
+        filled = await fillReading(readings, readingLink.id, upstream.payload, now, birthKept);
+      } catch (e) {
+        lastError = e;
       }
-    } catch (e) {
-      console.log(`chart: could not store the reading (${e.message})`);
+    }
+    if (!filled) {
+      console.log(`chart: could not store the reading (${lastError?.message})`);
+      await note("chart-not-saved", `${tierNote}: ${lastError?.name ?? "Error"}`, true);
+      return fail("chart-not-saved", { paid: true });
+    }
+    if (!filled.ok) {
+      console.log(`chart: reading not filled (${filled.reason})`);
+    } else if (deliver) {
+      /**
+       * THE SECOND EMAIL, and the one that is actually worth keeping.
+       *
+       * The first goes out when the card clears and contains a door to a
+       * FORM -- there is no chart in it, because there is no chart yet.
+       * Jeremy, having just made one: "as soon as the bodygraph is shown, an
+       * email should be in flight with link/code, right? I didn't get one."
+       *
+       * Right. So one goes now, and because the reading is filled it says
+       * "Access your Human Design chart" rather than "Create and view".
+       *
+       * Sent only on a FIRST fill. `fillReading` is write-once, so a second
+       * submission returns `already_filled` and lands in the branch above --
+       * which means a double-tapped form cannot send a second email either.
+       *
+       * A failure here does not fail the chart. The person is looking at it.
+       */
+      try {
+        await deliver({ id: readingLink.id, tier: filled.tier });
+      } catch (e) {
+        console.log(`chart: ready-email failed (${e?.message})`);
+        await note("ready-email", `${tierNote}: ${e?.name ?? "Error"}`, true);
+      }
     }
   }
 

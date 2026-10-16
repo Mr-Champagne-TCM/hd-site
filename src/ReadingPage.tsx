@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { customerText } from "../shared/customerMessages.mjs";
 import { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
 import ChartKey from "./ChartKey";
@@ -52,7 +53,13 @@ type Reading = {
 type State =
   | { at: "loading" }
   | { at: "ready"; reading: Reading }
-  | { at: "failed"; message: string; expired: boolean };
+  /**
+   * `ours`: the failure is on our side (the store, the configuration, the
+   * connection), so the page says the reading is SAFE rather than that the
+   * link could not be opened -- the second reads as the customer's problem,
+   * and it is not one (10/16).
+   */
+  | { at: "failed"; message: string; expired: boolean; ours: boolean };
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
@@ -77,10 +84,13 @@ export default function ReadingPage({ token }: { token: string }) {
         const body = await res.json().catch(() => null);
         if (!alive) return;
         if (!res.ok) {
+          // No readable answer at all is ours too: the function fell over.
+          const ours = res.status >= 500 || !body?.error;
           setState({
             at: "failed",
             expired: body?.error?.code === "link_expired",
-            message: body?.error?.message ?? "That link could not be opened.",
+            ours,
+            message: body?.error?.message ?? customerText(ours ? "reading-unavailable" : "reading-link-bad"),
           });
           return;
         }
@@ -90,8 +100,8 @@ export default function ReadingPage({ token }: { token: string }) {
         setState({
           at: "failed",
           expired: false,
-          message:
-            "The connection dropped before your reading arrived. Nothing is lost — reloading usually finds it.",
+          ours: true,
+          message: customerText("reading-connection-dropped"),
         });
       }
     })();
@@ -176,7 +186,9 @@ export default function ReadingPage({ token }: { token: string }) {
         <h1 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
           {state.expired
             ? "This link has finished its six days"
-            : "That link could not be opened"}
+            : state.ours
+              ? "Your reading is safe"
+              : "That link could not be opened"}
         </h1>
         <div className="mt-5 max-w-[60ch]">
           <Panel>{state.message}</Panel>
@@ -209,7 +221,21 @@ export default function ReadingPage({ token }: { token: string }) {
           from here -- a bad link proves nothing about who holds it -- but the
           way to a person and the way to the readings are both on the page.
         */}
-        {!state.expired && (
+        {state.ours && (
+          <div className="mt-8 max-w-[60ch]">
+            <p className="text-[16px] leading-relaxed text-brand-muted">
+              If it still does not appear,{" "}
+              <a
+                href={`mailto:${CONTACT}`}
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+              >
+                {CONTACT}
+              </a>{" "}
+              is read by Jeremy.
+            </p>
+          </div>
+        )}
+        {!state.expired && !state.ours && (
           <div className="mt-8 max-w-[60ch]">
             <p className="text-[16px] leading-relaxed text-brand-muted">
               If this link came with a purchase,{" "}

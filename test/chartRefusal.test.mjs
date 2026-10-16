@@ -77,11 +77,18 @@ test("A PAID CHART THE ENGINE REFUSES IS REPORTED, not only returned", async () 
     }),
     report: async (i) => seen.push(i),
   });
-  assert.equal(result.status, 403, "the buyer still gets the engine's own answer");
+  // 10/16: the engine's own words ("This key reaches tier 1...") no longer
+  // reach the buyer. They get the calm paid sentence; Jeremy gets the kind.
+  assert.equal(result.status, 503);
+  const body = JSON.parse(result.body);
+  assert.equal(body.error.key, "chart-slow-paid");
+  assert.doesNotMatch(result.body, /key reaches|Tier 2 was asked/);
+  assert.match(body.error.message, /purchase is safe/i);
   assert.equal(seen.length, 1, "nobody was told a paid request failed");
-  assert.equal(seen[0].kind, "chart-refused-403");
+  assert.equal(seen[0].kind, "engine-403-tier");
+  assert.equal(seen[0].paid, true);
   assert.match(seen[0].detail, /tier 2/);
-  assert.match(seen[0].detail, /tier/);
+  assert.match(seen[0].detail, /engine 403/);
 });
 
 test("NO BIRTH MOMENT TRAVELS IN THE INCIDENT", async () => {
@@ -104,7 +111,8 @@ test("a reporter that throws does not fail the request", async () => {
       throw new Error("health store is down");
     },
   });
-  assert.equal(result.status, 502);
+  assert.equal(result.status, 503);
+  assert.equal(JSON.parse(result.body).error.key, "chart-slow-paid");
 });
 
 // --- one address, more than one person --------------------------------------

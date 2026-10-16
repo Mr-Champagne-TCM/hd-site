@@ -209,12 +209,20 @@ function str(v) {
  * has no TTL of its own -- a reading past its year is still sitting there, and
  * "still in the bucket" must not mean "still served".
  */
-export async function loadReading(store, id, now = Date.now()) {
+export async function loadReading(store, id, now = Date.now(), { strict = false } = {}) {
   if (typeof id !== "string" || !ID.test(id)) return null;
   let raw;
   try {
     raw = await store.get(id, { type: "json" });
-  } catch {
+  } catch (e) {
+    /**
+     * STRICT: a store that did not answer is NOT a reading that is not there
+     * (10/16). The customer paths ask strictly, so a blip is told as "on our
+     * side, your reading is safe" rather than "that link could not be opened"
+     * -- and so a repeat claim cannot mistake a blip for "never saved" and
+     * write a blank pending record over a reading that has a chart.
+     */
+    if (strict) throw e;
     return null;
   }
   if (!raw || typeof raw !== "object") return null;

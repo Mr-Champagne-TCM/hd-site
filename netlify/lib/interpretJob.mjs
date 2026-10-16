@@ -1,7 +1,7 @@
 import { fillInterpretation, loadReading, mintReadingLink } from "./reading.mjs";
 import { generateReading } from "./gemini.mjs";
 import { promptShape } from "./interpretation.mjs";
-import { reportFailure } from "./health.mjs";
+import { geminiKind, noteFailure } from "./failures.mjs";
 
 /**
  * WRITE ONE READING. The job itself, with everything it touches passed in.
@@ -61,12 +61,13 @@ export async function interpretOne({
    * buyer the afternoon. Every refusal is reported with its excerpt.
    */
   for (let ask = 1; ask < ASKS && !made.ok && made.reason === "malformed"; ask++) {
-    await reportFailure(health, {
-      kind: "interpretation-malformed",
+    // One refused draft is noise on its own (internal-only); the sweep counts
+    // them, and six in an hour raises reading-failure-rate.
+    await noteFailure(health, "gemini-refused", {
       detail: made.detail ?? null,
       excerpt: made.text ?? null,
       now,
-    }).catch(() => {});
+    });
     made = await generate(reading.output, { apiKey, prompt, shape });
   }
   if (!made.ok) {
@@ -75,13 +76,15 @@ export async function interpretOne({
      * buyer has a chart and is waiting for words that are never coming, and
      * every other surface looks fine. The reason travels; the chart does not.
      */
-    await reportFailure(health, {
-      kind: `interpretation-${made.reason}`,
+    // Granular (gemini-503, gemini-429, gemini-timeout, gemini-refused-5x ...)
+    // so the alert says WHICH wall was hit. The buyer meanwhile sees "being
+    // written", then "taking longer than it should" -- never an error.
+    await noteFailure(health, geminiKind(made.reason, made.detail), {
       detail: made.detail ?? null,
       excerpt: made.text ?? null,
       now,
       ...(deliver?.alert ? { send: deliver.alert, site: origin } : {}),
-    }).catch(() => {});
+    });
     return { ok: false, reason: made.reason, detail: made.detail };
   }
 
@@ -95,9 +98,12 @@ export async function interpretOne({
    */
   if (typeof deliver?.email === "function" && grantSecret && origin) {
     const url = `${origin}/r/${mintReadingLink({ id, tier: reading.tier }, grantSecret)}`;
-    await deliver
-      .email({ to: reading.buyer?.email ?? null, name: reading.buyer?.name ?? null, url, tier: reading.tier })
-      .catch(() => {});
+    try {
+      await deliver.email({ to: reading.buyer?.email ?? null, name: reading.buyer?.name ?? null, url, tier: reading.tier });
+    } catch (e) {
+      // The reading is on the page; the email is the copy. Ours to follow up.
+      await noteFailure(health, "reading-ready-email", { detail: `${e?.message ?? e?.name ?? "send failed"}`.slice(0, 80), now });
+    }
   }
 
   return { ok: true, words: made.text.split(/\s+/).length };
