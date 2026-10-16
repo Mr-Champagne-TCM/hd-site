@@ -281,7 +281,9 @@ test("an unknown tier still produces a sendable email", () => {
 // --- the sender ------------------------------------------------------------
 
 test("D-12: both addresses are the domain, and no personal inbox travels", () => {
-  assert.equal(FROM, "The Champagne Method Coaching and Consulting <hd-readings@thechampagnemethod.co>");
+  // Jeremy 10/16 (brand check B5): the HD sender name, "by" lowercase.
+  assert.equal(FROM, "Human Design by The Champagne Method <hd-readings@thechampagnemethod.co>");
+  assert.doesNotMatch(FROM, /Coaching and Consulting/, "the business name is for non-HD mail");
   assert.equal(REPLY_TO, "hd-readings@thechampagnemethod.co");
   // The From must be a domain that can be authenticated, and the Reply-To must
   // not be a personal inbox: replies are routed by forwarding at the registrar,

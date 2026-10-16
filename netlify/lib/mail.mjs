@@ -42,8 +42,14 @@
  * are part of the product's voice, and a from-address settable by an
  * environment variable is one that gets changed by accident on one deploy and
  * not another.
+ *
+ * THE NAME A BUYER SEES IN THEIR INBOX (Jeremy 10/16, brand check B5): every
+ * Human Design email -- delivery, resend, reading ready, alerts, digests --
+ * comes from "Human Design by The Champagne Method", with "by" lowercase.
+ * "The Champagne Method Coaching and Consulting" is for the business's other
+ * mail, none of which is sent from here.
  */
-export const FROM = "The Champagne Method Coaching and Consulting <hd-readings@thechampagnemethod.co>";
+export const FROM = "Human Design by The Champagne Method <hd-readings@thechampagnemethod.co>";
 export const REPLY_TO = "hd-readings@thechampagnemethod.co";
 
 const ENDPOINT = "https://api.resend.com/emails";
