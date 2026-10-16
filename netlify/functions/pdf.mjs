@@ -46,8 +46,8 @@ export default guard(
       build: readingPdf,
       links: SITE,
       accept: request.headers.get("accept") ?? "",
-      note: (kind, { detail } = {}) =>
-        noteFailure(health(), kind, { detail, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL }),
+      note: (kind, { detail, ref } = {}) =>
+        noteFailure(health(), kind, { detail, ref, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL }),
     });
     if (!result.bytes) {
       console.log(`GET /api/pdf -> ${result.status}`);

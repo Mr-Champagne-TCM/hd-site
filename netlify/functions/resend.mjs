@@ -6,8 +6,8 @@ import { SITE } from "../lib/siteLinks.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
 
 const health = () => getStore({ name: "health", consistency: "strong" });
-const note = (kind, { detail } = {}) =>
-  noteFailure(health(), kind, { detail, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL });
+const note = (kind, { detail, ref } = {}) =>
+  noteFailure(health(), kind, { detail, ref, send: alertSender(process.env.RESEND_API_KEY), site: process.env.URL });
 
 /**
  * POST /api/resend -- send a reading again, to the address on the purchase.

@@ -81,9 +81,11 @@ export async function handleResend({
   /** `note(kind, { detail })` files a failure at its severity (failures.mjs). */
   note = async () => {},
 }) {
+  // WHICH reading, once the link has been read (10/16) -- for an alert.
+  let ref = null;
   const fail = async (kind, detail, opts) => {
     try {
-      await note(kind, { detail });
+      await note(kind, { detail, ...(ref ? { ref } : {}) });
     } catch {
       /* never fails the person pressing the button */
     }
@@ -120,6 +122,8 @@ export async function handleResend({
       if (link.reason === "misconfigured") return fail("resend-misconfigured", "GRANT_SECRET unusable");
       return fail("resend-link-bad", `link ${link.reason ?? "bad"}`);
     }
+
+    ref = { reading: link.id, tier: link.tier };
 
     // The visitor limit is charged BEFORE the store is touched, so somebody
     // hammering made-up tokens cannot make us do lookups for free.

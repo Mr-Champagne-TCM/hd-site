@@ -19,7 +19,13 @@
  */
 import { readFileSync } from "node:fs";
 
-const text = [readFileSync("src/copy.ts", "utf8"), readFileSync("shared/customerMessages.mjs", "utf8")].join("\n");
+// netlify/lib/alertNotes.mjs (10/16): the ready-made notes an alert offers
+// Jeremy to send a buyer. His voice, so the same rules.
+const text = [
+  readFileSync("src/copy.ts", "utf8"),
+  readFileSync("shared/customerMessages.mjs", "utf8"),
+  readFileSync("netlify/lib/alertNotes.mjs", "utf8"),
+].join("\n");
 
 /** Never, under any circumstances. W-2 and W-3. */
 const BANNED = [

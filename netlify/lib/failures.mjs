@@ -1,6 +1,8 @@
 import { record, reportFailure } from "./health.mjs";
 import { sendMail } from "./mail.mjs";
 import { SITE } from "./siteLinks.mjs";
+import { mintReadingLink } from "./reading.mjs";
+import { retryLink } from "./retryCode.mjs";
 import { MESSAGES, customerHeading, customerText } from "../../shared/customerMessages.mjs";
 
 /**
@@ -200,10 +202,14 @@ export function customerError(kind, { paid = false, message, extra, status, code
  * `detail` is a REASON ("resend 401", "engine 503"), never a payload: no
  * email, name, birth moment or reading text. `excerpt` is only for a refused
  * reading draft (chart prose, no identity), as before.
+ *
+ * `ref` (10/16) is WHICH purchase: `{ reading, session, payment, tier }` --
+ * ids only, shape-checked by health.mjs `cleanRef`, so a page can link to the
+ * Stripe object and the buyer's reading without carrying who they are.
  */
-export async function noteFailure(store, kind, { detail, excerpt, paid = false, send, site, now = Date.now() } = {}) {
+export async function noteFailure(store, kind, { detail, excerpt, paid = false, ref, send, site, now = Date.now() } = {}) {
   const d = describe(kind, { paid });
-  const fields = { kind, detail, excerpt, now, severity: d.severity, customer: d.customer };
+  const fields = { kind, detail, excerpt, now, severity: d.severity, customer: d.customer, ref, paid };
   try {
     if (d.severity === SEVERITY.PAGE && typeof send === "function") {
       return await reportFailure(store, { ...fields, send, site });
@@ -257,18 +263,49 @@ export function geminiKind(reason, detail) {
 }
 
 /**
+ * What an alert can link to (10/16): the buyer's own reading link, minted
+ * fresh from the reading id, and a one-tap retry-code link (lib/retryCode.mjs)
+ * -- the second only when a Stripe key is present to make the code with.
+ * Every piece is optional; a missing one is said in the alert, not guessed.
+ */
+export function alertContext({
+  grantSecret = process.env.GRANT_SECRET,
+  origin = process.env.URL,
+  stripeKey = process.env.STRIPE_SECRET_KEY,
+  now = () => Date.now(),
+} = {}) {
+  return {
+    shop: origin || null,
+    linkFor(ref) {
+      if (!grantSecret || !origin || !ref?.reading || !Number.isInteger(ref.tier)) return null;
+      return `${origin}/r/${mintReadingLink({ id: ref.reading, tier: ref.tier, now: now() }, grantSecret)}`;
+    },
+    retryLinkFor(entry) {
+      return retryLink({ incident: entry, now: now() }, { secret: grantSecret, origin, stripeKey });
+    },
+  };
+}
+
+/**
  * How an incident reaches Jeremy the moment it happens. One copy, where there
  * used to be five identical ones in five functions.
+ *
+ * The sender carries its `context` (above), so every existing call site --
+ * `send: alertSender(process.env.RESEND_API_KEY)` -- gets the links without
+ * being touched.
  */
-export function alertSender(apiKey) {
+export function alertSender(apiKey, context = alertContext()) {
   if (!apiKey) return undefined;
-  return async ({ subject, text }) => {
-    const html =
+  const send = async ({ subject, text, html }) => {
+    const body =
+      html ||
       '<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">' +
-      text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-      "</pre>";
-    await sendMail({ to: SITE.contact, subject, html, text }, { apiKey });
+        text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+        "</pre>";
+    await sendMail({ to: SITE.contact, subject, html: body, text }, { apiKey });
   };
+  send.context = context;
+  return send;
 }
 
 /**

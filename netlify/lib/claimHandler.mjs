@@ -20,8 +20,8 @@ import { customerText } from "../../shared/customerMessages.mjs";
  * 200. Whatever fails after that is ours -- recorded, Jeremy paged -- and the
  * buyer is told their purchase is safe.
  *
- * `note(kind, { detail, paid })` files a failure at its severity
- * (netlify/lib/failures.mjs). `send` is sendMail with the key already bound.
+ * `note(kind, { detail, paid, ref })` files a failure at its severity
+ * (netlify/lib/failures.mjs); `ref` is WHICH purchase, ids only. `send` is sendMail with the key already bound.
  */
 export async function handleClaim({
   body,
@@ -70,6 +70,7 @@ export async function handleClaim({
     console.log(`POST /api/claim -> 502 (${e?.code || e?.message})`);
     await note("claim-stripe-unreachable", {
       detail: `stripe ${e?.status ?? e?.name ?? "error"}${e?.code ? ` ${e.code}` : ""}`,
+      ref: { session: id0 },
     });
     return fail("claim-stripe-unreachable");
   }
@@ -101,6 +102,10 @@ export async function handleClaim({
   let alreadyThere = false;
   let lastError = null;
   const id = readingIdForSession(id0, grantSecret);
+  // WHICH purchase, for an alert: ids only (10/16). No tier until a reading
+  // exists, so an alert never offers a link that leads nowhere.
+  const payment = typeof session?.payment_intent === "string" ? session.payment_intent : undefined;
+  const ref = { session: id0, reading: id, payment };
   // ONE MORE TRY before calling it (10/16). A blob store blip is the likeliest
   // cause, and the second ask usually lands.
   for (let attempt = 0; attempt < 2 && url === null; attempt++) {
@@ -135,7 +140,7 @@ export async function handleClaim({
      * an email only he (or the reconcile sweep) can cause.
      */
     console.log(`POST /api/claim: could not record the purchase (${lastError?.message})`);
-    await note("claim-not-recorded", { detail: `tier ${level}: ${lastError?.name ?? "Error"}`, paid: true });
+    await note("claim-not-recorded", { detail: `tier ${level}: ${lastError?.name ?? "Error"}`, paid: true, ref });
   }
 
   /**
@@ -162,11 +167,11 @@ export async function handleClaim({
     // Logged either way, and never with the address in it.
     console.log(`POST /api/claim: delivery email ${sent?.ok ? "sent" : `failed (${sent?.reason})`}`);
     if (!sent?.ok) {
-      await note("claim-email", { detail: `${sent?.reason ?? "unknown"} (tier ${level})`, paid: true });
+      await note("claim-email", { detail: `${sent?.reason ?? "unknown"} (tier ${level})`, paid: true, ref: { ...ref, tier: level } });
     }
   } else if (url && !alreadyThere && !buyer.email) {
     console.log("POST /api/claim: no email on the purchase, nothing sent");
-    await note("claim-no-address", { detail: `tier ${level}`, paid: true });
+    await note("claim-no-address", { detail: `tier ${level}`, paid: true, ref: { ...ref, tier: level } });
   }
 
   console.log(`POST /api/claim -> 200 (tier ${level}${url ? ", link minted" : ", NO LINK"})`);

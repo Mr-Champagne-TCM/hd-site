@@ -32,8 +32,9 @@
   schedule = "*/15 * * * *"
 [functions.reconcile]
   schedule = "*/15 * * * *"
+# Daily; the function itself goes weekly 30 days after RELEASE_DATE (lib/health.mjs).
 [functions.watch]
-  schedule = "0 13 * * 1"
+  schedule = "0 13 * * *"
 
 # The free chart endpoint is metered per visitor. See netlify/lib/ratelimit.mjs.
 

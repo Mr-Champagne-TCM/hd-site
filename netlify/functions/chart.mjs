@@ -21,10 +21,11 @@ import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 const health = () => getStore({ name: "health", consistency: "strong" });
 
 /** Every failure on this path, at its severity (netlify/lib/failures.mjs). */
-const note = (kind, { detail, paid = false } = {}) =>
+const note = (kind, { detail, paid = false, ref } = {}) =>
   noteFailure(health(), kind, {
     detail,
     paid,
+    ref,
     send: alertSender(process.env.RESEND_API_KEY),
     site: process.env.URL,
   });
@@ -183,7 +184,7 @@ export default guard("chart", async (request, context) => {
      * refused pages Jeremy (it cost a real purchase to learn that); a
      * stranger's typo is counted as noise.
      */
-    report: ({ kind, detail, paid }) => note(kind, { detail, paid }),
+    report: ({ kind, detail, paid, ref }) => note(kind, { detail, paid, ref }),
   });
 
   // Status only. The request body carries birth data and is never logged, at

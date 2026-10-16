@@ -49,7 +49,7 @@ function checkKey(key) {
   return k;
 }
 
-async function call(path, key, { method = "GET", params } = {}) {
+async function call(path, key, { method = "GET", params, idempotencyKey, fetchImpl = fetch } = {}) {
   key = checkKey(key);
 
   const headers = {
@@ -58,6 +58,10 @@ async function call(path, key, { method = "GET", params } = {}) {
     // for new accounts over time and a response quietly changes underneath a
     // deploy that has not been touched in months.
     "Stripe-Version": "2024-06-20",
+    // A repeated POST with the same key returns the FIRST answer instead of
+    // making a second object -- how a one-use retry code stays one code even
+    // if its button is pressed twice (lib/retryCode.mjs).
+    ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
   };
 
   let url = `${BASE}${path}`;
@@ -71,7 +75,7 @@ async function call(path, key, { method = "GET", params } = {}) {
     }
   }
 
-  const res = await fetch(url, { method, headers, body });
+  const res = await fetchImpl(url, { method, headers, body });
   const payload = await res.json().catch(() => null);
 
   if (!res.ok) {
@@ -122,4 +126,24 @@ export async function listSessions(key, { createdGte, limit = 100 } = {}) {
   if (Number.isFinite(createdGte)) params["created[gte]"] = Math.floor(createdGte / 1000);
   const page = await call("/checkout/sessions", key, { params });
   return { sessions: page?.data ?? [], more: Boolean(page?.has_more) };
+}
+
+/**
+ * A ONE-USE, 100%-OFF COUPON, and the promotion code a buyer types for it.
+ *
+ * Jeremy, 10/16: "No refunds offered. Can make a 0% code to retry." These two
+ * calls are that code, made from the alert email's signed one-tap link
+ * (lib/retryCode.mjs) rather than by hand in the dashboard. Both carry an
+ * idempotency key, so a second press returns the same coupon and the same
+ * code rather than a second free reading.
+ *
+ * A restricted key without the Coupons permission is refused here (403); the
+ * page that called says so and gives the dashboard steps instead.
+ */
+export function createCoupon(key, params, { idempotencyKey, fetchImpl } = {}) {
+  return call("/coupons", key, { method: "POST", params, idempotencyKey, fetchImpl });
+}
+
+export function createPromotionCode(key, params, { idempotencyKey, fetchImpl } = {}) {
+  return call("/promotion_codes", key, { method: "POST", params, idempotencyKey, fetchImpl });
 }

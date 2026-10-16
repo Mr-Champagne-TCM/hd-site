@@ -80,6 +80,8 @@ export default async () => {
               ? " -- delivered automatically"
               : " -- NOT DELIVERED: RECONCILE_DELIVER is not set to 1, so this needs you"
           }`,
+        ref: incident.ref,
+        paid: true,
         send: alertSender(mailKey),
         site: origin,
       }),

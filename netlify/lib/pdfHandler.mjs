@@ -17,9 +17,9 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
   const wantsJson = /application\/json/.test(accept) && !/text\/html/.test(accept);
   const back = typeof token === "string" && token ? `/r/${encodeURIComponent(token)}` : null;
 
-  const fail = async (kind, detail) => {
+  const fail = async (kind, detail, ref) => {
     try {
-      await note(kind, { detail });
+      await note(kind, { detail, ...(ref ? { ref } : {}) });
     } catch {
       /* the person waiting on a download is not failed by the record */
     }
@@ -61,7 +61,7 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
   try {
     reading = await loadReading(store, link.id, now, { strict: true });
   } catch (e) {
-    return fail("pdf-store-unavailable", `load failed (${e?.name ?? "Error"})`);
+    return fail("pdf-store-unavailable", `load failed (${e?.name ?? "Error"})`, { reading: link.id, tier: link.tier });
   }
   if (!reading || reading.tier !== link.tier) return fail("pdf-link-bad", "no reading, or tier mismatch");
   if (reading.pending) return fail("pdf-not-ready", `tier ${reading.tier}`);
@@ -81,7 +81,7 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e?.message})`);
-    return fail("pdf-build-failed", `tier ${reading.tier}: ${e?.name ?? "Error"}`);
+    return fail("pdf-build-failed", `tier ${reading.tier}: ${e?.name ?? "Error"}`, { reading: link.id, tier: link.tier });
   }
 
   return { status: 200, reading, bytes };

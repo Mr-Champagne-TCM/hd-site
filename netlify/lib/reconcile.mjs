@@ -136,6 +136,14 @@ export async function reconcile({
       await report({
         kind: "purchase-undelivered",
         detail: `tier ${level}, session created ${new Date((session.created ?? 0) * 1000).toISOString()}`,
+        // WHICH purchase (10/16). The tier -- and so a reading link in the
+        // alert -- only when this run is about to make the reading.
+        ref: {
+          session: sessionId,
+          reading: id,
+          payment: typeof session?.payment_intent === "string" ? session.payment_intent : undefined,
+          ...(typeof deliver === "function" ? { tier: level } : {}),
+        },
       }).catch(() => {});
     }
 

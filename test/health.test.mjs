@@ -116,7 +116,8 @@ test("the digest reaches the forwarding address, never the personal one", async 
   const { SITE } = await import("../netlify/lib/siteLinks.mjs");
   const watch = await import("../netlify/functions/watch.mjs");
   assert.equal(SITE.contact, "hd-readings@thechampagnemethod.co");
-  assert.equal(watch.config.schedule, "0 13 * * 1", "the weekly report is not scheduled for Monday");
+  // Daily (10/16); the function itself turns weekly after RELEASE_DATE + 30 days.
+  assert.equal(watch.config.schedule, "0 13 * * *", "the digest is not scheduled daily");
 });
 
 // --- the immediate alert ----------------------------------------------------

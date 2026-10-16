@@ -50,10 +50,10 @@ export async function handleChart({
    */
   report = null,
 }) {
-  const note = async (kind, detail, paid = false) => {
+  const note = async (kind, detail, paid = false, ref = null) => {
     if (typeof report !== "function") return;
     try {
-      await report({ kind, detail, paid });
+      await report({ kind, detail, paid, ...(ref ? { ref } : {}) });
     } catch {
       /* a reporter that fails must never fail the person waiting */
     }
@@ -153,6 +153,8 @@ export async function handleChart({
   /** Money has been taken for this one, so every failure below weighs more. */
   const paid = readingLink.ok;
   const tierNote = `tier ${entitled.tier}${paid ? ", paid link" : ""}`;
+  /** WHICH reading, for an alert (10/16): the id and tier the link was signed with. */
+  const ref = paid ? { reading: readingLink.id, tier: readingLink.tier } : null;
 
   let upstream;
   try {
@@ -164,7 +166,7 @@ export async function handleChart({
      * instead of by Netlify's function timeout, which the page cannot read.
      */
     const kind = e?.name === "AbortError" || e?.name === "TimeoutError" ? "engine-timeout" : "engine-unreachable";
-    await note(kind, `${tierNote}: ${e?.name ?? "Error"}`, paid);
+    await note(kind, `${tierNote}: ${e?.name ?? "Error"}`, paid, ref);
     return fail(kind, { paid });
   }
 
@@ -192,7 +194,7 @@ export async function handleChart({
      * field; anything on our side gets "something on our side is slow".
      */
     const kind = engineKind(upstream.status, upstream.payload?.error?.code);
-    await note(kind, `${tierNote}: engine ${upstream.status} ${upstream.payload?.error?.code ?? "unknown"}`, paid);
+    await note(kind, `${tierNote}: engine ${upstream.status} ${upstream.payload?.error?.code ?? "unknown"}`, paid, ref);
     return fail(kind, { paid });
   }
 
@@ -309,7 +311,7 @@ export async function handleChart({
     }
     if (!filled) {
       console.log(`chart: could not store the reading (${lastError?.message})`);
-      await note("chart-not-saved", `${tierNote}: ${lastError?.name ?? "Error"}`, true);
+      await note("chart-not-saved", `${tierNote}: ${lastError?.name ?? "Error"}`, true, ref);
       return fail("chart-not-saved", { paid: true });
     }
     if (!filled.ok) {

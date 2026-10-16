@@ -39,8 +39,8 @@ export default guard(
       getSession,
       readings: getStore({ name: "readings", consistency: "strong" }),
       send: mailKey ? (message) => sendMail(message, { apiKey: mailKey }) : null,
-      note: (kind, { detail, paid } = {}) =>
-        noteFailure(health(), kind, { detail, paid, send: alertSender(mailKey), site: process.env.URL }),
+      note: (kind, { detail, paid, ref } = {}) =>
+        noteFailure(health(), kind, { detail, paid, ref, send: alertSender(mailKey), site: process.env.URL }),
       origin: new URL(request.url).origin,
       links: SITE,
     });

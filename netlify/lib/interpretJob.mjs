@@ -83,6 +83,8 @@ export async function interpretOne({
       detail: made.detail ?? null,
       excerpt: made.text ?? null,
       now,
+      // WHICH reading (10/16), so the alert can link to it.
+      ref: { reading: id, tier: reading.tier },
       ...(deliver?.alert ? { send: deliver.alert, site: origin } : {}),
     });
     return { ok: false, reason: made.reason, detail: made.detail };

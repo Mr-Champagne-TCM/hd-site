@@ -42,9 +42,9 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
    * Every failure is noted at its severity (failures.mjs) and answered with
    * the catalogue's words. `note` never throws into this path.
    */
-  const fail = async (kind, detail, opts) => {
+  const fail = async (kind, detail, opts, ref) => {
     try {
-      await note(kind, { detail });
+      await note(kind, { detail, ...(ref ? { ref } : {}) });
     } catch {
       /* the reader is waiting; the record is ours to lose */
     }
@@ -81,7 +81,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
   try {
     reading = await loadReading(store, link.id, now, { strict: true });
   } catch (e) {
-    return fail("reading-store-unavailable", `load failed (${e?.name ?? "Error"})`);
+    return fail("reading-store-unavailable", `load failed (${e?.name ?? "Error"})`, undefined, { reading: link.id, tier: link.tier });
   }
   // Same message as a bad signature, deliberately. A reading past its year and
   // a reading that never existed look identical from outside.
