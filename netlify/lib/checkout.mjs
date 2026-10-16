@@ -82,7 +82,8 @@ export function creditFor({ grantTier = -1, linkTier = -1, level }) {
 /**
  * EACH TIER IS ONE STRIPE PRODUCT, under an id we choose (10/16).
  *
- * Jeremy: the free retry code is "limited to the tier they bought". Stripe can
+ * Jeremy: the free retry code is "limited to the tier they bought" (any tier
+ * when that cannot be told, his second call the same day). Stripe can
  * only hold a coupon to a PRODUCT (`applies_to.products`), and until now every
  * checkout made a fresh, nameless product of its own from `product_data` --
  * there was nothing for a coupon to point at. So each tier now has a product

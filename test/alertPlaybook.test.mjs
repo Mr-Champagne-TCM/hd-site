@@ -15,7 +15,7 @@ import {
   digestPlan,
   reportFailure,
 } from "../netlify/lib/health.mjs";
-import { codeFor, handleRetryCode, readRetryToken, retryLink, RETRY_LINK_TTL_MS } from "../netlify/lib/retryCode.mjs";
+import { codeFor, DASHBOARD_STEPS, handleRetryCode, readRetryToken, retryLink, RETRY_LINK_TTL_MS } from "../netlify/lib/retryCode.mjs";
 import { handleClaim } from "../netlify/lib/claimHandler.mjs";
 import { mintReadingLink, readReadingLink, readingIdForSession } from "../netlify/lib/reading.mjs";
 
@@ -139,7 +139,7 @@ test("THE ALERT: brief (when + how many), which (Stripe + reading links), number
   assert.match(text, /OPTIONS TO RESOLVE\n  1\. Resend their link: open their reading link/);
   assert.match(text, /  2\. Reply with a ready-made note/);
   assert.ok(text.includes(`"Your purchase went through and your reading is safe. Here is your link: ${link}`));
-  assert.match(text, /  3\. Give a free retry code \(one use, 100% off the tier they bought\).*one tap -> https:\/\/shop\.example\/api\/admin\/retry-code\?t=/);
+  assert.match(text, /  3\. Give a free retry code \(one use, 100% off the tier they bought, or any tier when that is not known\).*one tap -> https:\/\/shop\.example\/api\/admin\/retry-code\?t=/);
   assert.match(text, /Severity: page-jeremy \(money was taken\)/);
   // HTML has real links
   assert.match(html, /<a href="https:\/\/dashboard\.stripe\.com\/test\/checkout\/sessions\//);
@@ -282,8 +282,9 @@ test("RETRY LINK: only made when it can be protected (secret, origin, Stripe key
   assert.equal(retryLink({ incident: INCIDENT, now: NOW }, { secret: SECRET, origin: ORIGIN }), null);
   assert.equal(retryLink({ incident: INCIDENT, now: NOW }, { origin: ORIGIN, stripeKey: STRIPE }), null);
   assert.equal(retryLink({ incident: { kind: "x" }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }), null);
-  // Nothing on the incident can say which tier was bought: no one-tap link.
-  assert.equal(retryLink({ incident: { id: INCIDENT.id, kind: "checkout-crash" }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }), null);
+  // Nothing on the incident can say which tier was bought: the link is still
+  // made, and its code works on any tier (Jeremy 10/16).
+  assert.ok(retryLink({ incident: { id: INCIDENT.id, kind: "checkout-crash" }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
   // A checkout session can say it, so the link is made.
   assert.ok(retryLink({ incident: { id: INCIDENT.id, kind: "claim-not-recorded", ref: { session: SESSION } }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
 });
@@ -397,7 +398,7 @@ test("RETRY CODE: an older link without a tier finds it on the incident on file,
   assert.deepEqual(minted(st2)[0][1].applies_to, { products: ["hd_summary"] });
 });
 
-test("RETRY CODE: AN UNKNOWN TIER IS REFUSED -- nothing is made, never an unrestricted code", async () => {
+test("RETRY CODE: AN UNKNOWN TIER GETS AN ANY-TIER CODE (Jeremy 10/16: 'more is better to smooth things over')", async () => {
   const id = `${NOW}-777`;
   const t = tokenOf(retryLink({ incident: { id, kind: "claim-not-recorded", ref: { session: SESSION } }, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
   const cases = [
@@ -412,18 +413,49 @@ test("RETRY CODE: AN UNKNOWN TIER IS REFUSED -- nothing is made, never an unrest
   ];
   for (const [n, c] of cases.entries()) {
     if (c.file) await c.s.setJSON(`incident/${id}`, { id, kind: "claim-not-recorded", ref: { session: SESSION } });
-    for (const method of ["GET", "POST"]) {
-      const r = await handleRetryCode({ method, token: t, store: c.s, secret: SECRET, stripe: c.stripe, now: NOW });
-      assert.equal(r.status, 409, `case ${n} ${method}`);
-      assert.match(r.html, /Which tier they bought is not known/);
-      assert.match(r.html, /Nothing was made/);
-      assert.match(r.html, /Apply to specific products/, "the by-hand steps say to hold it to their tier");
-      assert.doesNotMatch(r.html, /Make the code/);
-    }
-    assert.equal(minted(c.stripe).length, 0, `case ${n}: a code was made without a tier`);
-    assert.ok(!c.stripe.calls.some(([w]) => w === "product"), `case ${n}`);
-    assert.ok(![...c.s.data.keys()].some((k) => k.startsWith("retry-code/")), `case ${n}: the link was spent`);
+    // Opening the page says the code works on any tier, and makes nothing.
+    const look = await handleRetryCode({ method: "GET", token: t, store: c.s, secret: SECRET, stripe: c.stripe, now: NOW });
+    assert.equal(look.status, 200, `case ${n} GET`);
+    assert.match(look.html, /100% off ANY tier \(which tier they bought is not known: /);
+    assert.match(look.html, /Make the code/);
+    assert.equal(minted(c.stripe).length, 0, `case ${n}: a GET made a code`);
+
+    const made = await handleRetryCode({ method: "POST", token: t, store: c.s, secret: SECRET, stripe: c.stripe, now: NOW });
+    assert.equal(made.status, 200, `case ${n} POST`);
+    assert.match(made.html, new RegExp(codeFor(id, SECRET)));
+    assert.match(made.html, /covers any tier/);
+    const [[, coupon], [, promo]] = minted(c.stripe);
+    // No product restriction at all -- but still one use, 100% off, once.
+    assert.equal(coupon.applies_to, undefined, `case ${n}: an unknown tier was held to a product`);
+    assert.equal(coupon.percent_off, 100);
+    assert.equal(coupon.duration, "once");
+    assert.equal(coupon.max_redemptions, 1);
+    assert.equal(promo.max_redemptions, 1);
+    assert.equal(coupon.metadata.tier, "any");
+    assert.ok(!c.stripe.calls.some(([w]) => w === "product"), `case ${n}: a product was made for an any-tier code`);
+
+    // Pressed again: the same code, still "any tier", no second mint.
+    const again = await handleRetryCode({ method: "POST", token: t, store: c.s, secret: SECRET, stripe: c.stripe, now: NOW + 5000 });
+    assert.match(again.html, /already made its one code/);
+    assert.match(again.html, /covers any tier/);
+    assert.equal(minted(c.stripe).length, 2, `case ${n}: a second press made a second code`);
   }
+});
+
+test("RETRY CODE: a KNOWN tier is still held to that tier, never widened to any", async () => {
+  const stripe = fakeStripe();
+  const t = tokenOf(retryLink({ incident: INCIDENT, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
+  const r = await handleRetryCode({ method: "POST", token: t, store: store(), secret: SECRET, stripe, now: NOW });
+  assert.equal(r.status, 200);
+  assert.doesNotMatch(r.html, /any tier/);
+  assert.deepEqual(minted(stripe)[0][1].applies_to, { products: ["hd_chart"] });
+  assert.equal(minted(stripe)[0][1].metadata.tier, "1");
+});
+
+test("RETRY CODE: the by-hand steps cover both cases -- their tier when known, any tier when not", () => {
+  assert.match(DASHBOARD_STEPS, /if it is known which they bought, tick "Apply to specific products" and pick only that one/);
+  assert.match(DASHBOARD_STEPS, /if it is not known, leave that unticked so the code works on any tier/);
+  assert.doesNotMatch(DASHBOARD_STEPS, /refund/i);
 });
 
 test("RETRY CODE: the page says which tier the code covers before the button is pressed", async () => {
