@@ -224,10 +224,16 @@ export const CREDIBILITY = {
     "rate at all.",
 };
 
+/**
+ * ONE EXAMPLE EVERYWHERE (Jeremy 10/16): the summary below, the readings page,
+ * its PDF and excerpt, and the library's marked example charts are all his own
+ * chart -- "OK to use mine", "my name is OK". Said plainly, with no "not a real
+ * person" any more, because it is one.
+ */
 export const EXAMPLE = {
   title: "What the summary looks like",
   caption:
-    "An example, not a real person — June 25, 1985, Chicago, birth time unknown. " +
+    "An example: Jeremy Champagne's own chart — September 17, 1983, Wichita Falls, Texas. " +
     "Yours would be your own, and would say so if the time were missing.",
 };
 

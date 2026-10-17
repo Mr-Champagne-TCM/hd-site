@@ -32,5 +32,5 @@ test("the done screen prints the shared birth line, not its own sentence", () =>
 test("dates read month first, as on the PDF", () => {
   assert.equal(humanDate("1991-07-22"), "July 22, 1991");
   assert.doesNotMatch(EXAMPLE.caption, DAY_FIRST);
-  assert.match(EXAMPLE.caption, /June 25, 1985/);
+  assert.match(EXAMPLE.caption, /September 17, 1983/);
 });
