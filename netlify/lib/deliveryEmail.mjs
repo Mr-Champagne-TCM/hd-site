@@ -64,6 +64,12 @@ function lowerFirst(s) {
   return typeof s === "string" && s ? s[0].toLowerCase() + s.slice(1) : "";
 }
 
+/** A chart term keeps its capital wherever it stands; anything else after a dash does not. */
+const CHART_TERMS = /^(Type|Strategy|Authority|Profile|Definition)\b/;
+function afterDash(s) {
+  return CHART_TERMS.test(s) ? s : lowerFirst(s);
+}
+
 const esc = (s) =>
   String(s)
     .replace(/&/g, "&amp;")
@@ -191,7 +197,13 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
   // NO CASE SURGERY. The first attempt read "The summary is type, Strategy,
   // Authority..." -- lowerFirst does not know a blurb opens with a list of
   // proper nouns. A dash needs no such knowledge.
-  const bought = `${TIERS[tier]?.label ?? "What you bought"} — ${TIERS[tier]?.blurb ?? ""}`;
+  //
+  // AFTER THE DASH THE SENTENCE CARRIES ON (open item, 10/17): "The chart --
+  // Your bodygraph" read as two sentences glued together. The first word goes
+  // lowercase, unless it is one of the chart's own capitalised terms -- the
+  // summary's blurb opens with "Type, Strategy, Authority...", which keep their
+  // capitals everywhere else too.
+  const bought = `${TIERS[tier]?.label ?? "What you bought"} — ${afterDash(TIERS[tier]?.blurb ?? "")}`;
 
   // Not for a tier that cannot be bought yet -- see readingHandler. An email is
   // the one surface nobody can correct after the fact.
