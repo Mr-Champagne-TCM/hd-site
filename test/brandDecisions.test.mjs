@@ -59,8 +59,10 @@ test("B2: the header is option B, a 'Human Design by' eyebrow over the wordmark,
 });
 
 test("B3/B4: the footer and the reading page name the business in full", () => {
-  assert.match(read("src/App.tsx"), /\[SITE\.home, "The Champagne Method Coaching and Consulting"\]/);
-  assert.match(read("src/ReadingActions.tsx"), /The Champagne Method Coaching and Consulting\s*<\/a>/);
+  // Since 10/17 both say it through the footer theme (shared/footerTheme.mjs).
+  assert.match(read("src/App.tsx"), /<FooterTheme \/>/);
+  assert.match(read("src/ReadingActions.tsx"), /<PageEnd \/>/);
+  assert.match(read("shared/footerTheme.mjs"), /BUSINESS_NAME = "The Champagne Method Coaching and Consulting"/);
 });
 
 const render = (tier) =>

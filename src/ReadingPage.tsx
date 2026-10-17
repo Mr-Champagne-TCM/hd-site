@@ -11,6 +11,7 @@ import type { Activation } from "./Activations";
 const CONTACT = "hd-readings@thechampagnemethod.co";
 import EntryForm from "./entry/EntryForm";
 import ReadingActions, { Resend } from "./ReadingActions";
+import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 
 /**
@@ -281,6 +282,8 @@ export default function ReadingPage({ token }: { token: string }) {
             </p>
           </div>
         )}
+        {/* The footer theme (Jeremy 10/17): every state of this page ends the same way. */}
+        <PageEnd />
       </div>
     );
   }

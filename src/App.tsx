@@ -5,6 +5,7 @@ import { startCheckout } from "./purchase";
 import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
 import MailtoText from "./MailtoText";
+import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
 import { customerText } from "../shared/customerMessages.mjs";
 
@@ -394,9 +395,16 @@ function Footer() {
         <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
           <MailtoText text={FOOTER.terms} />
         </p>
-        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-brand-gold/10 pt-6">
+        {/*
+          THE FOOTER THEME (Jeremy 10/17): the two names the delivery email ends
+          with, side by side. The business name used to lead the link row below;
+          it lives here now, with its line, so it is not said twice.
+        */}
+        <div className="mt-8 border-t border-brand-gold/10 pt-6">
+          <FooterTheme />
+        </div>
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
           {[
-            [SITE.home, "The Champagne Method Coaching and Consulting"],
             [SITE.library, "The Library"],
             [SITE.hd101, "The Human Design library"],
             [SITE.bodygraph, "Reading your bodygraph"],

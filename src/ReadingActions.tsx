@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SITE } from "./copy";
 import { startCheckout } from "./purchase";
 import MailtoText from "./MailtoText";
+import { PageEnd } from "./FooterTheme";
 import { TIERS } from "../shared/pricing.mjs";
 import {
   AUTHORITY_NOTES,
@@ -294,19 +295,14 @@ export default function ReadingActions({
         That is the case it was really for.
       */}
 
-      <section>
-        <p className="text-[15px] leading-relaxed text-brand-muted">
-          The rest of the practice is at{" "}
-          <a
-            href={SITE.home}
-            rel="noreferrer"
-            className="text-brand-gold underline decoration-brand-gold/40 underline-offset-4"
-          >
-            The Champagne Method Coaching and Consulting
-          </a>
-          , if you would like to look around.
-        </p>
-      </section>
+      {/*
+        THE FOOTER THEME (Jeremy 10/17) in place of "The rest of the practice is
+        at The Champagne Method Coaching and Consulting, if you would like to
+        look around." The same two names the delivery email ends with -- the
+        coaching link is still here, now in lavender with its own line -- and
+        the privacy line, since this page has no other footer.
+      */}
+      <PageEnd />
     </div>
   );
 }

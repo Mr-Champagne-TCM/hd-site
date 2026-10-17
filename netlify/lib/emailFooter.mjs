@@ -1,4 +1,9 @@
 import { SHOP } from "../../shared/libraryLinks.mjs";
+import { HD_NAME, BUSINESS_NAME, HD_LINE, COACH_LINE, COACH_COLOR } from "../../shared/footerTheme.mjs";
+
+// The words and the lavender live in shared/footerTheme.mjs (10/17), so the shop
+// pages carry exactly what the email does. Re-exported for the tests and callers.
+export { HD_NAME, BUSINESS_NAME, HD_LINE, COACH_COLOR };
 
 /**
  * THE EMAIL FOOTER AS A THEME (Jeremy 10/16: "mock both coaching site link and
@@ -34,9 +39,6 @@ import { SHOP } from "../../shared/libraryLinks.mjs";
  * "by" is always lowercase. Gold stays on the HD name only (gold is sparing).
  */
 
-/** The coaching title's colour: Jeremy's pick 10/16, mock v2 colour 4, lavender
- * (6.5:1 on the email navy; a cool partner to the HD gold, not a second gold). */
-export const COACH_COLOR = "#a78bfa";
 
 /**
  * Option E's two columns, a theme's worth of parts the readings site reuses.
@@ -54,15 +56,9 @@ const tint = (hex, a) => {
   return `rgba(${r},${g},${b},${a})`;
 };
 
-export const HD_NAME = "Human Design by The Champagne Method";
-export const BUSINESS_NAME = "The Champagne Method Coaching and Consulting";
-
-/** The line under the HD name when it opens the shop. */
-export const HD_LINE = "Charts and readings, for you or someone close to you.";
-
 /** The two proposed lines under the business name (option C). */
 export const COACHING_LINES = {
-  1: "Coaching, if you’d like to go further.",
+  1: COACH_LINE,
   2: "Coaching, whenever you’d like to talk it through.",
 };
 
