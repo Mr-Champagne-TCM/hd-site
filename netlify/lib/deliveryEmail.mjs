@@ -1,5 +1,6 @@
 import { TIERS } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
+import { emailFooter } from "./emailFooter.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -117,8 +118,10 @@ function button(href, text) {
  * first of them promising words that had not been written. A buyer who opened
  * that one and found a chart would be right to think something had gone wrong.
  */
-export function deliveryEmail({ tier, name, url, links, pending = false, writing = false }) {
+export function deliveryEmail({ tier, name, url, links, pending = false, writing = false, footer = "A", footerColor }) {
   const word = tierWord(tier);
+  // The footer is a theme (emailFooter.mjs). "A" is today's, until Jeremy picks.
+  const end = emailFooter(footer, links, footerColor ? { coachColor: footerColor } : undefined);
   const top = tier >= TIERS.length - 1;
   // Guest checkout collects no name (Link would have supplied one). "Hello,"
   // on its own reads like a field that failed to fill; this reads as intended.
@@ -242,13 +245,11 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
         ]),
     // The sign-off is the HD brand, as the sender is (Jeremy 10/16): "by" is
     // always lowercase. The business in full is for non-HD mail.
-    SIGN_OFF,
-    links.home,
-    "",
+    //
     // The plain-text alternative is a real body, not a courtesy copy: it is what
     // text-only clients and screen readers render. A link present in the HTML and
     // absent here is a link half the recipients do not have.
-    `What we keep, and for how long: ${links.privacy}`,
+    ...end.text,
   ].join("\n");
 
   const html = `<!doctype html>
@@ -297,20 +298,7 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline">${esc(links.contact)}</a>
     reaches Jeremy directly.</td></tr>
 
-  <tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px">
-    <a href="${esc(links.home)}" style="color:${GOLD};font-weight:600;text-decoration:none">${esc(SIGN_OFF_NAME)}</a>
-    <div style="font-size:14px;color:${MUTED};padding-top:2px">Coaching, and the rest of the library.</div>
-  </td></tr>
-
-  <!--
-    THE POLICY TRAVELS WITH THE THING IT DESCRIBES. This email is what a buyer
-    still has in a week; the shop page is not. Putting the link only on the
-    page they bought from makes it unfindable at exactly the moment somebody
-    wonders what was kept.
-  -->
-  <tr><td style="padding:10px 0 0;font-size:13px;color:${MUTED}">
-    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline">What we keep, and for how long</a>
-  </td></tr>
+  ${end.html}
 
 </table>
 </td></tr></table>
