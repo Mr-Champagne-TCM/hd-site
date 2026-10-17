@@ -46,7 +46,7 @@ test("from B on, the HD name opens the shop, as it does on the PDF", () => {
 });
 
 test("C and D carry the business name, linked to the coaching home", () => {
-  for (const o of ["C1", "C2", "D1", "D2"]) {
+  for (const o of ["C1", "C2", "D1", "D2", "E"]) {
     const { html, text } = emailFooter(o, SITE);
     assert.match(html, new RegExp(`href="${SITE.home}"[^>]*>${BUSINESS_NAME}</a>`), `${o}`);
     assert.ok(text.includes(BUSINESS_NAME) && text.includes(SITE.home), `${o} text`);
@@ -57,4 +57,16 @@ test("the delivery email still sends today's footer unless told otherwise", () =
   const args = { tier: 1, name: "Claude Test Five", url: "https://example.test/r/x", links: SITE };
   assert.deepEqual(deliveryEmail(args), deliveryEmail({ ...args, footer: "A" }));
   assert.notDeepEqual(deliveryEmail(args).html, deliveryEmail({ ...args, footer: "C1" }).html);
+});
+
+test("E: C1's words, side by side, the business name in the colour asked for (mock v2)", () => {
+  const { html, text } = emailFooter("E", SITE, { coachColor: "#e8cba0" });
+  assert.match(html, new RegExp(`color:#e8cba0[^>]*>${BUSINESS_NAME}</a>`));
+  assert.match(html, /color:#c9a227[^>]*>Human Design by The Champagne Method<\/a>/);
+  assert.ok(html.includes("Coaching, if you’d like to go further."));
+  assert.ok(html.includes("Charts and readings, for you or someone close to you."));
+  // Two inline blocks that stack on a phone without a media query.
+  assert.equal((html.match(/display:inline-block;vertical-align:top;width:100%;max-width:268px/g) || []).length, 2);
+  assert.ok(text.includes("Coaching, if you’d like to go further."));
+  assert.doesNotMatch(html, /#e9e4f2[^>]*>The Champagne Method Coaching/, "the business name is not white");
 });

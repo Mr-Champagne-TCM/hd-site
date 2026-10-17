@@ -118,10 +118,10 @@ function button(href, text) {
  * first of them promising words that had not been written. A buyer who opened
  * that one and found a chart would be right to think something had gone wrong.
  */
-export function deliveryEmail({ tier, name, url, links, pending = false, writing = false, footer = "A" }) {
+export function deliveryEmail({ tier, name, url, links, pending = false, writing = false, footer = "A", footerColor }) {
   const word = tierWord(tier);
   // The footer is a theme (emailFooter.mjs). "A" is today's, until Jeremy picks.
-  const end = emailFooter(footer, links);
+  const end = emailFooter(footer, links, footerColor ? { coachColor: footerColor } : undefined);
   const top = tier >= TIERS.length - 1;
   // Guest checkout collects no name (Link would have supplied one). "Hello,"
   // on its own reads like a field that failed to fill; this reads as intended.

@@ -26,10 +26,32 @@ import { SHOP } from "../../shared/libraryLinks.mjs";
  *   C2  both, stacked, coaching line wording 2
  *   D1  both, one line each, no lines under them
  *   D2  both, side by side
+ *   E   Jeremy's pick from mock v1 (10/16): "C with 'if you'd like to go
+ *       further' AND i like the side by side. Bring those 2 together." D2's
+ *       columns carrying C1's words, the business name in its own colour
+ *       (not white: "i dont like the white(ish)") -- `coachColor`, mock v2.
  *
- * "by" is always lowercase. Gold stays on the HD name only (gold is sparing);
- * the business name is paper-white, one step quieter.
+ * "by" is always lowercase. Gold stays on the HD name only (gold is sparing).
  */
+
+/** Option E's coaching-title colour until Jeremy picks one (mock v2, candidate 1). */
+export const COACH_COLOR = "#3fe0c5";
+
+/**
+ * Option E's two columns, a theme's worth of parts the readings site reuses.
+ * Each column is the name, then one line under it.
+ */
+export const COLUMNS = (links, coachColor = COACH_COLOR) => [
+  { href: links.shop ?? SHOP, name: HD_NAME, line: HD_LINE, color: "#c9a227" },
+  { href: links.home, name: BUSINESS_NAME, line: COACHING_LINES[1], color: coachColor },
+];
+
+/** "#3fe0c5" -> "rgba(63,224,197,0.55)" for the thin bar beside each column. */
+const tint = (hex, a) => {
+  const h = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return `rgba(${r},${g},${b},${a})`;
+};
 
 export const HD_NAME = "Human Design by The Champagne Method";
 export const BUSINESS_NAME = "The Champagne Method Coaching and Consulting";
@@ -43,7 +65,7 @@ export const COACHING_LINES = {
   2: "Coaching, whenever you’d like to talk it through.",
 };
 
-export const FOOTER_OPTIONS = ["A", "B", "C1", "C2", "D1", "D2"];
+export const FOOTER_OPTIONS = ["A", "B", "C1", "C2", "D1", "D2", "E"];
 
 const GOLD = "#c9a227";
 const PAPER = "#e9e4f2";
@@ -89,12 +111,48 @@ function privacyRow(links) {
  * Every link in the HTML is in the text too: the plain-text body is what
  * text-only clients and screen readers get.
  */
-export function emailFooter(option = "A", links) {
+export function emailFooter(option = "A", links, { coachColor = COACH_COLOR } = {}) {
   const shop = links.shop ?? SHOP;
   const home = links.home;
   const privacyText = `What we keep, and for how long: ${links.privacy}`;
 
   switch (option) {
+    case "E": {
+      /*
+        SIDE BY SIDE ON A COMPUTER, STACKED ON A PHONE, WITH NO MEDIA QUERY.
+        Two inline blocks of at most 268px fit beside each other in the 544px
+        column and fall one under the other on anything narrower -- the only
+        responsive trick that Gmail, Apple Mail and Outlook.com all honour.
+        Outlook for Windows ignores max-width, so it gets a two-cell table in
+        conditional comments. font-size:0 on the cell removes the gap a space
+        between two inline blocks would leave.
+      */
+      const cols = COLUMNS(links, coachColor);
+      const block = ({ href, name, line, color }) =>
+        `<div style="display:inline-block;vertical-align:top;width:100%;max-width:268px;font-size:15px">
+      <div style="border-left:2px solid ${tint(color, 0.55)};padding:0 14px 0 12px;margin:0 0 14px">
+        <a href="${esc(href)}" style="color:${color};font-weight:600;text-decoration:none">${esc(name)}</a>
+        ${under(line)}
+      </div>
+    </div>`;
+      return {
+        html: `<tr><td style="border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:0">
+    <!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="50%" valign="top"><![endif]-->
+    ${block(cols[0])}
+    <!--[if mso]></td><td width="50%" valign="top"><![endif]-->
+    ${block(cols[1])}
+    <!--[if mso]></td></tr></table><![endif]-->
+  </td></tr>
+
+  ${privacyRow(links).replace("padding:10px 0 0", "padding:0")}`,
+        text: [
+          `— ${HD_NAME}`, HD_LINE, shop, "",
+          BUSINESS_NAME, COACHING_LINES[1], home, "",
+          privacyText,
+        ],
+      };
+    }
+
     case "B":
       return {
         html: `<tr><td style="${RULE}">
