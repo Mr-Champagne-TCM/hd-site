@@ -287,10 +287,15 @@ test("it ends '— Human Design by The Champagne Method', 'by' lowercase (Jeremy
       const lines = text.split("\n");
       const at = lines.indexOf(SIGN_OFF);
       assert.ok(at > 0, `tier ${tier} lost the sign-off`);
-      assert.equal(lines[at + 1], LINKS.home);
+      assert.equal(lines[at + 1], "Charts and readings, for you or someone close to you.");
       assert.match(html, />Human Design by The Champagne Method<\/a>/);
-      assert.doesNotMatch(text, /Coaching and Consulting/, "the business name is for non-HD mail");
-      assert.doesNotMatch(html, /Coaching and Consulting/, "the business name is for non-HD mail");
+      // The footer (Jeremy 10/16, mock v2 "E") carries the business name too,
+      // as its own column linking the coaching site -- and only there.
+      const biz = lines.indexOf("The Champagne Method Coaching and Consulting");
+      assert.ok(biz > at, `tier ${tier}: the coaching column follows the HD column`);
+      assert.equal(lines[biz + 1], "Coaching, if you’d like to go further.");
+      assert.equal(lines[biz + 2], LINKS.home);
+      assert.equal(text.split("Coaching and Consulting").length - 1, 1, "the business name appears once, in the footer");
       assert.doesNotMatch(text + html, /Human Design By /, "'by' is always lowercase");
     }
   }

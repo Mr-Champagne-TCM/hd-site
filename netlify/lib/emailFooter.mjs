@@ -6,9 +6,9 @@ import { SHOP } from "../../shared/libraryLinks.mjs";
  *
  * One footer, written once, chosen by a letter, so the same ending can later
  * go on the resend email, the reading-ready email and the alerts without being
- * re-typed into each. MOCK STAGE: the delivery email still defaults to "A",
- * which is the footer exactly as it is today, so nothing a buyer receives has
- * changed until Jeremy picks one.
+ * re-typed into each. PICKED 10/16 (mock v2): "E", the two names side by
+ * side with C1's words ("Coaching, if you'd like to go further."), coaching
+ * title in colour 4, lavender. "A" stays for comparison and tests.
  *
  * WHERE EACH NAME POINTS follows the PDF, which he has already accepted
  * (10/16 03:20): the HD brand line opens the SHOP, the business line opens the
@@ -34,8 +34,9 @@ import { SHOP } from "../../shared/libraryLinks.mjs";
  * "by" is always lowercase. Gold stays on the HD name only (gold is sparing).
  */
 
-/** Option E's coaching-title colour until Jeremy picks one (mock v2, candidate 1). */
-export const COACH_COLOR = "#3fe0c5";
+/** The coaching title's colour: Jeremy's pick 10/16, mock v2 colour 4, lavender
+ * (6.5:1 on the email navy; a cool partner to the HD gold, not a second gold). */
+export const COACH_COLOR = "#a78bfa";
 
 /**
  * Option E's two columns, a theme's worth of parts the readings site reuses.

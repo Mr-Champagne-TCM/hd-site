@@ -53,9 +53,11 @@ test("C and D carry the business name, linked to the coaching home", () => {
   }
 });
 
-test("the delivery email still sends today's footer unless told otherwise", () => {
+test("the delivery email sends Jeremy's pick, E in lavender, unless told otherwise (10/16)", () => {
   const args = { tier: 1, name: "Claude Test Five", url: "https://example.test/r/x", links: SITE };
-  assert.deepEqual(deliveryEmail(args), deliveryEmail({ ...args, footer: "A" }));
+  assert.deepEqual(deliveryEmail(args), deliveryEmail({ ...args, footer: "E" }));
+  assert.match(deliveryEmail(args).html, /#a78bfa/i);
+  assert.notDeepEqual(deliveryEmail(args).html, deliveryEmail({ ...args, footer: "A" }).html);
   assert.notDeepEqual(deliveryEmail(args).html, deliveryEmail({ ...args, footer: "C1" }).html);
 });
 
