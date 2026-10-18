@@ -31,9 +31,10 @@ export const S5 = "What you take in from others";
 /**
  * A summary row placeholder. Not "Signature value.": the old words are refused
  * in the on / off track lines now (oldWordProblem), and a placeholder that
- * repeats the label would trip it.
+ * repeats the label would trip it. Five words or more: an on / off track row
+ * under 5 words is refused too (trackRowProblem, 10/17).
  */
-export const row = (k) => `Row ${SUMMARY_KEYS.indexOf(k) + 1} value.`;
+export const row = (k) => `Row ${SUMMARY_KEYS.indexOf(k) + 1} value, a whole sentence.`;
 
 /** A reading that passes the whole chain for `chart`, with named sections replaced. */
 export function reading(chart, overrides = {}) {

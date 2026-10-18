@@ -133,7 +133,7 @@ test("'signature' as ordinary English is not judged outside the on / off track c
 test("headings, labels and the disclaimer are ours and never judged", () => {
   // An old stored reading: "Signature:" / "Not-Self Theme:" labels and the old heading.
   const old = reading(CHART)
-    .replace(`Not-self: ${row("Not-self")}`, "Not-Self Theme: A grinding stuckness.")
+    .replace(`Not-self: ${row("Not-self")}`, "Not-Self Theme: A grinding stuckness settles in the body.")
     .replace(`${S6}\n`, "When it is working, and when it is not\n");
   assert.equal(oldWordProblem(old), null);
   // The whole chain on the same labels (new heading: a new draft must carry it).

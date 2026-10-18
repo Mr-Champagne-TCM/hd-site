@@ -204,8 +204,45 @@ export function firstProblem(
     profileOrdinalProblem(reading) ??
     openCentreProblem(reading, openCenters, undefinedCenters) ??
     centreStateProblem(reading, definedCenters, undefinedCenters, openCenters) ??
-    oldWordProblem(reading)
+    oldWordProblem(reading) ??
+    trackRowProblem(reading)
   );
+}
+
+/**
+ * AN ON / OFF TRACK ROW IS A SENTENCE, NOT A WORD (Jeremy 10/17, option A: "A
+ * is best. This feels best to reader. They understand why they might feel
+ * satisfaction.").
+ *
+ * Shop reading ed6b8caf (10/17) came back with "When it's on track:
+ * Satisfaction" and "When it's off track: Frustration" -- the chart's word and
+ * nothing else -- and the page and PDF printed "The feeling is satisfaction.
+ * Satisfaction". Every other check passed it. A row under 5 words is now
+ * REFUSED, never trimmed or rewritten, and the draft is asked for again.
+ *
+ * WHY 5. Measured 10/17 on every stored shop reading (28 written, 56 rows):
+ * the two bare words above, nothing of 2-4 words, and the shortest healthy row
+ * is 11 words. A word is any run with a letter or digit in it, so a lone "."
+ * or dash does not count.
+ *
+ * Both paths reach this: the form's rows are printed by structured.mjs as
+ * "When it's on track: <slot>", and the letter writes the line itself. Old
+ * stored readings are not affected -- like the other checks, this runs only
+ * on a new draft.
+ */
+export const TRACK_ROW_MIN_WORDS = 5;
+
+export function trackRowProblem(raw) {
+  const rows = summaryRows(raw);
+  for (const key of Object.keys(SUMMARY_LABELS)) {
+    const text = rows[key];
+    if (text === undefined) continue;
+    const n = text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+    if (n < TRACK_ROW_MIN_WORDS) {
+      return `The reading's "${SUMMARY_LABELS[key]}" line came back as ${n} word${n === 1 ? "" : "s"} ("${text}"), not a sentence.`;
+    }
+  }
+  return null;
 }
 
 /**
