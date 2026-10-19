@@ -1,6 +1,8 @@
 import { SITE } from "./copy";
 import type { ReadingView } from "./StartHere";
 import { AUTHORITY, CENTERS, DEFINITION, LIBRARY, crossLink, profileLink, typeLink } from "../shared/libraryLinks.mjs";
+import Linked from "./Linked";
+import CoachCard from "./CoachCard";
 
 /**
  * The written interpretation, on the page.
@@ -225,7 +227,7 @@ export function ReadingInOrder({
 }: {
   v: ReadingView;
   notes: Record<string, Array<[string, string]>>;
-  chart: { type?: string; profile?: string; incarnationCross?: string };
+  chart: { type?: string; profile?: string; incarnationCross?: string; channels?: string[] };
 }) {
   const feature = /^\((.+?)\)\s*([\s\S]+)$/;
   const [intro, ...items] = v.takeaways;
@@ -239,11 +241,16 @@ export function ReadingInOrder({
           {v.reading.map((s) => (
             <article key={s.heading} className="border-l-2 border-brand-gold/40 pl-5">
               <Label>{s.heading}</Label>
-              {s.lede && <p className="mt-2 text-[19px] font-semibold leading-snug text-brand-paper">{s.lede}</p>}
+              {s.lede && (
+                <p className="mt-2 text-[19px] font-semibold leading-snug text-brand-paper">
+                  <Linked text={s.lede} chart={chart} />
+                </p>
+              )}
               <div className="mt-3 space-y-3">
                 {s.paragraphs.map((p, i) => (
                   <p key={i} className="text-[16px] leading-relaxed text-brand-paper/85">
-                    {p}
+                    {/* FIX 7 (10/19): the Human Design words open the library. */}
+                    <Linked text={p} chart={chart} />
                   </p>
                 ))}
               </div>
@@ -279,7 +286,11 @@ export function ReadingInOrder({
           <h2 id="experiments" className="font-display text-[clamp(1.3rem,3vw,1.6rem)] font-medium tracking-tight text-brand-gold">
             {TAKEAWAYS}
           </h2>
-          {intro && <p className="mt-3 text-[16px] leading-relaxed text-brand-paper/85">{intro}</p>}
+          {intro && (
+            <p className="mt-3 text-[16px] leading-relaxed text-brand-paper/85">
+              <Linked text={intro} chart={chart} />
+            </p>
+          )}
           <ul className="mt-4 space-y-4">
             {items.map((p, i) => {
               const m = feature.exec(p);
@@ -287,13 +298,18 @@ export function ReadingInOrder({
                 <li key={i} className="relative pl-6">
                   <span aria-hidden className="absolute left-0 top-[0.8em] h-[2px] w-3 bg-brand-gold" />
                   {m && <p className="text-[17px] font-semibold text-brand-gold">{m[1]}</p>}
-                  <p className="text-[17px] leading-relaxed text-brand-paper/90">{m ? m[2] : p}</p>
+                  <p className="text-[17px] leading-relaxed text-brand-paper/90">
+                    <Linked text={m ? m[2] : p} chart={chart} />
+                  </p>
                 </li>
               );
             })}
           </ul>
         </section>
       )}
+
+      {/* FIX 10B (10/19): the coaching card ends the reading, before its disclaimer, as in the PDF. */}
+      <CoachCard />
 
       <p className="border-t border-white/10 pt-4 text-[14px] leading-relaxed text-brand-muted">{v.disclaimer}</p>
 

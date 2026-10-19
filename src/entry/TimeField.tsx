@@ -124,6 +124,16 @@ export default function TimeField({
           )}
         </span>
       </label>
+
+      {/*
+        FIX 15B (Jeremy 10/19): why the time matters, folded under the field,
+        one tap to open -- said once, and not in the way of anybody who knows
+        their time already.
+      */}
+      <details className="mt-4 rounded-xl border border-brand-gold/25 bg-white/[0.03] px-4 py-3">
+        <summary className="cursor-pointer text-[14px] text-brand-teal">{ENTRY.whyTime}</summary>
+        <p className="mt-2 text-[14px] leading-relaxed text-brand-muted">{ENTRY.whyTimeBody}</p>
+      </details>
     </fieldset>
   );
 }

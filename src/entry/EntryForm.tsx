@@ -14,6 +14,7 @@ import { warmEngine } from "./warm";
 import MailtoText from "../MailtoText";
 import { customerText } from "../../shared/customerMessages.mjs";
 import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
+import { CHART_NAME_MAX, chartTitle, cleanChartName, firstName } from "../../shared/chartName.mjs";
 
 /**
  * The way in.
@@ -84,6 +85,8 @@ export type EntryProps = {
   readingToken?: string;
   tier?: number;
   name?: string | null;
+  /** What "Name for this chart" starts with: the buyer's first name (fix 17A). */
+  chartName?: string | null;
   /**
    * Handed down from the reading page so that the screen after a submit can
    * offer exactly what the screen after a reload offers. They were two
@@ -109,9 +112,18 @@ export default function EntryForm({
   readingToken,
   tier = FREE_TIER,
   name = null,
+  chartName = null,
   upgrade = null,
   canResend = false,
 }: EntryProps = {}) {
+  /**
+   * FIX 17A (Jeremy 10/19): whose chart this is, asked on the form (optional),
+   * filled with the buyer's first name and changeable for a gift. It is the
+   * title of the page and the PDF ("Alex's Human Design") and is kept with the
+   * reading like the birth details -- so only on the tiers that keep those.
+   */
+  const askName = Boolean(readingToken) && tier >= 1;
+  const [who, setWho] = useState(() => chartName ?? firstName(name) ?? "");
   const [date, setDate] = useState("");
   const [place, setPlace] = useState<Place | null>(null);
   const [timeKnown, setTimeKnown] = useState<boolean | null>(null);
@@ -253,6 +265,9 @@ export default function EntryForm({
             place: place.label,
             timeKnown: timeKnown !== false,
             ...(timeKnown !== false ? { time } : {}),
+            // The name for the chart (fix 17A): kept with the reading for its
+            // title, never sent on to the engine or the writer.
+            ...(askName && cleanChartName(who) ? { name: cleanChartName(who) } : {}),
           },
         }),
       });
@@ -568,6 +583,24 @@ export default function EntryForm({
         <Rule label={ENTRY.startRule} />
 
         <div className="space-y-7 py-7">
+          {askName && (
+            <label className="block">
+              <span className="mb-2 block font-sans text-[15px] font-semibold text-brand-paper">
+                Name for this chart <span className="font-normal text-brand-muted">(optional)</span>
+              </span>
+              <input
+                value={who}
+                maxLength={CHART_NAME_MAX}
+                autoComplete="given-name"
+                onChange={(e) => setWho(e.target.value)}
+                className={field}
+              />
+              <span className="mt-1.5 block text-[14px] leading-snug text-brand-muted">
+                It goes on your page and on the PDF: “{chartTitle(who)}”. Change it if the reading is
+                for someone else.
+              </span>
+            </label>
+          )}
           <BirthDateField value={date} onChange={setDate} />
           <PlaceField chosen={place} onChoose={setPlace} />
 

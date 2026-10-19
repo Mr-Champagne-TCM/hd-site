@@ -10,7 +10,10 @@ import type { Activation } from "./Activations";
 /** The forwarding address, never the personal inbox (D-12). */
 const CONTACT = "hd-readings@thechampagnemethod.co";
 import EntryForm from "./entry/EntryForm";
-import ReadingActions, { Resend } from "./ReadingActions";
+import ReadingActions, { Resend, pdfLabel, PDF_BUTTON } from "./ReadingActions";
+import ThreeLines from "./ThreeLines";
+import CoachCard from "./CoachCard";
+import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 
@@ -36,7 +39,12 @@ type Reading = {
   pending: boolean;
   tier: number;
   label: string | null;
+  /** Whose chart: the name typed on the birth form (fix 17A), else the buyer's. */
   name: string | null;
+  /** Pending only: what the form's "Name for this chart" starts with. */
+  chartName?: string | null;
+  /** The PDF's real page count (fix 9A), when there is one to download. */
+  pdfPages?: number | null;
   purchasedAt: number;
   output: SummaryData & { personality?: Activation[]; design?: Activation[] };
   upgrade: { level: number; label: string; available?: boolean } | null;
@@ -45,7 +53,7 @@ type Reading = {
   notes: Record<string, Array<[string, string]>> | null;
   /** The PDFs' order, when the reading lays out that way (Jeremy 10/16). */
   view?: ReadingView | null;
-  /** "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00", when kept. */
+  /** "December 14, 1976 · 6:18 PM · Chicago, Illinois", when kept (no time zone since fix 20A). */
   birthLine?: string | null;
   /** Paid for words the sweeper has not written yet. */
   writing: boolean;
@@ -308,6 +316,7 @@ export default function ReadingPage({ token }: { token: string }) {
           readingToken={token}
           tier={reading.tier}
           name={reading.name}
+          chartName={reading.chartName ?? null}
           upgrade={reading.upgrade}
           canResend={reading.canResend}
         />
@@ -318,7 +327,7 @@ export default function ReadingPage({ token }: { token: string }) {
   return (
     <div className={shell}>
       <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
-        {reading.name ? `${reading.name}’s Human Design` : "Your Human Design"}
+        {chartTitle(reading.name)}
       </h1>
       {reading.label && (
         <p className="mt-2 font-sans text-[13px] uppercase tracking-[0.16em] text-brand-muted">
@@ -333,6 +342,30 @@ export default function ReadingPage({ token }: { token: string }) {
       {reading.birthLine && (
         <p className="mt-2 text-[15px] text-brand-muted">{reading.birthLine}</p>
       )}
+
+      {/*
+        FIX 9A (Jeremy 10/19): the PDF, solid and named, right under the title
+        -- on the first screen, on a phone too, saying what is in it. Not while
+        the words are still being written (the file would be short of them).
+      */}
+      {reading.tier >= 1 && !reading.writing && (
+        <div className="mt-6">
+          <a href={`/api/pdf?t=${encodeURIComponent(token)}`} className={`block w-full sm:w-auto ${PDF_BUTTON}`}>
+            {pdfLabel(reading.tier, reading.pdfPages)}
+          </a>
+          <p className="mt-2 text-[14px] text-brand-muted">
+            {reading.tier >= 2
+              ? "The chart, its values and the written reading, ready to print or keep."
+              : "The chart and its values, ready to print or keep."}
+          </p>
+        </div>
+      )}
+
+      {/*
+        FIX 1A (Jeremy 10/19): "Your chart in three lines", a plain way in
+        before the chart. Below the chart, today's order stays (his 1B half).
+      */}
+      {reading.output && <ThreeLines chart={reading.output} takeaways={reading.view?.takeaways ?? null} />}
 
       {/*
         THE NEW ORDER, the PDFs' order (Jeremy 10/16: "All PDFs should look
@@ -368,15 +401,23 @@ export default function ReadingPage({ token }: { token: string }) {
       {reading.view ? (
         <>
           <div className="mt-14">
-            <StartHere v={reading.view} />
+            <StartHere v={reading.view} chart={reading.output} />
           </div>
           <div className="mt-14">
             <ReadingInOrder v={reading.view} notes={reading.notes ?? {}} chart={reading.output} />
           </div>
         </>
       ) : (
-        /* A reading that cannot be laid out the new way (letter mode) keeps its old shape. */
-        reading.written && <WrittenReading written={reading.written} notes={reading.notes ?? {}} />
+        <>
+          {/* A reading that cannot be laid out the new way (letter mode) keeps its old shape. */}
+          {reading.written && <WrittenReading written={reading.written} notes={reading.notes ?? {}} />}
+          {/* FIX 10B: the coaching card ends every reading page; the new-order reading carries its own. */}
+          {!reading.writing && (
+            <div className="mt-12">
+              <CoachCard />
+            </div>
+          )}
+        </>
       )}
 
       {/*
@@ -433,6 +474,7 @@ export default function ReadingPage({ token }: { token: string }) {
         tier={reading.tier}
         mechanics={reading.output}
         writing={reading.writing}
+        pdfPages={reading.pdfPages ?? null}
       />
     </div>
   );

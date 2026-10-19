@@ -4,6 +4,21 @@ import { loadReading, readReadingLink } from "../lib/reading.mjs";
 import { ringIfDue } from "../lib/ring.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+import { readingPdf, pdfPageCount } from "../lib/readingPdf.mjs";
+import { SITE } from "../lib/siteLinks.mjs";
+
+/** The PDF's page count (fix 9A): built exactly as /api/pdf builds it (pdfHandler.mjs). */
+const countPages = async (r) =>
+  pdfPageCount(
+    await readingPdf({
+      tier: r.tier,
+      name: r.birth?.name ?? r.buyer?.name ?? null,
+      output: r.output,
+      links: SITE,
+      reading: r.reading ?? null,
+      birth: r.birth ?? null,
+    }),
+  );
 
 const health = () => getStore({ name: "health", consistency: "strong" });
 const note = (kind, { detail, ref } = {}) =>
@@ -50,6 +65,7 @@ export default guard("reading", async (request) => {
     secret,
     now: Date.now(),
     note,
+    countPages,
   });
 
   // Status only. Never the token, never the reading id, never the name -- a log

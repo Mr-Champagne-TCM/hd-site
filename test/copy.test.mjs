@@ -31,9 +31,11 @@ test("the paid tiers do NOT claim nothing is written to disk", () => {
   }
 });
 
-test("the paid note says the reading is saved, and for how long the link lasts", () => {
-  assert.match(PRIVACY_NOTE_PAID, /saved/);
-  assert.match(PRIVACY_NOTE_PAID, /6 days/);
+test("the paid note says what is kept and for how long, without the 6 days (fixes 15B + 17A)", () => {
+  assert.match(PRIVACY_NOTE_PAID, /kept with your reading/);
+  assert.match(PRIVACY_NOTE_PAID, /name and birth details/);
+  assert.match(PRIVACY_NOTE_PAID, /kept for a year/);
+  assert.doesNotMatch(PRIVACY_NOTE_PAID, /6 days|six days/);
 });
 
 test("the two promises are actually different", () => {

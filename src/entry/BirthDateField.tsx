@@ -145,11 +145,20 @@ export default function BirthDateField({
         Date of birth
       </legend>
 
+      {/*
+        FIX 15B (Jeremy 10/19): a small label over each box, and each empty box
+        says "Choose" -- three empty dashes read as unfinished.
+      */}
+      <div aria-hidden className="mb-1 grid grid-cols-[1.4fr_0.8fr_1fr] gap-2 font-sans text-[11px] uppercase tracking-[0.16em] text-brand-muted/80">
+        <span>Month</span>
+        <span className="text-center">Day</span>
+        <span className="text-right">Year</span>
+      </div>
       <div className="grid grid-cols-[1.4fr_0.8fr_1fr] gap-2">
         <Picker
           label="Month"
           align="left"
-          placeholder="—"
+          placeholder="Choose"
           value={month === null ? "" : String(month)}
           options={MONTHS.map((name, i) => ({
             value: String(i + 1),
@@ -168,7 +177,7 @@ export default function BirthDateField({
         <Picker
           label="Day"
           align="center"
-          placeholder="—"
+          placeholder="Choose"
           value={day === null ? "" : String(day)}
           options={days.map((d) => ({ value: String(d), label: String(d) }))}
           columns={6}
@@ -181,7 +190,7 @@ export default function BirthDateField({
         <Picker
           label="Year"
           align="right"
-          placeholder="————"
+          placeholder="Choose"
           value={year === null ? "" : String(year)}
           options={years.map((y) => ({ value: String(y), label: String(y) }))}
           columns={4}

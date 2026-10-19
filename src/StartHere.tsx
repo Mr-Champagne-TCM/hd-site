@@ -1,4 +1,5 @@
 import { CENTERS, channelLink, lineLink } from "../shared/libraryLinks.mjs";
+import Linked, { type ChartFacts } from "./Linked";
 
 /**
  * "START HERE" -- centers, channels, profile, each a short list with the
@@ -76,21 +77,22 @@ function List({ items, dim, href }: { items: Item[]; dim: boolean; href: (it: It
   );
 }
 
-function Takeaway({ lines }: { lines: string[] }) {
+function Takeaway({ lines, chart }: { lines: string[]; chart: ChartFacts }) {
   if (!lines.length) return null;
   return (
     <div className="mt-4 border-l-[3px] border-brand-gold pl-4">
       <p className="font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-brand-gold">Takeaway</p>
       {lines.map((t, i) => (
         <p key={i} className="mt-1 text-[17px] leading-relaxed text-brand-paper">
-          {t}
+          {/* The reading's own sentences: their Human Design words link (fix 7). */}
+          <Linked text={t} chart={chart} />
         </p>
       ))}
     </div>
   );
 }
 
-export default function StartHere({ v }: { v: ReadingView }) {
+export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFacts }) {
   return (
     <section aria-labelledby="start-here">
       <h2 id="start-here" className="font-display text-[clamp(1.3rem,3vw,1.6rem)] font-medium tracking-tight text-brand-paper">
@@ -110,7 +112,7 @@ export default function StartHere({ v }: { v: ReadingView }) {
             <List items={v.otherCenters} dim href={() => CENTERS} />
           </>
         )}
-        <Takeaway lines={v.centersTakeaway} />
+        <Takeaway lines={v.centersTakeaway} chart={chart} />
 
         <Head n={2} title="Your channels" count={`(${v.channels.length})`} />
         {v.channels.length ? (
@@ -118,11 +120,11 @@ export default function StartHere({ v }: { v: ReadingView }) {
         ) : (
           <p className="mt-2 text-[16px] text-brand-paper">{NO_CHANNELS}</p>
         )}
-        <Takeaway lines={v.channelsTakeaway} />
+        <Takeaway lines={v.channelsTakeaway} chart={chart} />
 
         <Head n={3} title="Your profile" count={v.profile} />
         <List items={v.profileLines} dim={false} href={(it) => lineLink(it.title)} />
-        <Takeaway lines={v.profileLinesTakeaway} />
+        <Takeaway lines={v.profileLinesTakeaway} chart={chart} />
       </div>
     </section>
   );

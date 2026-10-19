@@ -9,6 +9,7 @@ import {
   profileLink,
   typeLink,
 } from "../shared/libraryLinks.mjs";
+import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs";
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 
@@ -115,23 +116,41 @@ export default function Glance({ data, says = null, showActivations = false }: P
             <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">{value}</dd>
           </div>
         ))}
-        {showActivations &&
-          sides.map((side: { key: string; label: string; list: Activation[] }) => (
-            <div key={side.key} className="grid gap-1 border-b border-white/[0.06] py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
-              <dt className="pt-[3px] font-sans text-[13px] uppercase tracking-[0.1em] text-brand-muted">
-                {side.key === "personality" ? "Personality" : "Design"}
-              </dt>
-              <dd className="grid grid-cols-2 gap-x-4 gap-y-1 text-[15px] min-[520px]:grid-cols-4">
-                {side.list.map((a, i) => (
-                  <span key={`${a.planet}-${i}`} className="whitespace-nowrap text-brand-paper/80">
-                    {planetName(a.planet).toLowerCase()}{" "}
-                    <strong className="font-semibold tabular-nums text-brand-paper">{activationLabel(a)}</strong>
-                  </span>
-                ))}
-              </dd>
-            </div>
-          ))}
       </dl>
+
+      {/*
+        FIX 6A (Jeremy 10/19): the planet numbers fold away, CLOSED, in place,
+        named "Technical values ... (for the curious)" with a line on how to
+        read them. A newcomer met "sun 21.5 · earth 48.5" with no meaning
+        given; nothing here is needed to use the reading. The PDF prints the
+        same grid under the same heading (a PDF cannot fold).
+      */}
+      {showActivations && sides.length > 0 && (
+        <details className="mt-4 rounded-xl border border-brand-gold/25 bg-white/[0.02] px-4 py-3">
+          <summary className="cursor-pointer select-none font-sans text-[14px] font-semibold text-brand-gold">
+            {techTitle(sides.reduce((n: number, s: { list: Activation[] }) => n + s.list.length, 0))}{" "}
+            <span className="font-normal text-brand-muted">{TECH_TITLE_NOTE}</span>
+          </summary>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-brand-paper/85">{TECH_HOW}</p>
+          <dl className="mt-2">
+            {sides.map((side: { key: string; label: string; list: Activation[] }) => (
+              <div key={side.key} className="grid gap-1 border-b border-white/[0.06] py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
+                <dt className="pt-[3px] font-sans text-[13px] uppercase tracking-[0.1em] text-brand-muted">
+                  {side.key === "personality" ? "Personality" : "Design"}
+                </dt>
+                <dd className="grid grid-cols-2 gap-x-4 gap-y-1 text-[15px] min-[520px]:grid-cols-4">
+                  {side.list.map((a, i) => (
+                    <span key={`${a.planet}-${i}`} className="whitespace-nowrap text-brand-paper/80">
+                      {planetName(a.planet).toLowerCase()}{" "}
+                      <strong className="font-semibold tabular-nums text-brand-paper">{activationLabel(a)}</strong>
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
     </section>
   );
 }

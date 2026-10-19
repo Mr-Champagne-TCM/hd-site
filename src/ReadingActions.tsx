@@ -28,6 +28,20 @@ import {
 
 export type Upgrade = { level: number; label: string; available?: boolean } | null;
 
+/**
+ * FIX 9A (Jeremy 10/19): the PDF button says what is in it and how long it
+ * is -- "Download your full reading (PDF, 8 pages)" -- with the page count
+ * the server counted from the real file. No count, no number.
+ */
+export function pdfLabel(tier: number, pages?: number | null) {
+  const what = tier >= 2 ? "your full reading" : "your chart";
+  return `Download ${what} (PDF${pages ? `, ${pages} pages` : ""})`;
+}
+
+/** The solid teal button, top and bottom of the page alike. */
+export const PDF_BUTTON =
+  "inline-block rounded-full bg-brand-teal px-6 py-3.5 text-center font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5";
+
 /** "The reading" -> "the reading", so it can sit inside a sentence. */
 function lowerFirst(s: string): string {
   return s ? s[0].toLowerCase() + s.slice(1) : s;
@@ -40,8 +54,11 @@ export default function ReadingActions({
   tier = 0,
   mechanics,
   writing = false,
+  pdfPages = null,
 }: {
   token: string;
+  /** The PDF's real page count, from the server (fix 9A). */
+  pdfPages?: number | null;
   upgrade: Upgrade;
   canResend: boolean;
   /** The PDF is the chart tier and above; the summary was never sold one. */
@@ -149,7 +166,7 @@ export default function ReadingActions({
           <Resource
             href={SITE.bodygraph}
             title="Reading your bodygraph"
-            blurb="The picture itself — what the shapes mean, and why some are filled and some are not."
+            blurb="The picture itself — what the shapes mean, and why some are colored in and some are not."
           />
         </div>
       </section>
@@ -227,9 +244,10 @@ export default function ReadingActions({
             The one you keep
           </h2>
           <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-            Your chart and the values behind it, as a PDF — the same drawing, at
-            print size. Take it now, or have the link emailed and come back to
-            it later.
+            {/* Fix 9A: what is in it, in plain words, with its real length. */}
+            {tier >= 2
+              ? `Your full reading as a PDF${pdfPages ? `: ${pdfPages} pages` : ""}, with the chart at print size, its values and the written reading.`
+              : `Your chart as a PDF${pdfPages ? `: ${pdfPages} pages` : ""}, with the drawing at print size and its values.`}
           </p>
           {/*
             NOT WHILE THE READING IS STILL BEING WRITTEN.
@@ -252,9 +270,9 @@ export default function ReadingActions({
             <>
               <span
                 aria-disabled="true"
-                className="mt-4 inline-block cursor-not-allowed rounded-full border border-brand-gold/20 px-5 py-2.5 font-sans text-[15px] text-brand-gold/40"
+                className="mt-4 inline-block cursor-not-allowed rounded-full bg-brand-teal/25 px-6 py-3.5 font-sans text-[16px] font-semibold text-[#0d1b1a]/60"
               >
-                Download the PDF
+                {pdfLabel(tier)}
               </span>
               <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
                 Ready once your reading is written — it goes in the PDF, and a
@@ -267,11 +285,8 @@ export default function ReadingActions({
               navigates to; building the file in the page and handing it to a
               synthetic anchor is more moving parts and it breaks on a phone.
             */
-            <a
-              href={`/api/pdf?t=${encodeURIComponent(token)}`}
-              className="mt-4 inline-block rounded-full border border-brand-gold/50 px-5 py-2.5 font-sans text-[15px] text-brand-gold transition-colors hover:bg-brand-gold/10"
-            >
-              Download the PDF
+            <a href={`/api/pdf?t=${encodeURIComponent(token)}`} className={`mt-4 ${PDF_BUTTON}`}>
+              {pdfLabel(tier, pdfPages)}
             </a>
           )}
         </section>

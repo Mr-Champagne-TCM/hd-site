@@ -299,6 +299,9 @@ export async function handleChart({
       timeKnown: birth.timeKnown,
       zone: birth.zone,
       place: birth.place,
+      // The optional name for the chart (fix 17A, 10/19): kept with the birth
+      // details for the title; never in ALLOWED_BIRTH_FIELDS, so never sent on.
+      name: birth.name,
     };
     let filled;
     let lastError = null;
@@ -335,6 +338,9 @@ export async function handleChart({
        * A failure here does not fail the chart. The person is looking at it.
        */
       try {
+        // ONE "READY" EMAIL ON THE READING TIER (fix 4A, 10/19): it goes when
+        // the words are written (interpret.mjs), not now. `deliver` still runs
+        // so the writer is rung; it sends nothing at tier 2.
         await deliver({ id: readingLink.id, tier: filled.tier });
       } catch (e) {
         console.log(`chart: ready-email failed (${e?.message})`);

@@ -5,6 +5,28 @@ import { buildReadingView } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
+import { firstName } from "../../shared/chartName.mjs";
+
+/** Page counts by reading and version, so a reload does not build the PDF again. */
+const PAGES = new Map();
+
+async function pagesFor(reading, id, countPages) {
+  if (typeof countPages !== "function" || reading.tier < 1 || reading.pending) return null;
+  if (reading.tier >= 2 && !reading.reading) return null; // still being written
+  const key = `${id}:${reading.filledAt}:${reading.writtenAt}`;
+  if (PAGES.has(key)) return PAGES.get(key);
+  try {
+    const n = await countPages(reading);
+    const pages = Number.isInteger(n) && n > 0 ? n : null;
+    if (pages) {
+      if (PAGES.size > 500) PAGES.clear();
+      PAGES.set(key, pages);
+    }
+    return pages;
+  } catch {
+    return null; // a count is a nicety; the page never fails for it
+  }
+}
 
 /**
  * Opening a reading link, with the store passed in.
@@ -37,7 +59,7 @@ import { customerError } from "./failures.mjs";
  * The NAME is returned, because it is what labels the page as theirs, and it is
  * the thing that makes keeping a birthday unnecessary.
  */
-export async function handleReading({ body, store, secret, now = Date.now(), note = async () => {} }) {
+export async function handleReading({ body, store, secret, now = Date.now(), note = async () => {}, countPages = null }) {
   /**
    * Every failure is noted at its severity (failures.mjs) and answered with
    * the catalogue's words. `note` never throws into this path.
@@ -120,6 +142,8 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
       tier: reading.tier,
       label: TIERS[reading.tier]?.label ?? null,
       name: reading.buyer?.name ?? null,
+      /** The form's "Name for this chart" starts with the buyer's first name (fix 17A). */
+      chartName: firstName(reading.buyer?.name),
       purchasedAt: reading.purchasedAt,
       output: null,
       upgrade: null,
@@ -133,9 +157,21 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     tier: reading.tier,
     // What they bought, in the words the site already uses for it.
     label: TIERS[reading.tier]?.label ?? null,
-    name: reading.buyer?.name ?? null,
+    /**
+     * WHOSE CHART, for the title (fix 17A, 10/19): the name typed on the birth
+     * form when there is one, else the buyer's, as before.
+     */
+    name: reading.birth?.name ?? reading.buyer?.name ?? null,
     purchasedAt: reading.purchasedAt,
     output: reading.output,
+    /**
+     * THE PDF'S REAL PAGE COUNT (fix 9A, 10/19): the download button says
+     * "PDF, 8 pages". Counted from the PDF itself, built the way /api/pdf
+     * builds it -- only when there is one to download (chart tier and up, not
+     * while the words are still being written). Null when it cannot be had;
+     * the button then simply says "PDF".
+     */
+    pdfPages: await pagesFor(reading, link.id, countPages),
     /**
      * THE WRITTEN INTERPRETATION, PARSED, when the tier paid for one.
      *

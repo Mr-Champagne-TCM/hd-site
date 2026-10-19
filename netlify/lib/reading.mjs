@@ -1,5 +1,6 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { open as openSealed, seal } from "./sig.mjs";
+import { cleanChartName } from "../../shared/chartName.mjs";
 
 /**
  * The kept reading, and the one link that reaches it.
@@ -119,7 +120,7 @@ const ID = /^[0-9a-f]{32}$/;
  */
 export async function saveReading(
   store,
-  { tier, output, name, email, phone, sku, purchasedAt, id = null, now = Date.now() },
+  { tier, output, name, email, phone, sku, purchasedAt, paidCents = null, id = null, now = Date.now() },
 ) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
   // Null is a pending reading. Anything else that is not an object is a caller
@@ -160,6 +161,9 @@ export async function saveReading(
     // not -- a reading re-rendered after a fix keeps its purchase date.
     sku: str(sku),
     purchasedAt: Number.isFinite(purchasedAt) ? Math.floor(purchasedAt / 1000) : Math.floor(now / 1000),
+    // What was actually paid, in cents, from Stripe's own session (fix 4A, 10/19: the
+    // receipt email says it). A 100%-off code is 0. Absent on older records.
+    ...(Number.isInteger(paidCents) && paidCents >= 0 ? { paidCents } : {}),
     createdAt: Math.floor(now / 1000),
   });
   return readingId;
@@ -250,6 +254,7 @@ export async function loadReading(store, id, now = Date.now(), { strict = false 
     buyer: raw.buyer ?? { name: null, email: raw.email ?? null, phone: null },
     sku: raw.sku ?? null,
     purchasedAt: bought,
+    paidCents: Number.isInteger(raw.paidCents) ? raw.paidCents : null,
     createdAt: raw.createdAt ?? 0,
     /** When the chart was cast. Carried so a later write cannot reset it. */
     filledAt: raw.filledAt ?? 0,
@@ -314,10 +319,16 @@ function refuseBirthData(output) {
 
 /**
  * The birth details a paid chart keeps, as five fields and no more:
- * { date, time, timeKnown, place, zone }. Built field by field rather than
- * copied, so nothing else a request carried (coordinates, a UTC instant, a
- * stray field) can ride along into the store. Anything unusable becomes null:
- * a reading without a birth line is fine, a wrong one is not.
+ * { date, time, timeKnown, place, zone } -- and, since 19 October 2026, the
+ * optional NAME FOR THE CHART typed on the same form (Jeremy, fix 17A: the
+ * page and PDF title "Alex's Human Design"). Kept with the reading exactly as
+ * the birth details are, for the same year; never sent to the engine or the
+ * writer. Absent when none was typed.
+ *
+ * Built field by field rather than copied, so nothing else a request carried
+ * (coordinates, a UTC instant, a stray field) can ride along into the store.
+ * Anything unusable becomes null: a reading without a birth line is fine, a
+ * wrong one is not.
  */
 export function birthRecord(b) {
   if (!b || typeof b !== "object") return null;
@@ -329,7 +340,8 @@ export function birthRecord(b) {
     timeKnown && typeof b.time === "string" && /^\d{1,2}:\d{2}(:\d{2})?$/.test(b.time.trim()) ? b.time.trim() : null;
   if (timeKnown && !time) return null;
   const place = typeof b.place === "string" ? b.place.trim().replace(/\s+/g, " ").slice(0, 120) || null : null;
-  return { date, time, timeKnown, place, zone };
+  const name = cleanChartName(b.name);
+  return { date, time, timeKnown, place, zone, ...(name ? { name } : {}) };
 }
 
 /**
@@ -359,6 +371,7 @@ export async function fillReading(store, id, output, now = Date.now(), birth = n
     buyer: existing.buyer,
     sku: existing.sku,
     purchasedAt: existing.purchasedAt,
+    ...(existing.paidCents !== null ? { paidCents: existing.paidCents } : {}),
     createdAt: existing.createdAt,
     // When the chart was computed, which is NOT when it was bought. The year
     // runs from the purchase either way; this is only ever for looking at.
@@ -404,6 +417,7 @@ export async function fillInterpretation(store, id, text, now = Date.now()) {
     buyer: existing.buyer,
     sku: existing.sku,
     purchasedAt: existing.purchasedAt,
+    ...(existing.paidCents !== null ? { paidCents: existing.paidCents } : {}),
     createdAt: existing.createdAt,
     filledAt: existing.filledAt || Math.floor(now / 1000),
     // Carried through: rebuilding the record field by field must not drop it.

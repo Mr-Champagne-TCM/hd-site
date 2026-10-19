@@ -95,10 +95,58 @@ test("kept birth details reach the page only as the PDF's birth line (Jeremy 10/
   });
   const token = mintReadingLink({ id, tier: 1 }, SECRET);
   const raw = await open(store, token).then((r) => r.body);
-  assert.equal(JSON.parse(raw).birthLine, "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00");
-  for (const leak of ['"date"', '"zone"', '"place"', "America/Chicago", '"18:18"']) {
+  // No time zone printed since fix 20A (10/19); it is still kept, server-side.
+  assert.equal(JSON.parse(raw).birthLine, "December 14, 1976 · 6:18 PM · Chicago, Illinois");
+  for (const leak of ['"date"', '"zone"', '"place"', "America/Chicago", '"18:18"', "UTC-06"]) {
     assert.doesNotMatch(raw, new RegExp(leak), `${leak} appeared in a reading response`);
   }
+});
+
+test("17A: the name typed for the chart is kept with the birth details and titles the reading", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, ...BUYER });
+  await fillReading(store, id, OUTPUT, Date.now(), {
+    date: "1976-12-14", time: "18:18", timeKnown: true, place: "Chicago, Illinois", zone: "America/Chicago",
+    name: "  Mary  <b>Jane</b> ",
+  });
+  const kept = await store.get(id, { type: "json" });
+  assert.equal(kept.birth.name, "Mary bJane/b", "the name is kept with the birth block, cleaned");
+  assert.equal(kept.output.name, undefined, "the name never goes into the engine's output");
+  const token = mintReadingLink({ id, tier: 1 }, SECRET);
+  const body = JSON.parse(await open(store, token).then((r) => r.body));
+  assert.equal(body.name, "Mary bJane/b");
+});
+
+test("17A: a pending reading offers the buyer's first name for the form", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 2, output: null, ...BUYER });
+  const token = mintReadingLink({ id, tier: 2 }, SECRET);
+  const body = JSON.parse(await open(store, token).then((r) => r.body));
+  assert.equal(body.pending, true);
+  assert.equal(body.chartName, String(BUYER.name).split(" ")[0]);
+});
+
+test("9A: the PDF's page count is sent once there is a PDF, never while the words are being written", async () => {
+  const store = fakeStore();
+  const id = await saveReading(store, { tier: 1, output: null, ...BUYER });
+  await fillReading(store, id, OUTPUT, Date.now());
+  const token = mintReadingLink({ id, tier: 1 }, SECRET);
+  const counted = [];
+  const countPages = async (r) => (counted.push(r.tier), 3);
+  const body = JSON.parse((await handleReading({ body: JSON.stringify({ token }), store, secret: SECRET, countPages })).body);
+  assert.equal(body.pdfPages, 3);
+  // A reading still being written has no PDF worth counting.
+  const id2 = await saveReading(store, { tier: 2, output: null, ...BUYER });
+  await fillReading(store, id2, OUTPUT, Date.now());
+  const t2 = mintReadingLink({ id: id2, tier: 2 }, SECRET);
+  const b2 = JSON.parse((await handleReading({ body: JSON.stringify({ token: t2 }), store, secret: SECRET, countPages })).body);
+  assert.equal(b2.writing, true);
+  assert.equal(b2.pdfPages, null);
+  // A count that fails is no count, never a failed page.
+  const b3 = JSON.parse(
+    (await handleReading({ body: JSON.stringify({ token }), store, secret: SECRET, countPages: async () => { throw new Error("x"); } })).body,
+  );
+  assert.equal(b3.pdfPages, 3, "cached from the first count");
 });
 
 // --- the upgrade, per D-11 --------------------------------------------------

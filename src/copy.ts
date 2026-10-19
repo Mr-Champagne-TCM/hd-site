@@ -20,9 +20,15 @@
  * price in two files is a price that will disagree with itself.
  */
 
+/**
+ * FIX 13A (Jeremy 10/19): the header's library link is the HUMAN DESIGN
+ * library, by name ("The Library" landed on the coaching library, where HD is
+ * sixth of six), and it shows on a phone too, as "Library", beside Coaching.
+ */
 export const NAV = {
   brand: "The Champagne Method",
-  library: "The Library",
+  library: "The Human Design library",
+  libraryShort: "Library",
   toCoaching: "Coaching",
 };
 
@@ -90,7 +96,7 @@ export const RESOURCES = {
       tag: "Goes with the chart",
       title: "Reading your bodygraph",
       blurb:
-        "The picture itself: what the shapes mean, why some are filled and some are not, and " +
+        "The picture itself: what the shapes mean, why some are colored in and some are not, and " +
         "what to make of the difference. Written for someone holding their own chart.",
     },
   ],
@@ -292,6 +298,12 @@ export const ENTRY = {
   startRule: "Three things, then you’re done",
   endRule: "That’s everything",
   restart: "Start a new chart",
+  /** Fix 15B (10/19): the fold-out under the time field. */
+  whyTime: "Why the time matters",
+  whyTimeBody:
+    "The Moon moves fast, and it carries your profile with it. A few minutes either way can change " +
+    "it, so the time on a birth certificate is best if you have it. An unknown time is fine too: " +
+    "the chart says plainly which parts depend on it.",
   timeUnknownLabel: "I don’t know my birth time",
   timeUnknownHelp:
     "Most of a chart holds without one. The Moon is the fast mover, and it carries the Profile " +
@@ -329,10 +341,15 @@ export const PRIVACY_NOTE =
  * the reading, for the reading's own year, so the PDF can print the birth line
  * under the name the way the phone's PDF does. Said plainly, before the form.
  */
+/*
+ * 10/19: fix 15B drops "your link is active for 6 days" (it read as the reading
+ * vanishing), and fix 17A adds the name for the chart, which is kept the same
+ * way as the birth details.
+ */
 export const PRIVACY_NOTE_PAID =
-  "Your birth details are kept with your reading, so your PDF can show when and where you " +
-  "were born. Your reading is saved for a year so it can be delivered to you — your link is " +
-  "active for 6 days.";
+  "The name and birth details you enter are kept with your reading, so your page and PDF can " +
+  "show whose chart it is and when and where they were born. Your reading is kept for a year, " +
+  "and your email always brings you back to it.";
 
 /**
  * Tier 0 (the summary) keeps no birth details at all, so it keeps the stronger
@@ -341,6 +358,25 @@ export const PRIVACY_NOTE_PAID =
 export function privacyFor(tier: number): string {
   return tier > 0 ? PRIVACY_NOTE_PAID : PRIVACY_NOTE;
 }
+
+/**
+ * FIX 3A (Jeremy 10/19): "Who makes this", under the opening, with his current
+ * site photo and a plain "How it's made" line about the AI. His one line
+ * paraphrases his own My Story; the AI facts are the privacy page's.
+ */
+export const WHO_MAKES = {
+  label: "Who makes this",
+  line:
+    "I’m Jeremy Champagne. I came up in engineering, then turned to working with people instead " +
+    "of parts; that became The Champagne Method, my coaching practice. I read every email that comes in.",
+  howLabel: "How it’s made: ",
+  myStory: "https://thechampagnemethod.co/#my-story",
+};
+
+/** FIX 5B: one plain line under his accuracy words, which stay exactly as they are. */
+export const PLAIN_ACCURACY =
+  "In plain words: across 1,000 test charts it was typically right to within 14 seconds of " +
+  "birth time, closer than a birth time written to the minute.";
 
 export const FOOTER = {
   disclaimer:

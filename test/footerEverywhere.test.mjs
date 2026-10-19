@@ -42,8 +42,10 @@ test("the offer page footer carries the theme, and the business name is not said
   assert.match(app, /import FooterTheme from "\.\/FooterTheme"/);
   assert.match(app, /<FooterTheme \/>/);
   assert.doesNotMatch(app, /\[SITE\.home, "The Champagne Method Coaching and Consulting"\]/);
-  // The rest of the link row stays, Privacy last.
-  assert.match(app, /\[SITE\.library, "The Library"\][\s\S]*\[SITE\.privacy, "Privacy"\]/);
+  // The rest of the link row stays, Privacy last. "The Library" (the coaching
+  // library) left the row with fix 13A (10/19): the header names the HD library.
+  assert.match(app, /\[SITE\.hd101, "The Human Design library"\][\s\S]*\[SITE\.privacy, "Privacy"\]/);
+  assert.doesNotMatch(app, /\[SITE\.library, "The Library"\]/);
 });
 
 test("the reading page ends with the theme and the privacy line, in every state", () => {

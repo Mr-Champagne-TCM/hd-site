@@ -1,6 +1,18 @@
-import { HERO, NAV, CREDIBILITY, EXAMPLE, TIERS_INTRO, LADDER_NOTE, FOOTER, SITE, RESOURCES } from "./copy";
+import {
+  HERO,
+  NAV,
+  CREDIBILITY,
+  EXAMPLE,
+  TIERS_INTRO,
+  LADDER_NOTE,
+  FOOTER,
+  SITE,
+  RESOURCES,
+  WHO_MAKES,
+  PLAIN_ACCURACY,
+} from "./copy";
 import { useEffect, useState } from "react";
-import { ladder, money, SUMMARY } from "../shared/pricing.mjs";
+import { ladder, money, SUMMARY, READING } from "../shared/pricing.mjs";
 import { startCheckout } from "./purchase";
 import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
@@ -41,17 +53,21 @@ function Wordmark() {
 function Nav() {
   return (
     <nav className="border-b border-brand-gold/15">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-5 sm:px-8">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 gap-y-3 px-6 py-5 sm:flex-nowrap sm:px-8">
         {/* The brand is the way home, as it is on the main site. Two links on
-            the right and no more: at 390px a third one starts colliding with
-            the brand, which is the fault that had to be fixed on the library. */}
+            the right and no more.
+            FIX 13A (Jeremy 10/19): "The Human Design library" beside Coaching
+            on every screen. On a phone the two links take their own row under
+            the name ("Library  Coaching"), so neither collides with the brand
+            -- the fault that had to be fixed on the library at 390px. */}
         <Wordmark />
-        <div className="flex shrink-0 items-center gap-5">
+        <div className="flex w-full shrink-0 items-center gap-5 sm:w-auto">
           <a
-            href={SITE.library}
-            className="hidden whitespace-nowrap font-sans text-[15px] text-brand-muted transition-colors hover:text-brand-teal sm:inline"
+            href={SITE.hd101}
+            className="whitespace-nowrap font-sans text-[14px] text-brand-muted transition-colors hover:text-brand-teal sm:text-[15px]"
           >
-            {NAV.library}
+            <span className="sm:hidden">{NAV.libraryShort}</span>
+            <span className="hidden sm:inline">{NAV.library}</span>
           </a>
           <a
             href={SITE.connect}
@@ -62,6 +78,53 @@ function Nav() {
         </div>
       </div>
     </nav>
+  );
+}
+
+/**
+ * FIX 3A (Jeremy 10/19): who makes this, under the opening -- his current
+ * site photo (approach-candid.jpg, cropped round), one line in his own voice,
+ * and the AI said plainly before anybody pays, not only on the privacy page.
+ */
+const AI_LINE =
+  `Your chart is calculated, not written by AI. The written part of the ${money(READING.cents)} reading is ` +
+  "drafted by Google's Gemini AI from your chart's values only — no name, no birth date, no place — " +
+  "and checked before it reaches you.";
+
+const linkCls =
+  "text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal";
+
+function WhoMakesThis() {
+  return (
+    <section className="mx-auto max-w-5xl px-6 pt-10 sm:px-8">
+      <div className="flex flex-col gap-5 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5 sm:flex-row sm:items-start sm:p-6">
+        <img
+          src="/jeremy.jpg"
+          alt="Jeremy Champagne"
+          width={120}
+          height={120}
+          className="h-[120px] w-[120px] shrink-0 rounded-xl object-cover"
+        />
+        <div>
+          <p className="font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-brand-teal">
+            {WHO_MAKES.label}
+          </p>
+          <p className="mt-2 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper">{WHO_MAKES.line}</p>
+          <p className="mt-3 max-w-[60ch] text-[15.5px] leading-relaxed text-brand-paper/85">
+            <span className="font-semibold text-brand-gold">{WHO_MAKES.howLabel}</span>
+            {AI_LINE}
+          </p>
+          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
+            <a href={WHO_MAKES.myStory} className={linkCls}>
+              My story
+            </a>
+            <a href={SITE.privacy} className={linkCls}>
+              What is sent, and to whom
+            </a>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -319,20 +382,32 @@ function Credibility() {
         {CREDIBILITY.standout}
       </p>
 
-      <dl className="mt-7 grid gap-4 sm:grid-cols-2">
-        {CREDIBILITY.checks.map(([figure, what]) => (
-          <div key={figure} className="rounded-2xl border border-brand-teal/20 bg-white/[0.03] p-5">
-            <dt className="font-display text-[1.6rem] leading-none text-brand-teal tabular-nums">
-              {figure}
-            </dt>
-            <dd className="mt-2 text-[15px] leading-relaxed text-brand-paper/80">{what}</dd>
-          </div>
-        ))}
-      </dl>
+      {/*
+        FIX 5B (Jeremy 10/19): every word above stays exactly; one plain line
+        is added, and the four number cards and the closing paragraph fold
+        behind a tap. A newcomer read "14 seconds", "15 of 15" and "1 in 3,000"
+        as doubts raised right before the buy.
+      */}
+      <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper">{PLAIN_ACCURACY}</p>
+      <details className="mt-5 rounded-2xl border border-brand-teal/25 bg-white/[0.02] px-5 py-4">
+        <summary className="cursor-pointer select-none font-sans text-[16px] font-semibold text-brand-teal">
+          How we check: the four numbers
+        </summary>
+        <dl className="mt-7 grid gap-4 sm:grid-cols-2">
+          {CREDIBILITY.checks.map(([figure, what]) => (
+            <div key={figure} className="rounded-2xl border border-brand-teal/20 bg-white/[0.03] p-5">
+              <dt className="font-display text-[1.6rem] leading-none text-brand-teal tabular-nums">
+                {figure}
+              </dt>
+              <dd className="mt-2 text-[15px] leading-relaxed text-brand-paper/80">{what}</dd>
+            </div>
+          ))}
+        </dl>
 
-      <p className="mt-6 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-        {CREDIBILITY.closing}
-      </p>
+        <p className="mt-6 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
+          {CREDIBILITY.closing}
+        </p>
+      </details>
     </section>
   );
 }
@@ -405,7 +480,8 @@ function Footer() {
         </div>
         <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
           {[
-            [SITE.library, "The Library"],
+            // "The Library" (the coaching library) left this row with fix 13A
+            // (10/19): the header now names the Human Design library instead.
             [SITE.hd101, "The Human Design library"],
             [SITE.bodygraph, "Reading your bodygraph"],
             [SITE.connect, "Start a conversation"],
@@ -604,6 +680,7 @@ export default function App({ upgradeToken = null }: { upgradeToken?: string | n
       <Nav />
       <main>
         <Hero />
+        <WhoMakesThis />
         {/* Prices before the example. Jeremy, 2026-10-04: "They can't tell they
             can buy anything unless they scroll." The library's "your chart"
             links land here, so the buy buttons have to be on the first screen. */}
