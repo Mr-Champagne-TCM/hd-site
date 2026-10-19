@@ -1,4 +1,4 @@
-import { TIERS, priceFor } from "../../shared/pricing.mjs";
+import { TIERS, priceFor, CHECKOUT_NEXT_STEP } from "../../shared/pricing.mjs";
 
 /**
  * What we ask Stripe for, worked out here so it can be tested without a network.
@@ -95,7 +95,10 @@ export function creditFor({ grantTier = -1, linkTier = -1, level }) {
 export function tierProduct(level) {
   const tier = tierAt(level);
   if (!tier) return null;
-  return { id: tier.sku, name: tier.label, description: tier.blurb };
+  // Fix 14B (10/19): "Human Design reading" and a plain line, not "The reading"
+  // and the activations jargon. ensureProduct brings an existing product's
+  // name and description up to these (stripe.mjs).
+  return { id: tier.sku, name: tier.checkoutName ?? tier.label, description: tier.checkoutDescription ?? tier.blurb };
 }
 
 /**
@@ -156,7 +159,18 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * may be marketed to and who may only be delivered to -- rather than that
      * being worked out afterwards, or found out the hard way.
      */
-    phone_number_collection: { enabled: true },
+    /*
+     * PHONE OFF (Jeremy 10/19, fix 14B). Stripe has no optional mode, so this
+     * made a phone number REQUIRED on a small purchase -- and the shop never
+     * sends texts (the phone app is separate and unaffected). The email alone
+     * delivers. Was: phone_number_collection: { enabled: true }.
+     */
+    phone_number_collection: { enabled: false },
+    /*
+     * A line under the Pay button saying what comes next (fix 14B).
+     * custom_text.submit is on the pinned API version (2024-06-20).
+     */
+    custom_text: { submit: { message: CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *
@@ -212,7 +226,9 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
         price_data: {
           currency: "usd",
           unit_amount: due,
-          ...(product ? { product } : { product_data: { name: tier.label, description: tier.blurb } }),
+          ...(product
+            ? { product }
+            : { product_data: { name: tier.checkoutName ?? tier.label, description: tier.checkoutDescription ?? tier.blurb } }),
         },
       },
     ],

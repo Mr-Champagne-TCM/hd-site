@@ -26,50 +26,78 @@ const build = (tier, name, pending = false) =>
 
 // --- D-11, point by point --------------------------------------------------
 
-test("the thank-you is TEXT and the action is a BUTTON", () => {
-  // Jeremy: "TEXT: Thank you for your purchase! Followed by button."
+test("the receipt thanks them in TEXT, and the action is a BUTTON (fix 4A)", () => {
   for (const tier of [0, 1, 2]) {
-    const { html, text } = build(tier, "Jeremy");
-    assert.ok(text.includes("Thank you for your purchase!"), `tier ${tier} lost the thank-you`);
-    // A table with a background colour is the only thing that renders as a
-    // button everywhere; a styled <a> collapses to a text link in Outlook,
-    // which is exactly what this was trying to stop being.
-    assert.match(html, /<table[^>]*role="presentation"[\s\S]*?bgcolor="#3fe0c5"/);
-    assert.match(html, /border-radius:999px/);
+    for (const pending of [true, false]) {
+      const { html, text } = build(tier, "Jeremy", pending);
+      if (pending) assert.ok(text.includes("Thank you. Your payment went through, and here is your receipt."), `tier ${tier} receipt lost the thank-you`);
+      // A table with a background colour is the only thing that renders as a
+      // button everywhere; a styled <a> collapses to a text link in Outlook.
+      assert.match(html, /<table[^>]*role="presentation"[\s\S]*?bgcolor="#3fe0c5"/);
+      assert.match(html, /border-radius:999px/);
+    }
   }
 });
 
-test("THE BUTTON SAYS CREATE WHEN THERE IS NOTHING TO ACCESS YET", () => {
-  // The first version promised "Here is your Human Design summary" in an email
-  // sent seconds after the card -- before any birth moment had been entered.
-  // It was a door to a form, described as a chart.
+test("THE RECEIPT'S BUTTON IS JEREMY'S OWN WORDS: 'Enter your birth details'", () => {
+  // His markup on the 4A mock, 10/19. The ready email opens what is there.
   for (const [tier, word] of [[0, "summary"], [1, "chart"], [2, "reading"]]) {
     const pendingMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: true });
     const filledMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: false });
-
-    assert.ok(
-      pendingMail.text.includes(`Create and view your Human Design ${word}`),
-      `tier ${tier} pending wording is wrong`,
-    );
-    assert.ok(
-      filledMail.text.includes(`Access your Human Design ${word}`),
-      `tier ${tier} filled wording is wrong`,
-    );
-    assert.doesNotMatch(pendingMail.text, /Access your/, "a pending reading offered access");
-    assert.doesNotMatch(filledMail.text, /Create and view/, "a filled reading offered creation");
+    assert.ok(pendingMail.text.includes("Enter your birth details:"), `tier ${tier} receipt button wording is wrong`);
+    assert.ok(filledMail.text.includes(`Open your ${word}:`), `tier ${tier} ready wording is wrong`);
+    assert.doesNotMatch(pendingMail.text, /Open your/, "a receipt offered to open something not made yet");
+    assert.doesNotMatch(filledMail.text, /Enter your birth details/, "a ready email asked for the details again");
   }
 });
 
-test("the action is what the button links to, in both states", () => {
+test("the action is what the button links to, in both emails", () => {
   for (const pending of [true, false]) {
     const { html } = deliveryEmail({ tier: 1, name: "J", url: URL_, links: LINKS, pending });
     const btn = html.match(/<a href="([^"]+)"[^>]*border-radius:999px">([^<]+)</);
     assert.ok(btn, "no button found");
     assert.equal(btn[1], URL_);
-    assert.match(btn[2], pending ? /^Create and view/ : /^Access/);
+    assert.equal(btn[2], pending ? "Enter your birth details" : "Open your chart");
   }
 });
 
+test("A REAL RECEIPT: what, the amount, the date, and the next step (fix 4A)", async () => {
+  const paidAt = Date.UTC(2026, 9, 17, 22, 0); // 5 PM in Chicago, October 17
+  const { READING, money } = await import("../shared/pricing.mjs");
+  const r = deliveryEmail({ tier: 2, name: "Alex", url: URL_, links: LINKS, pending: true, amountCents: READING.cents, paidAt });
+  assert.equal(r.subject, `Receipt: Alex’s Human Design reading, ${money(READING.cents)}`);
+  for (const body of [r.text, r.html]) {
+    assert.match(body, /Human Design: the reading/);
+    assert.ok(body.includes(money(READING.cents)));
+    assert.match(body, /October 17, 2026/);
+    assert.match(body, /Paid by card through/);
+    assert.match(body, /Next, about 2 minutes|NEXT, ABOUT 2 MINUTES/);
+    assert.match(body, /Your birth date, time and place/);
+  }
+  // A 100%-off code: nothing charged, and no card was used.
+  const free = deliveryEmail({ tier: 2, name: "Alex", url: URL_, links: LINKS, pending: true, amountCents: 0, paidAt });
+  assert.ok(free.text.includes(`Amount paid: ${money(0)}`));
+  assert.match(free.text, /Paid through: Stripe/);
+  assert.doesNotMatch(free.text, /by card/);
+  // Unknown amount or date (an older purchase re-sent): the row is left out, never guessed.
+  const old = deliveryEmail({ tier: 1, name: "Alex", url: URL_, links: LINKS, pending: true });
+  assert.doesNotMatch(old.text, /Amount paid|Date:/);
+  assert.equal(old.subject, "Receipt: Alex’s Human Design chart");
+});
+
+test("ONE READY EMAIL on the reading tier, listing what is on the page", () => {
+  const r = deliveryEmail({ tier: 2, name: "Alex", url: URL_, links: LINKS, pending: false });
+  assert.match(r.text, /Your chart and your written reading are ready\./);
+  for (const t of ["Your bodygraph, drawn", "About 1,200 words written to your chart", "Four small things to try", "A PDF to keep"]) {
+    assert.ok(r.text.includes(`✓ ${t}`), t);
+  }
+});
+
+test("the ready email's subject names the chart (fix 17A), the greeting the buyer", () => {
+  const r = deliveryEmail({ tier: 2, name: "Jeremy", chartName: "Mary", url: URL_, links: LINKS, pending: false });
+  assert.equal(r.subject, "Mary’s Human Design reading is ready");
+  assert.match(r.text, /^Hello Jeremy,/);
+});
 test("each library link carries a line saying what it is for", () => {
   // Jeremy: "there should be a description after it".
   const { html, text } = build(1, "Jeremy");
@@ -183,7 +211,7 @@ test("no imperatives: it offers, it does not instruct", () => {
   }
 });
 
-test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL", () => {
+test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL (the receipt)", () => {
   // Jeremy: "shown in the context of the first email, it adds anxiety about
   // what happens when 6 days passes. Do they lose their purchase?"
   //
@@ -192,22 +220,22 @@ test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL", () => {
   // how to get something back.
   for (const tier of [0, 1, 2]) {
     const pendingMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: true });
-    assert.doesNotMatch(pendingMail.text, /six days/i, `tier ${tier} pending mentions six days`);
-    assert.doesNotMatch(pendingMail.html, /six days/i, `tier ${tier} pending mentions six days`);
+    assert.doesNotMatch(pendingMail.text, /six days|6 days/i, `tier ${tier} pending mentions six days`);
+    assert.doesNotMatch(pendingMail.html, /six days|6 days/i, `tier ${tier} pending mentions six days`);
   }
 });
 
 test("and present once there is something to come back TO", () => {
   const { text } = build(1, "J");
-  assert.match(text, /rests after six days/);
+  assert.match(text, /This link works for 6 days/);
   // THE REASSURANCE COMES FIRST NOW, not after. Jeremy asked "are we still
   // doing that?" about the six days, which is what a limit reads as when it
   // leads: a countdown. The year leads instead, and the six days is a fact
   // about one link rather than about the purchase.
   const year = text.indexOf("kept for a year");
-  const six = text.indexOf("rests after six days");
+  const six = text.indexOf("works for 6 days");
   assert.ok(year >= 0 && six > year, "the six-day line still leads");
-  assert.match(text, /offers you a fresh one/);
+  assert.match(text, /sends you a fresh one/);
 });
 
 test("the subject says what arrived, so it can be found again in a year", () => {
@@ -403,12 +431,14 @@ test("a network failure and a timeout are both answers", async () => {
   assert.deepEqual(slow, { ok: false, reason: "timeout" });
 });
 
-test("the library block is labelled as RESOURCES, so it reads as free tools", () => {
+test("the library block is labelled as free, so it reads as free tools", () => {
   // Jeremy: the heading alone made the two links look load-bearing -- like
   // something needed to use the reading rather than something free beside it.
   const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: true });
-  assert.match(mail.html, /Resources &mdash; free in the library/i);
-  assert.match(mail.text, /RESOURCES — free in the library/);
+  assert.match(mail.html, /While you wait, free in the library/);
+  assert.match(mail.text, /WHILE YOU WAIT, FREE IN THE LIBRARY/);
+  const ready = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: false });
+  assert.match(ready.html, /Free in the library/);
 });
 
 test("the next tier CONTAINS its parts, it does not add them", () => {
@@ -419,42 +449,32 @@ test("the next tier CONTAINS its parts, it does not add them", () => {
   assert.ok(!/adds/.test(all), "the upgrade line still says 'adds'");
 });
 
-// --- three stages, three subjects -------------------------------------------
+// --- two emails, two subjects (fix 4A, 10/19) -------------------------------
 
 test("EVERY EMAIL A BUYER GETS HAS ITS OWN SUBJECT", () => {
-  // The reading tier sends three. Two of them shared a subject, which in an
-  // inbox reads as a duplicate send -- and the one somebody deletes as the
-  // duplicate is the second, which is the one with the reading in it.
+  // An inbox showing the same subject twice reads as a duplicate send.
   const at = (o) => deliveryEmail({ tier: 2, name: "J", url: "https://x/r/t", links: LINKS, ...o });
-  const subjects = [
-    at({ pending: true }).subject,
-    at({ pending: false, writing: true }).subject,
-    at({ pending: false }).subject,
-  ];
-  assert.equal(new Set(subjects).size, 3, `subjects collide: ${subjects.join(" | ")}`);
+  const subjects = [at({ pending: true, amountCents: 4444 }).subject, at({ pending: false }).subject];
+  assert.equal(new Set(subjects).size, 2, `subjects collide: ${subjects.join(" | ")}`);
 });
 
-test("the middle email does not promise words that are not written yet", () => {
-  // Generation runs in the background and takes tens of seconds, so this goes
-  // out while the reading is still being written. It used to say "Access your
-  // Human Design reading" -- somebody opening it and finding a bodygraph would
-  // be right to think something had gone wrong.
-  const mail = deliveryEmail({
-    tier: 2,
-    name: "J",
-    url: "https://x/r/t",
-    links: LINKS,
-    pending: false,
-    writing: true,
-  });
-  assert.match(mail.subject, /being written/);
-  assert.doesNotMatch(mail.text, /Access your Human Design reading/);
-  assert.match(mail.text, /bodygraph/i);
+test("there is no middle 'bodygraph is ready' email any more", () => {
+  // `writing` is ignored: the reading tier gets one ready email, when the words are written.
+  const mail = deliveryEmail({ tier: 2, name: "J", url: "https://x/r/t", links: LINKS, pending: false, writing: true });
+  assert.doesNotMatch(mail.subject, /being written/);
+  assert.match(mail.subject, /reading is ready/);
 });
 
-test("the chart tier never sees the middle stage", () => {
-  // There are no words to wait for, so there is no gap to explain.
+test("the chart tier's ready email says what is on its page", () => {
   const chart = deliveryEmail({ tier: 1, name: "J", url: "https://x/r/t", links: LINKS });
   assert.match(chart.subject, /Human Design chart is ready/);
-  assert.doesNotMatch(chart.subject, /being written/);
+  assert.match(chart.text, /Your chart is ready\./);
+});
+
+test("'colored in', the one word for it (fix 18A)", () => {
+  for (const pending of [true, false]) {
+    const { text, html } = deliveryEmail({ tier: 1, name: "J", url: "https://x/r/t", links: LINKS, pending });
+    assert.match(text + html, /why some are colored in and some are not/);
+    assert.doesNotMatch(text + html, /filled/);
+  }
 });

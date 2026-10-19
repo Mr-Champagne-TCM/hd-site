@@ -127,6 +127,17 @@ export default guard("chart", async (request, context) => {
     deliver: async ({ id, tier }) => {
       const secret = process.env.GRANT_SECRET;
       const apiKey = process.env.RESEND_API_KEY;
+      /**
+       * TWO EMAILS, NOT THREE (Jeremy 10/19, fix 4A): a receipt when the card
+       * clears and ONE "ready" email when everything is written. On the
+       * reading tier that is the writer's email (interpret.mjs), so this one
+       * only rings the writer; the page already shows the chart and a "being
+       * written" panel in the meantime.
+       */
+      if (tier >= 2) {
+        await ringTheWriter(request, id).catch(() => {});
+        return;
+      }
       if (!secret || !apiKey) return;
 
       const store = getStore({ name: "readings", consistency: "strong" });
@@ -144,25 +155,16 @@ export default guard("chart", async (request, context) => {
       const { subject, html, text } = deliveryEmail({
         tier,
         name: reading.buyer.name,
+        chartName: reading.birth?.name ?? null,
         url,
         links: SITE,
         pending: false,
-        /**
-         * ON THE READING TIER, THE CHART IS ONLY HALF OF IT. The words are
-         * being written as this goes out, so it says so rather than inviting
-         * somebody to "access your reading" and find a bodygraph.
-         */
-        writing: tier >= 2,
       });
-      /**
-       * RING THE WRITER, if this purchase bought words as well as a chart.
-       *
-       * Fire and forget: a background function answers 202 at once and then
-       * takes as long as it takes. Nothing here waits on it, and a failure to
-       * ring is not a failure of the chart -- `sweep` calls the same door every
-       * fifteen minutes for exactly this case.
+      /*
+       * RINGING THE WRITER (reading tier) happens above, before this: fire and
+       * forget, a background function answers 202 at once, and `sweep` calls
+       * the same door every fifteen minutes in case the ring is lost.
        */
-      if (tier >= 2) await ringTheWriter(request, id).catch(() => {});
 
       const sent = await sendMail({ to, subject, html, text }, { apiKey });
       console.log(`chart: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);

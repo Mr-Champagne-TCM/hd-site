@@ -313,7 +313,7 @@ test("RETRY CODE: opening the link makes nothing; the button makes one code, onc
   assert.equal(made.status, 200);
   const code = codeFor(INCIDENT.id, SECRET);
   assert.match(made.html, new RegExp(code));
-  assert.match(made.html, /covers The chart only/);
+  assert.match(made.html, /covers Human Design chart only/);
   const [[, coupon, copts], [, promo, popts]] = minted(stripe);
   assert.equal(coupon.percent_off, 100);
   assert.equal(coupon.duration, "once");
@@ -461,7 +461,7 @@ test("RETRY CODE: the by-hand steps cover both cases -- their tier when known, a
 test("RETRY CODE: the page says which tier the code covers before the button is pressed", async () => {
   const t = tokenOf(retryLink({ incident: INCIDENT, now: NOW }, { secret: SECRET, origin: ORIGIN, stripeKey: STRIPE }));
   const look = await handleRetryCode({ method: "GET", token: t, store: store(), secret: SECRET, stripe: fakeStripe(), now: NOW });
-  assert.match(look.html, /100% off The chart only \(the tier they bought\)/);
+  assert.match(look.html, /100% off Human Design chart only \(the tier they bought\)/);
 });
 
 // --- the digest -------------------------------------------------------------------------------

@@ -162,6 +162,10 @@ export async function handleResend({
       // form, or somebody coming back to a reading they already have. The record
       // has just been loaded, so this is known rather than assumed.
       pending: reading.pending,
+      // A re-sent receipt still says what was paid and when (fix 4A).
+      amountCents: reading.paidCents ?? null,
+      paidAt: reading.purchasedAt ? reading.purchasedAt * 1000 : null,
+      chartName: reading.birth?.name ?? null,
     });
 
     let sent;

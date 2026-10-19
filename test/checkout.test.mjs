@@ -79,9 +79,11 @@ test("a 100%-off session still counts as paid", () => {
   assert.equal(paidLevel({ payment_status: "paid", amount_total: 0, metadata: { level: "2" } }), 2);
 });
 
-test("a phone number is collected, and consent is asked for separately", () => {
+test("no phone number is asked for (fix 14B, 10/19), and consent is not assumed", () => {
   const p = sessionParams({ level: 0, origin: "https://x" });
-  assert.equal(p.phone_number_collection.enabled, true);
+  // Stripe has no optional phone field: on, it was REQUIRED on a small purchase,
+  // and the shop never texts. Jeremy took it off (14B).
+  assert.equal(p.phone_number_collection.enabled, false);
   // Consent is asked as its own question rather than assumed from the purchase.
   // Delivering to a buyer and marketing to them are different permissions, and
   // for SMS in the US the difference has a price on it.
@@ -92,4 +94,20 @@ test("a phone number is collected, and consent is asked for separately", () => {
   // without a customer, and the session fails to create at all. It is also what
   // D-9c needs to key an upgrade credit to an earlier purchase.
   assert.equal(p.customer_creation, "always");
+});
+
+test("under Pay: what comes next (fix 14B), on every tier", () => {
+  for (const level of [0, 1, 2]) {
+    const p = sessionParams({ level, origin: "https://x" });
+    assert.equal(p.custom_text.submit.message, "Next: your birth date, time and place (about 2 minutes).");
+  }
+});
+
+test("the checkout names the product plainly (fix 14B)", async () => {
+  const { tierProduct } = await import("../netlify/lib/checkout.mjs");
+  assert.equal(tierProduct(2).name, "Human Design reading");
+  assert.equal(tierProduct(2).description, "Your chart, a written reading of about 1,200 words, and a PDF to keep.");
+  assert.equal(tierProduct(1).name, "Human Design chart");
+  assert.equal(tierProduct(0).name, "Human Design summary");
+  for (const level of [0, 1, 2]) assert.doesNotMatch(tierProduct(level).description, /activations/);
 });

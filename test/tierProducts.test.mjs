@@ -14,7 +14,7 @@ const KEY = "sk_test_" + "0".repeat(24);
 
 test("every tier has a product under its own sku, and nothing else does", () => {
   assert.deepEqual(TIERS.map((_, i) => tierProduct(i).id), ["hd_summary", "hd_chart", "hd_reading"]);
-  for (const [i, t] of TIERS.entries()) assert.deepEqual(tierProduct(i), { id: t.sku, name: t.label, description: t.blurb });
+  for (const [i, t] of TIERS.entries()) assert.deepEqual(tierProduct(i), { id: t.sku, name: t.checkoutName, description: t.checkoutDescription });
   for (const bad of [-1, 3, 1.5, null, "1"]) assert.equal(tierProduct(bad), null);
 });
 
@@ -30,7 +30,7 @@ test("the checkout prices against the tier's product; the amount is still comput
 test("without the product, the sale still goes through inline, as before", () => {
   const price = sessionParams({ level: 1, origin: "https://x" }).line_items[0].price_data;
   assert.equal(price.product, undefined);
-  assert.deepEqual(price.product_data, { name: TIERS[1].label, description: TIERS[1].blurb });
+  assert.deepEqual(price.product_data, { name: TIERS[1].checkoutName, description: TIERS[1].checkoutDescription });
 });
 
 test("checkoutProduct: made sure of once per instance and mode; a refusal falls back and is noted, never thrown", async () => {
@@ -74,9 +74,23 @@ function fakeFetch(answers) {
 test("ensureProduct: found is found; missing is made under our id; a race is success; archived is refused", async () => {
   const product = tierProduct(1);
 
-  const found = fakeFetch({ "GET /products/hd_chart": [200, { id: "hd_chart", active: true }] });
+  const found = fakeFetch({
+    "GET /products/hd_chart": [200, { id: "hd_chart", active: true, name: product.name, description: product.description }],
+  });
   assert.equal((await ensureProduct(KEY, product, { fetchImpl: found.fetchImpl })).id, "hd_chart");
   assert.equal(found.seen.length, 1);
+
+  // Fix 14B (10/19): a product made under the old name ("The chart") is renamed in place.
+  const old = fakeFetch({
+    "GET /products/hd_chart": [200, { id: "hd_chart", active: true, name: "The chart", description: "old" }],
+    "POST /products/hd_chart": [200, { id: "hd_chart", active: true, name: product.name }],
+  });
+  assert.equal((await ensureProduct(KEY, product, { fetchImpl: old.fetchImpl })).name, "Human Design chart");
+  assert.equal(old.seen[1].method, "POST");
+  assert.equal(new URLSearchParams(old.seen[1].body).get("name"), "Human Design chart");
+  // A refused rename keeps the sale: the old product is still used.
+  const stuck = fakeFetch({ "GET /products/hd_chart": [200, { id: "hd_chart", active: true, name: "The chart" }] });
+  assert.equal((await ensureProduct(KEY, product, { fetchImpl: stuck.fetchImpl })).id, "hd_chart");
 
   const missing = fakeFetch({
     "GET /products/hd_chart": [404, { error: { code: "resource_missing", message: "No such product" } }],
@@ -87,7 +101,7 @@ test("ensureProduct: found is found; missing is made under our id; a race is suc
   assert.equal(made.method, "POST");
   const body = new URLSearchParams(made.body);
   assert.equal(body.get("id"), "hd_chart");
-  assert.equal(body.get("name"), "The chart");
+  assert.equal(body.get("name"), "Human Design chart");
   assert.equal(made.idem, "product-hd_chart");
 
   const race = fakeFetch({

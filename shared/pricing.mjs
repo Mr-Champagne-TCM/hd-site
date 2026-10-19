@@ -12,6 +12,9 @@ export const SUMMARY = {
   sku: "hd_summary",
   cents: 111,
   label: "The summary",
+  /** On Stripe's checkout (fix 14B, 10/19): the product's own name and a plain line. */
+  checkoutName: "Human Design summary",
+  checkoutDescription: "Your chart's key facts in plain words: type, strategy, authority, profile and more.",
   blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your incarnation cross.",
 };
 
@@ -19,6 +22,8 @@ export const CHART = {
   sku: "hd_chart",
   cents: 1111,
   label: "The chart",
+  checkoutName: "Human Design chart",
+  checkoutDescription: "Your bodygraph drawn, your chart's values, and a PDF to keep.",
   blurb: "Your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates.",
 };
 
@@ -26,6 +31,8 @@ export const READING = {
   sku: "hd_reading",
   cents: 4444,
   label: "The reading",
+  checkoutName: "Human Design reading",
+  checkoutDescription: "Your chart, a written reading of about 1,200 words, and a PDF to keep.",
   blurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
 };
 
@@ -34,6 +41,12 @@ export const GIFT = null;
 
 /** Cheapest first. The ladder, in order. */
 export const TIERS = [SUMMARY, CHART, READING];
+
+/**
+ * Under Stripe's Pay button (fix 14B, 10/19): what comes next, so the step
+ * after paying is no surprise.
+ */
+export const CHECKOUT_NEXT_STEP = "Next: your birth date, time and place (about 2 minutes).";
 
 /**
  * WHAT YOU HAVE ALREADY PAID COMES OFF WHAT YOU PAY NEXT.

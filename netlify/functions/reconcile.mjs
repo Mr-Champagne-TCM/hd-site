@@ -107,9 +107,9 @@ export default async () => {
 
 /** The same delivery email every other path sends, so there is one design. */
 function sendDelivery(apiKey) {
-  return async ({ to, name, url, tier }) => {
+  return async ({ to, name, url, tier, amountCents = null, paidAt = null }) => {
     if (!to) return;
-    const { subject, html, text } = deliveryEmail({ tier, name, url, links: SITE, pending: true });
+    const { subject, html, text } = deliveryEmail({ tier, name, url, links: SITE, pending: true, amountCents, paidAt });
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`reconcile: delivery ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
     if (!sent.ok) throw new Error(sent.reason || "send failed");

@@ -1,9 +1,14 @@
-import { TIERS } from "../../shared/pricing.mjs";
+import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
+ *
+ * 10/19 (fix 4A): now TWO emails -- a real receipt and one "ready" email --
+ * see `deliveryEmail` below. The history that follows explains the parts that
+ * stayed (the button, the library links, the subject naming the chart, the
+ * six days kept out of the first email).
  *
  * D-11, close to Jeremy's own words: it says "Thank you for your purchase!",
  * then a BUTTON to their reading. Two library links with a line each saying
@@ -100,31 +105,71 @@ function button(href, text) {
 </table>`;
 }
 
+/** "October 17, 2026", in Jeremy's own time zone (the receipt's date). */
+export function receiptDate(ms) {
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "America/Chicago",
+  });
+}
+
+/** What the ready email lists, per tier: the parts that are now on the page. */
+const READY = Object.freeze({
+  0: {
+    lead: "Your summary is ready.",
+    ticks: ["Type, Strategy, Authority and Profile", "Your definition and your centers", "Your incarnation cross"],
+  },
+  1: {
+    lead: "Your chart is ready.",
+    ticks: ["Your bodygraph, drawn", "Your channels and activated gates", "A PDF to keep"],
+  },
+  2: {
+    lead: "Your chart and your written reading are ready.",
+    ticks: ["Your bodygraph, drawn", "About 1,200 words written to your chart", "Four small things to try", "A PDF to keep"],
+  },
+});
+
 /**
  * Build the delivery email.
  *
  * Takes everything it needs and reads nothing from the environment, so the
  * whole message can be asserted in a test without a network, a key or a clock.
  *
- * `name` is the buyer's, already capitalised at the store. It opens the message
- * and is allowed to be missing — a greeting is a nicety, and a message that
- * could not be sent because somebody checked out without a name would be a real
- * failure caused by a decorative one.
+ * TWO EMAILS, EACH WITH ONE JOB (Jeremy 10/19, fix 4A). The newcomer review
+ * found three emails that all opened "Thank you for your purchase!" and looked
+ * the same -- they read as duplicates -- and a "receipt" with no amount and no
+ * date. Now:
  *
- * THREE STAGES, NOT TWO, and the third is the reading tier's.
+ *   pending   THE RECEIPT, sent when the card clears: what was bought, the
+ *             amount, the date, and the next step -- the birth details, about
+ *             two minutes -- behind the button "Enter your birth details"
+ *             (Jeremy's own words for it).
+ *   ready     ONE "READY" EMAIL, when everything is there. On the reading tier
+ *             that is when the words are written, so no separate "bodygraph is
+ *             drawn" email any more (chart.mjs sends nothing at tier 2).
  *
- *   pending          paid for, nothing computed. The link opens a FORM.
- *   writing          the chart is drawn; the words are still being written.
- *   neither          it is all there.
- *
- * The middle one exists because the reading tier gained a real gap: generation
- * runs on a background function and takes tens of seconds, so a buyer gets
- * their chart first and their words a minute later. Without this stage, both
- * emails said "Access your Human Design reading" -- two identical messages, the
- * first of them promising words that had not been written. A buyer who opened
- * that one and found a chart would be right to think something had gone wrong.
+ * `name` is the buyer's, already capitalised at the store: it opens the
+ * message. `chartName` is the name typed for the chart (fix 17A), when there
+ * is one: the ready email's subject says whose chart it is. `amountCents` and
+ * `paidAt` come from Stripe's own session; either may be missing (a re-send of
+ * an older purchase), and the receipt then leaves that row out rather than
+ * guessing. `writing` is no longer used (there is no middle email).
  */
-export function deliveryEmail({ tier, name, url, links, pending = false, writing = false, footer = "E", footerColor }) {
+export function deliveryEmail({
+  tier,
+  name,
+  chartName = null,
+  url,
+  links,
+  pending = false,
+  amountCents = null,
+  paidAt = null,
+  footer = "E",
+  footerColor,
+}) {
   const word = tierWord(tier);
   // The footer is a theme (emailFooter.mjs): "E", side by side, Jeremy's pick 10/16.
   const end = emailFooter(footer, links, footerColor ? { coachColor: footerColor } : undefined);
@@ -132,86 +177,24 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
   // Guest checkout collects no name (Link would have supplied one). "Hello,"
   // on its own reads like a field that failed to fill; this reads as intended.
   const greeting = name ? `Hello ${name},` : "Hello there,";
-
-  const action = pending
-    ? `Create and view your Human Design ${word}`
-    : writing
-      ? "See your bodygraph now"
-      : `Access your Human Design ${word}`;
+  const label = TIERS[tier]?.label ?? "The reading";
 
   /**
-   * THE SUBJECT SAYS WHAT ARRIVED, because a subject line is how somebody finds
-   * this again in a year. "Thank you for your purchase" is a lovely opening and
-   * a useless thing to search for.
-   *
-   * And the two reading-tier emails must not share one. An inbox showing the
-   * same subject twice reads as a duplicate send, so the second gets deleted --
-   * and the second is the one with the reading in it.
+   * THE CHART'S NAME IS IN THE SUBJECT, and it is not decoration: every buyer
+   * once got the identical subject, Gmail collapsed every purchase into one
+   * conversation, and a buyer could follow a link to somebody else's chart.
+   * The receipt names the buyer (nothing has been typed for the chart yet);
+   * the ready email names the chart.
    */
-  /**
-   * THE CHART'S NAME IS IN THE SUBJECT, and it is not decoration.
-   *
-   * Every buyer got the identical subject, so Gmail collapsed EVERY PURCHASE
-   * INTO ONE CONVERSATION -- one thread in Jeremy's inbox holds six messages
-   * from six different purchases. He counted four emails and reasonably
-   * suspected duplicates; they were four correct emails wearing one hat.
-   *
-   * The count was never the hazard. The hazard is that a buyer opens "their"
-   * thread, lands on the message Gmail chose to show, and follows a link to
-   * SOMEBODY ELSE'S CHART. He hit exactly that: went looking for his summary
-   * and arrived at a reading. And it is not a rare case -- one address buying
-   * for a partner or a friend is the case the whole credit rule was written
-   * around.
-   *
-   * A name threads correctly, stays searchable a year later, and matches the
-   * heading on the page the link opens. Nameless purchases keep the old
-   * wording, which is still better than nothing and still unique enough when
-   * there is only one of them.
-   */
-  const whose = name ? `${name}’s` : "Your";
-  const subject = writing
-    ? `${whose} bodygraph is ready, the reading is being written`
-    : pending
-      ? `${whose} Human Design ${word}`
-      : `${whose} Human Design ${word} is ready`;
+  const buyerWhose = name ? `${name}’s` : "Your";
+  const forChart = chartName || name;
+  const chartWhose = forChart ? `${forChart}’s` : "Your";
+  const amount = Number.isInteger(amountCents) && amountCents >= 0 ? money(amountCents) : null;
+  const on = receiptDate(paidAt);
 
-  /**
-   * WHAT THEY BOUGHT, AND THEN -- SEPARATELY -- WHAT ELSE THERE IS.
-   *
-   * Jeremy read the summary email and found it describing the CHART: "not tier
-   * 0 content relevant. Should only say what they just bought - don't get their
-   * hopes up, but DO offer upgrade to get more." One paragraph was doing both
-   * jobs, so the tier they had just paid for was never named at all and the one
-   * they had not was described in detail.
-   *
-   * Two blocks now, with a heading between them. The first says what is behind
-   * the link; the second is plainly an offer.
-   *
-   * "CONTAINS", NOT "ADDS" -- "adds" describes a delta somebody has to compute
-   * against what they are holding.
-   *
-   * AND NOT "the same link has it". Same link as what? He asked, which is the
-   * whole answer. It names the page instead.
-   */
-  //
-  // NO CASE SURGERY. The first attempt read "The summary is type, Strategy,
-  // Authority..." -- lowerFirst does not know a blurb opens with a list of
-  // proper nouns. A dash needs no such knowledge.
-  //
-  // AFTER THE DASH THE SENTENCE CARRIES ON (open item, 10/17): "The chart --
-  // Your bodygraph" read as two sentences glued together. The first word goes
-  // lowercase, unless it is one of the chart's own capitalised terms -- the
-  // summary's blurb opens with "Type, Strategy, Authority...", which keep their
-  // capitals everywhere else too.
-  const bought = `${TIERS[tier]?.label ?? "What you bought"} — ${afterDash(TIERS[tier]?.blurb ?? "")}`;
-
-  // Not for a tier that cannot be bought yet -- see readingHandler. An email is
-  // the one surface nobody can correct after the fact.
-  const upgradeLine = top || !sellable(tier + 1)
-    ? null
-    : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
-      `It is offered on the page above, and what you have already paid comes off the price ` +
-      `there — nobody pays twice for the same thing.`;
+  const subject = pending
+    ? `Receipt: ${buyerWhose} Human Design ${word}${amount ? `, ${amount}` : ""}`
+    : `${chartWhose} Human Design ${word} is ready`;
 
   /**
    * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs
@@ -229,40 +212,104 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
     [
       links.bodygraph,
       "Reading your bodygraph",
-      "The picture itself — what the shapes mean, and why some are filled and some are not.",
+      // "colored in", the one word for it everywhere (fix 18A, 10/19).
+      "The picture itself — what the shapes mean, and why some are colored in and some are not.",
     ],
   ];
+  const resourcesHead = pending ? "While you wait, free in the library" : "Free in the library";
+
+  /**
+   * WHAT ELSE THERE IS, on the ready email only, and only for a tier that can
+   * actually be bought (readingHandler, sellable()). "CONTAINS", NOT "ADDS".
+   * Never on the receipt: somebody who has not yet seen what they bought is not
+   * sold the next thing.
+   */
+  const upgradeLine =
+    pending || top || !sellable(tier + 1)
+      ? null
+      : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
+        `It is offered on the page above, and what you have already paid comes off the price ` +
+        `there — nobody pays twice for the same thing.`;
+
+  /** "Your reading is kept for a year..." -- once there is something to come back to. */
+  const kept =
+    `Your ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
+    "sends you a fresh one, as often as you need.";
+
+  const ready = READY[tier] ?? READY[2];
+  const receiptRows = [
+    ["What", `Human Design: ${label.toLowerCase()}`],
+    ...(amount !== null ? [["Amount paid", amount]] : []),
+    ...(on ? [["Date", on]] : []),
+    [amountCents === 0 ? "Paid through" : "Paid by card through", "Stripe"],
+  ];
+  const nextHead = "Next, about 2 minutes";
+  const nextLine =
+    "Your birth date, time and place. Your chart is made from them, and the time can be left " +
+    "out if you don’t know it.";
+  const action = pending ? "Enter your birth details" : top ? "Open your reading" : `Open your ${word}`;
 
   const text = [
     greeting,
     "",
-    "Thank you for your purchase!",
-    "",
-    `${action}:`,
-    url,
-    "",
-    bought,
-    "",
-    "RESOURCES — free in the library, written for exactly this moment:",
+    ...(pending
+      ? [
+          "Thank you. Your payment went through, and here is your receipt.",
+          "",
+          "RECEIPT",
+          ...receiptRows.map(([k, v]) => `  ${k}: ${v}`),
+          "",
+          nextHead.toUpperCase(),
+          nextLine,
+          "",
+          `${action}:`,
+          url,
+          "",
+        ]
+      : [ready.lead, "", "On one page:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", kept, ""]),
+    `${resourcesHead.toUpperCase()}:`,
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),
     askLine,
     "",
-    ...(pending
-      ? []
-      : [
-          "Your reading is kept for a year. This particular link rests after six days —",
-          "open it then and it offers you a fresh one, as many times as you need.",
-          "",
-        ]),
     // The sign-off is the HD brand, as the sender is (Jeremy 10/16): "by" is
-    // always lowercase. The business in full is for non-HD mail.
-    //
-    // The plain-text alternative is a real body, not a courtesy copy: it is what
-    // text-only clients and screen readers render. A link present in the HTML and
-    // absent here is a link half the recipients do not have.
+    // always lowercase. The plain-text alternative is a real body, not a
+    // courtesy copy: text-only clients and screen readers render it.
     ...end.text,
   ].join("\n");
+
+  const row = (html, pad = "0 0 18px", extra = "") => `<tr><td style="padding:${pad};${extra}">${html}</td></tr>`;
+  const small = `font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}`;
+  const body = pending
+    ? [
+        row(esc("Thank you. Your payment went through, and here is your receipt."), "0 0 18px", `font-size:19px;color:${PAPER}`),
+        row(
+          `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PANEL};border-radius:12px">
+    <tr><td colspan="2" style="padding:12px 18px 4px;${small}">Receipt</td></tr>
+    ${receiptRows
+      .map(
+        ([k, v]) =>
+          `<tr><td style="padding:5px 0 5px 18px;font-size:14px;color:${MUTED};width:42%">${esc(k)}</td><td style="padding:5px 18px 5px 0;font-size:16px;color:${PAPER};font-weight:600">${esc(v)}</td></tr>`,
+      )
+      .join("\n    ")}
+    <tr><td colspan="2" style="height:8px"></td></tr>
+  </table>`,
+          "0 0 22px",
+        ),
+        row(`<div style="${small};padding-bottom:6px">${esc(nextHead)}</div>
+    <div style="font-size:17px;color:${PAPER}">${esc(nextLine)}</div>`, "0 0 16px"),
+        row(button(url, action), "0 0 24px"),
+      ]
+    : [
+        row(esc(ready.lead), "0 0 18px", `font-size:19px;color:${PAPER}`),
+        row(
+          `<div style="font-size:15px;color:${MUTED};padding-bottom:6px">On one page:</div>
+    <div style="font-size:16px;color:${PAPER};line-height:1.9">${ready.ticks.map((t) => `&#10003; ${esc(t)}`).join("<br>")}</div>`,
+          "0 0 20px",
+        ),
+        row(button(url, action), "0 0 22px"),
+        row(esc(kept), "0 0 18px", `font-size:14px;color:${MUTED}`),
+      ];
 
   const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:${GROUND}">
@@ -270,17 +317,10 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
 <tr><td align="center" style="padding:28px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:544px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:${PAPER};line-height:1.6">
 
-  <tr><td style="padding:0 0 22px;font-size:19px;font-weight:600;color:${GOLD}">${esc(greeting)}</td></tr>
+  ${row(esc(greeting), "0 0 18px", `font-size:19px;font-weight:600;color:${GOLD}`)}
+  ${body.join("\n  ")}
 
-  <tr><td style="padding:0 0 18px;font-size:19px;color:${PAPER}">Thank you for your purchase!</td></tr>
-
-  <tr><td style="padding:0 0 20px">${button(url, action)}</td></tr>
-
-  <tr><td style="padding:0 0 26px;font-size:15px;color:${MUTED}">${esc(bought)}</td></tr>
-
-  <tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">
-    Resources &mdash; free in the library
-  </td></tr>
+  ${row(esc(resourcesHead), "0 0 10px", small)}
   ${RESOURCES.map(
     ([href, title, blurb]) => `<tr><td style="padding:0 0 16px">
     <a href="${esc(href)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:none">${esc(title)}</a>
@@ -290,19 +330,10 @@ export function deliveryEmail({ tier, name, url, links, pending = false, writing
 
   ${
     upgradeLine
-      ? `<tr><td style="padding:0 0 10px;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}">If you would like more</td></tr>
+      ? `<tr><td style="padding:0 0 10px;${small}">If you would like more</td></tr>
   <tr><td style="padding:14px 18px;margin:0;background:${PANEL};border-radius:12px;font-size:15px;color:${MUTED}">${esc(upgradeLine)}</td></tr>
   <tr><td style="height:22px"></td></tr>`
       : `<tr><td style="height:8px"></td></tr>`
-  }
-
-  ${
-    pending
-      ? ""
-      : `<tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">
-    Your reading is kept for a year. This particular link rests after six days &mdash; open it then
-    and it offers you a fresh one, as many times as you need.
-  </td></tr>`
   }
 
   <!-- The address is a mailto link (link audit, 10/16): one tap opens a reply. -->

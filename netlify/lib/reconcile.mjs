@@ -160,6 +160,7 @@ export async function reconcile({
         phone: buyer.phone ?? null,
         sku: session?.metadata?.sku ?? null,
         purchasedAt: typeof session?.created === "number" ? session.created * 1000 : now,
+        paidCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
       });
 
       const url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
@@ -168,6 +169,8 @@ export async function reconcile({
         name: nameCase(buyer.name),
         url,
         tier: level,
+        amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
+        paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
       });
       result.delivered += 1;
     } catch {

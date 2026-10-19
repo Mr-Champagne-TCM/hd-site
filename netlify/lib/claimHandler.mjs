@@ -124,6 +124,7 @@ export async function handleClaim({
           phone: buyer.phone ?? null,
           sku: session?.metadata?.sku ?? null,
           purchasedAt: typeof session?.created === "number" ? session.created * 1000 : now,
+          paidCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
         });
       }
       url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
@@ -155,8 +156,11 @@ export async function handleClaim({
       name: nameCase(buyer.name),
       url,
       links,
-      // Always pending here: nobody has entered a birth moment yet.
+      // Always pending here: nobody has entered a birth moment yet. The
+      // RECEIPT (fix 4A, 10/19): what was paid and when, from Stripe itself.
       pending: true,
+      amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
+      paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
     });
     let sent;
     try {

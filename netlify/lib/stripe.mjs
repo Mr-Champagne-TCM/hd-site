@@ -169,6 +169,23 @@ export async function ensureProduct(key, { id, name, description }, { fetchImpl 
       err.code = "product_archived";
       throw err;
     }
+    /*
+     * RENAMED ONCE, IN PLACE (fix 14B, 10/19): the products made on 10/16 are
+     * called "The reading" etc. Checkout shows the product's own name, so an
+     * existing product whose name or description differs from ours is brought
+     * up to date. A failed update keeps the old name; the sale goes on.
+     */
+    if (found && (found.name !== name || (description && found.description !== description))) {
+      try {
+        return await call(`/products/${encodeURIComponent(id)}`, key, {
+          method: "POST",
+          params: { name, ...(description ? { description } : {}) },
+          fetchImpl,
+        });
+      } catch {
+        return found;
+      }
+    }
     return found;
   } catch (e) {
     if (e?.status !== 404) throw e;
