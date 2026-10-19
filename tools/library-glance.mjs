@@ -43,6 +43,8 @@ const read = (f) => JSON.parse(readFileSync(join(LIB, f), "utf8"));
 const centers = read("centers.json").centers;
 const channels = read("channels.json").channels;
 const profiles = read("profiles.json");
+const types = read("types.json").types;
+const authority = read("authority.json").authority;
 
 const block = (name, doc, obj) =>
   `/** ${doc} */\nexport const ${name} = Object.freeze(${JSON.stringify(obj, null, 2)});\n`;
@@ -60,6 +62,10 @@ const out = [
   block("CENTER_OPEN", 'First sentence of each center\'s "open" text.', map(centers, (v) => firstSentence(v.open))),
   block("CHANNEL", 'Each channel\'s glance, keyed lower gate first ("25-51").', map(channels, (v) => plain(v.glance))),
   block("PROFILE_LINE", "Each profile line's glance, keyed by its digit.", map(profiles.lines, (v) => plain(v.glance))),
+  // Fix 1A (10/19): the result page's "Your chart in three lines" box.
+  block("TYPE_GLANCE", "Each type's glance (the library's one-liner).", map(types, (v) => plain(v.glance))),
+  block("PROFILE_GLANCE", "Each profile's glance, keyed \"5/2\".", map(profiles.profiles, (v) => plain(v.glance))),
+  block("AUTHORITY_GLANCE", "Each authority's glance (the library's one-liner).", map(authority, (v) => plain(v.glance))),
 ].join("\n");
 
 writeFileSync(OUT, out, "utf8");

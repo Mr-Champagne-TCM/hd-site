@@ -17,6 +17,10 @@ import {
 } from "./mechanics.mjs";
 import { buildReadingView, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
+import { chartTitle } from "../../shared/chartName.mjs";
+import { termSpans } from "../../shared/readingTerms.mjs";
+import { JEREMY_JPG } from "./photo.mjs";
+import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -165,6 +169,8 @@ export const ONWARD_LINKS = Object.freeze([
 /** Under the bodygraph key, beside the QR. */
 export const GUIDE_URL = "thechampagnemethod.co/library/bodygraph";
 export const GUIDE_PROMPT = "How to read your bodygraph →";
+/** Under the QR, two short lines (fix 17A, 10/19). */
+export const QR_CAPTION = Object.freeze(["Scan: how to read", "your bodygraph"]);
 
 const NOON_NOTE =
   "Birth time was not known, so this chart is cast at noon. Type, " +
@@ -257,8 +263,9 @@ class Doc {
     return this.y <= MARGIN + 31 + 0.5;
   }
 
-  drawLines(l, from, to, x = MARGIN) {
+  drawLines(l, from, to, x = MARGIN, spans = null) {
     drawLayout(this.pdf, l, x, this.y, from, to);
+    if (spans) this.termLinks(l, from, to, x, this.y, spans);
     this.y += l.lineTop(to) - l.lineTop(from);
   }
 
@@ -266,9 +273,36 @@ class Doc {
     this.y += h;
   }
 
-  draw(l, x = MARGIN) {
+  draw(l, x = MARGIN, spans = null) {
     drawLayout(this.pdf, l, x, this.y);
+    if (spans) this.termLinks(l, 0, l.lineCount, x, this.y, spans);
     this.y += l.height;
+  }
+
+  /**
+   * FIX 7 (Jeremy 10/19): the Human Design words in the reading open their
+   * library entry -- "Decode here, don't dilute". Each term (shared/
+   * readingTerms.mjs `termSpans`, worked out on the laid-out text) gets a link
+   * box on every line it occupies and a thin teal line under it, the brand's
+   * own highlight, so a reader can see it is clickable. Lines [from, to) of
+   * `l`, drawn with the top of line `from` at `top`.
+   */
+  termLinks(l, from, to, x, top, spans) {
+    const size = l.paint.size;
+    for (let i = from; i < to; i++) {
+      const line = l.lines[i];
+      const base = top - l.lineTop(from) + l.baseline(i);
+      for (const sp of spans) {
+        const s = Math.max(sp.start, line.start);
+        let e = Math.min(sp.end, line.end);
+        while (e > s && /\s/.test(l.text[e - 1])) e--;
+        if (e <= s) continue;
+        const x0 = x + measure(this.pdf, l.text.slice(line.start, s), l.paint);
+        const x1 = x0 + measure(this.pdf, l.text.slice(s, e), l.paint);
+        this.rect(x0, base + 0.16 * size, x1 - x0, 0.6, LIB_TEAL);
+        this.link({ left: x0, top: base - 0.9277 * size, right: x1, bottom: base + 0.2441 * size }, sp.href, 0.5);
+      }
+    }
   }
 
   block(l, x = MARGIN, after = 0) {
@@ -323,7 +357,7 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
        */
       font: ROBOTO_400,
       info: {
-        Title: name ? `${name} — Human Design` : "Human Design",
+        Title: chartTitle(name),
         Author: "The Champagne Method",
         Creator: "thechampagnemethod.co",
       },
@@ -353,7 +387,7 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
     // gets the new order; anything else keeps its words as plain paragraphs.
     const view = text && structureProblem(text) === null ? buildReadingView(output, text) : null;
     if (view) {
-      startHere(d, view);
+      startHere(d, view, output);
       readingPages(d, output, view);
     } else if (text) {
       plainReading(d, text);
@@ -361,12 +395,23 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
     d.finish();
     if (inspect) hooks.onText = null;
 
+    const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve(inspect ? { bytes, links: d.links, runs } : bytes);
+      resolve(inspect ? { bytes, links: d.links, runs, pages } : bytes);
     });
     pdf.end();
   });
+}
+
+/**
+ * How many pages a built PDF has (fix 9A: the button says "PDF, 8 pages").
+ * Counted from the document's own page objects, so it is the real file's
+ * count rather than a guess.
+ */
+export function pdfPageCount(bytes) {
+  const s = Buffer.isBuffer(bytes) ? bytes.toString("latin1") : String(bytes ?? "");
+  return (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) ?? []).length;
 }
 
 /* --------------------------------------------------------------------- page 1 */
@@ -392,7 +437,7 @@ function bodygraphPage(d, { name, output, birth, qr }) {
   drawText(pdf, TITLE_MARK, MARGIN, d.y + 8, eyebrow);
   d.linkText(TITLE_MARK, MARGIN, d.y + 8, eyebrow, SHOP);
   d.gap(16);
-  drawText(pdf, name || "Your Human Design", MARGIN, d.y + 19, paint(24, INK, true));
+  drawText(pdf, chartTitle(name), MARGIN, d.y + 19, paint(24, INK, true));
   d.gap(25);
   const born = birthLine(birth);
   if (born) {
@@ -454,9 +499,15 @@ function bodygraphPage(d, { name, output, birth, qr }) {
   const qrSide = Math.min(Math.min(legendH, gutter), 74);
   if (qrSide > 34 && qr) {
     const qx = left + chartW + 8;
-    const qy = d.y + (legendH - qrSide) / 2;
+    // Up a little, to make room for its caption (fix 17A, 10/19).
+    const qy = d.y + (legendH - qrSide) / 2 - 6;
     drawQr(pdf, qr, qx, qy, qrSide);
     d.link({ left: qx, top: qy, right: qx + qrSide, bottom: qy + qrSide }, BODYGRAPH_GUIDE, 0);
+    // A QR with no word under it is a square nobody scans: say where it goes.
+    const cp = paint(6.5, DIM);
+    QR_CAPTION.forEach((t, i) => {
+      drawText(pdf, t, qx + (qrSide - measure(pdf, t, cp)) / 2, qy + qrSide + 8 + i * 8, cp);
+    });
   }
   d.link(guideBox, BODYGRAPH_GUIDE);
   d.gap(legendH);
@@ -646,9 +697,11 @@ function glancePage(d, { output, tier, reading }) {
   // The activations, in a four-up grid -- the READING tier's, never sold with
   // the chart tier.
   const activationRow = (label, acts) => {
-    const cols = 4;
+    // Five across, 12pt rows (fix 6A, 10/19; was four across, 13pt).
+    const cols = 5;
+    const rowH = 12;
     const rowsN = Math.ceil(acts.length / cols);
-    const h = rowsN * 13;
+    const h = rowsN * rowH;
     d.need(h + 10);
     d.gap(5);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, paint(8, DIM, false, 0.06));
@@ -657,7 +710,7 @@ function glancePage(d, { output, tier, reading }) {
     const gateP = paint(9, INK, true);
     acts.forEach((a, i) => {
       const cx = MARGIN + 110 + (i % cols) * colW;
-      const cy = d.y + 8 + Math.floor(i / cols) * 13;
+      const cy = d.y + 8 + Math.floor(i / cols) * rowH;
       const nm = String(a.planet ?? "").toLowerCase().replace(/_/g, " ") + " ";
       drawText(pdf, nm, cx, cy, nameP);
       drawText(pdf, `${a.gate}.${a.line}`, cx + measure(pdf, nm, nameP), cy, gateP);
@@ -665,9 +718,28 @@ function glancePage(d, { output, tier, reading }) {
     d.gap(h + 4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
-  if (tier >= 2) {
-    if (Array.isArray(c.personality) && c.personality.length) activationRow("Personality", c.personality);
-    if (Array.isArray(c.design) && c.design.length) activationRow("Design", c.design);
+  const pers = Array.isArray(c.personality) ? c.personality : [];
+  const des = Array.isArray(c.design) ? c.design : [];
+  if (tier >= 2 && pers.length + des.length > 0) {
+    /**
+     * FIX 6A (Jeremy 10/19): the same grid, NAMED AND EXPLAINED -- the page
+     * folds it closed under the same heading; a PDF cannot fold. A newcomer
+     * read "sun 21.5 · earth 48.5" as numbers with no meaning given.
+     */
+    // Compact on purpose: page 2 is nearly full on a long reading, and the
+    // page count must not change for this (Jeremy's 6A). The grid below runs
+    // five across instead of four, which pays for the heading and the line.
+    const how = d.L(TECH_HOW, paint(8, DIM), CONTENT_W);
+    const head = `${techTitle(pers.length + des.length)} ${TECH_TITLE_NOTE}`.toUpperCase();
+    d.need(8 + 12 + how.height + 4 + 40);
+    d.gap(8);
+    drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
+    d.gap(12);
+    d.draw(how);
+    d.gap(4);
+    d.rule(RULE, 0.8);
+    if (pers.length) activationRow("Personality", pers);
+    if (des.length) activationRow("Design", des);
   }
 
   // The tiers below the reading end on a calm page of their own (10/16,
@@ -742,10 +814,14 @@ function nextStepsPage(d, tier) {
   const noteTop = d.y;
   d.draw(onward);
   linkOnward(d, onward, noteTop);
-  if (!o) return;
-  d.gap(34);
-  sectionLabel(d, o.head);
-  d.draw(o.body);
+  if (o) {
+    d.gap(34);
+    sectionLabel(d, o.head);
+    d.draw(o.body);
+  }
+  // The coaching card ends this PDF too (fix 10B).
+  d.gap(18);
+  coachPanel(d, coachLayouts(d));
 }
 
 function lowerFirst(s) {
@@ -763,7 +839,7 @@ const LIST_W = 470;
  * the two profile-line sentences ONLY -- the glance box keeps its Profile
  * sentence (call 4).
  */
-function startHere(d, v) {
+function startHere(d, v, c) {
   d.start(START_HERE);
   const firstPage = d.pageNo;
 
@@ -778,19 +854,19 @@ function startHere(d, v) {
     subLabel(d, `Not colored in (${other.length}) · taken in from others`, other[0].h);
     itemList(d, other, () => CENTERS);
   }
-  takeaway(d, v.centersTakeaway);
+  takeaway(d, v.centersTakeaway, c);
 
   if (d.pageNo === firstPage) d.start(START_HERE);
   const chans = v.channels.map((it) => itemBlock(d, it, false));
   sectionHead(d, 2, "Your channels", `(${v.channels.length})`, chans[0]?.h ?? 20);
   if (!chans.length) plainLine(d, NO_CHANNELS);
   else itemList(d, chans, (it) => channelLink(it.title));
-  takeaway(d, v.channelsTakeaway);
+  takeaway(d, v.channelsTakeaway, c);
 
   const lines = v.profileLines.map((it) => itemBlock(d, it, false));
   sectionHead(d, 3, "Your profile", v.profile, lines[0]?.h ?? 20);
   itemList(d, lines, (it) => lineLink(it.title));
-  takeaway(d, v.profileLinesTakeaway);
+  takeaway(d, v.profileLinesTakeaway, c);
 }
 
 /** A gold-ringed number, the section title, and a dim count beside it. */
@@ -858,7 +934,7 @@ function itemList(d, items, href) {
 }
 
 /** "TAKEAWAY" on a gold bar, then the reading's own sentences. Kept whole. */
-function takeaway(d, lines) {
+function takeaway(d, lines, c) {
   if (!lines.length) return;
   const ls = lines.map((t) => d.L(t, paint(10.5, INK), LIST_W - 14));
   const h = 14 + ls.reduce((n, l) => n + l.height + 5, 0);
@@ -867,8 +943,9 @@ function takeaway(d, lines) {
   const top = d.y;
   drawText(d.pdf, "TAKEAWAY", MARGIN + 14, d.y + 8, paint(7.5, GOLD, true, 0.14));
   d.gap(14);
+  // The reading's own sentences, so their Human Design words link (fix 7).
   for (const l of ls) {
-    d.draw(l, MARGIN + 14);
+    d.draw(l, MARGIN + 14, termSpans(l.text, c));
     d.gap(5);
   }
   d.rect(MARGIN, top, 2.5, d.y - 3 - top, RULE);
@@ -892,9 +969,27 @@ function noteHref(label, c) {
   return null;
 }
 
+/** How much of a page "Your reading" needs under its big title before it may start there. */
+const READING_START_ROOM = 260;
+
 function readingPages(d, c, v) {
   const pdf = d.pdf;
-  d.start("Your reading");
+  if (d.y < d.bottom - READING_START_ROOM) {
+    /**
+     * FIX 17A (Jeremy 10/19): the written reading starts on the page Start
+     * here ends on (page 4), under a big title of its own, instead of leaving
+     * that page half empty. A rule closes Start here; the running head of
+     * every page after this one says "Your reading".
+     */
+    d.gap(26);
+    d.rule(RULE, 1.2);
+    d.gap(14);
+    drawText(pdf, "Your reading", MARGIN, d.y + 18, paint(22, INK, true));
+    d.gap(34);
+    d.head = "Your reading";
+  } else {
+    d.start("Your reading");
+  }
   const notes = marginNotes(c);
 
   for (const section of v.reading) {
@@ -938,20 +1033,74 @@ function readingPages(d, c, v) {
     d.draw(head, MARGIN);
     d.gap(6);
     if (ledeL) {
-      d.draw(ledeL, MARGIN);
+      d.draw(ledeL, MARGIN, termSpans(ledeL.text, c));
       d.gap(8);
     }
     for (const l of bodyLs) {
-      flowParagraph(d, l, () => rule(d.y + 9), () => {
-        partTop = d.y;
-      });
+      flowParagraph(
+        d,
+        l,
+        () => rule(d.y + 9),
+        () => {
+          partTop = d.y;
+        },
+        termSpans(l.text, c),
+      );
       d.gap(9);
     }
     rule(d.y);
   }
 
-  takeaways(d, v.takeaways, disclaimerLayout(d).height + 28);
+  const panel = coachLayouts(d);
+  takeaways(d, v.takeaways, disclaimerLayout(d).height + 28, c);
+  coachPanel(d, panel);
   disclaimer(d);
+}
+
+/**
+ * FIX 10B (Jeremy 10/19): the coaching card at the end of the reading -- his
+ * current photo (approach-candid.jpg, cropped round), "Talk it through with
+ * Jeremy", and the free 30-minute conversation. Kept on the page of the
+ * disclaimer under it; the PDF may grow a page for it.
+ */
+function coachLayouts(d) {
+  const textW = CONTENT_W - 100;
+  return {
+    head: d.L(COACH.head, paint(12, INK, true), textW),
+    body: d.L(COACH.body, paint(10, INK), textW),
+    link: d.L(`${COACH.link} → ${COACH.shown}`, paint(10, LIB_TEAL, true), textW),
+  };
+}
+
+function coachPanel(d, { head, body, link }) {
+  const pdf = d.pdf;
+  const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
+  d.need(16 + h + 20 + disclaimerLayout(d).height + 2);
+  d.gap(16);
+  const top = d.y;
+  pdf.save();
+  pdf.roundedRect(MARGIN, top, CONTENT_W, h, 8).lineWidth(0.9).strokeColor(LIB_TEAL).stroke();
+  pdf.restore();
+  const r = 25;
+  const cx = MARGIN + 15 + r;
+  const cy = top + h / 2;
+  try {
+    pdf.save();
+    pdf.circle(cx, cy, r).clip();
+    pdf.image(JEREMY_JPG, cx - r, cy - r, { width: 2 * r, height: 2 * r });
+    pdf.restore();
+  } catch {
+    pdf.restore(); // no photo is a card without one, never a failed download
+  }
+  const x = MARGIN + 80;
+  let y = top + 12;
+  drawLayout(pdf, head, x, y);
+  y += head.height + 3;
+  drawLayout(pdf, body, x, y);
+  y += body.height + 6;
+  drawLayout(pdf, link, x, y);
+  d.linkLayout(link, x, y, COACH.url);
+  d.y = top + h;
 }
 
 /**
@@ -959,7 +1108,7 @@ function readingPages(d, c, v) {
  * fit -- never leaving fewer than two lines at the foot of a page or at the
  * head of the next. A paragraph that cannot split that way moves whole.
  */
-function flowParagraph(d, l, onBreak, onNewPage) {
+function flowParagraph(d, l, onBreak, onNewPage, spans = null) {
   const n = l.lineCount;
   let from = 0;
   while (from < n) {
@@ -967,15 +1116,15 @@ function flowParagraph(d, l, onBreak, onNewPage) {
     let fit = 0;
     while (from + fit < n && l.lineTop(from + fit + 1) - l.lineTop(from) <= avail) fit++;
     if (from + fit === n) {
-      if (from === 0) d.draw(l);
-      else d.drawLines(l, from, n);
+      if (from === 0) d.draw(l, MARGIN, spans);
+      else d.drawLines(l, from, n, MARGIN, spans);
       return;
     }
     let take = Math.min(fit, n - from - MIN_SPLIT_LINES);
     if (take < MIN_SPLIT_LINES) take = 0;
     if (take === 0 && d.atTop) take = Math.max(fit, 1); // taller than a page
     if (take > 0) {
-      d.drawLines(l, from, from + take);
+      d.drawLines(l, from, from + take, MARGIN, spans);
       from += take;
     }
     onBreak();
@@ -989,7 +1138,7 @@ function flowParagraph(d, l, onBreak, onNewPage) {
  * in parentheses, lifted out and set in gold. The heading, the intro and the
  * first item travel together; the last item travels with the disclaimer.
  */
-function takeaways(d, paras, keepWith = 0) {
+function takeaways(d, paras, keepWith = 0, c = null) {
   if (!paras.length) return;
   const head = d.L(TAKEAWAYS.toUpperCase(), paint(9, GOLD, true, 0.16), 470);
   const intro = paras[0] ? d.L(paras[0], paint(10.5, INK), 470) : null;
@@ -1005,14 +1154,18 @@ function takeaways(d, paras, keepWith = 0) {
   d.gap(d.atTop ? 0 : 18);
   d.draw(head);
   d.gap(8);
-  if (intro) d.block(intro, MARGIN, 4);
+  if (intro) {
+    d.need(intro.height);
+    d.draw(intro, MARGIN, termSpans(intro.text, c));
+    d.gap(4);
+  }
   items.forEach(([leadL, l], i) => {
     const h = (leadL?.height ?? 0) + l.height;
     d.need(h + 12 + (i === items.length - 1 ? keepWith : 0));
     d.gap(9);
     d.rect(MARGIN, d.y + 6, 8, 1.5, RULE);
     if (leadL) d.draw(leadL, MARGIN + 16);
-    d.draw(l, MARGIN + 16);
+    d.draw(l, MARGIN + 16, termSpans(l.text, c));
   });
 }
 

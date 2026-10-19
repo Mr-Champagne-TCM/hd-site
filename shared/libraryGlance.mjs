@@ -103,3 +103,39 @@ export const PROFILE_LINE = Object.freeze({
   "5": "People see a rescuer in you. Practical answers keep that fair.",
   "6": "Three acts: trying it all, stepping back to watch, then living the example."
 });
+
+/** Each type's glance (the library's one-liner). */
+export const TYPE_GLANCE = Object.freeze({
+  "Generator": "Steady, renewable energy. Works best answering what shows up.",
+  "Manifesting Generator": "The Generator's motor, with a faster, many-paths streak.",
+  "Projector": "Built to see and guide other people's energy, not to outwork it.",
+  "Manifestor": "Starts things. Works best letting people know before moving.",
+  "Reflector": "No steady hubs of its own. Reflects the people and places around it."
+});
+
+/** Each profile's glance, keyed "5/2". */
+export const PROFILE_GLANCE = Object.freeze({
+  "1/3": "Studies the ground, then tests it by living it.",
+  "1/4": "Builds a solid base, then shares it through people it trusts.",
+  "2/4": "A natural gift that wants time alone, in a life that comes through people.",
+  "2/5": "A private talent that others see as the one who can fix it.",
+  "3/5": "Learns by trial and error, then turns lessons into practical fixes for others.",
+  "3/6": "Many lessons early, then some distance, then living what was learned.",
+  "4/6": "Lives through its people, and over time becomes someone they look up to.",
+  "4/1": "A steady, set path, carried through people and built on firm ground.",
+  "5/1": "Seen as the one with answers, and quietly built on solid research.",
+  "5/2": "A natural gift others call on, and a strong pull to stay apart.",
+  "6/2": "Three acts of life, with a natural gift others are waiting to see.",
+  "6/3": "A life of trying, stepping back, and trying again, ending in hard-earned wisdom."
+});
+
+/** Each authority's glance (the library's one-liner). */
+export const AUTHORITY_GLANCE = Object.freeze({
+  "Emotional": "Clarity comes over time, once the emotional wave has settled.",
+  "Sacral": "A gut response in the moment: a sound before a thought.",
+  "Splenic": "A quiet, instant knowing that speaks once.",
+  "Ego": "What you really want, heard in what you say or do.",
+  "Self-Projected": "Hearing yourself talk it through, and noticing what rings true.",
+  "Mental": "Clarity through talking with trusted people in the right place.",
+  "Lunar": "About a month: letting the Moon's cycle show the answer."
+});

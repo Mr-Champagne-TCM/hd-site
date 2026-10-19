@@ -8,10 +8,12 @@ import {
   ONWARD_NOTE,
   TITLE_MARK,
   WORDMARK,
+  QR_CAPTION,
   readingPdf,
 } from "../netlify/lib/readingPdf.mjs";
 import { LIBRARY, SHOP, SITE_URL, BODYGRAPH_GUIDE, topic } from "../shared/libraryLinks.mjs";
-import { birthLine } from "../shared/birthLine.mjs";
+import { birthLine, birthOffset } from "../shared/birthLine.mjs";
+import { COACH } from "../shared/readingCopy.mjs";
 import { syntheticReading } from "./support/syntheticReading.mjs";
 import { structureProblem } from "../netlify/lib/interpretation.mjs";
 
@@ -52,7 +54,9 @@ test("the brand lines are Jeremy's wording, 'by' lowercase", () => {
 test("page 1: eyebrow, name, birth line; every later page: the running brand line", async () => {
   const r = await render();
   const p1 = r.runs.filter((x) => x.page === 1).map((x) => x.text);
-  assert.deepEqual(p1.slice(0, 3), [TITLE_MARK, "Claude Test Four", "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00"]);
+  // Fix 17A: "<name>’s Human Design"; fix 20A: no "Timezone: UTC-06:00" (10/19).
+  assert.deepEqual(p1.slice(0, 3), [TITLE_MARK, "Claude Test Four’s Human Design", "December 14, 1976 · 6:18 PM · Chicago, Illinois"]);
+  assert.ok(!r.runs.some((x) => /Timezone|UTC[+-]/.test(x.text)), "a time zone reached the page");
   for (let p = 2; p <= pagesOf(r); p++) {
     assert.ok(r.runs.some((x) => x.page === p && x.text === WORDMARK), `page ${p} has no brand line`);
   }
@@ -61,14 +65,14 @@ test("page 1: eyebrow, name, birth line; every later page: the running brand lin
 test("no birth details kept (a reading from before 16 Oct): no birth line, nothing invented", async () => {
   const r = await render({ birth: null });
   const p1 = r.runs.filter((x) => x.page === 1).map((x) => x.text);
-  assert.deepEqual(p1.slice(0, 2), [TITLE_MARK, "Claude Test Four"]);
+  assert.deepEqual(p1.slice(0, 2), [TITLE_MARK, "Claude Test Four’s Human Design"]);
   assert.ok(!p1.some((t) => /Timezone|1976/.test(t)), p1.slice(0, 4).join(" | "));
 });
 
 test("an unknown birth time says so, and the noon note follows", async () => {
   const r = await render({ birth: { ...BIRTH, timeKnown: false, time: null }, output: { ...OUTPUT, timeKnown: false } });
   const p1 = r.runs.filter((x) => x.page === 1).map((x) => x.text);
-  assert.equal(p1[2], "December 14, 1976 · Time unknown (charted at noon) · Chicago, Illinois · Timezone: UTC-06:00");
+  assert.equal(p1[2], "December 14, 1976 · Time unknown (charted at noon) · Chicago, Illinois");
   assert.ok(p1.join(" ").includes("Birth time was not known, so this chart is cast at noon."));
 });
 
@@ -141,7 +145,7 @@ test("chart words open their own library entry (Claude Test Four, as the phone c
     }
   // Nothing else is a link.
   assert.ok(
-    r.links.every((l) => [SITE_URL, SHOP, LIBRARY, BODYGRAPH_GUIDE].includes(l.uri) || l.uri.startsWith(LIBRARY + "#")),
+    r.links.every((l) => [SITE_URL, SHOP, LIBRARY, BODYGRAPH_GUIDE, COACH.url].includes(l.uri) || l.uri.startsWith(LIBRARY + "#")),
   );
 });
 
@@ -174,20 +178,92 @@ test("a letter-mode reading keeps the old plain shape", async () => {
   assert.ok(heads.slice(2).every((h) => h === "Your reading"), String(heads));
 });
 
-test("the birth line, as the phone writes it", () => {
-  assert.equal(birthLine(BIRTH), "December 14, 1976 · 6:18 PM · Chicago, Illinois · Timezone: UTC-06:00");
-  // The zone's offset AT the birth moment: a Chicago summer is UTC-05:00.
-  assert.equal(
-    birthLine({ ...BIRTH, date: "1976-09-17", time: "13:39" }),
-    "September 17, 1976 · 1:39 PM · Chicago, Illinois · Timezone: UTC-05:00",
-  );
+test("the birth line, as the phone writes it -- no time zone printed (fix 20A, 10/19)", () => {
+  assert.equal(birthLine(BIRTH), "December 14, 1976 · 6:18 PM · Chicago, Illinois");
+  assert.equal(birthLine({ ...BIRTH, date: "1976-09-17", time: "13:39" }), "September 17, 1976 · 1:39 PM · Chicago, Illinois");
   assert.equal(
     birthLine({ date: "1985-06-25", timeKnown: false, place: "Kolkata, India", zone: "Asia/Kolkata" }),
-    "June 25, 1985 · Time unknown (charted at noon) · Kolkata, India · Timezone: UTC+05:30",
+    "June 25, 1985 · Time unknown (charted at noon) · Kolkata, India",
   );
-  assert.equal(birthLine({ ...BIRTH, time: "00:05" }), "December 14, 1976 · 12:05 AM · Chicago, Illinois · Timezone: UTC-06:00");
-  assert.equal(birthLine({ ...BIRTH, time: "12:00" }), "December 14, 1976 · 12:00 PM · Chicago, Illinois · Timezone: UTC-06:00");
+  assert.equal(birthLine({ ...BIRTH, time: "00:05" }), "December 14, 1976 · 12:05 AM · Chicago, Illinois");
+  assert.equal(birthLine({ ...BIRTH, time: "12:00" }), "December 14, 1976 · 12:00 PM · Chicago, Illinois");
+  // An unreadable zone still means no line at all: the zone is checked, only not printed.
   for (const bad of [null, undefined, {}, { date: "1976-12-14" }, { ...BIRTH, zone: "Not/AZone" }, { ...BIRTH, time: "25:00" }]) {
     assert.equal(birthLine(bad), null, JSON.stringify(bad));
   }
+});
+
+test("the offset is still worked out, for the record (birthOffset)", () => {
+  // The zone's offset AT the birth moment: a Chicago summer is UTC-05:00.
+  assert.equal(birthOffset(BIRTH), "UTC-06:00");
+  assert.equal(birthOffset({ ...BIRTH, date: "1976-09-17", time: "13:39" }), "UTC-05:00");
+  assert.equal(birthOffset({ date: "1985-06-25", timeKnown: false, zone: "Asia/Kolkata" }), "UTC+05:30");
+  assert.equal(birthOffset({ ...BIRTH, zone: "Not/AZone" }), null);
+});
+
+/* ------------------------------------------------ the 10/19 newcomer fixes */
+
+test("17A: the QR says where it goes, in two lines under it", async () => {
+  const r = await render();
+  const p1 = r.runs.filter((x) => x.page === 1);
+  const qr = r.links.find((l) => l.page === 1 && l.uri === BODYGRAPH_GUIDE && Math.abs(l.right - l.left - (l.bottom - l.top)) < 0.5);
+  const caps = QR_CAPTION.map((t) => p1.find((x) => x.text === t));
+  assert.ok(caps.every(Boolean), "caption missing");
+  // The key's words end left of the QR; the caption may be a little wider than
+  // the small code, centred under it, but never reaches the key or the page edge.
+  const keyRight = Math.max(...p1.filter((x) => x.y > qr.top - 20 && x.x + x.w < qr.left + 1).map((x) => x.x + x.w));
+  for (const c of caps) {
+    assert.ok(c.y > qr.bottom && c.y < qr.bottom + 20, `caption '${c.text}' not under the QR`);
+    assert.ok(Math.abs(c.x + c.w / 2 - (qr.left + qr.right) / 2) < 0.6, `caption '${c.text}' not centred`);
+    assert.ok(c.x > keyRight + 2 && c.x + c.w < 612 - 36, `caption '${c.text}' runs into the key or the edge`);
+  }
+});
+
+test("17A: the written reading starts on the last Start here page under a big title, when there is room", async () => {
+  // With room (most readings), page 4; without, "Your reading" opens the next page as before.
+  for (const reading of [READING, syntheticReading({ ...OUTPUT, channels: [] })]) {
+    const r = await render({ reading, output: reading === READING ? OUTPUT : { ...OUTPUT, channels: [] } });
+    const start = r.runs.filter((x) => x.text === "Start here" && x.size === 9.5).map((x) => x.page);
+    const lastStart = Math.max(...start);
+    const title = r.runs.find((x) => x.text === "Your reading" && x.size === 22);
+    if (title) {
+      assert.equal(title.page, lastStart, "the big title is not on the last Start here page");
+    } else {
+      assert.ok(r.runs.some((x) => x.page === lastStart + 1 && x.text === "Your reading" && x.size === 9.5));
+    }
+  }
+  // The 10/17 sample shape (no channels, short Start here) does start on page 4.
+  const r = await render({ output: { ...OUTPUT, channels: [] }, reading: syntheticReading({ ...OUTPUT, channels: [] }) });
+  assert.equal(r.runs.find((x) => x.text === "Your reading" && x.size === 22)?.page, 4);
+});
+
+test("6A: the planet numbers are named and explained on page 2", async () => {
+  const r = await render();
+  const p2 = r.runs.filter((x) => x.page === 2);
+  const head = p2.find((x) => x.text === "TECHNICAL VALUES: YOUR 26 PLANET NUMBERS (FOR THE CURIOUS)");
+  assert.ok(head, "no heading");
+  assert.ok(p2.some((x) => x.text.startsWith("How to read them: 21.5 is gate 21, line 5.")), "no how-to line");
+  const firstGate = p2.find((x) => /^\d+\.\d$/.test(x.text) && x.bold && x.size === 9);
+  assert.ok(firstGate.y > head.y, "the heading is not above the grid");
+});
+
+test("7: the reading's Human Design words link to the library, underlined in teal", async () => {
+  const r = await render();
+  const body = r.links.filter((l) => l.page >= 4 && l.uri.startsWith(LIBRARY + "#") && l.left < 410);
+  assert.ok(body.length >= 5, `${body.length} term links in the reading`);
+  // Every term link is one the library answers: types, profiles, lines, channels, gates, the cross, topics.
+  for (const l of body) {
+    assert.match(l.uri.split("#")[1], /^(type-[a-z-]+|profile-\d-\d|line-[1-6]|channel-\d+-\d+|gate-\d+|cross-[rlj]-[a-z0-9-]+|authority|centers|definition)$/);
+  }
+});
+
+test("10B: the coaching card ends the reading, photo and link, before the disclaimer", async () => {
+  const r = await render();
+  const last = pagesOf(r);
+  const head = r.runs.find((x) => x.text === COACH.head);
+  assert.equal(head?.page, last);
+  const link = r.links.find((l) => l.uri === COACH.url);
+  assert.equal(link?.page, last);
+  const disc = r.runs.filter((x) => x.page === last && x.size === 8.5).pop();
+  assert.ok(disc.y > head.y, "the disclaimer is not after the card");
 });

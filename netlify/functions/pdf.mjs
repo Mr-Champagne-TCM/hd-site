@@ -63,7 +63,7 @@ export default guard(
      * characters: a filename crosses filesystems, and one that arrives broken on
      * Windows is worse than one that is plain everywhere.
      */
-    const safe = (reading.buyer?.name ?? "Human Design")
+    const safe = (reading.birth?.name ?? reading.buyer?.name ?? "Human Design")
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
       .replace(/[^A-Za-z0-9]+/g, "-")

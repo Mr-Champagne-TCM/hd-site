@@ -14,6 +14,8 @@
  *     Opening each anchor in a real browser is the stronger check.
  * With --all it also checks every anchor the phone's engine can produce
  * (test/fixtures/phone-parity/phone-library-targets.txt), 179 of them.
+ * With --pdf <file.pdf> (repeatable) it also checks every link printed in
+ * that built PDF -- e.g. a rebuilt sample (fix 7's term links, 10/19).
  *
  * Reads the network; not part of `npm test`.
  */
@@ -32,6 +34,11 @@ for (const slug of SLUGS) {
     const r = await readingPdf({ tier, name: "Claude Test", output, reading: syntheticReading(output), birth, inspect: true });
     for (const l of r.links) uris.add(l.uri);
   }
+}
+for (let i = 0; i < process.argv.length; i++) {
+  if (process.argv[i] !== "--pdf") continue;
+  const raw = readFileSync(process.argv[i + 1]).toString("latin1");
+  for (const m of raw.matchAll(/\/URI \(((?:\\.|[^\\)])*)\)/g)) uris.add(m[1].replace(/\\(.)/g, "$1"));
 }
 const fromPdf = new Set(uris);
 if (process.argv.includes("--all")) {
@@ -71,6 +78,7 @@ for (const u of [...uris].sort()) {
     else if (/^profile-[1-6]-[1-6]$/.test(frag) && p.scripts.includes("profile-([1-6])-([1-6])")) how += " #opened-on-arrival";
     else if (/^cross-[rlj]-/.test(frag) && p.scripts.includes("cross-([rlj])-(.+)") && crossNamed(p.scripts, frag)) how += " #opened-on-arrival";
     else if (/^channel-\d+-\d+$/.test(frag) && p.scripts.includes("channel-(\\d+)-(\\d+)")) how += " #opened-on-arrival";
+    else if (/^gate-(\d+)$/.test(frag) && +frag.slice(5) >= 1 && +frag.slice(5) <= 64 && p.scripts.includes("gate-(\\d+)")) how += " #opened-on-arrival";
     else {
       ok = false;
       how += " #MISSING";

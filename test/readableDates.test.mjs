@@ -18,9 +18,10 @@ const DAY_FIRST = /\b\d{1,2} (January|February|March|April|May|June|July|August|
 test("the line under the name after the chart is the PDF's birth line", () => {
   // What EntryForm hands birthLine on the "done" screen, for Claude Test Five.
   const line = birthLine({ date: "1991-07-22", time: "17:40", timeKnown: true, place: "Denver, Colorado", zone: "America/Denver" });
-  assert.equal(line, "July 22, 1991 · 5:40 PM · Denver, Colorado · Timezone: UTC-06:00");
+  // No "Timezone: UTC-06:00" since fix 20A (10/19): jargon on the first line.
+  assert.equal(line, "July 22, 1991 · 5:40 PM · Denver, Colorado");
   const unknown = birthLine({ date: "1991-07-22", time: null, timeKnown: false, place: "Denver, Colorado", zone: "America/Denver" });
-  assert.equal(unknown, "July 22, 1991 · Time unknown (charted at noon) · Denver, Colorado · Timezone: UTC-06:00");
+  assert.equal(unknown, "July 22, 1991 · Time unknown (charted at noon) · Denver, Colorado");
 });
 
 test("the done screen prints the shared birth line, not its own sentence", () => {

@@ -70,7 +70,8 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
   try {
     bytes = await build({
       tier: reading.tier,
-      name: reading.buyer?.name ?? null,
+      // The name typed for the chart (fix 17A), else the buyer's, as the page shows.
+      name: reading.birth?.name ?? reading.buyer?.name ?? null,
       output: reading.output,
       links,
       // THE WRITTEN INTERPRETATION -- forgotten once, and a reading-tier buyer
