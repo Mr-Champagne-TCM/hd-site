@@ -60,12 +60,19 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
           </li>
         ))}
       </ol>
+      {/* "Start here" exists only with a written reading; the chart tier's page has none to point at. */}
       <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">
-        Below: your chart and its tables, then{" "}
-        <a href="#start-here" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
-          Start here
-        </a>
-        , a short walk through it.
+        {takeaways && takeaways.length ? (
+          <>
+            Below: your chart and its tables, then{" "}
+            <a href="#start-here" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+              Start here
+            </a>
+            , a short walk through it.
+          </>
+        ) : (
+          "Below: your chart and its tables."
+        )}
       </p>
     </section>
   );

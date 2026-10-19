@@ -195,8 +195,8 @@ class Doc {
     this.links = [];
   }
 
-  link(r, uri, pad = 1.5) {
-    const box = { page: this.pageNo, left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad, uri };
+  link(r, uri, pad = 1.5, kind = undefined) {
+    const box = { page: this.pageNo, left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad, uri, ...(kind ? { kind } : {}) };
     this.links.push(box);
     this.pdf.link(box.left, box.top, box.right - box.left, box.bottom - box.top, uri);
   }
@@ -300,7 +300,7 @@ class Doc {
         const x0 = x + measure(this.pdf, l.text.slice(line.start, s), l.paint);
         const x1 = x0 + measure(this.pdf, l.text.slice(s, e), l.paint);
         this.rect(x0, base + 0.16 * size, x1 - x0, 0.6, LIB_TEAL);
-        this.link({ left: x0, top: base - 0.9277 * size, right: x1, bottom: base + 0.2441 * size }, sp.href, 0.5);
+        this.link({ left: x0, top: base - 0.9277 * size, right: x1, bottom: base + 0.2441 * size }, sp.href, 0.5, "term");
       }
     }
   }

@@ -54,7 +54,8 @@ function phoneRuns(slug) {
       return { page: +p[0], x: +p[1], y: +p[2], size: +p[3], color: p[4], bold: p[5] === "1", w: +p[6], text: p[7] };
     })
     // The phone's own bodygraph labels (gate numbers and center names, 5.5-6pt).
-    .filter((r) => !(r.page === 1 && r.size <= 6.5));
+    // Strictly under 6.5: the QR caption (fix 17A, 10/19) is 6.5pt on both sides.
+    .filter((r) => !(r.page === 1 && r.size < 6.5));
 }
 
 function phoneLinks(slug) {
@@ -179,7 +180,10 @@ for (const [slug, name, b] of FIXTURES) {
     // Pages 1-4 page by page; the reading pages as one set (see above).
     const s = await shop(slug, name, b);
     const key = (l) => `p${l.page <= 4 ? l.page : "5+"} ${l.uri}`;
-    assert.deepEqual(s.links.map(key).sort(), phoneLinks(slug).map(key).sort());
+    // As SETS since fix 7 (10/19): a term link gets one box per line it covers,
+    // and a term can wrap on one side only, so the box COUNT may differ while
+    // every (page, destination) pair is the same.
+    assert.deepEqual([...new Set(s.links.map(key))].sort(), [...new Set(phoneLinks(slug).map(key))].sort());
   });
 
   test(`${slug}: link boxes on pages 1-4 sit where the phone's do`, { skip: SKIP }, async () => {
@@ -188,7 +192,8 @@ for (const [slug, name, b] of FIXTURES) {
     // differently, so this asks for overlap, not equality.
     const s = await shop(slug, name, b);
     const phone = phoneLinks(slug).filter((l) => l.page <= 4);
-    for (const a of s.links.filter((l) => l.page <= 4)) {
+    // Term links in the reading text (fix 7) move with each side's own line wraps; left out here.
+    for (const a of s.links.filter((l) => l.page <= 4 && l.kind !== "term")) {
       const hit = phone.some(
         (bx) => bx.page === a.page && bx.uri === a.uri && a.left < bx.right && bx.left < a.right && a.top < bx.bottom + 6 && bx.top < a.bottom + 6,
       );
