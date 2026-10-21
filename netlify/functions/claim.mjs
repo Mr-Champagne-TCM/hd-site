@@ -4,6 +4,7 @@ import { handleClaim } from "../lib/claimHandler.mjs";
 import { alertSender, guard, noteFailure } from "../lib/failures.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
+import { INDEX_STORE } from "../lib/charts.mjs";
 
 /**
  * POST /api/claim -- turn a finished purchase into an entitlement.
@@ -38,6 +39,8 @@ export default guard(
       grantSecret: process.env.GRANT_SECRET,
       getSession,
       readings: getStore({ name: "readings", consistency: "strong" }),
+      // The per-email list of charts, behind "Email me my charts" (release 2).
+      index: getStore({ name: INDEX_STORE, consistency: "strong" }),
       send: mailKey ? (message) => sendMail(message, { apiKey: mailKey }) : null,
       note: (kind, { detail, paid, ref } = {}) =>
         noteFailure(health(), kind, { detail, paid, ref, send: alertSender(mailKey), site: process.env.URL }),

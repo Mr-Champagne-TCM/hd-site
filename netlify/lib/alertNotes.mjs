@@ -16,8 +16,9 @@ import { customerText } from "../../shared/customerMessages.mjs";
  *                      is offered instead (lib/playbook.mjs, option c).
  *
  * `{link}` is filled with the buyer's own reading link when the alert can
- * make one, and left as a bracketed placeholder when it cannot. `{shop}` is
- * the shop's front door.
+ * make one, and left as a bracketed placeholder when it cannot. `{readings}`
+ * is the front door of Human Design readings -- "the shop" only in code; a
+ * buyer never reads that word (Jeremy 10/20).
  *
  * THE SIGN-OFF IS NOT IN THE WORDS BELOW (Jeremy 10/16). It is added by
  * `signOff(kind)`, from the failure the note answers:
@@ -46,7 +47,9 @@ export const NOTES = {
   "link-again":
     "Here is your reading link: {link} It's kept for a year, so it can be sent again whenever you need it.",
   "checkout-down":
-    "Thank you for stopping by for a reading. The checkout wasn't working on our side for a little while, and nothing was charged. It's working again now, whenever you'd like to come back: {shop}",
+    "Thank you for stopping by for a reading. The checkout wasn't working on our side for a little while, and nothing was charged. It's working again now, whenever you'd like to come back to Human Design readings: {readings}",
+  "charts-down":
+    "Thank you for asking for your charts. The page that emails them wasn't working on our side for a little while, and it's back now, whenever you'd like it: {readings}/charts/",
   "places-down":
     "The birthplace search wasn't working on our side for a little while. It's back now, and your link opens the same page whenever you're ready: {link}",
 };
@@ -97,6 +100,6 @@ export function fillNote(key, { link, shop, kind, paid = false } = {}) {
   if (!words) return null;
   const filled = words
     .replace("{link}", link || "[their reading link]")
-    .replace("{shop}", shop || "https://humandesign.thechampagnemethod.co");
+    .replace("{readings}", shop || "https://humandesign.thechampagnemethod.co");
   return `${filled} ${signOff(kind, { paid })}`;
 }

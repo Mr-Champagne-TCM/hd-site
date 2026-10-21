@@ -117,25 +117,22 @@ test("a reporter that throws does not fail the request", async () => {
 
 // --- one address, more than one person --------------------------------------
 
-test("A SECOND PURCHASE AT THE SAME TIER IS NOT AN UPGRADE, and is not questioned", async () => {
-  // Jeremy bought a summary having already bought a reading with different
-  // details, and was told "this is not the chart you had before". It was not,
-  // and it was never meant to be: one address can buy for a partner or a
-  // friend. Warning somebody that a different person's chart is different is
-  // the false alarm this feature cannot afford.
+test("THE ALARM IS RETIRED: no chart is ever stopped to ask 'is this the chart you had before?'", async () => {
+  // Release 2 (Jeremy 10/19: "retire no longer needed"). Kept details are
+  // confirmed or corrected; a correction is the buyer's own, kept with a
+  // history, and the reading says calmly what changed. The 409 is gone, and
+  // so is the whole-store scan that fed it.
   const { chartDifferences } = await import("../netlify/lib/chartDiff.mjs");
   const handler = readFileSync(
     fileURLToPath(new URL("../netlify/lib/handler.mjs", import.meta.url)),
     "utf8",
   );
-  assert.match(
-    handler,
-    /const isUpgrade = previous \? readingLink\.tier > previous\.tier : false;/,
-    "the comparison is no longer limited to upgrades",
-  );
-  assert.match(handler, /const changed = isUpgrade \?/, "a non-upgrade is still being compared");
+  assert.doesNotMatch(handler, /chart_differs/, "the alarm's code is still in the handler");
+  assert.doesNotMatch(handler, /previousChart/, "the whole-store scan is still in the handler");
+  assert.doesNotMatch(handler, /json\(409/, "something still answers 409");
 
-  // And the comparison itself is untouched -- it still notices a real change.
+  // The comparison itself is kept -- it groups an older summary with the
+  // reading it became (charts.mjs) -- and still notices a real change.
   assert.deepEqual(
     chartDifferences({ type: "Generator" }, { type: "Projector" }),
     ["type"],

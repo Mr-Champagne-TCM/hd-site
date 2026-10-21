@@ -199,6 +199,20 @@ export const MESSAGES = {
     text: `There is no email address on this purchase, so there is nowhere to send it. ${CONTACT} reaches Jeremy, and he can sort it out.`,
   },
 
+  // --- "Email me my charts" (release 2) ---------------------------------------
+  "mycharts-unavailable": {
+    act: false,
+    text: "That could not be sent just now — that's on our side. Nothing is lost, and another try in a few minutes usually works.",
+  },
+  "mycharts-bad-email": {
+    act: true,
+    text: "That doesn't look like a whole email address yet. The one you used when you bought is the one that works here, whenever you're ready.",
+  },
+  "mycharts-too-many": {
+    act: false,
+    text: "That has been asked a few times just now. In a little while it will go through again — nothing is wrong.",
+  },
+
   // --- the net under everything ---------------------------------------------
   "our-side-generic": {
     act: false,

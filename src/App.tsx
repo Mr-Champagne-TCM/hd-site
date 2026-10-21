@@ -10,9 +10,14 @@ import {
   RESOURCES,
   WHO_MAKES,
   PLAIN_ACCURACY,
+  CARDS,
+  MY_CHARTS,
+  RETURNING,
 } from "./copy";
 import { useEffect, useState } from "react";
-import { ladder, money, SUMMARY, READING } from "../shared/pricing.mjs";
+import { ladder, money, SUMMARY, CHART, READING, TIERS } from "../shared/pricing.mjs";
+import ChartThumb from "./ChartThumb";
+import { ChoiceCard, KeptLine, SomeoneNewCard, btn, h1, tierWord, whoseOf } from "./Returning";
 import { startCheckout } from "./purchase";
 import { sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
@@ -50,7 +55,7 @@ function Wordmark() {
   );
 }
 
-function Nav() {
+export function Nav() {
   return (
     <nav className="border-b border-brand-gold/15">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 gap-y-3 px-6 py-5 sm:flex-nowrap sm:px-8">
@@ -181,7 +186,75 @@ function Example() {
   );
 }
 
-function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | null }) {
+/** Fix 2, option B (Jeremy 10/20 "1B"): the reading's card in four plain ticks. */
+function ReadingTicks() {
+  return (
+    <div className="mt-3">
+      <p className="text-[15px] leading-relaxed text-brand-paper/85">{CARDS.readingLead}</p>
+      <ul className="mt-2 space-y-1">
+        {CARDS.readingTicks.map((t) => (
+          <li key={t} className="flex gap-2 text-[15px] text-brand-paper/90">
+            <span aria-hidden className="text-brand-teal">
+              ✓
+            </span>
+            {t}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[14px] text-brand-muted">{CARDS.readingPdf}</p>
+    </div>
+  );
+}
+
+/**
+ * THE LIBRARY NOTE on the summary and chart cards (Jeremy 10/19 pm: "these
+ * outputs can be used to get nearly a full reading when used with my HD
+ * library"), on every state of those cards.
+ */
+function LibraryNote({ sku }: { sku: string }) {
+  const [before, link, after] = sku === SUMMARY.sku ? CARDS.summaryNote : CARDS.chartNote;
+  return (
+    <p className="mb-2 mt-2 text-[14px] leading-snug text-brand-teal/90">
+      {before}
+      <a href={SITE.hd101} className={linkCls}>
+        {link}
+      </a>
+      {after}
+    </p>
+  );
+}
+
+/** Fix 2B, under the three cards: one real line from a real reading. */
+function RealLine() {
+  return (
+    <figure className="mt-6 rounded-2xl border border-brand-gold/30 bg-white/[0.04] px-5 py-4">
+      <p className="font-sans text-[12px] uppercase tracking-[0.16em] text-brand-gold">{CARDS.stripHead}</p>
+      <blockquote className="mt-2 font-display text-[1.2rem] italic leading-snug text-brand-paper">
+        “{CARDS.stripQuote}”
+      </blockquote>
+      <figcaption className="mt-2 text-[14px] text-brand-muted">
+        {CARDS.stripCaption}{" "}
+        <a href={SITE.readings} className={linkCls}>
+          {CARDS.stripMore}
+        </a>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * THE THREE CARDS.
+ *
+ * Two states since release 2. The first visit (`fresh` false) is the offer
+ * page as it was, with fix 2B and the library notes. `fresh` is "Start a new
+ * chart for someone else" from a returning buyer's link: full prices, no
+ * credit wording at all (Jeremy: never "what you paid comes off" on that
+ * path), and the purchase is marked as a new chart for someone new.
+ *
+ * The old third state -- the tiles priced against an owned tier -- is gone:
+ * a returning buyer now meets the question first (ReturningView).
+ */
+export function Tiers({ fresh = false }: { fresh?: boolean }) {
   const rows = ladder();
   /**
    * Which card is waiting on Stripe, and what went wrong if anything did.
@@ -198,34 +271,29 @@ function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | 
     setFailed(null);
     // Resolves with a message only if it did NOT leave -- the success case is a
     // redirect, so there is nothing to do afterwards.
-    const problem = await startCheckout(level, token);
+    const problem = await startCheckout(level, fresh ? { someoneNew: true } : {});
     if (problem) {
       setFailed({ sku, message: problem });
       setBusy(null);
     }
   };
   return (
-    <section className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
+    <section id="ways-in" className={"mx-auto max-w-5xl px-6 sm:px-8 " + (fresh ? "pt-8" : "pt-20")}>
       {/*
-        The invitation leads, and the label follows.
-
-        "If you'd like to see your own" used to introduce the form at the foot of
-        the page. It is the strongest line on the page and it belongs here, above
-        the prices, where it turns three cards from a menu into an answer to a
-        question somebody is already asking.
-
-        "Three ways in" keeps its job -- naming what the cards are -- at the size
-        that job deserves. It stops being the headline and becomes the label,
-        which is what it was doing anyway.
+        The invitation leads, and the label follows. "If you'd like to see your
+        own" turns three cards from a menu into an answer to a question somebody
+        is already asking; "Three ways in" names what the cards are.
       */}
-      <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {TIERS_INTRO.lead}
-      </h2>
-      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
-        {TIERS_INTRO.body}
-      </p>
+      {!fresh && (
+        <>
+          <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
+            {TIERS_INTRO.lead}
+          </h2>
+          <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">{TIERS_INTRO.body}</p>
+        </>
+      )}
 
-      <p className="mt-10 font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal">
+      <p className={(fresh ? "" : "mt-10 ") + "font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal"}>
         {TIERS_INTRO.title}
       </p>
 
@@ -233,50 +301,12 @@ function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | 
         {rows.map(({ tier, full, due, credit }, level) => (
           <div
             key={tier.sku}
+            data-card={tier.sku}
             className="flex flex-col gap-0 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
           >
             <h3 className="font-sans text-[16px] font-semibold text-brand-paper">{tier.label}</h3>
-            {/*
-              THREE STATES, and the middle one is the whole point of this page.
-
-              Jeremy walked the upgrade with his own card and it dropped him
-              straight into Stripe at full price, with no chance to see the
-              other tiers. His design: come back to the tiles with the discount
-              ALREADY APPLIED and the old price struck through, and anything
-              already owned greyed out and saying so.
-
-              `owned` is -1 on the open offer page, which collapses this back to
-              exactly what it was.
-            */}
-            {level <= owned ? (
-              <>
-                <p className="mt-3 font-display text-[2rem] leading-none text-brand-muted tabular-nums">
-                  {money(full)}
-                </p>
-                <p className="mt-2 text-[14px] font-semibold leading-snug text-brand-teal">
-                  You already have this
-                </p>
-              </>
-            ) : owned >= 0 ? (
-              <p className="mt-3 flex flex-wrap items-baseline gap-2">
-                <span className="font-display text-[2rem] leading-none text-brand-gold tabular-nums">
-                  {money(Math.max(0, full - rows[owned].tier.cents))}
-                </span>
-                <span className="font-display text-[1.25rem] leading-none text-brand-muted line-through tabular-nums">
-                  {money(full)}
-                </span>
-              </p>
-            ) : (
-              <p className="mt-3 font-display text-[2rem] leading-none text-brand-gold tabular-nums">
-                {money(full)}
-              </p>
-            )}
-            {owned >= 0 && level > owned && (
-              <p className="mt-2 text-[14px] leading-snug text-brand-teal">
-                {money(rows[owned].tier.cents)} already paid comes off
-              </p>
-            )}
-            {owned < 0 && credit > 0 && (
+            <p className="mt-3 font-display text-[2rem] leading-none text-brand-gold tabular-nums">{money(full)}</p>
+            {!fresh && credit > 0 && (
               <p className="mt-2 text-[14px] leading-snug text-brand-teal">
                 {/* The labels already begin with "The", so the article is stripped
                     rather than added. Without this it reads "the the summary". */}
@@ -284,37 +314,31 @@ function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | 
                 {rows[rows.findIndex((r) => r.tier === tier) - 1].tier.label.replace(/^The /, "the ")}
               </p>
             )}
-            <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">{tier.blurb}</p>
+            {tier.sku === READING.sku ? (
+              <ReadingTicks />
+            ) : (
+              <>
+                <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">{tier.blurb}</p>
+                <LibraryNote sku={tier.sku} />
+              </>
+            )}
 
             {/*
-              The cards were inert until now, and "clicking the price squares
-              does nothing" was exactly right. mt-auto pins the button to the
-              bottom so three cards of different heights still line up.
+              Only what can be delivered is offered. Said in words rather than
+              shown as a dead grey button; the refusal itself lives in the
+              checkout function -- see shared/availability.mjs.
             */}
-            {/*
-              Only the summary can be delivered today, so only the summary is
-              offered. Said in words rather than shown as a dead grey button:
-              a control that does nothing is a worse answer than a sentence.
-              The refusal itself lives in the checkout function -- see
-              shared/availability.mjs.
-            */}
-            {level <= owned ? (
-              <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">
-                It is on the link in your email, and it stays there for a year.
-              </p>
-            ) : !sellable(level) ? (
-              <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">
-                {TIERS_INTRO.notYet}
-              </p>
+            {!sellable(level) ? (
+              <p className="mt-auto pt-3 text-[14px] leading-snug text-brand-muted">{TIERS_INTRO.notYet}</p>
             ) : (
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => buy(tier.sku, level)}
-              className="mt-auto rounded-full bg-brand-teal px-5 py-3 font-sans text-[15px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {busy === tier.sku ? "Opening…" : `Buy ${tier.label.replace(/^The /, "the ")}`}
-            </button>
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => buy(tier.sku, level)}
+                className="mt-auto rounded-full bg-brand-teal px-5 py-3 font-sans text-[15px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {busy === tier.sku ? "Opening…" : `Buy ${tier.label.replace(/^The /, "the ")}`}
+              </button>
             )}
             {failed?.sku === tier.sku && (
               <p className="mt-2 text-[14px] leading-snug text-brand-gold">{failed.message}</p>
@@ -323,40 +347,33 @@ function Tiers({ owned = -1, token = null }: { owned?: number; token?: string | 
         ))}
       </div>
 
-      <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-        {LADDER_NOTE}
-      </p>
+      <RealLine />
+
+      {!fresh && <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{LADDER_NOTE}</p>}
       {/*
-        THE LONG ANSWER, one click away. Three cards carry one sentence each --
-        enough to price something, not enough to choose between two of them.
-        Jeremy asked for this after walking his own upgrade: "We need a page that
-        they can access that describes the tiers in more detail."
+        THE LONG ANSWER, one click away -- ONCE (release 1 showed it twice on
+        the upgrade page; Jeremy 10/20 "4A", fixed here).
       */}
       <p className="mt-4 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
-        <a
-          href={SITE.readings}
-          className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
-        >
+        <a href={SITE.readings} className={linkCls}>
           What each one actually is
         </a>
-        , shown with a real example chart — the summary in full, the bodygraph
-        drawn, and the PDF exactly as it downloads.
+        , shown with a real example chart — the summary in full, the bodygraph drawn, and the PDF exactly as it
+        downloads.
       </p>
       {/*
-        The standalone call to action is gone, deliberately.
-
-        It said "Start with the summary" at a price and linked to #yours -- the
-        form immediately below it. Pressing it moved nobody anywhere, and it
-        quoted a price for something the form beneath was handing over free.
-        Reported as circular routing, and it was.
-
-        The cards above already carry the purchase, and the form below already
-        introduces itself. A third control that duplicates one and points at the
-        other is not a path in, it is a loop.
-
-        It comes back when PAYWALL is on and the two are no longer the same
-        thing -- at which point it can honestly be the buy button.
+        "EMAIL ME MY CHARTS" (Jeremy 10/20, "3B"): one small line, after "What
+        each one actually is", for somebody who bought before and has lost the
+        email. Not on the someone-new tiles: that buyer has their link in hand.
       */}
+      {!fresh && (
+        <p className="mt-4 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
+          {MY_CHARTS.lineLead}{" "}
+          <a href="/charts/" className={linkCls}>
+            {MY_CHARTS.line}
+          </a>
+        </p>
+      )}
     </section>
   );
 }
@@ -412,7 +429,7 @@ function Credibility() {
   );
 }
 
-function Resources() {
+export function Resources() {
   return (
     <section className="mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
@@ -442,7 +459,7 @@ function Resources() {
   );
 }
 
-function Footer() {
+export function Footer() {
   return (
     // ROOM UNDERNEATH, and it is not decoration.
     //
@@ -560,20 +577,36 @@ function PaidReturn() {
 }
 
 /**
- * THE TILES, PRICED AGAINST WHAT A LINK ALREADY OWNS.
+ * THE RETURNING BUYER, ARRIVED BY THEIR SIGNED LINK (release 2, mock v2
+ * accepted 10/19). `/u/<token>`, where the upgrade tiles used to be.
  *
- * Jeremy walked the upgrade with his own card: the button dropped him straight
- * into Stripe, at full price, with no chance to see what the other tiers were
- * or to pick a different one. This is the page he asked for instead -- the same
- * tiles, the discount already applied, and anything already owned greyed out.
+ * Before anything is bought, one question: "Your chart, a step further -- or
+ * someone new?" Two cards. "For me" is THE SAME CHART a step further: its
+ * kept details shown, what it has cost so far taken off, and Stripe told which
+ * chart this upgrades. "Start a new chart for someone else" opens the three
+ * cards at full price, fresh, in plain words -- and never "what you paid comes
+ * off" there, because it does not: what Alex paid stays with Alex's chart.
  *
- * The tier comes from the SERVER, from the signed token, not from anything the
- * page works out. A page that decided for itself what somebody owned would be
- * a page that could be argued with.
+ * Owning the top tier already: "Alex's reading is here" and the same
+ * someone-new card. Everything about what is owned comes from the SERVER, from
+ * the signed token -- the page decides nothing about money.
  */
-function UpgradeView({ token }: { token: string }) {
-  const [owned, setOwned] = useState<number | null>(null);
+type Returning = {
+  pending: boolean;
+  tier: number;
+  label: string | null;
+  whose: string | null;
+  birthLine?: string | null;
+  kept?: { birthLine?: string | null } | null;
+  output?: { definedCenters?: string[] } | null;
+};
+
+function ReturningView({ token }: { token: string }) {
+  const [data, setData] = useState<Returning | null>(null);
   const [failed, setFailed] = useState(false);
+  const [showNew, setShowNew] = useState(() => typeof window !== "undefined" && window.location.hash === "#new");
+  const [busy, setBusy] = useState<number | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -583,59 +616,193 @@ function UpgradeView({ token }: { token: string }) {
       body: JSON.stringify({ token }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("no"))))
-      .then((body) => alive && setOwned(Number(body?.tier ?? 0)))
+      .then((body) => alive && setData(body as Returning))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
   }, [token]);
 
-  return (
-    <div className="font-sans text-brand-paper">
-      <Nav />
-      <main>
+  useEffect(() => {
+    const onHash = () => setShowNew(window.location.hash === "#new");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const startNew = () => {
+    window.location.hash = "new";
+    setShowNew(true);
+    window.scrollTo({ top: 0 });
+  };
+
+  const upgrade = async (level: number) => {
+    setBusy(level);
+    setProblem(null);
+    // FOR ME: the same chart, a step further. The server works out the credit
+    // from the chart this link names, and tells Stripe which chart it grows.
+    const message = await startCheckout(level, { reading: token, upgrade: true });
+    if (message) {
+      setProblem(message);
+      setBusy(null);
+    }
+  };
+
+  const whose = data?.whose ?? null;
+  const back = data?.pending ? `/r/${encodeURIComponent(token)}` : `/u/${encodeURIComponent(token)}`;
+
+  let body: React.ReactNode;
+  if (!data && !failed) {
+    body = (
+      <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+        <p className="min-h-[3.5rem] text-[17px] text-brand-paper/90">Reading your link…</p>
+      </section>
+    );
+  } else if (failed) {
+    // Nothing is said about credit when the link could not be read: the cards
+    // below are full price, and say nothing else.
+    body = (
+      <>
         <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
-          <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
-            What else there is
-          </h1>
-          {/*
-            NOTHING IS SAID ABOUT PRICE UNTIL THE SERVER HAS ANSWERED.
-            Caught by looking at the deployed page: for the moment the fetch was
-            in flight it promised a credit above three tiles that had not
-            rendered yet -- and if the link then turned out to be unreadable,
-            that promise was already read. The tiles were guarded against
-            exactly this and the sentence above them was not.
-          */}
-          <p className="mt-4 min-h-[3.5rem] max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
-            {owned === null && !failed
-              ? "Reading your link…"
-              : failed
-                ? "That link could not be read just now, so the prices below are the full ones. Your reading is safe — opening the link from your email again usually sorts it."
-                : "What you have already paid comes off whichever you choose. Nobody pays twice for the same thing."}
+          <p className="max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
+            That link could not be read just now, so the prices below are the full ones. Your reading is safe —
+            opening the link from your email again usually sorts it.
           </p>
         </section>
-        {/*
-          Rendered only once the server has answered. Showing full prices for a
-          moment and then quietly restriking them is how somebody comes away
-          remembering the wrong number.
-        */}
-        {(owned !== null || failed) && <Tiers owned={owned ?? -1} token={token} />}
-        {/*
-          AND THE LONG ANSWER HERE TOO. This page has the least explanation on
-          the whole site -- three cards and a price -- and it is where somebody
-          is actually choosing between two tiers.
-        */}
-        <p className="mx-auto max-w-5xl px-6 pt-6 text-[16px] leading-relaxed text-brand-paper/85 sm:px-8">
+        <Tiers fresh />
+      </>
+    );
+  } else if (showNew || data!.pending) {
+    // "Start a new chart for someone else": full price, fresh, plain words.
+    body = (
+      <>
+        <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
           <a
-            href={SITE.readings}
-            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+            href={back}
+            onClick={(e) => {
+              if (data!.pending) return;
+              e.preventDefault();
+              window.history.pushState({}, "", window.location.pathname);
+              setShowNew(false);
+            }}
+            className="font-sans text-[15px] text-brand-teal"
           >
+            ← Back to {whoseOf(whose)} chart
+          </a>
+          <h1 className={h1 + " mt-4"}>{RETURNING.startNew}</h1>
+          <p className="mt-4 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">
+            A chart for someone new starts fresh: {money(SUMMARY.cents)}, {money(CHART.cents)} or{" "}
+            {money(READING.cents)}.
+          </p>
+          <p className="mt-2 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">{RETURNING.staysWithYours}</p>
+          <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">{RETURNING.theirDetailsLater}</p>
+        </section>
+        <Tiers fresh />
+      </>
+    );
+  } else if (data!.tier >= TIERS.length - 1) {
+    // THE TOP TIER, ALREADY OWNED: nothing to take further, so no question.
+    body = (
+      <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+        <h1 className={h1}>
+          {whoseOf(whose, true)} {tierWord(data!.tier)} is here
+        </h1>
+        <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.topBody}</p>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          <ChoiceCard
+            tone="gold"
+            picture={<ChartThumb defined={data!.output?.definedCenters ?? []} />}
+            eyebrow={RETURNING.forMe}
+            title={`${whoseOf(whose, true)} ${tierWord(data!.tier)}`}
+            action={
+              <a href={`/r/${encodeURIComponent(token)}`} className={btn}>
+                Open {whoseOf(whose)} {tierWord(data!.tier)} →
+              </a>
+            }
+          >
+            <p className="mt-5 text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.topCard}</p>
+            {data!.birthLine && <KeptLine label="Cast from" line={data!.birthLine} />}
+          </ChoiceCard>
+          <SomeoneNewCard onStart={startNew} />
+        </div>
+      </section>
+    );
+  } else {
+    // THE QUESTION (wording A's heading over wording B's two cards, warmer).
+    const owned = data!.tier;
+    const paid = TIERS[owned].cents;
+    const ahead = TIERS.map((t, level) => ({ t, level })).filter(({ level }) => level > owned);
+    body = (
+      <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+        <h1 className={h1}>{RETURNING.question}</h1>
+        <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.questionBody}</p>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          <ChoiceCard
+            tone="gold"
+            picture={<ChartThumb defined={data!.output?.definedCenters ?? []} />}
+            eyebrow={RETURNING.forMe}
+            title={RETURNING.sameChart}
+            action={
+              <div className="flex flex-col items-start gap-3">
+                {ahead.map(({ t, level }) =>
+                  sellable(level) ? (
+                    <button
+                      key={t.sku}
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => upgrade(level)}
+                      className={btn}
+                    >
+                      {busy === level ? "Opening…" : `Take ${whoseOf(whose)} ${tierWord(owned)} to the ${tierWord(level)}`}
+                    </button>
+                  ) : null,
+                )}
+                {problem && <p className="text-[14px] leading-snug text-brand-gold">{problem}</p>}
+              </div>
+            }
+          >
+            <p className="mt-5 text-[17px] leading-relaxed text-brand-paper/90">
+              {ahead.length > 1
+                ? `The chart and the written reading, from the ${tierWord(owned)} you already have.`
+                : `The written ${tierWord(ahead[0]?.level ?? 2)}, from the ${tierWord(owned)} you already have.`}{" "}
+              {data!.birthLine ? "Your birth details are kept, so there is nothing to type." : ""}
+            </p>
+            {data!.birthLine ? (
+              <KeptLine line={data!.birthLine} />
+            ) : (
+              <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">{RETURNING.noKeptYet}</p>
+            )}
+            {ahead.map(({ t, level }) => (
+              <p key={t.sku} className="mt-5 flex flex-wrap items-baseline gap-2">
+                <span className="font-display text-[2.1rem] leading-none text-brand-gold tabular-nums">
+                  {money(t.cents - paid)}
+                </span>
+                <span className="font-display text-[1.25rem] leading-none text-brand-muted line-through tabular-nums">
+                  {money(t.cents)}
+                </span>
+                <span className="text-[15px] text-brand-muted">the {tierWord(level)}</span>
+              </p>
+            ))}
+            <p className="mt-2 text-[15px] leading-snug text-brand-teal">
+              The {money(paid)} you paid for this {tierWord(owned)} comes off
+            </p>
+          </ChoiceCard>
+          <SomeoneNewCard onStart={startNew} />
+        </div>
+        {/* "What each one actually is", ONCE on this page (release-1 bug: it was here twice). */}
+        <p className="mt-8 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
+          <a href={SITE.readings} className={linkCls}>
             What each one actually is
           </a>
           , shown with a real example chart.
         </p>
-        <Resources />
-      </main>
+      </section>
+    );
+  }
+
+  return (
+    <div className="font-sans text-brand-paper">
+      <Nav />
+      <main>{body}</main>
       <Footer />
     </div>
   );
@@ -652,7 +819,7 @@ export default function App({ upgradeToken = null }: { upgradeToken?: string | n
       typeof window !== "undefined" && new URL(window.location.href).searchParams.has("paid"),
   );
 
-  if (upgradeToken) return <UpgradeView token={upgradeToken} />;
+  if (upgradeToken) return <ReturningView token={upgradeToken} />;
 
   if (returningPaid) {
     return (

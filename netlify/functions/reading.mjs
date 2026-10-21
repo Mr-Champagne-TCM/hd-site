@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { handleReading } from "../lib/readingHandler.mjs";
-import { loadReading, readReadingLink } from "../lib/reading.mjs";
+import { loadCurrent, readReadingLink } from "../lib/reading.mjs";
 import { ringIfDue } from "../lib/ring.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
@@ -104,14 +104,16 @@ async function nudgeIfStuck(rawBody, answer, secret, request) {
   const link = readReadingLink(token, secret, Date.now());
   if (!link.ok) return;
   const store = getStore({ name: "readings", consistency: "strong" });
-  const reading = await loadReading(store, link.id, Date.now());
+  // An old link that has grown is writing the GROWN chart's words (release 2).
+  const current = await loadCurrent(store, link.id, Date.now());
+  const reading = current?.reading ?? null;
   if (!reading || reading.reading || reading.pending) return;
   const filledAtMs = Number(reading.filledAt) * 1000;
   const origin = process.env.URL || new URL(request.url).origin;
   const ringToken = triggerToken(secret);
   if (!ringToken) return;
   const out = await ringIfDue({
-    id: link.id,
+    id: current.id,
     filledAtMs,
     gate: getStore({ name: "health", consistency: "strong" }),
     ring: async (id) => {

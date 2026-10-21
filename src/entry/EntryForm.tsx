@@ -4,10 +4,11 @@ import PlaceField, { type Place } from "./PlaceField";
 import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
 import Bodygraph from "../Bodygraph";
-import { ENTRY, privacyFor, SITE } from "../copy";
+import { ENTRY, PRIVACY_NOTE, RETURNING } from "../copy";
 import { humanDate } from "./birthDate";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { displayTime } from "./time";
+import { sayDate, sayTime } from "../../shared/correctionNote.mjs";
 import ReadingActions from "../ReadingActions";
 import { TIERS } from "../../shared/pricing.mjs";
 import { warmEngine } from "./warm";
@@ -94,19 +95,41 @@ export type EntryProps = {
    */
   upgrade?: { level: number; label: string } | null;
   canResend?: boolean;
+  /**
+   * WHICH FORM THIS IS (release 2):
+   *   first       a first purchase: "The birth details for this chart"
+   *   typeOnce    an upgrade of an older summary that kept nothing: asked once
+   *   someoneNew  "Start a new chart for someone else": their chart, fresh
+   *   correct     "Change a detail": the kept details, prefilled, corrected
+   */
+  mode?: "first" | "typeOnce" | "someoneNew" | "correct";
+  /** The kept details a correction starts from. */
+  initial?: { date: string; time: string | null; timeKnown: boolean; place: string | null; zone: string; name?: string } | null;
+  /** "Keep them as they are": back to the confirm screen. */
+  onCancel?: () => void;
 };
 
 type State =
   | { at: "asking" }
   | { at: "working" }
   | { at: "done"; summary: SummaryData }
-  | {
-      at: "differs";
-      message: string;
-      previous: Record<string, unknown>;
-      computed: Record<string, unknown>;
-    }
   | { at: "failed"; message: string };
+
+/**
+ * ON A CORRECTION, A FIELD THAT NOW DIFFERS FROM WHAT IS KEPT is framed and
+ * says what it was (mock v2 step 3: "Changed · it was 5:40 PM").
+ */
+function Changed({ was, children }: { was: string | null; children: React.ReactNode }) {
+  if (was === null) return <>{children}</>;
+  return (
+    <div data-changed className="-mx-3 rounded-2xl border border-brand-teal/50 bg-brand-teal/[0.05] p-3">
+      <p className="mb-3 font-sans text-[13px] font-semibold uppercase tracking-[0.14em] text-brand-teal">
+        Changed · it was {was}
+      </p>
+      {children}
+    </div>
+  );
+}
 
 export default function EntryForm({
   readingToken,
@@ -115,6 +138,9 @@ export default function EntryForm({
   chartName = null,
   upgrade = null,
   canResend = false,
+  mode = "first",
+  initial = null,
+  onCancel,
 }: EntryProps = {}) {
   /**
    * FIX 17A (Jeremy 10/19): whose chart this is, asked on the form (optional),
@@ -122,12 +148,19 @@ export default function EntryForm({
    * title of the page and the PDF ("Alex's Human Design") and is kept with the
    * reading like the birth details -- so only on the tiers that keep those.
    */
-  const askName = Boolean(readingToken) && tier >= 1;
-  const [who, setWho] = useState(() => chartName ?? firstName(name) ?? "");
-  const [date, setDate] = useState("");
-  const [place, setPlace] = useState<Place | null>(null);
-  const [timeKnown, setTimeKnown] = useState<boolean | null>(null);
-  const [time, setTime] = useState("");
+  // Release 2: the summary keeps the name and details too, so the field is on every tier.
+  const askName = Boolean(readingToken);
+  const other = mode === "someoneNew";
+  const correcting = mode === "correct" && initial !== null;
+  const [who, setWho] = useState(() =>
+    correcting ? (initial?.name ?? "") : other ? (chartName ?? "") : (chartName ?? firstName(name) ?? ""),
+  );
+  const [date, setDate] = useState(() => (correcting ? initial!.date : ""));
+  const [place, setPlace] = useState<Place | null>(() =>
+    correcting && initial!.place ? { label: initial!.place, zone: initial!.zone } : null,
+  );
+  const [timeKnown, setTimeKnown] = useState<boolean | null>(() => (correcting ? initial!.timeKnown : null));
+  const [time, setTime] = useState(() => (correcting && initial!.timeKnown ? (initial!.time ?? "").slice(0, 5) : ""));
   const [state, setState] = useState<State>({ at: "asking" });
 
   /**
@@ -196,6 +229,14 @@ export default function EntryForm({
     return () => io.disconnect();
   }, []);
 
+  const wasTime = correcting ? (initial!.timeKnown ? sayTime(initial!.time) : "unknown") : null;
+  const nowTime = timeKnown === false ? "unknown" : sayTime(time);
+  const changedDate = correcting && date !== initial!.date ? sayDate(initial!.date) : null;
+  const changedPlace = correcting && (place?.label ?? null) !== initial!.place ? (initial!.place ?? "not given") : null;
+  const changedTime = correcting && nowTime !== wasTime ? wasTime : null;
+  const changedName =
+    correcting && cleanChartName(who) !== (initial!.name ?? null) ? (initial!.name ?? "no name") : null;
+
   // TimeField hands back a complete 24-hour "HH:MM" or an empty string, so
   // there is nothing to re-validate here -- a second opinion about the same
   // string is how the two come to disagree.
@@ -222,7 +263,7 @@ export default function EntryForm({
    * the trouble to write in.
    */
   const missing = (() => {
-    if (!date) return "the day you were born.";
+    if (!date) return other ? "the day they were born." : "the day you were born.";
     if (!place)
       return (
         "where you were born. Start typing the town, then pick it from the list — " +
@@ -237,7 +278,7 @@ export default function EntryForm({
     return null;
   })();
 
-  async function submit(e: React.FormEvent | null, accept = false) {
+  async function submit(e: React.FormEvent | null) {
     e?.preventDefault();
     if (!ready || !place) return;
     setState({ at: "working" });
@@ -251,16 +292,10 @@ export default function EntryForm({
           // lived in the tab they closed.
           reading: readingToken ?? undefined,
           grant: heldGrant() ?? undefined,
-          /**
-           * "YES, THIS IS THE CHART I MEANT." Sent only on the second submit,
-           * after the difference has been shown and looked at. The server does
-           * not compare again once this is set.
-           */
-          accept: accept || undefined,
           birth: {
             date,
             zone: place.zone,
-            // Kept with a PAID chart for the PDF's birth line (Jeremy 10/16);
+            // Kept with the chart for its birth line (Jeremy 10/16; every tier since release 2);
             // never sent on to the engine, which needs only the zone.
             place: place.label,
             timeKnown: timeKnown !== false,
@@ -280,26 +315,11 @@ export default function EntryForm({
        * wording when this form came from a paid link.
        */
       const body = await res.json().catch(() => null);
-      /**
-       * THE CHART IS NOT THE ONE THEY HAD LAST TIME.
-       *
-       * Shown BEFORE the chart, with both versions side by side and a way back
-       * to the form. Jeremy: "they have no way to update, that message should
-       * come before the output is shown, and allow chance to change or accept
-       * their entries."
-       *
-       * Neither answer is treated as the mistake. A time that was guessed last
-       * year and is known now produces exactly this, and so does a typo.
+      /*
+       * "This is not the chart you had before" is retired (release 2): kept
+       * details are confirmed or corrected, and a correction is the buyer's own
+       * -- the reading then says calmly what changed.
        */
-      if (res.status === 409 && body?.error?.code === "chart_differs") {
-        setState({
-          at: "differs",
-          message: body.error.message,
-          previous: body.error.previous,
-          computed: body.error.computed,
-        });
-        return;
-      }
       if (!res.ok) {
         // The edge and the engine both write messages meant for a person to
         // read, so they are shown rather than reworded.
@@ -341,83 +361,6 @@ export default function EntryForm({
             "usually works.",
       });
     }
-  }
-
-  if (state.at === "differs") {
-    const rows: Array<[string, string]> = [
-      ["Type", "type"],
-      ["Profile", "profile"],
-      ["Authority", "authority"],
-      ["Definition", "definition"],
-      ["Incarnation cross", "incarnationCross"],
-    ];
-    const show = (v: unknown) => (Array.isArray(v) ? v.join(" · ") : String(v ?? "—"));
-
-    return (
-      <section className="page-bottom mx-auto max-w-3xl px-6 pt-20 sm:px-8">
-        <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-          This is not the chart you had before
-        </h2>
-        <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">
-          {state.message}
-        </p>
-
-        {/*
-          BOTH, SIDE BY SIDE, so the choice is made by looking rather than by
-          remembering. Neither column is labelled right or wrong -- a birth time
-          learned since last time changes a chart exactly as a typo does.
-        */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {[
-            ["The one you had", state.previous],
-            ["What these details give", state.computed],
-          ].map(([label, data]) => (
-            <div
-              key={label as string}
-              className="rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5"
-            >
-              <h3 className="font-sans text-[12px] uppercase tracking-[0.16em] text-brand-teal">
-                {label as string}
-              </h3>
-              <dl className="mt-3 space-y-2">
-                {rows.map(([name, key]) => (
-                  <div key={key}>
-                    <dt className="font-sans text-[11px] uppercase tracking-[0.14em] text-brand-muted/80">
-                      {name}
-                    </dt>
-                    <dd className="text-[15px] leading-snug text-brand-paper">
-                      {show((data as Record<string, unknown>)?.[key])}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setState({ at: "asking" })}
-            className="rounded-full border border-brand-teal/60 px-6 py-3 font-sans text-[16px] text-brand-teal transition-colors hover:bg-brand-teal/10"
-          >
-            Change my details
-          </button>
-          <button
-            type="button"
-            onClick={() => submit(null, true)}
-            className="rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
-          >
-            These details are right
-          </button>
-        </div>
-
-        <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-          Nothing is decided until you choose. Your details are still on the form
-          exactly as you typed them.
-        </p>
-      </section>
-    );
   }
 
   if (state.at === "done") {
@@ -463,7 +406,7 @@ export default function EntryForm({
         </h2>
         <p className="mt-2 font-sans text-[14px] text-brand-muted">{born}</p>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
-          {privacyFor(tier)}
+          {PRIVACY_NOTE}
         </p>
 
         {/*
@@ -535,11 +478,33 @@ export default function EntryForm({
       className="page-bottom mx-auto max-w-5xl px-6 pt-20 sm:px-8"
     >
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {readingToken && name ? `${name}, enter your birth details` : ENTRY.title}
+        {correcting
+          ? RETURNING.correctTitle
+          : other
+            ? RETURNING.someoneNewTitle
+            : mode === "typeOnce" && name
+              ? `${firstName(name) || name}, enter your birth details`
+              : readingToken
+                ? ENTRY.titleFirst
+                : ENTRY.title}
       </h2>
-      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
-        {ENTRY.body}
-      </p>
+      {/* One calm note under the heading: a correction, someone new, or details asked once. */}
+      {(correcting || other || mode === "typeOnce") && (
+        <div className="mt-4 max-w-[62ch] rounded-xl border border-brand-teal/30 bg-brand-teal/[0.06] px-4 py-3 text-[16px] leading-relaxed text-brand-paper">
+          {correcting
+            ? RETURNING.correctNote
+            : other
+              ? `Payment received, thank you. This chart starts fresh and stays separate from yours${
+                  firstName(name) ? `, ${firstName(name)}` : ""
+                } — nothing is compared and nothing carries over. The link comes to you, to pass on whenever you like.`
+              : RETURNING.typeOnceNote}
+        </div>
+      )}
+      {!correcting && (
+        <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
+          {ENTRY.body}
+        </p>
+      )}
 
       {!readingToken && purchase?.ok === true && (
         <p className="mt-5 rounded-xl border border-brand-teal/40 bg-brand-teal/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">
@@ -567,7 +532,8 @@ export default function EntryForm({
         something belongs before it is handed over, not after.
       */}
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-        {privacyFor(tier)}
+        {/* One privacy sentence for every tier (release 2); a correction says where the old details go. */}
+        {correcting ? RETURNING.correctPrivacy : PRIVACY_NOTE}
       </p>
 
       <form onSubmit={submit} className="mt-8 max-w-[34rem]">
@@ -584,35 +550,49 @@ export default function EntryForm({
 
         <div className="space-y-7 py-7">
           {askName && (
-            <label className="block">
-              <span className="mb-2 block font-sans text-[15px] font-semibold text-brand-paper">
-                Name for this chart <span className="font-normal text-brand-muted">(optional)</span>
-              </span>
-              <input
-                value={who}
-                maxLength={CHART_NAME_MAX}
-                autoComplete="given-name"
-                onChange={(e) => setWho(e.target.value)}
-                className={field}
-              />
-              <span className="mt-1.5 block text-[14px] leading-snug text-brand-muted">
-                It goes on your page and on the PDF: “{chartTitle(who)}”. Change it if the reading is
-                for someone else.
-              </span>
-            </label>
+            <Changed was={changedName}>
+              <label className="block">
+                <span className="mb-2 block font-sans text-[15px] font-semibold text-brand-paper">
+                  {/* Jeremy 10/19, mock v1 p13: "whose chart will this be" */}
+                  {correcting ? "Whose chart this is" : "Whose chart will this be?"}{" "}
+                  <span className="font-normal text-brand-muted">(optional)</span>
+                </span>
+                <input
+                  value={who}
+                  maxLength={CHART_NAME_MAX}
+                  autoComplete={other ? "off" : "given-name"}
+                  placeholder={other ? "Their first name" : undefined}
+                  onChange={(e) => setWho(e.target.value)}
+                  className={field}
+                />
+                <span className="mt-1.5 block text-[14px] leading-snug text-brand-muted">
+                  {other
+                    ? `It is the title of their chart: “${chartTitle(who)}”.`
+                    : correcting
+                      ? `It is the title of this chart: “${chartTitle(who)}”.`
+                      : `It is the title of this chart: “${chartTitle(who)}”. Change it if the chart is for someone else.`}
+                </span>
+              </label>
+            </Changed>
           )}
-          <BirthDateField value={date} onChange={setDate} />
-          <PlaceField chosen={place} onChoose={setPlace} />
+          <Changed was={changedDate}>
+            <BirthDateField value={date} onChange={setDate} />
+          </Changed>
+          <Changed was={changedPlace}>
+            <PlaceField chosen={place} onChoose={setPlace} />
+          </Changed>
 
-          <TimeField
-            value={time}
-            onChange={setTime}
-            unknown={timeKnown === false}
-            onUnknownChange={(u) => {
-              setTimeKnown(u ? false : null);
-              if (u) setTime("");
-            }}
-          />
+          <Changed was={changedTime}>
+            <TimeField
+              value={time}
+              onChange={setTime}
+              unknown={timeKnown === false}
+              onUnknownChange={(u) => {
+                setTimeKnown(u ? false : null);
+                if (u) setTime("");
+              }}
+            />
+          </Changed>
         </div>
 
         <Rule label={ENTRY.endRule} done={ready} />
@@ -643,8 +623,21 @@ export default function EntryForm({
             */}
             {state.at === "working"
               ? "Working…"
-              : `My ${(TIERS[tier]?.label ?? "summary").replace(/^The\s+/i, "").toLowerCase()}`}
+              : correcting
+                ? RETURNING.correctButton
+                : other
+                  ? `${cleanChartName(who) ? `${cleanChartName(who)}’s` : "Their"} ${(TIERS[tier]?.label ?? "chart").replace(/^The\s+/i, "").toLowerCase()}`
+                  : `My ${(TIERS[tier]?.label ?? "summary").replace(/^The\s+/i, "").toLowerCase()}`}
           </button>
+          {correcting && onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="ml-0 mt-4 block font-sans text-[15px] text-brand-teal underline decoration-brand-teal/40 underline-offset-4 sm:ml-5 sm:mt-0 sm:inline"
+            >
+              {RETURNING.keepAsIs}
+            </button>
+          )}
         </div>
       </form>
     </section>

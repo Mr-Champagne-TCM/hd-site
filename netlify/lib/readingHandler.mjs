@@ -1,4 +1,4 @@
-import { loadReading, readReadingLink } from "./reading.mjs";
+import { loadCurrent, loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
 import { marginNotes, parseReading, structureProblem } from "./interpretation.mjs";
 import { buildReadingView } from "./readingView.mjs";
@@ -100,8 +100,15 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
    * ours: say the reading is safe, and that reloading usually finds it.
    */
   let reading;
+  let current;
   try {
-    reading = await loadReading(store, link.id, now, { strict: true });
+    /*
+     * RELEASE 2 (Jeremy 10/19, "2 yes"): an OLD LINK AFTER AN UPGRADE opens the
+     * grown chart, with a small "Your chart has grown" note. `loadCurrent`
+     * follows the record's `grewTo` to the newest filled one.
+     */
+    current = await loadCurrent(store, link.id, now, { strict: true });
+    reading = current?.reading ?? null;
   } catch (e) {
     return fail("reading-store-unavailable", `load failed (${e?.name ?? "Error"})`, undefined, { reading: link.id, tier: link.tier });
   }
@@ -122,10 +129,27 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
    * to a tier is the engine's job, done once, at purchase; re-implementing it
    * here would be a second boundary to keep in step with the first.
    */
-  if (link.tier !== reading.tier) {
-    console.log(`reading: tier mismatch, link ${link.tier} vs stored ${reading.tier}`);
-    return fail("reading-tier-mismatch", `link ${link.tier} vs stored ${reading.tier}`);
+  if (link.tier !== current.first.tier) {
+    console.log(`reading: tier mismatch, link ${link.tier} vs stored ${current.first.tier}`);
+    return fail("reading-tier-mismatch", `link ${link.tier} vs stored ${current.first.tier}`);
   }
+
+  /**
+   * THE CHART IT GREW FROM, for an upgrade (release 2): its kept details are
+   * on this record already; its values are what the confirm screen shows
+   * ("Your chart: Manifesting Generator · 2/4 · Sacral authority") and its
+   * centers draw the small picture beside them.
+   */
+  let source = null;
+  if (reading.grewFrom) {
+    try {
+      source = await loadReading(store, reading.grewFrom, now);
+    } catch {
+      source = null;
+    }
+  }
+  /** "Alex": the name on the chart, else the buyer's first name. */
+  const whose = reading.birth?.name ?? firstName(reading.buyer?.name) ?? null;
 
   /**
    * A PENDING READING IS NOT A BROKEN ONE. They have paid and have not yet
@@ -142,8 +166,30 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
       tier: reading.tier,
       label: TIERS[reading.tier]?.label ?? null,
       name: reading.buyer?.name ?? null,
-      /** The form's "Name for this chart" starts with the buyer's first name (fix 17A). */
-      chartName: firstName(reading.buyer?.name),
+      /**
+       * The form's "Whose chart will this be?" starts with the buyer's first
+       * name (fix 17A) -- or with nothing, for a new chart for someone else.
+       */
+      chartName: reading.fresh ? "" : (reading.birth?.name ?? firstName(reading.buyer?.name)),
+      whose,
+      /**
+       * RELEASE 2: an upgrade carries its chart's kept details, so the page
+       * shows them to CONFIRM ("These are right -- make my reading") rather
+       * than asking again. The buyer's own details, on the buyer's own link.
+       */
+      kept: reading.birth ? { ...reading.birth, birthLine: birthLine(reading.birth) } : null,
+      grewFrom: source
+        ? {
+            tier: source.tier,
+            label: TIERS[source.tier]?.label ?? null,
+            chart: chartLine(source.output),
+            definedCenters: source.output?.definedCenters ?? [],
+          }
+        : null,
+      /** An upgrade of an older summary, which kept no details: typed once. */
+      typeOnce: Boolean(reading.grewFrom && !reading.birth),
+      /** Bought from "Start a new chart for someone else". */
+      fresh: reading.fresh,
       purchasedAt: reading.purchasedAt,
       output: null,
       upgrade: null,
@@ -162,8 +208,21 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      * form when there is one, else the buyer's, as before.
      */
     name: reading.birth?.name ?? reading.buyer?.name ?? null,
+    whose,
     purchasedAt: reading.purchasedAt,
     output: reading.output,
+    /**
+     * RELEASE 2: "Your chart has grown" -- this link was signed for an earlier
+     * tier, and opens the chart it grew into. Null on the link's own chart.
+     */
+    grown: current.grown ? { fromTier: current.first.tier, fromLabel: TIERS[current.first.tier]?.label ?? null } : null,
+    /**
+     * THE CALM NOTE after "Change a detail" (or an older summary typed once):
+     * what changed, and whether Type, Profile or Authority moved. Formatted on
+     * the page by shared/correctionNote.mjs. The record's HISTORY of earlier
+     * details is never sent -- it is for support only.
+     */
+    correction: reading.correction ?? null,
     /**
      * THE PDF'S REAL PAGE COUNT (fix 9A, 10/19): the download button says
      * "PDF, 8 pages". Counted from the PDF itself, built the way /api/pdf
@@ -171,7 +230,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      * while the words are still being written). Null when it cannot be had;
      * the button then simply says "PDF".
      */
-    pdfPages: await pagesFor(reading, link.id, countPages),
+    pdfPages: await pagesFor(reading, current.id, countPages),
     /**
      * THE WRITTEN INTERPRETATION, PARSED, when the tier paid for one.
      *
@@ -260,4 +319,13 @@ function json(status, payload) {
     },
     body: JSON.stringify(payload),
   };
+}
+
+/** "Manifesting Generator · 2/4 · Sacral authority": the chart in one line, for the confirm screen. */
+export function chartLine(output) {
+  if (!output) return null;
+  const parts = [output.type, output.profile, output.authority ? `${output.authority} authority` : null]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
 }

@@ -84,5 +84,5 @@ test("an incident recorded as paid is money, whatever its kind; no kind given is
 
 test("a filled note ends on its sign-off, after one space", () => {
   assert.ok(fillNote("link-again", { link: "https://x/r/1", kind: "resend-crash" }).endsWith("whenever you need it. Very Respectfully, Jeremy"));
-  assert.ok(fillNote("checkout-down", { shop: "https://x", kind: "checkout-misconfigured" }).endsWith("come back: https://x Respectfully, Jeremy"));
+  assert.ok(fillNote("checkout-down", { shop: "https://x", kind: "checkout-misconfigured" }).endsWith("come back to Human Design readings: https://x Respectfully, Jeremy"));
 });

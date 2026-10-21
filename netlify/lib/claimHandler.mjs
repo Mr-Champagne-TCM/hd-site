@@ -1,6 +1,7 @@
 import { paidLevel } from "./checkout.mjs";
 import { mintGrant } from "./grant.mjs";
-import { loadReading, mintReadingLink, nameCase, readingIdForSession, saveReading } from "./reading.mjs";
+import { loadReading, mintReadingLink, nameCase, readingIdForSession } from "./reading.mjs";
+import { recordPurchase } from "./charts.mjs";
 import { deliveryEmail } from "./deliveryEmail.mjs";
 import { customerError } from "./failures.mjs";
 import { customerText } from "../../shared/customerMessages.mjs";
@@ -29,6 +30,8 @@ export async function handleClaim({
   grantSecret,
   getSession,
   readings,
+  /** The per-email list of charts (charts.mjs). Optional: without it nothing is listed. */
+  index = null,
   send = null,
   note = async () => {},
   origin,
@@ -100,6 +103,8 @@ export async function handleClaim({
   const buyer = session?.customer_details ?? {};
   let url = null;
   let alreadyThere = false;
+  /** An upgrade whose chart's details were carried over: nothing to type, only to confirm. */
+  let kept = false;
   let lastError = null;
   const id = readingIdForSession(id0, grantSecret);
   // WHICH purchase, for an alert: ids only (10/16). No tier until a reading
@@ -115,17 +120,23 @@ export async function handleClaim({
         alreadyThere = true;
         console.log("POST /api/claim: already claimed, returning the same reading");
       } else {
-        await saveReading(readings, {
+        /*
+         * RELEASE 2: one function records a purchase for the claim and the
+         * purchase watcher alike -- the receipt, and for "For me" the chart
+         * it grew from (its kept details carried, so nothing is retyped), the
+         * old record marked as grown, and the buyer's list of charts.
+         */
+        const recorded = await recordPurchase({
+          readings,
+          index,
           id,
-          tier: level,
-          output: null,
-          name: buyer.name ?? null,
-          email: buyer.email ?? null,
-          phone: buyer.phone ?? null,
-          sku: session?.metadata?.sku ?? null,
-          purchasedAt: typeof session?.created === "number" ? session.created * 1000 : now,
-          paidCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
+          level,
+          session,
+          secret: grantSecret,
+          now,
+          note: (kind, detail) => note(kind, { detail, ref: { ...ref, tier: level } }),
         });
+        kept = Boolean(recorded?.kept);
       }
       url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
     } catch (e) {
@@ -159,6 +170,7 @@ export async function handleClaim({
       // Always pending here: nobody has entered a birth moment yet. The
       // RECEIPT (fix 4A, 10/19): what was paid and when, from Stripe itself.
       pending: true,
+      kept,
       amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
       paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
     });

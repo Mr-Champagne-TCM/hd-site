@@ -1,6 +1,15 @@
 /**
  * HAS THIS PERSON'S CHART CHANGED SINCE LAST TIME?
  *
+ * RELEASE 2 (Jeremy 10/19-10/20): the alarm this module fed -- "This is not
+ * the chart you had before", shown before an upgrade's chart -- is RETIRED.
+ * Birth details are kept now, so an upgrade confirms or corrects them, and the
+ * chart it grew from is named on the record (`grewFrom`) rather than searched
+ * for by email (`previousChart`, a scan of the whole store, is gone with it).
+ * What stays: the exact comparison of two outputs, used to group an older
+ * summary with the reading it became (charts.mjs) -- and the history below,
+ * which is why these fields and no others.
+ *
  * Birth details are never stored -- they are used to compute a chart and thrown
  * away -- so an upgrade asks for them again. Jeremy walked that path and named
  * the hazard himself:
@@ -91,44 +100,6 @@ export function chartDifferences(before, after) {
   }
 
   return changed;
-}
-
-/**
- * The most recent chart this buyer already has, by the address on the purchase.
- *
- * The address is the identity (D-9) and it is the only thread between two
- * separate purchases -- an upgrade is a NEW reading with a new id, so there is
- * nothing inside one record that points at the other.
- *
- * Returns null rather than throwing on anything unreadable. This runs while
- * somebody is waiting for a chart they have paid for, and a comparison that
- * cannot be made is a comparison not made -- never a failure.
- */
-export async function previousChart(store, { email, excludeId, loadReading, now = Date.now() }) {
-  if (!store || !email || typeof loadReading !== "function") return null;
-  let listed;
-  try {
-    listed = await store.list();
-  } catch {
-    return null;
-  }
-
-  const wanted = String(email).trim().toLowerCase();
-  let best = null;
-  for (const blob of listed?.blobs ?? []) {
-    if (blob.key === excludeId) continue;
-    let r;
-    try {
-      r = await loadReading(store, blob.key, now);
-    } catch {
-      continue;
-    }
-    if (!r || r.pending || !r.output) continue;
-    if (String(r.buyer?.email ?? "").trim().toLowerCase() !== wanted) continue;
-    // The most recently FILLED one is the one they last saw.
-    if (!best || (r.filledAt ?? 0) > (best.filledAt ?? 0)) best = r;
-  }
-  return best;
 }
 
 /** A short, human list of what moved: "Type, Profile and your channels". */

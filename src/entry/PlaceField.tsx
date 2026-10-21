@@ -168,7 +168,8 @@ export default function PlaceField({
   chosen: Place | null;
   onChoose: (p: Place | null) => void;
 }) {
-  const [query, setQuery] = useState("");
+  // A place handed in already chosen (a correction of kept details, release 2) shows its name.
+  const [query, setQuery] = useState(() => chosen?.label ?? "");
   const [results, setResults] = useState<Place[]>([]);
   /**
    * WHICH RESULT THE ARROW KEYS ARE ON. -1 is "none", which is where it starts

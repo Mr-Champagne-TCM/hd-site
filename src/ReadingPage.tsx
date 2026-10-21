@@ -16,6 +16,7 @@ import CoachCard from "./CoachCard";
 import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
+import { ConfirmKept, ReadingNotes } from "./Returning";
 
 /**
  * What a delivery link opens.
@@ -57,6 +58,18 @@ type Reading = {
   birthLine?: string | null;
   /** Paid for words the sweeper has not written yet. */
   writing: boolean;
+  // --- release 2 ---------------------------------------------------------------
+  /** "Alex": the name on the chart, else the buyer's first name. */
+  whose?: string | null;
+  /** Pending upgrade: its chart's kept details, to confirm rather than retype. */
+  kept?: { date: string; time: string | null; timeKnown: boolean; place: string | null; zone: string; name?: string; birthLine?: string | null } | null;
+  grewFrom?: { tier: number; label: string | null; chart: string | null; definedCenters: string[] } | null;
+  typeOnce?: boolean;
+  fresh?: boolean;
+  /** This link was signed for an earlier tier and opens the chart it grew into. */
+  grown?: { fromTier: number; fromLabel: string | null } | null;
+  /** The calm note after a correction (shared/correctionNote.mjs words it). */
+  correction?: unknown;
 };
 
 type State =
@@ -80,6 +93,8 @@ function Panel({ children }: { children: React.ReactNode }) {
 
 export default function ReadingPage({ token }: { token: string }) {
   const [state, setState] = useState<State>({ at: "loading" });
+  /** "Change a detail" on the confirm screen (release 2): the kept details, as a form. */
+  const [correcting, setCorrecting] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -310,6 +325,30 @@ export default function ReadingPage({ token }: { token: string }) {
    * depending on which door somebody came in through.
    */
   if (reading.pending) {
+    /**
+     * AN UPGRADE WITH KEPT DETAILS (release 2, mock v2 step 2): nothing to
+     * type -- the kept birth line, one look, three ways on. "Change a detail"
+     * opens the same form prefilled, as a CORRECTION by the same person.
+     */
+    if (reading.kept && !correcting) {
+      return (
+        <div className="mx-auto max-w-3xl">
+          <ConfirmKept
+            token={token}
+            tier={reading.tier}
+            whose={reading.whose ?? null}
+            fromTier={reading.grewFrom?.tier ?? null}
+            birthLine={reading.kept.birthLine ?? null}
+            chart={reading.grewFrom?.chart ?? null}
+            definedCenters={reading.grewFrom?.definedCenters ?? []}
+            onChange={() => {
+              setCorrecting(true);
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-3xl">
         <EntryForm
@@ -319,6 +358,9 @@ export default function ReadingPage({ token }: { token: string }) {
           chartName={reading.chartName ?? null}
           upgrade={reading.upgrade}
           canResend={reading.canResend}
+          mode={reading.kept ? "correct" : reading.fresh ? "someoneNew" : reading.typeOnce ? "typeOnce" : "first"}
+          initial={reading.kept ?? null}
+          onCancel={() => setCorrecting(false)}
         />
       </div>
     );
@@ -342,6 +384,13 @@ export default function ReadingPage({ token }: { token: string }) {
       {reading.birthLine && (
         <p className="mt-2 text-[15px] text-brand-muted">{reading.birthLine}</p>
       )}
+
+      {/*
+        RELEASE 2: the calm notes. "Your chart has grown" when this link was
+        signed for an earlier tier; "Your correction" after Change a detail
+        (or "What changed from your summary" for an older summary typed once).
+      */}
+      <ReadingNotes grown={reading.grown} label={reading.label} correction={reading.correction} />
 
       {/*
         FIX 9A (Jeremy 10/19): the PDF, solid and named, right under the title

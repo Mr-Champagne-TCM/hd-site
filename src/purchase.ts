@@ -57,26 +57,28 @@ export function dropGrant(): void {
  */
 export async function startCheckout(
   level: number,
-  reading?: string | null,
+  how: { reading?: string | null; upgrade?: boolean; someoneNew?: boolean } = {},
 ): Promise<string | null> {
   /**
-   * BOTH PROOFS OF WHAT IS ALREADY OWNED, and the second is the fix for a real
-   * overcharge. The grant lives in the tab that paid and dies with it; the
-   * reading token arrived by email and survives the tab, the device and the
-   * week. Somebody upgrading from their emailed link had no grant, so the
-   * credit was zero and Stripe asked full price -- on the one path we tell
-   * everybody to use.
+   * RELEASE 2: THE CREDIT BELONGS TO ITS OWN CHART (Jeremy 10/19).
    *
-   * The server verifies both signatures and takes the better of the two.
-   * Neither is a claim anybody can type.
+   *   For me        `{ reading, upgrade: true }` -- the same chart, a step
+   *                 further. The server checks the link, works out what that
+   *                 chart has cost so far, and tells Stripe which chart this
+   *                 purchase grows.
+   *   someone new   `{ someoneNew: true }` -- full price, a fresh chart, no
+   *                 link sent at all.
+   *   first visit   `{}` -- full price.
+   *
+   * The price is never sent: the server decides it.
    */
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       level,
-      grant: heldGrant() ?? undefined,
-      reading: reading ?? undefined,
+      ...(how.upgrade && how.reading ? { reading: how.reading, upgrade: true } : {}),
+      ...(how.someoneNew ? { someoneNew: true } : {}),
     }),
   });
   const body = await res.json().catch(() => null);

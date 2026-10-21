@@ -1,4 +1,4 @@
-import { loadReading, readReadingLink } from "./reading.mjs";
+import { loadCurrent, readReadingLink } from "./reading.mjs";
 import { customerError } from "./failures.mjs";
 import { messagePage } from "./messagePage.mjs";
 
@@ -51,19 +51,24 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
     return fail("pdf-link-bad", `link ${link.reason ?? "bad"}`);
   }
 
-  /**
-   * THE PDF IS THE CHART TIER AND ABOVE. The summary tier was never sold one,
-   * so this is a refusal rather than an omission (link.tier < 1).
-   */
-  if (link.tier < 1) return fail("pdf-link-bad", "tier 0 has no pdf");
-
   let reading;
+  let current;
   try {
-    reading = await loadReading(store, link.id, now, { strict: true });
+    // An old link whose chart has grown downloads the GROWN chart (release 2).
+    current = await loadCurrent(store, link.id, now, { strict: true });
   } catch (e) {
     return fail("pdf-store-unavailable", `load failed (${e?.name ?? "Error"})`, { reading: link.id, tier: link.tier });
   }
-  if (!reading || reading.tier !== link.tier) return fail("pdf-link-bad", "no reading, or tier mismatch");
+  // The link's tier must be the tier of the record it was signed for.
+  if (!current || current.first.tier !== link.tier) return fail("pdf-link-bad", "no reading, or tier mismatch");
+  reading = current.reading;
+
+  /**
+   * THE PDF IS THE CHART TIER AND ABOVE. The summary tier was never sold one,
+   * so this is a refusal rather than an omission -- unless a summary link has
+   * since grown into a chart, which then has one.
+   */
+  if (reading.tier < 1) return fail("pdf-link-bad", "tier 0 has no pdf");
   if (reading.pending) return fail("pdf-not-ready", `tier ${reading.tier}`);
 
   let bytes;

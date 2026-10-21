@@ -165,6 +165,11 @@ export function deliveryEmail({
   url,
   links,
   pending = false,
+  /**
+   * An upgrade whose chart's birth details were carried over (release 2):
+   * the next step is a look to confirm them, not a form to fill.
+   */
+  kept = false,
   amountCents = null,
   paidAt = null,
   footer = "E",
@@ -232,7 +237,7 @@ export function deliveryEmail({
         `there — nobody pays twice for the same thing.`;
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
-  const kept =
+  const keptLine =
     `Your ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
     "sends you a fresh one, as often as you need.";
 
@@ -243,11 +248,19 @@ export function deliveryEmail({
     ...(on ? [["Date", on]] : []),
     [amountCents === 0 ? "Paid through" : "Paid by card through", "Stripe"],
   ];
-  const nextHead = "Next, about 2 minutes";
-  const nextLine =
-    "Your birth date, time and place. Your chart is made from them, and the time can be left " +
-    "out if you don’t know it.";
-  const action = pending ? "Enter your birth details" : top ? "Open your reading" : `Open your ${word}`;
+  const nextHead = kept ? "Next, one look" : "Next, about 2 minutes";
+  const nextLine = kept
+    ? "Your birth details are kept from your chart, so there is nothing to type — only a look, " +
+      "to be sure they are right."
+    : "Your birth date, time and place. Your chart is made from them, and the time can be left " +
+      "out if you don’t know it.";
+  const action = pending
+    ? kept
+      ? "Confirm your birth details"
+      : "Enter your birth details"
+    : top
+      ? "Open your reading"
+      : `Open your ${word}`;
 
   const text = [
     greeting,
@@ -266,7 +279,7 @@ export function deliveryEmail({
           url,
           "",
         ]
-      : [ready.lead, "", "On one page:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", kept, ""]),
+      : [ready.lead, "", "On one page:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", keptLine, ""]),
     `${resourcesHead.toUpperCase()}:`,
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),
@@ -308,7 +321,7 @@ export function deliveryEmail({
           "0 0 20px",
         ),
         row(button(url, action), "0 0 22px"),
-        row(esc(kept), "0 0 18px", `font-size:14px;color:${MUTED}`),
+        row(esc(keptLine), "0 0 18px", `font-size:14px;color:${MUTED}`),
       ];
 
   const html = `<!doctype html>

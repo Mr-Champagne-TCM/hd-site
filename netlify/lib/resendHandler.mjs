@@ -1,4 +1,4 @@
-import { loadReading, mintReadingLink, readReadingLink } from "./reading.mjs";
+import { loadCurrent, mintReadingLink, readReadingLink } from "./reading.mjs";
 import { deliveryEmail } from "./deliveryEmail.mjs";
 import { customerError } from "./failures.mjs";
 
@@ -131,7 +131,9 @@ export async function handleResend({
     const visitorFull = overLimit(visitorHits, now, VISITOR_LIMITS);
     if (visitorFull) return tooMany("visitor");
 
-    const reading = await loadReading(store, link.id, now, { strict: true });
+    // An old link whose chart has grown sends the GROWN chart's link (release 2).
+    const current = await loadCurrent(store, link.id, now, { strict: true });
+    const reading = current?.reading ?? null;
     // Past the year there is nothing to send, which needs no separate rule.
     // Indistinguishable from a forged id, deliberately.
     if (!reading) return fail("resend-link-bad", "no reading for a valid link");
@@ -150,7 +152,7 @@ export async function handleResend({
      * A FRESH LINK, not the one that was presented. Six days again, from now.
      * Re-sending the expired token would be a re-send of nothing.
      */
-    const fresh = mintReadingLink({ id: link.id, tier: reading.tier, now }, secret);
+    const fresh = mintReadingLink({ id: current.id, tier: reading.tier, now }, secret);
     const url = `${origin}/r/${fresh}`;
 
     const { subject, html, text } = deliveryEmail({
@@ -162,6 +164,7 @@ export async function handleResend({
       // form, or somebody coming back to a reading they already have. The record
       // has just been loaded, so this is known rather than assumed.
       pending: reading.pending,
+      kept: Boolean(reading.pending && reading.birth),
       // A re-sent receipt still says what was paid and when (fix 4A).
       amountCents: reading.paidCents ?? null,
       paidAt: reading.purchasedAt ? reading.purchasedAt * 1000 : null,

@@ -39,3 +39,11 @@ export function upgradeTokenFromPath(pathname: string): string | null {
   const m = /^\/u\/([A-Za-z0-9_.-]+)\/?$/.exec(pathname);
   return m ? m[1] : null;
 }
+
+/**
+ * `/charts/` is "Email me my charts" (release 2): one exact path, with or
+ * without its trailing slash, and nothing under it.
+ */
+export function isChartsPath(pathname: string): boolean {
+  return /^\/charts\/?$/.test(pathname);
+}

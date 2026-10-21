@@ -130,7 +130,8 @@ test("the buyer is kept as exactly the five fields, and no others", async () => 
   // Nothing else about a person got in.
   assert.deepEqual(
     Object.keys(raw).sort(),
-    ["buyer", "createdAt", "output", "purchasedAt", "sku", "tier", "v"],
+    // `person` (release 2) is a record id -- whose chart -- not a fact about anybody.
+    ["buyer", "createdAt", "output", "person", "purchasedAt", "sku", "tier", "v"],
   );
 });
 
@@ -574,12 +575,11 @@ test("an unknown time is kept as unknown, never as noon", async () => {
   assert.deepEqual((await loadReading(store, id)).birth, { ...KEPT, timeKnown: false, time: null });
 });
 
-test("the summary tier keeps no birth details at all", async () => {
+test("THE SUMMARY KEEPS ITS BIRTH DETAILS TOO (release 2: 'capture birth details even for summary')", async () => {
   const store = fakeStore();
   const id = await saveReading(store, { tier: 0, output: null });
   await fillReading(store, id, OUTPUT, Date.now(), KEPT);
-  assert.equal((await loadReading(store, id)).birth, null);
-  assert.ok(!JSON.stringify(await store.get(id)).includes("1976-12-14"));
+  assert.deepEqual((await loadReading(store, id)).birth, KEPT);
 });
 
 test("writing the interpretation keeps the birth details it was cast from", async () => {

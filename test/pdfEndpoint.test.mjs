@@ -44,7 +44,9 @@ test("the summary tier is refused rather than sent an empty document", async () 
   // that decides the summary was never sold a download. If that check were
   // dropped, the page has no button but the URL is guessable.
   const pdf = source("netlify/lib/pdfHandler.mjs");
-  assert.match(pdf, /link\.tier < 1/, "the tier gate on the download is gone");
+  // Release 2: checked on the chart the link now opens (a summary link that
+  // grew into a chart has a PDF; one that did not, does not).
+  assert.match(pdf, /reading\.tier < 1/, "the tier gate on the download is gone");
 });
 
 test("nothing else in the app links a PDF the summary tier cannot have", () => {

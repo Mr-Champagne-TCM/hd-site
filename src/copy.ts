@@ -283,6 +283,8 @@ export const ENTRY = {
    * whole section is on its way out, once entry lives behind a signed link.
    */
   title: "Your birth details",
+  /** Release 2 (mock v2, accepted): a first purchase's form, which may be for anyone. */
+  titleFirst: "The birth details for this chart",
   body:
     "Three things are needed: the date, the place, and the time if it is known. " +
     "An unknown time is welcome — the chart is cast at noon and says so plainly, " +
@@ -311,53 +313,125 @@ export const ENTRY = {
 };
 
 /**
- * Two promises, because only one of them stays true once money changes hands.
+ * ONE PRIVACY SENTENCE FOR EVERY TIER (release 2, Jeremy 10/19: "capture birth
+ * details even for summary").
  *
- * The free summary genuinely keeps nothing: the details are used, the answer is
- * returned, and nothing touches a disk. That sentence is a real part of the
- * offer -- it is why somebody hands over a birth moment at all -- so it is not
- * watered down to cover a case most visitors never reach.
+ * The summary used to say its details were "used to compute the chart and then
+ * discarded... not stored, not logged" -- true then, and the reason an upgrade
+ * had to ask for them again and compare charts ("This is not the chart you had
+ * before"). Now every tier keeps the name and birth details with the chart for
+ * its year, so going a step further never means typing them again, and one
+ * sentence says so before anything is typed.
  *
- * A purchase is different and has to say so. The reading is saved, and the
- * reading has the buyer's birth date and place printed on it, so keeping the
- * document keeps the details. Storing only the rendered file and claiming
- * nothing was kept would be true in a database and false in the world.
- *
- * Said BEFORE the card, never after. A privacy sentence that appears once
+ * Said BEFORE the form, never after. A privacy sentence that appears once
  * somebody is already committed reads as something you hoped they would miss.
- *
- * One function rather than two strings loose in the file, for the same reason
- * P-1 keeps prices in one module: a promise written in two places is a promise
- * that will eventually disagree with itself.
  */
 export const PRIVACY_NOTE =
-  "Your birth details are used to compute the chart and then discarded. They are not stored, " +
-  "not logged, and not written to disk at any point.";
+  "The name and birth details entered here are kept with this chart for a year, so it can show " +
+  "whose chart it is and when and where they were born — and so going a step further later never " +
+  "means typing them again. Your email always brings you back to it.";
 
-/**
- * KEPT, SINCE 16 OCTOBER 2026 (Jeremy: "a veer from our initial approach.
- * Update Ts and Cs/privacy as needed"). A paid chart now keeps the birth
- * details it was cast from -- date, time or unknown, place, time zone -- with
- * the reading, for the reading's own year, so the PDF can print the birth line
- * under the name the way the phone's PDF does. Said plainly, before the form.
- */
-/*
- * 10/19: fix 15B drops "your link is active for 6 days" (it read as the reading
- * vanishing), and fix 17A adds the name for the chart, which is kept the same
- * way as the birth details.
- */
-export const PRIVACY_NOTE_PAID =
-  "The name and birth details you enter are kept with your reading, so your page and PDF can " +
-  "show whose chart it is and when and where they were born. Your reading is kept for a year, " +
-  "and your email always brings you back to it.";
-
-/**
- * Tier 0 (the summary) keeps no birth details at all, so it keeps the stronger
- * sentence; the chart and the reading keep them for the PDF's birth line.
- */
-export function privacyFor(tier: number): string {
-  return tier > 0 ? PRIVACY_NOTE_PAID : PRIVACY_NOTE;
+/** Kept for any caller that still asks by tier: every tier now keeps the same promise. */
+export function privacyFor(_tier?: number): string {
+  return PRIVACY_NOTE;
 }
+
+/**
+ * THE RETURNING BUYER (release 2, mock v2 accepted 10/19 with Jeremy's two
+ * changes). His words where he gave them:
+ *
+ *   - the question on the tiles page: "Your chart, a step further — or someone new?"
+ *   - the someone-else card must say START A NEW chart, "otherwise it looks a
+ *     bit like there are 2 charts accessible there" -- on every screen
+ *   - someone-new prices in plain words ("If i'm lost, they will be too"), and
+ *     never "what you paid comes off" on that path ("make alex think that HIS
+ *     paid amount comes off the next new chart")
+ */
+export const RETURNING = {
+  question: "Your chart, a step further — or someone new?",
+  questionBody: "Both are welcome. Choose one, and the right details and the right price come with it.",
+  forMe: "For me",
+  sameChart: "The same chart, a step further",
+  someoneNewEyebrow: "Someone new",
+  startNew: "Start a new chart for someone else",
+  startTheirs: "Start their new chart",
+  someoneNewBody:
+    "A partner, a friend, family: a chart of their own, from their own birth details. It starts fresh " +
+    "and stays separate from yours.",
+  staysWithYours: "What you paid stays with your own chart.",
+  theirDetailsLater: "Their birth details go in after checkout, on a page of their own.",
+  keptLabel: "Kept from your chart",
+  noKeptYet: "Your birth details are asked for once, after checkout — then they stay with your chart.",
+  topBody:
+    "You have the whole of it. And if there is someone whose chart you would love to see, theirs can " +
+    "start whenever you like.",
+  topCard:
+    "The chart, all twenty-six activations and the written reading. It stays on your link for a year, " +
+    "and the PDF is there whenever you want it.",
+  confirmBody:
+    "Payment received, thank you. Your birth details are kept, so there is nothing to type — just a " +
+    "look, to be sure they are right.",
+  confirmYes: "These are right — make my reading",
+  changeDetail: "Change a detail",
+  confirmHelp:
+    "Learned a more exact birth time? “Change a detail” corrects it, and your chart is cast from the " +
+    "corrected details.",
+  correctTitle: "Change a detail",
+  correctNote:
+    "Your details as they are kept now. Change only what needs correcting — your chart is then cast " +
+    "from the corrected details.",
+  correctPrivacy:
+    "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in " +
+    "about them. They are never shown on your page, your PDF or in an email.",
+  correctButton: "Use the corrected details",
+  keepAsIs: "Keep them as they are",
+  typeOnceNote:
+    "Your summary was made before birth details were kept, so they are asked for this once. From now " +
+    "on they stay with your chart — nothing to type again.",
+  someoneNewTitle: "A new chart for someone else",
+  someoneElseHeading: "A chart for someone else",
+  someoneElseBody:
+    "If there is someone whose chart you would love to see — a partner, a friend, family — theirs can " +
+    "start here. It is separate from yours, and yours stays exactly as it is.",
+};
+
+/**
+ * "EMAIL ME MY CHARTS" (release 2, Jeremy 10/20 "3B"). One field, the same
+ * answer whether or not the address has charts, links only to that inbox.
+ */
+export const MY_CHARTS = {
+  lineLead: "Bought here before?",
+  line: "Email me my charts",
+  title: "Email me my charts",
+  body: "Type the email you used when you bought. A fresh link to every chart bought with it goes to that inbox.",
+  label: "Your email",
+  button: "Email me my charts",
+  nothingShown: "Nothing is shown on this page. The links only ever go to the inbox typed here.",
+  sentHead: "Sent",
+  sentLine: (email: string) => `If ${email} has charts here, a fresh link to each one is on its way to it.`,
+  sentMore: "It can take a minute. If nothing arrives, it may be in spam, or under another email you have used.",
+  back: "Human Design readings",
+};
+
+/**
+ * FIX 2, OPTION B, WITH THE LIBRARY NOTES (Jeremy 10/20 "1B"; 10/19 pm notes).
+ * The reading's card in four plain ticks, a real line from a real reading
+ * under the three cards, and on the summary and chart cards a note that, with
+ * the free library, they come close to a full reading. The separate line under
+ * the cards is gone: the card notes say it.
+ */
+export const CARDS = {
+  readingLead: "Your chart, plus about 1,200 words written to it:",
+  readingTicks: ["How you decide", "How you meet the world", "What you take in from others", "Four small things to try"],
+  readingPdf: "A PDF to keep.",
+  summaryNote: ["With the free ", "Human Design library", " beside it, this comes close to a full reading."],
+  chartNote: ["Read alongside the free ", "Human Design library", ", it comes close to a full reading."],
+  stripHead: "From a real reading",
+  stripQuote:
+    "Watch what happens when you balance your public involvement with periods of quiet, uninterrupted solitude.",
+  stripCaption: "One of the four things to try, written for a 5/2 profile.",
+  stripMore: "More real excerpts",
+};
 
 /**
  * FIX 3A (Jeremy 10/19): "Who makes this", under the opening, with his current

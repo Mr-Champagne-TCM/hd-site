@@ -1,7 +1,7 @@
 import { check, record } from "./ratelimit.mjs";
 import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
-import { chartDifferences, describeDifferences, previousChart } from "./chartDiff.mjs";
+import { buildCorrection, historyEntry } from "./correction.mjs";
 import { customerError, engineKind } from "./failures.mjs";
 
 /**
@@ -71,7 +71,28 @@ export async function handleChart({
     return fail("chart-bad-request", { code: "bad_json" });
   }
 
-  const birth = request?.birth;
+  /**
+   * THE RECORD THIS FORM IS FILLING, read once, up front (release 2). An
+   * upgrade carries its chart's kept details, so "These are right -- make my
+   * reading" sends no birth at all (`kept: true`): the record's own details
+   * are used, exactly as they are kept. A typed birth on a record that already
+   * has details is a CORRECTION ("Change a detail").
+   */
+  const early = readReadingLink(request?.reading, grantSecret, now);
+  let filling = null;
+  if (early.ok && readings) {
+    try {
+      filling = await loadReading(readings, early.id, now);
+    } catch {
+      filling = null;
+    }
+  }
+  const useKept = request?.kept === true;
+  const birth = useKept
+    ? filling?.pending && filling.birth
+      ? { ...filling.birth }
+      : null
+    : request?.birth;
   if (!birth || typeof birth !== "object") {
     await note("chart-bad-request", "no birth object");
     return fail("chart-bad-request", { code: "no_birth" });
@@ -210,79 +231,15 @@ export async function handleChart({
    * buyer keeps the form as they filled it, and is told their purchase is safe.
    */
   /**
-   * IS THIS THE SAME CHART THEY HAD LAST TIME?
-   *
-   * Asked BEFORE anything is filed or shown. Jeremy's instruction: "that message
-   * should come before the output is shown, and allow chance to change or accept
-   * their entries." A warning printed above a chart somebody is already reading
-   * is not a choice, it is an apology.
-   *
-   * Only on an upgrade -- there has to be an earlier chart to differ from -- and
-   * only until they say to go ahead. `accept` comes back on the second submit.
-   *
-   * Nothing extra is stored to make this work. The engine's outputs are already
-   * kept; comparing two of them is exact rather than a guess about what somebody
-   * typed.
+   * "THIS IS NOT THE CHART YOU HAD BEFORE" IS RETIRED (release 2, Jeremy 10/19:
+   * "retire no longer needed"). It compared an upgrade's freshly typed details
+   * with the chart before, because nothing was kept. Now the details ARE kept
+   * and carried to the upgrade, so the buyer confirms them ("These are right")
+   * or corrects them ("Change a detail") -- a correction is theirs to make, and
+   * it is kept as their new, accurate details with the old ones in the
+   * record's history. The reading then says calmly what changed. Nothing here
+   * stops a chart any more; a request's old `accept` flag is simply ignored.
    */
-  /**
-   * ONLY ON AN UPGRADE, and the reason is a case this got wrong on its first
-   * outing: ONE ADDRESS CAN BUY FOR MORE THAN ONE PERSON.
-   *
-   * Jeremy bought a summary, having already bought a reading with different
-   * details, and was told "this is not the chart you had before". It was not,
-   * and it was never meant to be -- a second purchase at the same tier or a
-   * lower one is somebody buying again, quite possibly for a partner or a
-   * friend, on the same email. Warning them that a different person's chart is
-   * different is the false alarm this feature cannot afford.
-   *
-   * An UPGRADE is different. It is the same purchase getting larger, the credit
-   * has already been applied on that assumption, and re-entering the birth
-   * details is a step the system asked them to repeat. That is the only case
-   * where "you typed something different this time" is the likely explanation
-   * rather than "this is someone else".
-   *
-   * What this gives up: a second summary bought with a typo goes through
-   * quietly. They end up with two summaries rather than one wrong reading, and
-   * the alternative -- crying wolf at everybody buying a gift -- costs more.
-   */
-  if (readingLink.ok && readings && request?.accept !== true) {
-    /**
-     * A COMPARISON THAT CANNOT BE MADE IS SKIPPED, not failed. Today neither
-     * call throws (both swallow store errors), but this is a courtesy check on
-     * a paid path: if that ever changes, a throw here must cost the buyer the
-     * comparison, never the chart.
-     */
-    let previous = null;
-    try {
-      previous = await previousChart(readings, {
-        email: (await loadReading(readings, readingLink.id, now))?.buyer?.email ?? null,
-        excludeId: readingLink.id,
-        loadReading,
-        now,
-      });
-    } catch (e) {
-      await note("chart-previous-lookup", `${tierNote}: ${e?.name ?? "Error"}`, paid);
-    }
-
-    const isUpgrade = previous ? readingLink.tier > previous.tier : false;
-    const changed = isUpgrade ? chartDifferences(previous.output, upstream.payload) : [];
-    if (changed.length) {
-      console.log(`chart: differs from the previous one (${changed.join(", ")})`);
-      return json(409, {
-        error: {
-          code: "chart_differs",
-          message:
-            `This chart is not the same as the one you had. ${describeDifferences(changed)} ` +
-            "changed, which means the birth details entered this time are different from last " +
-            "time. Either can be the right one — a time that was guessed before and is known " +
-            "now would do exactly this.",
-          changed,
-          previous: summaryOf(previous.output),
-          computed: summaryOf(upstream.payload),
-        },
-      });
-    }
-  }
 
   if (readingLink.ok && readings) {
     /**
@@ -303,11 +260,44 @@ export async function handleChart({
       // details for the title; never in ALLOWED_BIRTH_FIELDS, so never sent on.
       name: birth.name,
     };
+
+    /**
+     * A CORRECTION, OR DETAILS TYPED ONCE (release 2). Worked out from the
+     * record read above -- never from anything the page claims.
+     *
+     *   kept details, confirmed      nothing to note
+     *   kept details, typed again    a correction: the old details go to the
+     *                                record's history, and the reading gets a
+     *                                calm note of what changed
+     *   an upgrade with NO kept      an older summary, typed once: the reading
+     *   details (older summary)      says only whether the chart moved
+     *
+     * The chart it is compared with is the one it grew from.
+     */
+    let extra = {};
+    if (filling?.pending && !useKept && (filling.birth || filling.grewFrom)) {
+      let before = null;
+      if (filling.grewFrom) {
+        try {
+          before = (await loadReading(readings, filling.grewFrom, now))?.output ?? null;
+        } catch {
+          before = null;
+        }
+      }
+      if (filling.birth) {
+        const entry = historyEntry({ was: filling.birth, now: birthKept, at: now });
+        const correction = buildCorrection({ type: "correction", was: filling.birth, now: birthKept, before, after: upstream.payload, at: now });
+        extra = { history: entry ? [entry] : null, correction };
+      } else {
+        extra = { correction: buildCorrection({ type: "first-details", before, after: upstream.payload, at: now }) };
+      }
+    }
+
     let filled;
     let lastError = null;
     for (let attempt = 0; attempt < 2 && !filled; attempt++) {
       try {
-        filled = await fillReading(readings, readingLink.id, upstream.payload, now, birthKept);
+        filled = await fillReading(readings, readingLink.id, upstream.payload, now, birthKept, extra);
       } catch (e) {
         lastError = e;
       }
@@ -357,21 +347,5 @@ function json(status, payload, headers = {}) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers },
     body: JSON.stringify(payload),
-  };
-}
-
-/**
- * The few values worth putting side by side. Not the whole output and never the
- * drawing -- this is a comparison, and a comparison nobody can read is not one.
- */
-function summaryOf(output) {
-  return {
-    type: output?.type ?? null,
-    profile: output?.profile ?? null,
-    authority: output?.authority ?? null,
-    definition: output?.definition ?? null,
-    incarnationCross: output?.incarnationCross ?? null,
-    definedCenters: output?.definedCenters ?? [],
-    channels: output?.channels ?? [],
   };
 }

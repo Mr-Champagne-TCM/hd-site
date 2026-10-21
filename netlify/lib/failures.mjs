@@ -139,6 +139,24 @@ export const KINDS = {
   "resend-too-many": { severity: I, customer: "resend-too-many", status: 429, code: "too_many" },
   "resend-no-address": { severity: F, customer: "resend-no-address", status: 409, code: "no_address" },
 
+  // --- returning buyers and their charts (release 2) -------------------------
+  // An upgrade's credit was given for a chart that, by the time the money
+  // settled, had already grown this far (two upgrades paid at once). The buyer
+  // has their purchase; it stands on its own.
+  "upgrade-already-grown": { severity: F, customer: null, status: 200, code: null },
+  // The old record could not be marked as grown: its old link keeps opening
+  // the old chart, and its credit is not yet spent.
+  "upgrade-link-not-saved": { severity: F, customer: null, status: 200, code: null },
+  // The purchase is safe; "Email me my charts" will not list it until fixed.
+  "chart-index-not-saved": { severity: F, customer: null, status: 200, code: null },
+
+  // --- "Email me my charts" (release 2, Jeremy 10/20 "3B") -------------------
+  "mycharts-misconfigured": { severity: P, customer: "mycharts-unavailable", status: 503, code: "misconfigured" },
+  "mycharts-store-unavailable": { severity: P, customer: "mycharts-unavailable", status: 503, code: "mycharts_unavailable" },
+  "mycharts-email-failed": { severity: F, customer: "mycharts-unavailable", status: 502, code: "send_failed" },
+  "mycharts-bad-email": { severity: I, customer: "mycharts-bad-email", status: 400, code: "bad_email" },
+  "mycharts-too-many": { severity: I, customer: "mycharts-too-many", status: 429, code: "too_many" },
+
   // --- the scheduled watchers (no customer on the line) ---------------------
   "purchase-undelivered": { severity: P, customer: null, status: 200, code: null },
   "reconcile-truncated": { severity: P, customer: null, status: 200, code: null },
@@ -152,6 +170,7 @@ export const KINDS = {
   "reading-crash": { severity: P, customer: "reading-unavailable", status: 500, code: "unexpected" },
   "pdf-crash": { severity: P, customer: "pdf-unavailable", status: 500, code: "unexpected" },
   "resend-crash": { severity: P, customer: "resend-unavailable", status: 500, code: "unexpected" },
+  "mycharts-crash": { severity: P, customer: "mycharts-unavailable", status: 500, code: "unexpected" },
 };
 
 /** "chart-slow" is two sentences: one when nothing was charged, one when it was. */

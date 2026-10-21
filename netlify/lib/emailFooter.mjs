@@ -92,7 +92,7 @@ const under = (words) => `<div style="font-size:14px;color:${MUTED};padding-top:
 function privacyRow(links) {
   return `<!--
     THE POLICY TRAVELS WITH THE THING IT DESCRIBES. This email is what a buyer
-    still has in a week; the shop page is not. Putting the link only on the
+    still has in a week; the readings page is not. Putting the link only on the
     page they bought from makes it unfindable at exactly the moment somebody
     wonders what was kept.
   -->

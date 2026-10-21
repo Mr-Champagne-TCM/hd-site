@@ -3,6 +3,7 @@ import { SITE } from "./copy";
 import { startCheckout } from "./purchase";
 import MailtoText from "./MailtoText";
 import { PageEnd } from "./FooterTheme";
+import { SomeoneElseSection } from "./Returning";
 import { TIERS } from "../shared/pricing.mjs";
 import {
   AUTHORITY_NOTES,
@@ -317,6 +318,13 @@ export default function ReadingActions({
         coaching link is still here, now in lavender with its own line -- and
         the privacy line, since this page has no other footer.
       */}
+      {/*
+        "A CHART FOR SOMEONE ELSE" at the end of a top-tier reading -- kept as
+        Jeremy circled it (returning-buyer mock v1 p15), its button saying
+        START A NEW chart (his 10/19 call). Not while the words are still
+        being written: that page is about waiting, not about someone else.
+      */}
+      {tier >= 2 && !writing && <SomeoneElseSection token={token} />}
       <PageEnd />
     </div>
   );

@@ -61,3 +61,14 @@
   from = "/u/*"
   to = "/app.html"
   status = 200
+
+[[redirects]]
+  # "Email me my charts" (release 2): a one-field page, served by the same shell.
+  from = "/charts"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/charts/*"
+  to = "/app.html"
+  status = 200

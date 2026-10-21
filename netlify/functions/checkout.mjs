@@ -1,7 +1,7 @@
-import { checkoutProduct, creditFor, sessionParams } from "../lib/checkout.mjs";
+import { checkoutCredit, checkoutProduct, sessionParams } from "../lib/checkout.mjs";
 import { createSession, ensureProduct } from "../lib/stripe.mjs";
-import { readGrant } from "../lib/grant.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
+import { chainHead } from "../lib/charts.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { getStore } from "@netlify/blobs";
@@ -68,31 +68,25 @@ export default guard("checkout", async (request) => {
   }
 
   /**
-   * WHAT THEY ALREADY OWN. Two proofs, and the SECOND one is the fix for an
-   * overcharge Jeremy found by walking the site with his own card.
-   *
-   *   the GRANT   lives in the browser tab that paid. Good for the minutes
-   *               right after a purchase, worthless the moment that tab closes.
-   *
-   *   the LINK    is the signed reading token. It survives the tab, the device
-   *               and the week, because it arrived by email.
-   *
-   * He upgraded from a page reached by his emailed link on a later visit. There
-   * was no grant in that tab, so the credit was zero and Stripe asked for the
-   * whole price -- while the PDF in his hand said "what you have already paid
-   * comes off the price there". The promise was false, and it was false on the
-   * ONE PATH WE TELL EVERYBODY TO USE.
-   *
-   * Both are server-verified signatures, so neither is a sentence anyone can
-   * type. The better of the two wins: somebody holding a chart link and a
-   * summary grant is credited for the chart.
+   * WHAT THEY ALREADY OWN. The signed link from their email is the proof (it
+   * survives the tab, the device and the week -- the fix for an overcharge
+   * Jeremy found by walking the site with his own card). The grant held in a
+   * tab used to count too; since release 2 it does not: it names a tier, not
+   * a chart, and credit now belongs to one chart.
    */
-  const held = readGrant(body?.grant, grantSecret);
-  const link = readReadingLink(body?.reading, grantSecret, Date.now());
-  const alreadyPaidCents = creditFor({
-    grantTier: held.ok ? held.tier : -1,
-    linkTier: link.ok ? link.tier : -1,
+  /*
+   * RELEASE 2: the credit belongs to its own chart. Only "For me" -- an
+   * upgrade of the chart the link names -- is credited, and Stripe is told
+   * which chart (`upgrades`), so the same credit cannot come off a second
+   * purchase. "Start a new chart for someone else" is full price.
+   */
+  const readings = getStore({ name: "readings", consistency: "strong" });
+  const { alreadyPaidCents, upgrades, fresh } = await checkoutCredit({
+    body,
+    secret: grantSecret,
     level,
+    head: (id) => chainHead(readings, id),
+    readLink: readReadingLink,
   });
 
   const origin = new URL(request.url).origin;
@@ -107,8 +101,10 @@ export default guard("checkout", async (request) => {
   });
 
   try {
-    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product }));
-    console.log(`POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${product ? "" : ", inline product"})`);
+    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh }));
+    console.log(
+      `POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${upgrades ? ", upgrade" : ""}${fresh ? ", someone new" : ""}${product ? "" : ", inline product"})`,
+    );
     return json(200, { url: session.url });
   } catch (e) {
     // Stripe's message is for a developer; the visitor gets one written for a

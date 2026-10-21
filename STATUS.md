@@ -4,6 +4,33 @@ _Updated 29 August 2026, late — the day the site went live and took a real
 payment. Supersedes UNVERIFIED.md and CHANGED-OVERNIGHT.md as the place to look
 first._
 
+## RELEASE 2 -- BUILT 20 OCTOBER 2026, NOT LIVE (branch ux-release-2)
+
+Jeremy's calls of 10/19-10/20, built as real code. Nothing here is deployed.
+
+| | What |
+|---|---|
+| Summary keeps details | The summary keeps the name and birth details like the chart and reading. ONE privacy sentence for every tier (src/copy.ts `PRIVACY_NOTE`) |
+| The question | `/u/<token>`: "Your chart, a step further -- or someone new?" -- "For me" (same chart, credit applied, Stripe metadata `upgrades` names the record) or "Start a new chart for someone else" (full price, `fresh`) |
+| Credit on its own chart | Credit only for an upgrade of the record the link names (checkout.mjs `checkoutCredit`); once grown, the old link speaks for the grown chart, so the same credit cannot come off twice. Grants no longer earn credit |
+| Confirm, do not retype | An upgrade carries the kept details; "These are right -- make my reading" casts from them (`kept: true`) |
+| Change a detail | A correction: new details kept, the old ones in the record's `history` (support only, never sent to a page), a calm note on the reading |
+| Alarm retired | No 409 `chart_differs` anywhere; `previousChart` (whole-store scan) removed |
+| Old link after an upgrade | Opens the grown chart with "Your chart has grown" (reading.mjs `loadCurrent`); PDF and "Email me this link" follow it too |
+| Email me my charts | `/charts/` + `POST /api/my-charts`: same answer either way, rate-limited per visitor and per address, sends only to the typed address, one link per person's chart, "Start a new chart" in both emails |
+| Per-email list | Blob store `charts-by-email`, key = HMAC of the address, rows = ids/person/tier/time only. Fills itself from older records on first use (`ensureIndexed`) |
+| Naming | "Human Design readings", never "the shop", in anything a customer reads |
+
+**Old records keep working, nothing migrated:** every new field has a default
+(`person` = own id, `legacy: true`; `grewFrom`/`grewTo` null; `history` []);
+an older summary with no details types them once and gets a calm note only if
+its chart moved.
+
+**New Netlify store** `charts-by-email` (made on first write). **New function**
+`my-charts` (needs GRANT_SECRET, RESEND_API_KEY, RATE_SALT -- all already set).
+
+---
+
 ## THE SHORT VERSION
 
 **You are live and selling.** A real card was charged at the reading tier and
@@ -186,8 +213,14 @@ including a webhook that never arrives.
 
 - **One bodygraph** (D-10). A client never chooses a palette. Print is a medium,
   not a choice.
-- **Birth details are never stored.** They compute a chart and are discarded. An
-  upgrade asks again, and the chart is COMPARED rather than the details kept.
+- **Birth details ARE kept now, on every tier** (Jeremy 10/16 for paid charts,
+  10/19 for the summary too). Date, time or "unknown", the place as picked, the
+  time zone and the name for the chart, with the chart for its year -- never
+  coordinates, never inside the engine's output, never sent to the writer. An
+  upgrade carries them over (confirm, do not retype); "Change a detail" is a
+  correction, kept with a history of earlier details for support only. This
+  replaced "never stored ... an upgrade asks again and the chart is COMPARED",
+  and with it the "This is not the chart you had before" alarm (retired).
 - **Identity is the email on the purchase** (D-9). Re-delivery goes there and
   nowhere else.
 - **Six days for a link, a year for the purchase** (D-9d). An expired link

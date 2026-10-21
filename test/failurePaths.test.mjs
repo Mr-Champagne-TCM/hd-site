@@ -121,7 +121,8 @@ test("our-side failures carry a next step; the customer acts only on their own t
     assert.match(m.text, /usually|reaches|will|could you|can be|on the home page|page has|whenever|is a perfectly|the summary|go through|nothing needs|clears on its own/i, `${key}: no next step`);
   }
   const acting = Object.entries(MESSAGES).filter(([, m]) => m.act).map(([k]) => k).sort();
-  assert.deepEqual(acting, ["chart-check-date", "chart-check-place", "chart-check-time"]);
+  // Release 2: a mistyped address on "Email me my charts" is theirs to fix too.
+  assert.deepEqual(acting, ["chart-check-date", "chart-check-place", "chart-check-time", "mycharts-bad-email"]);
 });
 
 test("engine answers map onto kinds the customer can act on, or ours", () => {

@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { LOOK_BACK_MS, reconcile } from "../lib/reconcile.mjs";
 import { listSessions } from "../lib/stripe.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
+import { INDEX_STORE } from "../lib/charts.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { alertSender, noteFailure } from "../lib/failures.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
@@ -61,6 +62,8 @@ export default async () => {
   const result = await reconcile({
     sessions: page.sessions,
     store,
+    // The per-email list of charts (release 2), written as the claim writes it.
+    index: getStore({ name: INDEX_STORE, consistency: "strong" }),
     grantSecret,
     origin,
     deliver: acting && mailKey ? sendDelivery(mailKey) : null,
@@ -107,9 +110,9 @@ export default async () => {
 
 /** The same delivery email every other path sends, so there is one design. */
 function sendDelivery(apiKey) {
-  return async ({ to, name, url, tier, amountCents = null, paidAt = null }) => {
+  return async ({ to, name, url, tier, kept = false, amountCents = null, paidAt = null }) => {
     if (!to) return;
-    const { subject, html, text } = deliveryEmail({ tier, name, url, links: SITE, pending: true, amountCents, paidAt });
+    const { subject, html, text } = deliveryEmail({ tier, name, url, links: SITE, pending: true, kept, amountCents, paidAt });
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`reconcile: delivery ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
     if (!sent.ok) throw new Error(sent.reason || "send failed");

@@ -1,4 +1,5 @@
-import { mintReadingLink, nameCase, readingIdForSession, saveReading } from "./reading.mjs";
+import { mintReadingLink, nameCase, readingIdForSession } from "./reading.mjs";
+import { recordPurchase } from "./charts.mjs";
 import { paidLevel } from "./checkout.mjs";
 
 /**
@@ -70,6 +71,8 @@ export const NEW_ID_SCHEME_FROM = Date.parse("2026-08-29T21:45:00Z");
 export async function reconcile({
   sessions,
   store,
+  /** The per-email list of charts (release 2). Optional. */
+  index = null,
   grantSecret,
   origin,
   deliver = null,
@@ -151,16 +154,19 @@ export async function reconcile({
 
     const buyer = session?.customer_details ?? {};
     try {
-      await saveReading(store, {
+      // The same recording as the claim (charts.mjs): an upgrade bought and
+      // never returned from is still joined to the chart it grew from.
+      const recorded = await recordPurchase({
+        readings: store,
+        index,
         id,
-        tier: level,
-        output: null,
-        name: buyer.name ?? null,
-        email: buyer.email ?? null,
-        phone: buyer.phone ?? null,
-        sku: session?.metadata?.sku ?? null,
-        purchasedAt: typeof session?.created === "number" ? session.created * 1000 : now,
-        paidCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
+        level,
+        session,
+        secret: grantSecret,
+        now,
+        note: async (kind, detail) => {
+          if (typeof report === "function") await report({ kind, detail, ref: { session: sessionId, reading: id } }).catch(() => {});
+        },
       });
 
       const url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
@@ -169,6 +175,7 @@ export async function reconcile({
         name: nameCase(buyer.name),
         url,
         tier: level,
+        kept: Boolean(recorded?.kept),
         amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
         paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
       });

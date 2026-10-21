@@ -15,9 +15,35 @@ import { cleanChartName } from "../../shared/chartName.mjs";
  *   was unknown), the place as it was picked, and the time zone -- in their
  *   own `birth` block, beside the engine's output and never inside it.
  *
- * Nothing else about the birth is kept: no coordinates, no UTC instant. The
- * summary tier (0) still keeps none of it -- it has no PDF to print it on, and
- * its privacy sentence still promises that nothing is stored.
+ * Nothing else about the birth is kept: no coordinates, no UTC instant.
+ *
+ * 20 OCTOBER 2026 (release 2, Jeremy: "capture birth details even for
+ * summary"): THE SUMMARY KEEPS THEM TOO, so going a step further never means
+ * typing them again. One privacy sentence for every tier says so (copy.ts).
+ *
+ * RELEASE 2 ALSO ADDS, all optional and all read with defaults, so every
+ * record written before it loads exactly as it did (no migration):
+ *
+ *   person     WHICH PERSON'S CHART this is: the id of the first record in
+ *              its chain. Absent on older records -> the record's own id
+ *              (and `legacy: true`, so the "Email me my charts" list can still
+ *              group an older summary with the reading it grew into).
+ *   grewFrom   the record this purchase upgraded (Stripe metadata `upgrades`,
+ *              set by the checkout from a verified link). Absent -> null.
+ *   grewTo     the record that upgraded this one. An old link follows it and
+ *              opens the grown chart ("Your chart has grown"). Absent -> null.
+ *   fresh      bought from "Start a new chart for someone else".
+ *   history    EARLIER BIRTH DETAILS, when "Change a detail" corrected them:
+ *              [{ at, was, changed }]. For support lookup only -- never sent
+ *              to a page, a PDF or an email. Absent -> [].
+ *   correction the calm note the reading page shows after a correction (or
+ *              after an older summary's details were typed once): what was
+ *              changed and which chart values moved. Absent -> null.
+ *
+ * THE CREDIT BELONGS TO ITS OWN CHART. Only a purchase that upgrades this very
+ * record is credited with what it cost (checkout.mjs `upgradeCredit`), and once
+ * it has grown, its old link speaks for the grown one -- so the same credit can
+ * never come off a second purchase.
  *
  * Same store, same record and same lifetime as the reading itself: written
  * once with the chart (`fillReading`), carried through `fillInterpretation`,
@@ -120,7 +146,24 @@ const ID = /^[0-9a-f]{32}$/;
  */
 export async function saveReading(
   store,
-  { tier, output, name, email, phone, sku, purchasedAt, paidCents = null, id = null, now = Date.now() },
+  {
+    tier,
+    output,
+    name,
+    email,
+    phone,
+    sku,
+    purchasedAt,
+    paidCents = null,
+    id = null,
+    now = Date.now(),
+    // Release 2: whose chart, what it grew from, kept details carried over.
+    person = null,
+    grewFrom = null,
+    fresh = false,
+    birth = null,
+    history = null,
+  },
 ) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
   // Null is a pending reading. Anything else that is not an object is a caller
@@ -165,8 +208,63 @@ export async function saveReading(
     // receipt email says it). A 100%-off code is 0. Absent on older records.
     ...(Number.isInteger(paidCents) && paidCents >= 0 ? { paidCents } : {}),
     createdAt: Math.floor(now / 1000),
+    // WHICH PERSON'S CHART (release 2): its own id unless it grew from another.
+    person: ID.test(String(person)) ? person : readingId,
+    ...(ID.test(String(grewFrom)) ? { grewFrom } : {}),
+    ...(fresh === true ? { fresh: true } : {}),
+    // An upgrade carries the kept details over, so there is nothing to retype.
+    ...(birthRecord(birth) ? { birth: birthRecord(birth) } : {}),
+    ...(cleanHistory(history).length ? { history: cleanHistory(history) } : {}),
   });
   return readingId;
+}
+
+/**
+ * EVERY FIELD A RECORD CARRIES, rebuilt one by one (never spread), with
+ * `patch` laid over what was loaded. One place, so a field added later -- as
+ * release 2 added six -- cannot be dropped by one of the three writers that
+ * used to list them each by hand.
+ *
+ * `person` is written only when the record already had one or the patch sets
+ * it: an older record stays recognisably older (`legacy`) until a release-2
+ * flow says whose chart it is.
+ */
+function serialize(existing, patch = {}) {
+  const r = { ...existing, ...patch };
+  const hist = cleanHistory(r.history);
+  return {
+    v: 1,
+    tier: r.tier,
+    output: r.output ?? null,
+    buyer: r.buyer,
+    sku: r.sku ?? null,
+    purchasedAt: r.purchasedAt,
+    ...(Number.isInteger(r.paidCents) ? { paidCents: r.paidCents } : {}),
+    createdAt: r.createdAt,
+    ...(r.filledAt ? { filledAt: r.filledAt } : {}),
+    ...(r.birth ? { birth: r.birth } : {}),
+    ...(typeof r.reading === "string" ? { reading: r.reading } : {}),
+    ...(r.writtenAt ? { writtenAt: r.writtenAt } : {}),
+    ...(!r.legacy || "person" in patch ? { person: r.person } : {}),
+    ...(r.grewFrom ? { grewFrom: r.grewFrom } : {}),
+    ...(r.grewTo ? { grewTo: r.grewTo } : {}),
+    ...(r.fresh ? { fresh: true } : {}),
+    ...(hist.length ? { history: hist } : {}),
+    ...(r.correction ? { correction: r.correction } : {}),
+  };
+}
+
+/** History entries as kept: when, the details as they were, what changed. Nothing else. */
+function cleanHistory(h) {
+  if (!Array.isArray(h)) return [];
+  return h
+    .filter((e) => e && typeof e === "object" && Number.isFinite(e.at))
+    .map((e) => ({
+      at: Math.floor(e.at),
+      was: birthRecord(e.was),
+      changed: Array.isArray(e.changed) ? e.changed.filter((c) => typeof c === "string").slice(0, 8) : [],
+    }))
+    .slice(-20);
 }
 
 /**
@@ -268,7 +366,64 @@ export async function loadReading(store, id, now = Date.now(), { strict = false 
     writtenAt: raw.writtenAt ?? 0,
     /** The birth details the chart was cast from (16 Oct 2026 on); null before that. */
     birth: birthRecord(raw.birth),
+    // --- release 2: every one defaulted, so an older record loads unchanged ---
+    id,
+    /** Which person's chart. An older record is its own person. */
+    person: ID.test(String(raw.person)) ? raw.person : id,
+    /** No `person` written: from before release 2 (see `serialize`). */
+    legacy: !ID.test(String(raw.person)),
+    grewFrom: ID.test(String(raw.grewFrom)) ? raw.grewFrom : null,
+    grewTo: ID.test(String(raw.grewTo)) ? raw.grewTo : null,
+    fresh: raw.fresh === true,
+    /** Earlier details, for support only. Never returned to a page. */
+    history: cleanHistory(raw.history),
+    correction: raw.correction && typeof raw.correction === "object" ? raw.correction : null,
   };
+}
+
+/**
+ * THE CHART THIS LINK NOW SPEAKS FOR (release 2, Jeremy 10/19 "2 yes").
+ *
+ * An upgrade is a new record, so the link in the first email still names the
+ * old one. Once the upgrade has a chart, that old link opens the grown one --
+ * "Your chart has grown, this is now your reading". Followed only to a record
+ * that is filled and higher, at most a few steps (summary -> chart -> reading),
+ * so a paid-but-not-yet-entered upgrade leaves the old chart showing.
+ *
+ * Returns `{ reading, id, grown }`, or null when the starting record is not
+ * readable. `strict` is passed through for the first load only: a blip on a
+ * later step leaves the link on the chart it already reached.
+ */
+export async function loadCurrent(store, id, now = Date.now(), { strict = false } = {}) {
+  const first = await loadReading(store, id, now, { strict });
+  if (!first) return null;
+  let at = first;
+  for (let hop = 0; hop < 4 && at.grewTo; hop++) {
+    let next = null;
+    try {
+      next = await loadReading(store, at.grewTo, now);
+    } catch {
+      next = null;
+    }
+    if (!next || next.pending || next.tier <= at.tier) break;
+    at = next;
+  }
+  return { reading: at, id: at.id, grown: at.id !== first.id, first };
+}
+
+/**
+ * Rewrite a record with a few fields changed, everything else carried
+ * (`serialize`). For the release-2 links between records -- `grewTo` on the
+ * one that was upgraded -- never for the chart or the words, which stay
+ * write-once in `fillReading` / `fillInterpretation`.
+ */
+export async function updateRecord(store, id, patch, now = Date.now()) {
+  const existing = await loadReading(store, id, now, { strict: true });
+  if (!existing) return { ok: false, reason: "not_found" };
+  const allowed = {};
+  for (const k of ["grewTo", "person"]) if (k in patch) allowed[k] = patch[k];
+  await store.setJSON(id, serialize(existing, allowed));
+  return { ok: true };
 }
 
 /**
@@ -356,7 +511,7 @@ export function birthRecord(b) {
  * not fillable, because "already done" is an ordinary thing for a double-
  * submitted form to be.
  */
-export async function fillReading(store, id, output, now = Date.now(), birth = null) {
+export async function fillReading(store, id, output, now = Date.now(), birth = null, { history = null, correction = null } = {}) {
   if (!output || typeof output !== "object") throw new Error("fillReading: no output");
   refuseBirthData(output);
 
@@ -364,22 +519,24 @@ export async function fillReading(store, id, output, now = Date.now(), birth = n
   if (!existing) return { ok: false, reason: "not_found" };
   if (!existing.pending) return { ok: false, reason: "already_filled" };
 
-  await store.setJSON(id, {
-    v: 1,
-    tier: existing.tier,
-    output,
-    buyer: existing.buyer,
-    sku: existing.sku,
-    purchasedAt: existing.purchasedAt,
-    ...(existing.paidCents !== null ? { paidCents: existing.paidCents } : {}),
-    createdAt: existing.createdAt,
-    // When the chart was computed, which is NOT when it was bought. The year
-    // runs from the purchase either way; this is only ever for looking at.
-    filledAt: Math.floor(now / 1000),
-    // The birth details it was cast from -- paid charts only (tier 1 and up),
-    // and only the five fields `birthRecord` allows (Jeremy 10/16).
-    ...(existing.tier >= 1 && birthRecord(birth) ? { birth: birthRecord(birth) } : {}),
-  });
+  const kept = birthRecord(birth);
+  await store.setJSON(
+    id,
+    serialize(existing, {
+      output,
+      // When the chart was computed, which is NOT when it was bought. The year
+      // runs from the purchase either way; this is only ever for looking at.
+      filledAt: Math.floor(now / 1000),
+      // The birth details it was cast from -- EVERY tier since release 2 (the
+      // summary too), and only the fields `birthRecord` allows (Jeremy 10/16).
+      // None given keeps what the record already had (an upgrade's carried
+      // details, confirmed with "These are right").
+      birth: kept ?? existing.birth,
+      // A correction keeps the details it replaced, for support only.
+      history: history ? [...existing.history, ...cleanHistory(history)] : existing.history,
+      ...(correction && typeof correction === "object" ? { correction } : {}),
+    }),
+  );
   return { ok: true, tier: existing.tier };
 }
 
@@ -410,22 +567,15 @@ export async function fillInterpretation(store, id, text, now = Date.now()) {
   if (existing.tier < 2) return { ok: false, reason: "wrong_tier" };
   if (existing.reading) return { ok: false, reason: "already_written" };
 
-  await store.setJSON(id, {
-    v: 1,
-    tier: existing.tier,
-    output: existing.output,
-    buyer: existing.buyer,
-    sku: existing.sku,
-    purchasedAt: existing.purchasedAt,
-    ...(existing.paidCents !== null ? { paidCents: existing.paidCents } : {}),
-    createdAt: existing.createdAt,
-    filledAt: existing.filledAt || Math.floor(now / 1000),
-    // Carried through: rebuilding the record field by field must not drop it.
-    ...(existing.birth ? { birth: existing.birth } : {}),
-    reading: text,
-    // When it was written -- neither when it was bought nor when the chart was
-    // cast. Kept for looking at, never for expiry.
-    writtenAt: Math.floor(now / 1000),
-  });
+  await store.setJSON(
+    id,
+    serialize(existing, {
+      filledAt: existing.filledAt || Math.floor(now / 1000),
+      reading: text,
+      // When it was written -- neither when it was bought nor when the chart was
+      // cast. Kept for looking at, never for expiry.
+      writtenAt: Math.floor(now / 1000),
+    }),
+  );
   return { ok: true, tier: existing.tier };
 }

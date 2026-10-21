@@ -63,20 +63,59 @@ export function formEncode(obj, prefix = "") {
  * from a GRANT held in the tab that paid, and the path we tell everybody to use
  * -- the link in their email, on a later visit -- has no such tab.
  *
- * Both inputs are verified signatures, checked by the caller. Neither is a
- * claim anybody can type. The BETTER of the two wins: somebody holding a chart
- * link and a stale summary grant is credited for the chart.
+ * Release 2: the link is the only proof now, and only for an upgrade of the
+ * chart it names (`checkoutCredit` below). `headTier` is the tier that chart
+ * has reached.
  *
  * Credit is only ever for a tier BELOW the one being bought. Buying something
  * cheaper than what you hold is not an upgrade and earns nothing back.
  */
-export function creditFor({ grantTier = -1, linkTier = -1, level }) {
-  const owned = Math.max(
-    Number.isInteger(grantTier) ? grantTier : -1,
-    Number.isInteger(linkTier) ? linkTier : -1,
-  );
-  if (owned < 0 || owned >= level) return 0;
+export function upgradeCredit({ headTier = -1, level }) {
+  const owned = Number.isInteger(headTier) ? headTier : -1;
+  if (owned < 0 || !Number.isInteger(level) || owned >= level) return 0;
   return TIERS[owned]?.cents ?? 0;
+}
+
+/**
+ * THE CREDIT BELONGS TO ITS OWN CHART (release 2, Jeremy 10/19: "What Alex
+ * paid stays with Alex's chart").
+ *
+ * The gap this closes: a signed link used to take its tier's price off ANY
+ * purchase made while it lived -- for anyone, any number of times. Now:
+ *
+ *   "For me"        (`upgrade: true` + the link) is an UPGRADE OF THAT RECORD.
+ *                   The credit is what that chart has cost so far -- the
+ *                   newest record of its chain, so a link that has already
+ *                   grown speaks for the grown chart -- and Stripe's metadata
+ *                   names the record (`upgrades`), so the claim joins the new
+ *                   purchase to it. Once joined, the old record has grown and
+ *                   its credit cannot be taken a second time: every route to
+ *                   the reading still totals the reading's price.
+ *   someone new     (`someoneNew: true`, no link) full price, fresh, nothing
+ *                   compared. Never "what you paid comes off".
+ *   anything else   full price. A grant held in a tab no longer earns credit:
+ *                   it names a tier, not a chart.
+ *
+ * `head(id)` returns the newest record of the chain the link names (charts.mjs
+ * `chainHead`), or null. Never throws into the checkout: a credit that cannot
+ * be worked out is no credit, and the page said what the price would be.
+ */
+export async function checkoutCredit({ body, secret, level, head, readLink, now = Date.now() }) {
+  const fresh = body?.someoneNew === true;
+  if (fresh || body?.upgrade !== true) return { alreadyPaidCents: 0, upgrades: null, fresh };
+  const link = readLink(body?.reading, secret, now);
+  if (!link.ok) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
+  let h = null;
+  try {
+    h = await head(link.id);
+  } catch {
+    h = null;
+  }
+  if (!h) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
+  const cents = upgradeCredit({ headTier: h.tier, level });
+  return cents > 0
+    ? { alreadyPaidCents: cents, upgrades: h.id, fresh: false }
+    : { alreadyPaidCents: 0, upgrades: null, fresh: false };
 }
 
 /**
@@ -134,7 +173,7 @@ const READY = new Set();
  * inline product so a sale is never lost over it -- a retry code then does not
  * reach that one purchase, and the checkout says so to Jeremy.
  */
-export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null }) {
+export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false }) {
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);
   const due = priceFor(tier, alreadyPaidCents);
@@ -235,7 +274,16 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
     // Read back on claim. The tier a session was FOR is decided here, on the
     // server, at the moment the price is set -- so the thing bought and the
     // thing delivered cannot drift apart.
-    metadata: { level: String(level), sku: tier.sku },
+    //
+    // `upgrades` (release 2): WHICH CHART this purchase takes a step further,
+    // set only when the credit was given for it -- so the credit and the chart
+    // it belongs to travel together. `fresh`: a new chart for someone else.
+    metadata: {
+      level: String(level),
+      sku: tier.sku,
+      ...(/^[0-9a-f]{32}$/.test(String(upgrades)) && alreadyPaidCents > 0 ? { upgrades } : {}),
+      ...(fresh ? { fresh: "1" } : {}),
+    },
   };
 }
 

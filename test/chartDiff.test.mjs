@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   chartDifferences,
   describeDifferences,
-  previousChart,
 } from "../netlify/lib/chartDiff.mjs";
 
 /**
@@ -110,66 +109,12 @@ test("nothing to compare against is silence, not a warning", () => {
   assert.deepEqual(chartDifferences(CHART, null), []);
 });
 
-// --- finding the previous one ----------------------------------------------
+// --- the alarm is retired (release 2) ----------------------------------------
+//
+// previousChart scanned the whole store by email to find "the chart you had
+// before". An upgrade now names the record it grew from, so the scan is gone.
 
-function storeWith(records) {
-  const data = new Map(Object.entries(records));
-  return {
-    async list() {
-      return { blobs: [...data.keys()].map((key) => ({ key })) };
-    },
-    get: async (k) => data.get(k) ?? null,
-    _raw: data,
-  };
-}
-
-const loader = async (store, id) => store._raw.get(id) ?? null;
-
-test("the most recently filled chart for that address is the one compared", async () => {
-  const store = storeWith({
-    old: { tier: 0, output: CHART, pending: false, buyer: { email: "b@example.com" }, filledAt: 100 },
-    newer: { tier: 1, output: CHART, pending: false, buyer: { email: "b@example.com" }, filledAt: 900 },
-    other: { tier: 1, output: CHART, pending: false, buyer: { email: "someone@example.com" }, filledAt: 999 },
-    self: { tier: 2, output: null, pending: true, buyer: { email: "b@example.com" }, filledAt: 0 },
-  });
-  const found = await previousChart(store, {
-    // Deliberately odd casing: the address is the identity, and a buyer who
-    // typed it differently at Stripe must still match.
-    email: "B@example.com",
-    excludeId: "self",
-    loadReading: loader,
-  });
-  assert.equal(found.filledAt, 900, "the wrong previous chart was chosen");
-});
-
-test("THE PURCHASE BEING FILLED IS NEVER COMPARED WITH ITSELF", async () => {
-  const store = storeWith({
-    self: { tier: 2, output: CHART, pending: false, buyer: { email: "b@example.com" }, filledAt: 500 },
-  });
-  assert.equal(
-    await previousChart(store, { email: "b@example.com", excludeId: "self", loadReading: loader }),
-    null,
-  );
-});
-
-test("an unreadable store is a comparison NOT MADE, never a failure", async () => {
-  // This runs while somebody is waiting for a chart they have paid for.
-  const angry = {
-    async list() {
-      throw new Error("blobs are down");
-    },
-  };
-  assert.equal(await previousChart(angry, { email: "b@example.com", loadReading: loader }), null);
-  assert.equal(await previousChart(null, { email: "b@example.com", loadReading: loader }), null);
-  assert.equal(await previousChart(storeWith({}), { email: null, loadReading: loader }), null);
-});
-
-test("a first purchase has nothing to differ from", async () => {
-  const store = storeWith({
-    theirs: { tier: 0, output: null, pending: true, buyer: { email: "b@example.com" } },
-  });
-  assert.equal(
-    await previousChart(store, { email: "b@example.com", excludeId: "theirs", loadReading: loader }),
-    null,
-  );
+test("previousChart is gone with the alarm it fed", async () => {
+  const mod = await import("../netlify/lib/chartDiff.mjs");
+  assert.equal(mod.previousChart, undefined);
 });

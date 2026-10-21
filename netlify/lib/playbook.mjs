@@ -220,6 +220,9 @@ export const PLAYBOOK = {
   // --- sending the link again ---------------------------------------------------------
   "resend-misconfigured": { who: "visitor", brief: 'A buyer pressed "Email me this link" and nothing could be sent: the site is missing a setting.', fix: MISCONFIG, options: ["note:link-again", "code"] },
   "resend-store-unavailable": { who: "buyer", brief: 'A buyer pressed "Email me this link" and the store did not answer, so nothing was sent.', options: ["resend", "note:link-again", "code"] },
+  "mycharts-misconfigured": { who: "visitor", brief: 'Someone asked "Email me my charts" and nothing could be sent: the site is missing a setting.', fix: MISCONFIG, options: ["note:charts-down", "code"] },
+  "mycharts-store-unavailable": { who: "visitor", brief: 'Someone asked "Email me my charts" and the store did not answer, so nothing was sent.', options: ["note:charts-down", "code"] },
+  "mycharts-crash": { who: "visitor", brief: '"Email me my charts" hit an unexpected fault, so nothing was sent.', fix: "The function log for /api/my-charts at this time has the fault.", options: ["note:charts-down", "code"] },
   "resend-crash": { who: "visitor", brief: '"Email me this link" hit an unexpected fault, so nothing was sent.', fix: "The function log for /api/resend at this time has the fault.", options: ["note:link-again", "code"] },
 };
 
