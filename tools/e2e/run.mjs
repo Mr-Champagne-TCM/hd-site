@@ -115,6 +115,8 @@ if (fresh) {
   const { startRig } = await import("./harness/server.mjs");
   const { seedLegacy } = await import("./harness/seed.mjs");
   const combos = JSON.parse(readFileSync(join(E2E, "combos.json"), "utf8"));
+  // The journeys as they were for this run, so a later --checks-only judges it by them.
+  writeFileSync(join(runDir, "combos.json"), JSON.stringify(combos, null, 1));
   const rig = await startRig({ runDir, fixturesDir: FIXTURES, engineMode: arg("engine", "local"), log: (m) => say("  " + m) });
   say(`  shop: ${rig.origin} (built dist/, functions in-process, fakes for Stripe / Resend / Gemini)`);
   const seeded = await seedLegacy({ combos, fixturesDir: FIXTURES, email: combos.buyerEmail });

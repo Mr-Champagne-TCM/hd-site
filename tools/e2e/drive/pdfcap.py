@@ -62,7 +62,7 @@ def capture_pdf(request, url, prefix):
         pages.append({"n": n + 1, "fill": fill_of(img), "inkTop": top, "inkBottom": bottom, "png": f"{prefix}.p{n + 1}.png"})
     json.dump(texts, open(prefix + ".pages.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(links, open(prefix + ".links.json", "w", encoding="utf-8"), indent=1)
-    out.update({"file": path, "pages": len(rd.pages), "pageInfo": pages, "title": str((rd.metadata or {}).get("/Title")), "textFile": prefix + ".pages.json", "linksFile": prefix + ".links.json"})
+    out.update({"file": path, "pages": len(rd.pages), "pageInfo": pages, "title": str((rd.metadata or {}).get("/Title") or ""), "textFile": prefix + ".pages.json", "linksFile": prefix + ".links.json"})
     return out
 
 
@@ -79,4 +79,4 @@ def capture_pdf_file(path, prefix):
                 links.append({"page": n, "href": str(uri)})
     json.dump(texts, open(prefix + ".pages.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(links, open(prefix + ".links.json", "w", encoding="utf-8"), indent=1)
-    return {"file": path, "pages": len(rd.pages), "title": str((rd.metadata or {}).get("/Title")), "textFile": prefix + ".pages.json", "linksFile": prefix + ".links.json"}
+    return {"file": path, "pages": len(rd.pages), "title": str((rd.metadata or {}).get("/Title") or ""), "textFile": prefix + ".pages.json", "linksFile": prefix + ".links.json"}
