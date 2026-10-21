@@ -81,13 +81,13 @@ Plus: 10 pre-10/16 purchases written into the store the old way (no name, no bir
 | Check | Guards | What fails it |
 |---|---|---|
 | run-complete, no-live-calls, no-incidents | the rig | a journey that could not finish; any call to an outside host; any alert that would have paged Jeremy |
-| values-match-engine | #2 | a table value differing from the engine's full chart for that birth; "None" where the chart has data |
+| values-match-engine | #2 | a table value differing from the engine's full chart for that birth; "None" where the chart has data; a channel list with one too many or one missing |
 | provisional-marks | #3 #17 | unknown time: Type / Authority / Profile anywhere without "provisional" (three-lines box, PDF page 1); Type provisional but its centers not; "usually your Type and Authority" anywhere (shop, website, phone source) |
 | stripe-next-step | #4 | Stripe's line under Pay asking for birth details on an upgrade that keeps them |
 | confirm-button-tier | #5 | "make my reading" on a chart upgrade |
 | someone-new-their | #16 #19 W8 | "your birth date", "your summary", "I don't know my birth time", a "Your Human Design" title, in what the buyer reads about someone else's chart; a nameless gift chart titled with the buyer's name |
-| form-missing-count | #1 | "One thing left" on a blank form |
-| authority-side-note | #14 | the CENTER side note not naming the authority's own center |
+| form-missing-count | #1 | any count short of three ("One thing left", "Two things left"), or "That’s everything", on a blank form |
+| authority-side-note | #14 | the CENTER side note not naming the authority's own center, on the page or in the PDF |
 | pdf-page-fill | #6 | a PDF page under 15% filled (measured on the rendered page); "above" with nothing above; a page that is only the coaching card |
 | links | links | any link on our sites not 200; any #anchor missing or not in view when the page loads with the hash (library entries open from the hash) |
 | near-miss-words | #9 #15 AI5 | a near miss of "not-self" / "signature"; another type's feeling word in on-track / off-track text; **the shop's own checker probed** with "not-sf", "not self", "signiture" and another type's word: each must be refused |
@@ -95,19 +95,36 @@ Plus: 10 pre-10/16 purchases written into the store the old way (no name, no bir
 | my-charts-rows | #8 | two rows reading the same; one chart listed twice |
 | my-charts-time | #7 | more than 6 s with every store request slowed to the live 400 ms |
 | readings-site-unknown | #18 | "expired" for a link that never existed |
-| website-claims | #10 #11 #12 | the website saying phone numbers are collected (every checkout has it off), the summary keeps no birth details (it does), or Signature / Not-Self |
+| website-claims | #10 #11 #12 | the website saying a phone number is collected at payment (every checkout has it off; the in-person readings on Jeremy’s phone are another matter), the summary keeps no birth details (it does), or Signature / Not-self |
 | sample-pdfs | #13 | a sample PDF with a "Timezone:" line or the old title |
 | us-spelling-no-shop | rules | UK spellings; "shop" in customer copy |
 | tier-aware-copy | W2 W3 W5 W12 | "Below: your chart and its tables" on a summary; "your reading" to summary and chart buyers; "While you wait" with nothing to wait for; "INTERPRETATION" on the chart-only PDF; the bodygraph guide given the library's address |
-| style | W1 W4 W9 W10 W14 | periods on table values; a spaced hyphen as a dash; "Cross of The"; UK date order; a footer date months behind the site |
+| style | W1 W4 W9 W10 W14 | a period on a table value standing alone (a reading's "Projector. &lt;sentence&gt;" is right); a spaced hyphen as a dash; "Cross of The"; UK date order; a footer date months behind the site; a privacy "Last updated" older than its text |
 | drawing-names | W13 | "EGO" in the drawing, "Heart" in the tables |
 | correction-note | W15 | the correction note gone once the chart grows |
 | fresh-link-email | W7 | the fresh-link email not saying it is one |
 | phone-width | rules | any page wider than 390 px |
 | two-emails | 4A | a purchase sending other than one receipt and one "ready" |
-| ai-writing | AI1 AI3 AI4 | most try-this lines opening "Notice / Watch / Observe"; glance rows that are fragments; the known word slips |
+| ai-writing | AI1 AI3 AI4 | most try-this lines opening "Notice / Watch / Observe"; glance rows that are fragments (an -ing opening and no main verb; "Waiting for the invitation keeps…" is a sentence); the known word slips |
 
 Findings are tagged **AI / data** when the words are not in the source (the model wrote them, or they are chart data), so a fix goes to the prompt and checker rather than the code.
+
+## Tests for the checks
+
+A check that misses a real error masks it; a check that fires on right text is a false error. Either makes the rig a new source of the mistakes it is there to stop.
+
+```
+node tools/e2e/checks/selftest.mjs            (newest finished run as the base; about 5 seconds)
+node tools/e2e/checks/selftest.mjs --base=<run folder> --only=style,links --keep
+```
+
+- For every check, a **known-good** document that must pass: one taken from a real run, corrected the way the fix would correct it, plus look-alikes that are right as they are ("Reading your bodygraph", a reading's "Projector. <sentence>", the in-person row on the privacy page).
+- And **known-bad** versions of that same document, each with one error planted in the shape the live test found it ("One thing left", "not-sf", "CENTER: Single"…). Each must fail, with a finding that names it.
+- Each case runs alone on a small copy in `<data home>\selftest-tmp\`, deleted afterwards. The base run is only read. Planted words are short and made up.
+- Checks that read numbers the driver measured (PDF fill, phone width, link status, the my-charts time, emails per step) are tested by changing those recorded numbers: that is all the check reads.
+- It also checks every error-set item the rig can see is planted at least once and caught **the way the report counts it** (`errorset.json` match and where), so the report's "caught" list can be trusted.
+- Exit code 1 if any case fails, a check has no good or no bad case, or an error-set item is not caught.
+- Cases live in `checks/selftest/cases.mjs`. A new check, or a new item in the error set, gets its cases there.
 
 ## What still needs a human, and why
 
@@ -142,6 +159,7 @@ For a run against Stripe's real test API, once Jeremy pastes a test key:
 | `harness/paths.mjs` | where the sibling repos and the data home are |
 | `drive/drive.py`, `drive/pdfcap.py` | the buyer, in headless Chrome; PDF text, links, page PNGs and fill |
 | `checks/*.mjs` | the truth checks and the baseline diff |
+| `checks/selftest.mjs`, `checks/selftest/` | the tests for the checks (above) |
 | `report/report.mjs`, `report/print.py` | report.html and report.pdf |
 | `combos.json` | births and journeys |
 | `errorset.json` | the 10/21 error set, item by item, mapped to its check |
