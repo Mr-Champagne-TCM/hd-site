@@ -17,7 +17,6 @@ import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 import { ConfirmKept, ReadingNotes } from "./Returning";
-import { fix } from "../shared/fixMock.mjs";
 
 /**
  * What a delivery link opens.
@@ -217,8 +216,9 @@ export default function ReadingPage({ token }: { token: string }) {
         </h1>
         <div className="mt-5 max-w-[60ch]">
           <Panel>
-            {/* MOCK FIX W6: the panel does not open by repeating the heading above it. */}
-            {fix("W6") && !state.expired && !state.ours
+            {/* The panel does not open by repeating the heading above it (W6). The
+                message keeps it for where it stands alone, under "Email me this link". */}
+            {!state.expired && !state.ours
               ? state.message.replace(/^That link could not be opened\.\s*/, "")
               : state.message}
           </Panel>
@@ -297,7 +297,7 @@ export default function ReadingPage({ token }: { token: string }) {
               year.
             </p>
             <div className="mt-4">
-              <Resend token={token} bare={fix("W6")} />
+              <Resend token={token} />
             </div>
             <p className="mt-6 text-[15px] leading-relaxed text-brand-muted">
               If that does not reach you,{" "}

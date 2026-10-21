@@ -371,7 +371,8 @@ export const RETURNING = {
   confirmBody:
     "Payment received, thank you. Your birth details are kept, so there is nothing to type — just a " +
     "look, to be sure they are right.",
-  confirmYes: "These are right — make my reading",
+  // Names what was bought: "make my chart" on a chart upgrade (bug 5, 10/21: it said "reading").
+  confirmYes: (what: string) => `These are right — make my ${what}`,
   changeDetail: "Change a detail",
   confirmHelp:
     "Learned a more exact birth time? “Change a detail” corrects it, and your chart is cast from the " +
@@ -475,12 +476,15 @@ export const FOOTER = {
    * NOT A REFUND PATH FOR MISTYPED BIRTH DETAILS EITHER. Also his call: he
    * handles those himself, from his own app, one at a time. Automating it can
    * wait until the volume asks for it.
+   *
+   * Under "Start a new chart for someone else" the details are THEIRS (10/21
+   * check audit, with #19 and W8): `terms("their")`.
    */
-  terms:
+  terms: (whose: "your" | "their" = "your") =>
     "All purchases are final. Your reading is made and sent the moment you ask for it, so there " +
     "is nothing to send back — and I would rather say so plainly here than leave you to find " +
     "out later. Two exceptions, and I would rather name the exceptions than have you wonder: if " +
-    "something did not arrive, or did not work, that is mine to put right. And if your " +
+    `something did not arrive, or did not work, that is mine to put right. And if ${whose} ` +
     "birth details went in wrong, write to hd-readings@thechampagnemethod.co — I read these " +
     "myself, and I will do what I can.",
   attribution: "Place and timezone data from GeoNames, CC BY 4.0.",

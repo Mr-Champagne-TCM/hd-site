@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { MONTHS, clampDay, daysInMonth, toIso, typedDate } from "./birthDate";
 import { warmEngine } from "./warm";
 import Picker from "./Picker";
-import { fix } from "../../shared/fixMock.mjs";
 
 /**
  * A birth date, which is not the same problem as a date.
@@ -223,15 +222,9 @@ export default function BirthDateField({
         <div className="mt-3">
           <label className="block">
             <span className="text-[14px] text-brand-muted">
-              {/* MOCK FIX W10: the example in US order, as the boxes are. */}
-              {fix("W10") ? (
-                <>Month, day, then the four-digit year &mdash; 06251985 for June 25, 1985</>
-              ) : (
-                <>
-                  Month, day, then the four-digit year &mdash; 06251985 for 25 June
-                  1985
-                </>
-              )}
+              {/* The example in US order, as the boxes are (W10, 10/21). */}
+              Month, day, then the four-digit year &mdash; 06251985 for June 25,
+              1985
             </span>
             <input
               inputMode="numeric"

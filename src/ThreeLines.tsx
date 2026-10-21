@@ -1,5 +1,4 @@
 import { AUTHORITY_GLANCE, PROFILE_GLANCE, TYPE_GLANCE } from "../shared/libraryGlance.mjs";
-import { fix } from "../shared/fixMock.mjs";
 
 /**
  * FIX 1A (Jeremy 10/19): "Your chart in three lines", a plain way in at the
@@ -45,11 +44,11 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
   const shown = rows.filter(([, , line]) => line);
   if (!shown.length) return null;
   /**
-   * MOCK FIX 3 (10/21 live test, bug 3): with no birth time the box marks the
-   * values that can move, as the table below it already does. It stated Type,
-   * Authority and Profile plainly while the table called them provisional.
+   * WITH NO BIRTH TIME the box marks the values that can move, as the table
+   * below it already does (10/21 live test, bug 3: it stated Type, Authority
+   * and Profile plainly while the table called them provisional).
    */
-  const unsure = new Set(fix("3") ? (chart.provisional ?? []) : []);
+  const unsure = new Set(chart.provisional ?? []);
   const rowField: Record<string, string> = {
     "Your energy": "type",
     "How you decide": "authority",
@@ -93,8 +92,8 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             </a>
             , a short walk through it.
           </>
-        ) : fix("W2") && chart.bodygraphSvg === undefined ? (
-          // MOCK FIX W2: the summary has no drawing, so it does not promise one.
+        ) : chart.bodygraphSvg === undefined ? (
+          // The summary has no drawing, so it does not promise one (W2, 10/21).
           "Below: your chart at a glance, and what these three mean."
         ) : (
           "Below: your chart and its tables."

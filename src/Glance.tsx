@@ -96,8 +96,8 @@ export default function Glance({ data, says = null, showActivations = false }: P
                 </a>
               </dt>
               <dd className="text-[17px] leading-relaxed text-brand-paper">
-                {/* MOCK FIX W1: a bare value carries no period (the summary); a value with its sentence keeps it. */}
-                {fix("W1") && !sentence ? value : `${value}.`}
+                {/* A bare value carries no period (W1: the summary's "Projector."); one with its sentence keeps it. */}
+                {sentence ? `${value}.` : value}
                 {sentence ? ` ${sentence}` : ""}
                 {provisional.has(field) && (
                   <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">

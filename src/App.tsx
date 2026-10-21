@@ -25,7 +25,6 @@ import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
 import { customerText } from "../shared/customerMessages.mjs";
-import { fix } from "../shared/fixMock.mjs";
 
 /**
  * The offer page.
@@ -188,9 +187,8 @@ function Example() {
 }
 
 /**
- * MOCK FIX W8 (branch fix-mock-1021): the someone-new cards describe THEIR
- * chart. They said "your centers, your incarnation cross" to a buyer starting
- * a chart for someone else.
+ * The someone-new cards describe THEIR chart (W8, 10/21): they said "your
+ * centers, your incarnation cross" to a buyer starting a chart for someone else.
  */
 const THEIR = {
   summary: "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.",
@@ -328,11 +326,11 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
               </p>
             )}
             {tier.sku === READING.sku ? (
-              <ReadingTicks their={fresh && fix("W8")} />
+              <ReadingTicks their={fresh} />
             ) : (
               <>
                 <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">
-                  {fresh && fix("W8") ? (tier.sku === SUMMARY.sku ? THEIR.summary : THEIR.chart) : tier.blurb}
+                  {fresh ? (tier.sku === SUMMARY.sku ? THEIR.summary : THEIR.chart) : tier.blurb}
                 </p>
                 <LibraryNote sku={tier.sku} />
               </>
@@ -474,7 +472,8 @@ export function Resources() {
   );
 }
 
-export function Footer() {
+/** `their`: under "Start a new chart for someone else", whose birth details the terms speak of. */
+export function Footer({ their = false }: { their?: boolean } = {}) {
   return (
     // ROOM UNDERNEATH, and it is not decoration.
     //
@@ -500,7 +499,7 @@ export function Footer() {
           copy.ts for why the wording is what it is.
         */}
         <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-          <MailtoText text={FOOTER.terms} />
+          <MailtoText text={FOOTER.terms(their ? "their" : "your")} />
         </p>
         {/*
           THE FOOTER THEME (Jeremy 10/17): the two names the delivery email ends
@@ -818,7 +817,7 @@ function ReturningView({ token }: { token: string }) {
     <div className="font-sans text-brand-paper">
       <Nav />
       <main>{body}</main>
-      <Footer />
+      <Footer their={Boolean(failed || showNew || data?.pending)} />
     </div>
   );
 }

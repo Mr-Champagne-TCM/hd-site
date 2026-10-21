@@ -28,7 +28,7 @@ export default function TimeField({
   onUnknownChange,
   their = false,
 }: {
-  /** MOCK FIX 19 (branch fix-mock-1021): someone new's form, "their birth time". */
+  /** Someone new's form: "I don’t know their birth time" (bug 19, 10/21). */
   their?: boolean;
   /** "HH:MM" in 24-hour form, or "" while incomplete. */
   value: string;
