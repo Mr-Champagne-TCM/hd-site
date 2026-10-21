@@ -65,7 +65,10 @@ export function inSource(sentence) {
 export function loadRun(runDir) {
   const m = J(join(runDir, "manifest.json"));
   const rig = existsSync(join(runDir, "rig.json")) ? J(join(runDir, "rig.json")) : {};
-  const combos = J(join(E2E, "combos.json"));
+  // The journeys this run was driven with. A run that saved its own copy is
+  // re-checked against that, not against today's combos.json (which may have
+  // grown a step since, and would read as "stopped after 2 of 3 steps").
+  const combos = J(existsSync(join(runDir, "combos.json")) ? join(runDir, "combos.json") : join(E2E, "combos.json"));
   const pages = m.pages.map((p) => {
     const text = T(join(runDir, p.text));
     const links = existsSync(join(runDir, p.links)) ? J(join(runDir, p.links)) : [];
@@ -116,6 +119,19 @@ export function rows(text) {
     if (LABELS.includes(l) && !(l in out)) out[l] = lines[i + 1];
   }
   return out;
+}
+
+/**
+ * A value that runs over several lines: CHANNELS prints one channel a line,
+ * and a PROVISIONAL mark may follow the last one. rows() keeps only the first.
+ */
+export function block(text, label) {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const at = lines.findIndex((l) => l.replace(/’/g, "'") === label);
+  if (at < 0 || at === lines.length - 1) return null;
+  const out = [lines[at + 1]];
+  for (let i = at + 2; i < lines.length && /^(?:\d{1,2}-\d{1,2}\b|PROVISIONAL$)/i.test(lines[i]); i++) out.push(lines[i]);
+  return out.join("\n");
 }
 
 export const sentences = (text) =>
