@@ -18,7 +18,9 @@
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { nearMissProblem } from "../../../netlify/lib/interpretation.mjs";
+// The shop's near-miss check, where the checked-out shop has one (10/21 fixes on);
+// code from before it has none, never refuses a stored reading, and never asks twice.
+const { nearMissProblem = () => null } = await import("../../../netlify/lib/interpretation.mjs");
 
 const INTERPRETATION = [
   "Your energy, and how it starts",
@@ -133,11 +135,14 @@ export function placeholderForm(f) {
     takeIn: { ...sec("what you take in"), paragraphs: [para("what you take in") + " " + one(f.undefined, "undefined"), para("what you take in (second)") + " " + one(f.open, "open")] },
     working: sec("on track and off track"),
     experimentIntro: "[RIG PLACEHOLDER] These are invitations to test, not instructions.",
+    // As long as real ones (about 45 words, the shape the prompt asks for), so a
+    // PDF's last page is filled the way a real reading fills it: one-line
+    // stand-ins left the last page under 15% and failed pdf-page-fill (10/21).
     takeaways: [
-      `(Authority) [RIG PLACEHOLDER] An experiment with your ${f.authority} authority.`,
-      `(Strategy) [RIG PLACEHOLDER] An experiment with your strategy.`,
-      `(Profile ${f.profile}) [RIG PLACEHOLDER] An experiment with your profile.`,
-      `(Type) [RIG PLACEHOLDER] An experiment with being a ${f.type}.`,
+      `(Authority) [RIG PLACEHOLDER] The next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer, and notice what changes, so the wait is familiar when a heavier choice comes along.`,
+      `(Strategy) [RIG PLACEHOLDER] This week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish and notice how the plan feels an hour later, so the strategy is familiar when more depends on it.`,
+      `(Profile ${f.profile}) [RIG PLACEHOLDER] Over the next few days, in an easy catch-up with a friend, you might let one line of your profile lead the conversation and notice how it is received, so that line is familiar when an opening matters more.`,
+      `(Type) [RIG PLACEHOLDER] Once or twice this week, on something light like a short errand, you might work the way a ${f.type} is built to and notice how your energy holds up afterward, so that pace is familiar when the week is fuller.`,
     ],
   };
 }

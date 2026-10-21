@@ -449,7 +449,7 @@ test("the next tier CONTAINS its parts, it does not add them", () => {
   const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: false });
   const all = mail.html + mail.text;
   assert.match(all, /contains/);
-  assert.ok(!/adds/.test(all), "the upgrade line still says 'adds'");
+  assert.ok(!/\badds\b/.test(all), "the upgrade line still says 'adds'");
 });
 
 // --- two emails, two subjects (fix 4A, 10/19) -------------------------------

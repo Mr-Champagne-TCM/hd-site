@@ -294,11 +294,10 @@ export const ENTRY = {
    *
    * Reported as "it is hard to tell when you're done" -- three fields in a
    * column give no edge, so there is no moment where somebody can see they have
-   * finished. Two labelled rules put a top and a bottom on it, and the closing
-   * one counts down rather than just sitting there.
+   * finished. Two rules put a top and a bottom on it; the closing one stays an
+   * unlabeled line until every field is answered, then says "Ready".
    */
   startRule: "Three things, then you’re done",
-  endRule: "That’s everything",
   restart: "Start a new chart",
   /** Fix 15B (10/19): the fold-out under the time field. */
   whyTime: "Why the time matters",

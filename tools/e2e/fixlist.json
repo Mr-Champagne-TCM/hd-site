@@ -255,6 +255,21 @@
         "^Birth time changed from \\d{1,2}:\\d{2} [AP]M to \\d{1,2}:\\d{2} [AP]M — your chart is cast from the corrected details\\.$",
         "^Your Type, Profile and Authority are the same\\.$"
       ]
+    },
+    {
+      "id": "end-rule",
+      "about": "the form's closing rule says nothing until every field is answered ('That's everything' over 'Three things left' read as a contradiction)",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d-form(-typing)?$",
+      "minus": ["^THAT’S EVERYTHING$"]
+    },
+    {
+      "id": "gift-subject",
+      "about": "a chart for someone else with no name: the ready email's subject says 'Their', not the buyer's 'Your'",
+      "docs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| ",
+      "addsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Their Human Design (summary|chart|reading) is ready$",
+      "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Your Human Design (summary|chart|reading) is ready$",
+      "minus": ["^Your Human Design (summary|chart|reading) is ready$"],
+      "plus": ["^Their Human Design (summary|chart|reading) is ready$"]
     }
   ]
 }

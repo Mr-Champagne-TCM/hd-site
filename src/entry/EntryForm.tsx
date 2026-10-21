@@ -39,26 +39,26 @@ import { CHART_NAME_MAX, chartTitle, cleanChartName, firstName } from "../../sha
  * where somebody scanning down the page will meet it first.
  */
 function Rule({ label, done }: { label: string; done?: boolean }) {
+  const text = done ? "Ready" : label;
+  const line = "h-px flex-1 " + (done ? "bg-brand-teal/40" : "bg-brand-gold/20");
+  // A rule with nothing to say is one unbroken line, at the height it has
+  // once it does, so "Ready" appearing does not move the form.
   return (
-    <div className="flex items-center gap-3" aria-hidden>
-      <span
-        className={
-          "h-px flex-1 " + (done ? "bg-brand-teal/40" : "bg-brand-gold/20")
-        }
-      />
-      <span
-        className={
-          "font-sans text-[12px] uppercase tracking-[0.18em] " +
-          (done ? "text-brand-teal" : "text-brand-muted/70")
-        }
-      >
-        {done ? "Ready" : label}
-      </span>
-      <span
-        className={
-          "h-px flex-1 " + (done ? "bg-brand-teal/40" : "bg-brand-gold/20")
-        }
-      />
+    <div className="flex h-[18px] items-center gap-3" aria-hidden>
+      <span className={line} />
+      {text && (
+        <>
+          <span
+            className={
+              "font-sans text-[12px] uppercase tracking-[0.18em] " +
+              (done ? "text-brand-teal" : "text-brand-muted/70")
+            }
+          >
+            {text}
+          </span>
+          <span className={line} />
+        </>
+      )}
     </div>
   );
 }
@@ -621,7 +621,8 @@ export default function EntryForm({
           </Changed>
         </div>
 
-        <Rule label={ENTRY.endRule} done={ready} />
+        {/* No words until it is true: "That's everything" over "Three things left" read as a contradiction (10/21 rig). */}
+        <Rule label="" done={ready} />
 
         {state.at === "failed" && (
           <p className="mt-6 rounded-xl border border-brand-gold/50 bg-brand-gold/[0.08] px-4 py-3 text-[15px] leading-relaxed text-brand-paper">

@@ -222,8 +222,9 @@ export function deliveryEmail({
   const subject = pending
     ? `Receipt: ${buyerWhose} Human Design ${word}${amount ? `, ${amount}` : ""}`
     : freshLink
-      ? `A fresh link to ${forChart ? chartWhose : "your"} Human Design ${word}`
-      : `${chartWhose} Human Design ${word} is ready`;
+      ? `A fresh link to ${whoseInline} Human Design ${word}`
+      : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
+        `${WhoseLead} Human Design ${word} is ready`;
 
   /**
    * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs

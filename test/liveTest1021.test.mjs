@@ -115,6 +115,15 @@ test("#1 A BLANK FORM COUNTS WHAT IS MISSING: three things, not 'One thing left'
   assert.doesNotMatch(page, /One thing left/);
 });
 
+test("#1 THE CLOSING RULE SAYS NOTHING until every field is answered, then 'Ready'", () => {
+  const blank = text(form.render("default", { readingToken: "t", tier: 1, name: "Alex Rivera" }));
+  assert.doesNotMatch(blank, /everything/i);
+  const initial = { date: "1991-07-22", time: "17:40", timeKnown: true, place: "Denver, Colorado", zone: "America/Denver", name: "Alex" };
+  const full = text(form.render("default", { readingToken: "t", tier: 1, mode: "correct", initial }));
+  assert.match(full, /Ready/);
+  assert.doesNotMatch(full, /everything/i);
+});
+
 test("#1 one thing missing keeps the longer sentence that says how", () => {
   const initial = { date: "1991-07-22", time: "17:40", timeKnown: true, place: null, zone: "America/Denver", name: "Alex" };
   const page = text(form.render("default", { readingToken: "t", tier: 1, mode: "correct", initial }));
@@ -529,8 +538,9 @@ test("#16 WHAT ELSE THERE IS, for someone new: their bodygraph, their channels",
 test("A CHART FOR SOMEONE ELSE NEVER CARRIES THE BUYER'S NAME, even with none typed", () => {
   const m = mail({ tier: 1, name: "Sage Testwell", chartName: null, someoneNew: true });
   assert.doesNotMatch(all(m).replaceAll("Hello Sage Testwell,", ""), /Sage/);
-  // The title any chart with no name has, as on the page and the PDF.
-  assert.equal(m.subject, `${chartTitle(null)} chart is ready`);
+  // To the buyer it is theirs, as the body says ("Their chart is ready."), never "Your".
+  assert.equal(m.subject, "Their Human Design chart is ready");
+  assert.equal(mail({ tier: 1, name: "Sage Testwell", chartName: null, someoneNew: true, freshLink: true }).subject, "A fresh link to their Human Design chart");
   assert.match(m.text, /Their chart is ready\./);
   assert.match(m.text, /Open their chart:/);
   assert.match(m.text, /Their chart is kept for a year/);
