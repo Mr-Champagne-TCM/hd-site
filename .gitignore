@@ -13,3 +13,7 @@ tools/private-terms.local.txt
 # Phone-app parity fixtures: real model readings for made-up clients, copied
 # from the PRIVATE phone repo by tools/phone-parity-sync.mjs. Never published.
 test/fixtures/phone-parity.local/
+
+# The local test rig (tools/e2e): Python caches. Its captures and fixtures live
+# OUTSIDE this repo, in the data home (tools/e2e/README.md).
+__pycache__/

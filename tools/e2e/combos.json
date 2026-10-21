@@ -1,0 +1,49 @@
+{
+  "_about": "Every buyer journey the rig drives. A step without \"name\" leaves the chart-name box as the form prefills it; \"\" clears it (no name). Births are MADE UP (tools/e2e/find-births.mjs walks dates arithmetically; the named ones are the live-test people of 10/21, also made up). 'pick' is the town exactly as the place list prints it. Paths: buy = a new purchase from the offer page; upgrade = For me, from the record before it (/u/<token>); someone-new = from a /u/ page, Start a new chart for someone else. A reading for a chart with a stored live reading replays those words; any other chart gets a marked placeholder.",
+  "buyerEmail": "rig-buyer@example.com",
+  "births": {
+    "rowan": { "date": "1990-02-11", "time": "06:25", "type": "Albuquerque", "pick": "Albuquerque, New Mexico", "zone": "America/Denver", "shape": "Projector, Self-Projected, 1 channel" },
+    "maya": { "date": "1979-08-30", "time": "22:50", "type": "Savannah", "pick": "Savannah, Georgia", "zone": "America/New_York", "shape": "Projector, Emotional, 2 channels (corrected to 23:05)" },
+    "theo": { "date": "2001-12-05", "time": null, "type": "Spokane", "pick": "Spokane, Washington", "zone": "America/Los_Angeles", "shape": "Generator, unknown time, 4 channels" },
+    "sage": { "date": "1972-06-18", "time": "14:30", "type": "Duluth", "pick": "Duluth, Minnesota", "zone": "America/Chicago", "shape": "Manifesting Generator, 5 channels" },
+    "quinn": { "date": "2008-11-09", "time": "21:45", "type": "Honolulu", "pick": "Honolulu, Hawaii", "zone": "Pacific/Honolulu", "shape": "Generator, Emotional" },
+    "jordan": { "date": "1991-07-22", "time": "17:40", "type": "Denver", "pick": "Denver, Colorado", "zone": "America/Denver", "shape": "Generator, Sacral, 1 channel" },
+    "reflector": { "date": "1963-11-09", "time": "10:09", "type": "Fargo", "pick": "Fargo, North Dakota", "zone": "America/Chicago", "shape": "Reflector, Lunar, 0 channels" },
+    "egoM": { "date": "1963-09-11", "time": "12:59", "type": "Tulsa", "pick": "Tulsa, Oklahoma", "zone": "America/Chicago", "shape": "Manifestor, Ego Manifested, 3 channels" },
+    "egoP": { "date": "1969-01-11", "time": "08:13", "type": "Reno", "pick": "Reno, Nevada", "zone": "America/Los_Angeles", "shape": "Projector, Ego Projected, 1 channel" },
+    "mental": { "date": "1962-10-24", "time": "15:51", "type": "Dayton", "pick": "Dayton, Ohio", "zone": "America/New_York", "shape": "Projector, Mental, 1 channel" },
+    "ch3": { "date": "1961-05-15", "time": "00:13", "type": "Tulsa", "pick": "Tulsa, Oklahoma", "zone": "America/Chicago", "shape": "Projector, Emotional, 3 channels" },
+    "ch6": { "date": "1961-09-03", "time": "08:09", "type": "Reno", "pick": "Reno, Nevada", "zone": "America/Los_Angeles", "shape": "Manifesting Generator, 6 channels" },
+    "manifestor": { "date": "1961-09-11", "time": "20:33", "type": "Reno", "pick": "Reno, Nevada", "zone": "America/Los_Angeles", "shape": "Manifestor, Emotional, 3 channels" },
+    "gift": { "date": "1966-04-02", "time": null, "type": "Boise", "pick": "Boise, Idaho", "zone": "America/Boise", "shape": "unknown time, for a gift chart with no name" }
+  },
+  "journeys": [
+    { "id": "rowan", "buyer": "Rowan Testwell", "about": "summary -> For me chart -> For me reading (Self-Projected)",
+      "steps": [ { "do": "buy", "tier": 0, "birth": "rowan" }, { "do": "upgrade", "tier": 1 }, { "do": "upgrade", "tier": 2 } ] },
+    { "id": "maya", "buyer": "Maya Testwell", "about": "summary -> Change a detail on the chart upgrade -> reading",
+      "steps": [ { "do": "buy", "tier": 0, "birth": "maya" }, { "do": "upgrade", "tier": 1, "correct": { "time": "23:05" } }, { "do": "upgrade", "tier": 2 } ] },
+    { "id": "theo", "buyer": "Theo Testwell", "about": "unknown time: summary -> reading in one step",
+      "steps": [ { "do": "buy", "tier": 0, "birth": "theo" }, { "do": "upgrade", "tier": 2 } ] },
+    { "id": "sage", "buyer": "Sage Testwell", "about": "chart bought new (5 channels); then someone new from Sage's link",
+      "steps": [ { "do": "buy", "tier": 1, "birth": "sage" }, { "do": "someone-new", "tier": 0, "birth": "quinn", "name": "Quinn" }, { "do": "someone-new", "tier": 2, "birth": "ch3", "name": "Morgan" } ] },
+    { "id": "jordan", "buyer": "Jordan Testwell", "about": "reading bought new with the $0 code, no name on the chart",
+      "steps": [ { "do": "buy", "tier": 2, "birth": "jordan", "name": "", "promo": "RIGFREE100" } ] },
+    { "id": "reflector", "buyer": "Robin Testwell", "about": "Reflector (0 channels, Lunar): chart, then reading",
+      "steps": [ { "do": "buy", "tier": 1, "birth": "reflector" }, { "do": "upgrade", "tier": 2 } ] },
+    { "id": "egoM", "buyer": "Ellis Testwell", "about": "Ego Manifested: reading bought new",
+      "steps": [ { "do": "buy", "tier": 2, "birth": "egoM" } ] },
+    { "id": "egoP", "buyer": "Emery Testwell", "about": "Ego Projected: summary -> chart; someone new with unknown time",
+      "steps": [ { "do": "buy", "tier": 0, "birth": "egoP" }, { "do": "upgrade", "tier": 1 }, { "do": "someone-new", "tier": 1, "birth": "gift", "name": "" } ] },
+    { "id": "mental", "buyer": "Marlo Testwell", "about": "Mental authority: reading bought new",
+      "steps": [ { "do": "buy", "tier": 2, "birth": "mental" } ] },
+    { "id": "ch6", "buyer": "Six Testwell", "about": "6 channels: chart bought new",
+      "steps": [ { "do": "buy", "tier": 1, "birth": "ch6" } ] },
+    { "id": "manifestor", "buyer": "Mani Testwell", "about": "Manifestor: summary bought new",
+      "steps": [ { "do": "buy", "tier": 0, "birth": "manifestor" } ] }
+  ],
+  "legacy": {
+    "_about": "Purchases made before 10/16 (no name, no birth kept, no `person`), written straight into the store the way the older code wrote them, for the same inbox: what 'Email me my charts' meets for a buyer who has been around. Built from the stored live readings in the data home (all-readings.json #0-#8) plus one older copy of Rowan's chart.",
+    "fromAllReadings": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    "olderCopyOf": "r1-chart.json"
+  }
+}
