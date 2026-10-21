@@ -6,13 +6,14 @@ import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
 import { readingPdf, pdfPageCount } from "../lib/readingPdf.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
+import { buyerNameFor } from "../../shared/chartName.mjs";
 
 /** The PDF's page count (fix 9A): built exactly as /api/pdf builds it (pdfHandler.mjs). */
 const countPages = async (r) =>
   pdfPageCount(
     await readingPdf({
       tier: r.tier,
-      name: r.birth?.name ?? r.buyer?.name ?? null,
+      name: r.birth?.name ?? buyerNameFor(r),
       output: r.output,
       links: SITE,
       reading: r.reading ?? null,

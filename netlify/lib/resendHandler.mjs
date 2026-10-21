@@ -169,7 +169,7 @@ export async function handleResend({
       amountCents: reading.paidCents ?? null,
       paidAt: reading.purchasedAt ? reading.purchasedAt * 1000 : null,
       chartName: reading.birth?.name ?? null,
-      // MOCK FIXES 16 + W7 (branch only): "their" for someone new; a fresh link says so.
+      // "Their" for a chart bought for someone new (bug 16); a fresh link says it is one (W7).
       someoneNew: reading.fresh === true,
       freshLink: !reading.pending,
     });

@@ -36,6 +36,16 @@ export function chartTitle(name) {
   return n ? `${n}’s Human Design` : "Your Human Design";
 }
 
+/**
+ * The buyer's name, where a stored chart has no name of its own -- but never on
+ * a chart bought for someone else ("Start a new chart for someone else"). That
+ * one, given no name, is "Your Human Design" like any chart with no name; it
+ * was titled with the BUYER's name (10/21 rig, a nameless gift chart).
+ */
+export function buyerNameFor(reading) {
+  return reading?.fresh ? null : (reading?.buyer?.name ?? null);
+}
+
 /** The first name the form starts with: the buyer's own, first word only ("Alex Rivera" -> "Alex"). */
 export function firstName(full) {
   const n = cleanChartName(full);

@@ -1,17 +1,6 @@
 import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
-import { fix } from "../../shared/fixMock.mjs";
-
-/**
- * MOCK FIX 16 (branch fix-mock-1021): what a chart for SOMEONE NEW is ready
- * with -- their centers, their cross -- where it said "your".
- */
-const READY_THEIR = Object.freeze({
-  0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their incarnation cross"],
-  1: ["Their bodygraph, drawn", "Their channels and activated gates", "A PDF to keep"],
-  2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
-});
 
 /**
  * The delivery email, which is a door and not the product.
@@ -144,6 +133,16 @@ const READY = Object.freeze({
 });
 
 /**
+ * The same, for a chart bought for SOMEONE NEW: their centers, their cross
+ * (10/21 live test, bug 16: it said "your" to the buyer).
+ */
+const READY_THEIR = Object.freeze({
+  0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their incarnation cross"],
+  1: ["Their bodygraph, drawn", "Their channels and activated gates", "A PDF to keep"],
+  2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
+});
+
+/**
  * Build the delivery email.
  *
  * Takes everything it needs and reads nothing from the environment, so the
@@ -168,6 +167,12 @@ const READY = Object.freeze({
  * `paidAt` come from Stripe's own session; either may be missing (a re-send of
  * an older purchase), and the receipt then leaves that row out rather than
  * guessing. `writing` is no longer used (there is no middle email).
+ *
+ * `someoneNew`: bought from "Start a new chart for someone else". The email
+ * still goes to the buyer, but the chart is THEIRS: "Quinn’s summary is
+ * ready", "Enter their birth details" (bug 16). With no name typed it is never
+ * titled with the buyer's name: "Your Human Design", as any chart with no name.
+ * `freshLink`: sent from "Email me this link", and it says so (W7).
  */
 export function deliveryEmail({
   tier,
@@ -185,12 +190,10 @@ export function deliveryEmail({
   paidAt = null,
   footer = "E",
   footerColor,
-  /** MOCK FIX 16: bought from "Start a new chart for someone else". */
   someoneNew = false,
-  /** MOCK FIX W7: sent from "Email me this link". */
   freshLink = false,
 }) {
-  const their = fix("16") && someoneNew;
+  const their = someoneNew === true;
   const word = tierWord(tier);
   // The footer is a theme (emailFooter.mjs): "E", side by side, Jeremy's pick 10/16.
   const end = emailFooter(footer, links, footerColor ? { coachColor: footerColor } : undefined);
@@ -208,15 +211,18 @@ export function deliveryEmail({
    * the ready email names the chart.
    */
   const buyerWhose = name ? `${name}’s` : "Your";
-  const forChart = chartName || name;
+  const forChart = chartName || (their ? null : name);
   const chartWhose = forChart ? `${forChart}’s` : "Your";
+  /** Whose chart, mid-sentence: "Quinn’s", else "their" or "your". */
+  const whoseInline = forChart ? chartWhose : their ? "their" : "your";
+  const WhoseLead = forChart ? chartWhose : their ? "Their" : "Your";
   const amount = Number.isInteger(amountCents) && amountCents >= 0 ? money(amountCents) : null;
   const on = receiptDate(paidAt);
 
   const subject = pending
     ? `Receipt: ${buyerWhose} Human Design ${word}${amount ? `, ${amount}` : ""}`
-    : fix("W7") && freshLink
-      ? `A fresh link to ${chartWhose === "Your" ? "your" : chartWhose} Human Design ${word}`
+    : freshLink
+      ? `A fresh link to ${forChart ? chartWhose : "your"} Human Design ${word}`
       : `${chartWhose} Human Design ${word} is ready`;
 
   /**
@@ -230,10 +236,8 @@ export function deliveryEmail({
     [
       links.hd101,
       "The Human Design library",
-      // MOCK FIX W3: the buyer's own tier, not a reading they may not have.
-      fix("W3") && tier < 2
-        ? `Every part of a chart, one layer at a time, and every word in ${their ? "their" : "your"} ${word} explained.`
-        : "Every part of a chart, one layer at a time, and every word in your reading explained.",
+      // What this buyer has, not a reading they may not have (W3, 10/21).
+      `Every part of a chart, one layer at a time, and every word in ${their ? "their" : "your"} ${word} explained.`,
     ],
     [
       links.bodygraph,
@@ -242,8 +246,8 @@ export function deliveryEmail({
       "The picture itself — what the shapes mean, and why some are colored in and some are not.",
     ],
   ];
-  // MOCK FIX W5: a receipt has nothing to wait for -- the next step is the buyer's.
-  const resourcesHead = pending && !fix("W5") ? "While you wait, free in the library" : "Free in the library";
+  // Not "While you wait": on a receipt there is nothing to wait for, the next step is the buyer's (W5).
+  const resourcesHead = "Free in the library";
 
   /**
    * WHAT ELSE THERE IS, on the ready email only, and only for a tier that can
@@ -260,15 +264,18 @@ export function deliveryEmail({
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
   const keptLine =
-    `${their ? chartWhose : "Your"} ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
+    `${their ? WhoseLead : "Your"} ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
     "sends you a fresh one, as often as you need.";
 
-  const ready0 = READY[tier] ?? READY[2];
-  const ready = their
-    ? { lead: ready0.lead.replace(/^Your chart and your/, `${chartWhose} chart and`).replace(/^Your/, chartWhose), ticks: READY_THEIR[tier] ?? READY_THEIR[2] }
-    : fix("W7") && freshLink
-      ? { ...ready0, lead: `Here is the fresh link you asked for — ${chartWhose === "Your" ? "your" : chartWhose} ${word}.` }
-      : ready0;
+  const own = READY[tier] ?? READY[2];
+  const ready = {
+    lead: freshLink
+      ? `Here is the fresh link you asked for — ${whoseInline} ${word}.`
+      : their
+        ? own.lead.replace(/^Your chart and your/, `${WhoseLead} chart and`).replace(/^Your/, WhoseLead)
+        : own.lead,
+    ticks: their ? (READY_THEIR[tier] ?? READY_THEIR[2]) : own.ticks,
+  };
   const receiptRows = [
     ["What", `Human Design: ${label.toLowerCase()}`],
     ...(amount !== null ? [["Amount paid", amount]] : []),
@@ -291,7 +298,7 @@ export function deliveryEmail({
         ? "Enter their birth details"
         : "Enter your birth details"
     : their
-      ? `Open ${chartWhose === "Your" ? "their" : chartWhose} ${top ? "reading" : word}`
+      ? `Open ${whoseInline} ${top ? "reading" : word}`
       : top
         ? "Open your reading"
         : `Open your ${word}`;

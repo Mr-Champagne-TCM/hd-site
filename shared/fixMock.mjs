@@ -1,15 +1,22 @@
 /**
- * MOCK SWITCH -- branch fix-mock-1021 only, never main.
+ * MOCK SWITCH -- branch only, never main.
  *
- * The fixes for the 10/21 live-test error set, each behind its own id so the
- * mock's GREEN renders are real pages, PDFs and emails (Jeremy: red now /
- * green proposed, one change per page). Same pattern as the earlier
- * `?ux=` / `?mock=` mocks:
+ * The 10/21 live-test items still waiting on Jeremy's call, each behind its own
+ * id so the mock's GREEN renders are real pages, PDFs and emails (Jeremy: red
+ * now / green proposed, one change per page). Only these remain; every chosen
+ * fix is written in plainly:
  *
- *   pages     ?fix=2A        (or ?fix=2A,6B)
- *   server    HD_FIX=2A      (PDF, emails, checker, handlers)
+ *   2A / 2B    the summary's "Channels: None"
+ *   17A / 17B  an unknown birth time, told two ways (W4's dash rides with it)
+ *   W13        "EGO" in the drawing
+ *   W14        "Cross of The ..."
  *
- * With no switch every page, PDF and email is exactly what is live today.
+ * Same pattern as the earlier `?ux=` / `?mock=` mocks:
+ *
+ *   pages     ?fix=2A        (or ?fix=2A,17B)
+ *   server    HD_FIX=2A      (PDF, emails, handlers)
+ *
+ * With no switch, these items read exactly as they do live today.
  * Once Jeremy picks, the chosen option is written in plainly and this goes.
  */
 function picked() {

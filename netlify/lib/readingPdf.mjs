@@ -22,7 +22,7 @@ import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import { fix } from "../../shared/fixMock.mjs";
-import { AUTHORITY_CENTER, NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
+import { NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -144,14 +144,21 @@ const VALUE_RULE = "#EFF2F4";
 export const WORDMARK = "HUMAN DESIGN by THE CHAMPAGNE METHOD COACHING AND CONSULTING";
 export const WORDMARK_TRACKING = 0.18;
 export const TITLE_MARK = "HUMAN DESIGN INTERPRETATION by THE CHAMPAGNE METHOD";
+/** The same mark on a chart without a written reading, which is not an interpretation (W12, 10/21). */
+export const TITLE_MARK_CHART = TITLE_MARK.replace("INTERPRETATION", "CHART");
 
 /** Footer on every page: the business name, then the site. The whole line goes home. */
 export const FOOTER = "The Champagne Method Coaching and Consulting · thechampagnemethod.co";
 
-/** Under the chart values on page 2: both free pages, the library and the bodygraph guide. */
+/**
+ * Under the chart values on page 2: both free pages, the library and the
+ * bodygraph guide, each at its own address (W12, 10/21: it said both were "at
+ * .../library/human-design", where the bodygraph guide is not).
+ */
 export const ONWARD_NOTE =
   "Every word above is explained in The Human Design library, and the drawing on " +
-  "page 1 in “Reading your bodygraph.” Both are free, at thechampagnemethod.co/library/human-design.";
+  "page 1 in “Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
+  "and thechampagnemethod.co/library/bodygraph.";
 
 /**
  * The chart tier's last page, "Where to go from here" (Jeremy 10/16, item 12
@@ -166,6 +173,7 @@ export const ONWARD_LINKS = Object.freeze([
   ["The Human Design library", LIBRARY],
   ["Reading your bodygraph", BODYGRAPH_GUIDE],
   ["thechampagnemethod.co/library/human-design", LIBRARY],
+  ["thechampagnemethod.co/library/bodygraph", BODYGRAPH_GUIDE],
 ]);
 
 /** Under the bodygraph key, beside the QR. */
@@ -173,21 +181,6 @@ export const GUIDE_URL = "thechampagnemethod.co/library/bodygraph";
 export const GUIDE_PROMPT = "How to read your bodygraph →";
 /** Under the QR, two short lines (fix 17A, 10/19). */
 export const QR_CAPTION = Object.freeze(["Scan: how to read", "your bodygraph"]);
-
-/**
- * MOCK FIX W12 (branch only): the note gives each free page its own address.
- * It said both were "at .../library/human-design", where the bodygraph guide
- * is not.
- */
-const ONWARD_NOTE_W12 =
-  "Every word above is explained in The Human Design library, and the drawing on " +
-  "page 1 in “Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
-  "and thechampagnemethod.co/library/bodygraph.";
-const onwardNote = (onPage = false) => {
-  const t = fix("W12") ? ONWARD_NOTE_W12 : ONWARD_NOTE;
-  return onPage ? t.replace("Every word above", "Every word on page 2") : t;
-};
-const ONWARD_LINKS_W12 = Object.freeze([...ONWARD_LINKS, ["thechampagnemethod.co/library/bodygraph", BODYGRAPH_GUIDE]]);
 
 const NOON_NOTE =
   "Birth time was not known, so this chart is cast at noon. Type, " +
@@ -210,15 +203,24 @@ class Doc {
     this.head = null;
     /** Clickable areas, page by page -- also handed back for the tests. */
     this.links = [];
-    /** MOCK FIX 6 (branch only): the page a closing block landed on alone, and the page to tighten. */
+    /**
+     * NO CLOSING BLOCK ON A PAGE OF ITS OWN (fix 6): `alone` is the page one
+     * landed on by itself, `aloneKind` which one ("note" or "card"); `squeeze`
+     * the page whose white space gives way so it fits; `keepClosing` sends the
+     * block before it along instead.
+     */
     this.alone = null;
+    this.aloneKind = null;
     this.squeeze = null;
     this.keepClosing = false;
   }
 
-  /** MOCK FIX 6: a closing block about to be drawn; was it pushed onto a page of its own? */
-  closing() {
-    if (this.atTop && this.alone === null) this.alone = this.pageNo;
+  /** A closing block about to be drawn: was it pushed onto a page of its own? */
+  closing(kind) {
+    if (this.atTop && this.alone === null) {
+      this.alone = this.pageNo;
+      this.aloneKind = kind;
+    }
   }
 
   link(r, uri, pad = 1.5, kind = undefined) {
@@ -299,7 +301,7 @@ class Doc {
     this.y += h;
   }
 
-  /** MOCK FIX 6B: white space only (never the room under drawn text), which gives way on the squeezed page. */
+  /** White space only (never the room under drawn text), which gives way on the squeezed page. */
   space(h) {
     this.y += this.squeeze && this.squeeze.page === this.pageNo ? h * this.squeeze.f : h;
   }
@@ -366,26 +368,39 @@ class Doc {
 /**
  * Builds the PDF. `birth` is the record's birth block (null on readings stored
  * before 16 Oct 2026, which simply get no birth line). Resolves to the bytes,
- * or -- with `inspect` set, for the tests -- to `{ bytes, links, runs }`: every
- * link box and every run of text drawn, page by page.
+ * or -- with `inspect` set, for the tests -- to `{ bytes, links, runs, pages,
+ * alone, aloneKind }`: every link box and every run of text drawn, page by page.
+ *
+ * NO PAGE HOLDS ONLY A CLOSING BLOCK (10/21 live test, bug 6; Jeremy's pick 6B):
+ * the page-2 note, or the coaching card, pushed onto a page of its own. It is
+ * pulled up: the page before gives a little of its white space until it fits.
+ * Only if it cannot (the card is tall) does the block before it go with it.
  */
 export async function readingPdf(args) {
-  if (!fix("6A", "6B")) return buildPdf(args);
+  const out = (r) => (args.inspect ? r : r.bytes);
+  const first = await buildPdf(args);
+  if (first.alone === null) return out(first);
   /**
-   * MOCK FIX 6 (10/21 live test, bug 6): no page holds only a closing block
-   * (the page-2 note, the coaching card).
-   *   6A keep together: the block before it always goes with it.
-   *   6B pull it up: the page before tightens its spacing until it fits;
-   *      only if it cannot (the card is tall) does 6A's rule apply.
+   * Each try is a whole build, and the download waits on them, so none is
+   * wasted. Only page 2 has white space that gives (`space`), so only the
+   * page-2 note can be pulled up -- never the card, after the reading's pages.
+   * The gentlest squeeze is tried first; then the most page 2 can give, and if
+   * that is not enough nothing in between is. The gentlest that fits wins.
    */
-  if (fix("6A")) return buildPdf(args, { keepClosing: true });
-  const first = await buildPdf({ ...args, inspect: true });
-  if (first.alone === null) return args.inspect ? first : first.bytes;
-  for (const f of [0.9, 0.8, 0.7, 0.6]) {
-    const r = await buildPdf({ ...args, inspect: true }, { squeeze: { page: first.alone - 1, f } });
-    if (r.alone === null) return args.inspect ? r : r.bytes;
+  const squeezed = (f) => buildPdf(args, { squeeze: { page: first.alone - 1, f } });
+  if (first.aloneKind === "note") {
+    const gentle = await squeezed(0.9);
+    if (gentle.alone === null) return out(gentle);
+    const most = await squeezed(0.6);
+    if (most.alone === null) {
+      for (const f of [0.8, 0.7]) {
+        const r = await squeezed(f);
+        if (r.alone === null) return out(r);
+      }
+      return out(most);
+    }
   }
-  return buildPdf(args, { keepClosing: true });
+  return out(await buildPdf(args, { keepClosing: true }));
 }
 
 async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false }, opts = {}) {
@@ -449,11 +464,7 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve(
-        inspect
-          ? { bytes, links: d.links, runs, pages, ...(fix("6A", "6B") ? { alone: d.alone } : {}) }
-          : bytes,
-      );
+      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind });
     });
     pdf.end();
   });
@@ -489,8 +500,7 @@ function bodygraphPage(d, { name, output, birth, qr, tier }) {
   const pdf = d.pdf;
   d.start();
   const eyebrow = paint(8, MARK, true, 0.19);
-  // MOCK FIX W12: a chart without a written reading is not called an interpretation.
-  const titleMark = fix("W12") && Number.isInteger(tier) && tier < 2 ? TITLE_MARK.replace("INTERPRETATION", "CHART") : TITLE_MARK;
+  const titleMark = Number.isInteger(tier) && tier < 2 ? TITLE_MARK_CHART : TITLE_MARK;
   drawText(pdf, titleMark, MARGIN, d.y + 8, eyebrow);
   d.linkText(titleMark, MARGIN, d.y + 8, eyebrow, SHOP);
   d.gap(16);
@@ -799,9 +809,9 @@ function glancePage(d, { output, tier, reading }) {
     const how = d.L(TECH_HOW, paint(8, DIM), CONTENT_W);
     const head = `${techTitle(pers.length + des.length)} ${TECH_TITLE_NOTE}`.toUpperCase();
     if (d.keepClosing) {
-      // MOCK FIX 6A: the whole technical block travels with the closing note under it.
+      // The whole technical block travels with the closing note under it (fix 6).
       const rowsH = [pers, des].filter((a) => a.length).reduce((n, a) => n + 5 + Math.ceil(a.length / 5) * 12 + 4 + 0.5, 0);
-      const note = d.L(onwardNote(), paint(9, DIM), CONTENT_W);
+      const note = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
       d.need(8 + 12 + how.height + 4 + 0.8 + rowsH + 14 + note.height);
     }
     d.need(8 + 12 + how.height + 4 + 40);
@@ -821,21 +831,19 @@ function glancePage(d, { output, tier, reading }) {
   if (tier < 2) return nextStepsPage(d, tier);
 
   // The onward pointer: both free pages, in the voice of an invitation.
-  let onward = d.L(onwardNote(), paint(9, DIM), CONTENT_W);
+  let onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
   d.space(14);
   d.need(onward.height);
-  if (fix("6A", "6B")) {
-    d.closing();
-    // MOCK FIX 6: off page 2 the note names the page, as the chart tier's does ("above" pointed at nothing).
-    if (d.pageNo !== 2) onward = d.L(onwardNote(true), paint(9, DIM), CONTENT_W);
-  }
+  d.closing("note");
+  // Off page 2 the note names the page, as the chart tier's does ("above" pointed at nothing).
+  if (d.pageNo !== 2) onward = d.L(ONWARD_NOTE_PAGE, paint(9, DIM), CONTENT_W);
   const noteTop = d.y;
   d.draw(onward);
   linkOnward(d, onward, noteTop);
 }
 
 function linkOnward(d, layout, top) {
-  for (const [phrase, uri] of fix("W12") ? ONWARD_LINKS_W12 : ONWARD_LINKS) {
+  for (const [phrase, uri] of ONWARD_LINKS) {
     for (const r of phraseRects(d.pdf, layout, phrase)) {
       d.link({ left: r.left + MARGIN, top: r.top + top, right: r.right + MARGIN, bottom: r.bottom + top }, uri);
     }
@@ -879,12 +887,12 @@ function sectionLabel(d, text) {
  */
 function nextStepsPage(d, tier) {
   const o = offerLayouts(d, tier);
-  let onward = d.L(onwardNote(), paint(10, INK), CONTENT_W);
+  let onward = d.L(ONWARD_NOTE, paint(10, INK), CONTENT_W);
   const total = 10 + 23 + onward.height + 34 + 23 + (o ? o.body.height : 0);
   if (d.pageNo >= 3 && d.y + 40 + total <= d.bottom) {
     d.gap(40);
   } else {
-    onward = d.L(onwardNote(true), paint(10, INK), CONTENT_W);
+    onward = d.L(ONWARD_NOTE_PAGE, paint(10, INK), CONTENT_W);
     d.start(NEXT_STEPS_HEAD);
     d.gap(10);
   }
@@ -1130,7 +1138,7 @@ function readingPages(d, c, v) {
   }
 
   const panel = coachLayouts(d);
-  // MOCK FIX 6A: the last thing to try travels with the coaching card, so the card never ends the PDF alone.
+  // When the card cannot be pulled up, the last thing to try travels with it, so it never ends the PDF alone (fix 6).
   takeaways(d, v.takeaways, d.keepClosing ? coachNeed(d, panel) + 8 : disclaimerLayout(d).height + 28, c);
   coachPanel(d, panel);
   disclaimer(d);
@@ -1151,7 +1159,7 @@ function coachLayouts(d) {
   };
 }
 
-/** MOCK FIX 6A: the room the card and the disclaimer under it take. */
+/** The room the coaching card and the disclaimer under it take. */
 function coachNeed(d, { head, body, link }) {
   const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
   return 16 + h + 20 + disclaimerLayout(d).height + 2;
@@ -1161,7 +1169,7 @@ function coachPanel(d, { head, body, link }) {
   const pdf = d.pdf;
   const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
   d.need(16 + h + 20 + disclaimerLayout(d).height + 2);
-  if (fix("6A", "6B")) d.closing();
+  d.closing("card");
   d.gap(16);
   const top = d.y;
   pdf.save();

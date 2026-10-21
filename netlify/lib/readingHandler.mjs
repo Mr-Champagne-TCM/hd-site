@@ -5,7 +5,7 @@ import { buildReadingView } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
-import { firstName } from "../../shared/chartName.mjs";
+import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 
 /** Page counts by reading and version, so a reload does not build the PDF again. */
 const PAGES = new Map();
@@ -148,8 +148,8 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
       source = null;
     }
   }
-  /** "Alex": the name on the chart, else the buyer's first name. */
-  const whose = reading.birth?.name ?? firstName(reading.buyer?.name) ?? null;
+  /** "Alex": the name on the chart, else the buyer's first name (never on a chart for someone else). */
+  const whose = reading.birth?.name ?? firstName(buyerNameFor(reading)) ?? null;
 
   /**
    * A PENDING READING IS NOT A BROKEN ONE. They have paid and have not yet
@@ -205,9 +205,10 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     label: TIERS[reading.tier]?.label ?? null,
     /**
      * WHOSE CHART, for the title (fix 17A, 10/19): the name typed on the birth
-     * form when there is one, else the buyer's, as before.
+     * form when there is one, else the buyer's, as before -- but not on a chart
+     * for someone else, which with no name is "Your Human Design".
      */
-    name: reading.birth?.name ?? reading.buyer?.name ?? null,
+    name: reading.birth?.name ?? buyerNameFor(reading),
     whose,
     purchasedAt: reading.purchasedAt,
     output: reading.output,

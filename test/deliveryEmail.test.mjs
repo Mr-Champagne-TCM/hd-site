@@ -434,9 +434,12 @@ test("a network failure and a timeout are both answers", async () => {
 test("the library block is labelled as free, so it reads as free tools", () => {
   // Jeremy: the heading alone made the two links look load-bearing -- like
   // something needed to use the reading rather than something free beside it.
+  // W5 (10/21): not "While you wait" on the receipt -- nothing is being waited
+  // for there; the next step is the buyer's.
   const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: true });
-  assert.match(mail.html, /While you wait, free in the library/);
-  assert.match(mail.text, /WHILE YOU WAIT, FREE IN THE LIBRARY/);
+  assert.match(mail.html, /Free in the library/);
+  assert.match(mail.text, /FREE IN THE LIBRARY:/);
+  assert.doesNotMatch(mail.html + mail.text, /while you wait/i);
   const ready = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: false });
   assert.match(ready.html, /Free in the library/);
 });

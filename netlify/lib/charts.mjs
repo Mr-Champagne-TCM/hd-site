@@ -1,9 +1,8 @@
 import { createHmac } from "node:crypto";
 import { loadCurrent, loadReading, saveReading, updateRecord } from "./reading.mjs";
 import { IDENTIFYING, IDENTIFYING_SETS } from "./chartDiff.mjs";
-import { fix } from "../../shared/fixMock.mjs";
 
-/** MOCK FIX 7 (branch only): `fn` over `items`, at most `n` at a time, results in order. */
+/** `fn` over `items`, at most `n` at a time, results in order. */
 async function mapLimit(items, n, fn) {
   const out = new Array(items.length);
   let next = 0;
@@ -240,27 +239,22 @@ export async function chartsForEmail({ readings, index, email, secret, now = Dat
 
   const heads = new Map(); // head id -> reading
   /**
-   * MOCK FIX 7 (10/21 live test, bug 7): the records are read eight at a time
-   * instead of one after another -- 19 charts took ~20 s on "Sending...".
-   * Same records, same order, same answer.
+   * EIGHT RECORDS AT A TIME (10/21 live test, bug 7): read one after another,
+   * 19 charts took ~20 s on "Sending...". Same records, same order, same answer.
    */
-  const pre = fix("7")
-    ? await mapLimit(list.charts, 8, async (entry) => {
-        const cur = await loadCurrent(readings, entry.id, now).catch(() => null);
-        const own =
-          cur && normaliseEmail(cur.reading.buyer?.email ?? "") !== e
-            ? await loadReading(readings, entry.id, now).catch(() => null)
-            : null;
-        return { cur, own };
-      })
-    : null;
-  for (const [i, entry] of list.charts.entries()) {
-    const cur = pre ? pre[i].cur : await loadCurrent(readings, entry.id, now).catch(() => null);
+  const read = await mapLimit(list.charts, 8, async (entry) => {
+    const cur = await loadCurrent(readings, entry.id, now).catch(() => null);
+    // The head may have been bought with another address (an upgrade paid
+    // from a different email). Then this address's own record is what it has.
+    const own =
+      cur && normaliseEmail(cur.reading.buyer?.email ?? "") !== e
+        ? await loadReading(readings, entry.id, now).catch(() => null)
+        : null;
+    return { cur, own };
+  });
+  for (const { cur, own } of read) {
     if (!cur) continue; // past its year, or gone
     if (normaliseEmail(cur.reading.buyer?.email ?? "") !== e) {
-      // The head may have been bought with another address (an upgrade paid
-      // from a different email). Then this address's own record is what it has.
-      const own = pre ? pre[i].own : await loadReading(readings, entry.id, now).catch(() => null);
       if (own && normaliseEmail(own.buyer?.email ?? "") === e) heads.set(own.id, own);
       continue;
     }
@@ -287,17 +281,13 @@ export async function chartsForEmail({ readings, index, email, secret, now = Dat
     if (!prev || r.tier > prev.tier || (r.tier === prev.tier && r.purchasedAt > prev.purchasedAt)) bySig.set(sig, r);
   }
   /**
-   * MOCK FIX 8 (10/21 live test): an older record whose chart is the same as
-   * a newer one's is that person too -- his Wichita Falls chart was listed
-   * twice (the 10/16 record and the one bought today). The newer one stays.
+   * AN OLDER RECORD OF A NEWER ONE'S CHART is that person too (10/21 live test,
+   * bug 8): his Wichita Falls chart was listed twice, the 10/16 record and the
+   * one bought that day. The newer one stays -- only when it goes as far: an
+   * older READING is never hidden behind a newer summary.
    */
-  const newSigs = fix("8A", "8B")
-    ? new Map([...byPerson.values()].filter((r) => signature(r.output)).map((r) => [signature(r.output), r.tier]))
-    : null;
-  // Only when the newer one goes as far: an older READING is never hidden behind a newer summary.
-  const olderKept = [...bySig.values()].filter(
-    (r) => !newSigs || r.pending || !(newSigs.get(signature(r.output)) >= r.tier),
-  );
+  const newSigs = new Map([...byPerson.values()].filter((r) => signature(r.output)).map((r) => [signature(r.output), r.tier]));
+  const olderKept = [...bySig.values()].filter((r) => r.pending || !(newSigs.get(signature(r.output)) >= r.tier));
   return [...byPerson.values(), ...olderKept]
     .sort((a, b) => (b.purchasedAt ?? 0) - (a.purchasedAt ?? 0))
     .map((reading) => ({ reading, id: reading.id }));

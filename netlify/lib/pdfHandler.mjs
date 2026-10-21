@@ -1,5 +1,6 @@
 import { loadCurrent, readReadingLink } from "./reading.mjs";
 import { customerError } from "./failures.mjs";
+import { buyerNameFor } from "../../shared/chartName.mjs";
 import { messagePage } from "./messagePage.mjs";
 
 /**
@@ -76,7 +77,7 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
     bytes = await build({
       tier: reading.tier,
       // The name typed for the chart (fix 17A), else the buyer's, as the page shows.
-      name: reading.birth?.name ?? reading.buyer?.name ?? null,
+      name: reading.birth?.name ?? buyerNameFor(reading),
       output: reading.output,
       links,
       // THE WRITTEN INTERPRETATION -- forgotten once, and a reading-tier buyer

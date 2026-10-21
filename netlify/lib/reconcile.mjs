@@ -178,6 +178,8 @@ export async function reconcile({
         kept: Boolean(recorded?.kept),
         amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
         paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
+        // As the claim's receipt: a chart bought for someone new says "their" (bug 16).
+        someoneNew: session?.metadata?.fresh === "1",
       });
       result.delivered += 1;
     } catch {

@@ -271,7 +271,8 @@ export async function handleChart({
      * A CORRECTION, OR DETAILS TYPED ONCE (release 2). Worked out from the
      * record read above -- never from anything the page claims.
      *
-     *   kept details, confirmed      nothing to note
+     *   kept details, confirmed      nothing new to note; a correction the
+     *                                chart it grew from had travels with it
      *   kept details, typed again    a correction: the old details go to the
      *                                record's history, and the reading gets a
      *                                calm note of what changed
@@ -297,12 +298,12 @@ export async function handleChart({
       } else {
         extra = { correction: buildCorrection({ type: "first-details", before, after: upstream.payload, at: now }) };
       }
-    } else if (fix("W15") && filling?.pending && useKept && filling.grewFrom) {
+    } else if (filling?.pending && useKept && filling.grewFrom) {
       /**
-       * MOCK FIX W15 (10/21 live test): kept details, confirmed, on an upgrade
-       * of a chart that was CORRECTED -- the correction travels with it, so the
-       * reading keeps "Your correction" (Maya's vanished once her chart became
-       * a reading). Nothing new is worked out; the chart's own note is carried.
+       * Kept details, confirmed, on an upgrade of a chart that was CORRECTED:
+       * the correction travels with it, so the reading keeps "Your correction"
+       * (W15, 10/21 live test: Maya's vanished once her chart became a reading).
+       * Nothing new is worked out; the chart's own note is carried.
        */
       try {
         const source = await loadReading(readings, filling.grewFrom, now);

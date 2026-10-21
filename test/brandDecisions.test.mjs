@@ -93,11 +93,23 @@ test("item 12, option B: the chart tier ends on a calm page 3 of its own", async
   assert.ok(note.length >= 3, `${note.length} note links on page 3`);
 });
 
-test("the reading tier keeps 'Every word above' under its values, and no offer", async () => {
+test("the reading tier keeps the note under its values, and no offer", async () => {
   const r = await render(2);
   const all = r.runs.map((x) => x.text).join(" ");
-  assert.match(all, /Every word above is explained/);
-  assert.doesNotMatch(all, /Every word on page 2|Where to go from here|comes off the price/);
+  assert.doesNotMatch(all, /Where to go from here|comes off the price/);
+  /**
+   * Fix 6 (10/21): the note never stands on a page alone. Here page 2 cannot
+   * give enough room, so the technical values go over with it -- and with page
+   * 2's values no longer "above", the note names the page.
+   */
+  const notePage = r.runs.find((x) => /^Every word (above|on page 2)/.test(x.text))?.page;
+  const on = r.runs.filter((x) => x.page === notePage).map((x) => x.text).join(" ");
+  if (notePage === 2) assert.match(on, /Every word above is explained/);
+  else {
+    assert.match(on, /Every word on page 2 is explained/);
+    assert.match(on, /TECHNICAL VALUES/, "the note went over without the block before it");
+  }
+  assert.equal(r.alone, null);
 });
 
 test("item 11: the key has no extra line under it, as on the phone", async () => {

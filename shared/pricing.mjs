@@ -48,6 +48,10 @@ export const TIERS = [SUMMARY, CHART, READING];
  */
 export const CHECKOUT_NEXT_STEP = "Next: your birth date, time and place (about 2 minutes).";
 
+/** The same line on an upgrade whose chart keeps its birth details: nothing to type (fix 4, 10/21). */
+export const checkoutNextStepKept = (level) =>
+  `Next: one look at your kept birth details, then your ${level >= 2 ? "reading is written" : "chart is drawn"}.`;
+
 /**
  * WHAT YOU HAVE ALREADY PAID COMES OFF WHAT YOU PAY NEXT.
  *

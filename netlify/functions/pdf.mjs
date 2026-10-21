@@ -4,6 +4,7 @@ import { alertSender, guard, noteFailure } from "../lib/failures.mjs";
 import { messagePage, messageResponse } from "../lib/messagePage.mjs";
 import { readingPdf } from "../lib/readingPdf.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
+import { buyerNameFor } from "../../shared/chartName.mjs";
 
 /**
  * GET /api/pdf?t=<token> — the chart tier's downloadable PDF.
@@ -58,12 +59,14 @@ export default guard(
     console.log(`GET /api/pdf -> 200 (tier ${reading.tier}, ${bytes.length} bytes)`);
 
     /**
-     * The filename is the buyer's name, because a downloads folder full of
+     * The filename is the chart's name, because a downloads folder full of
      * `reading.pdf` is a folder nobody can find anything in. Reduced to plain
      * characters: a filename crosses filesystems, and one that arrives broken on
-     * Windows is worse than one that is plain everywhere.
+     * Windows is worse than one that is plain everywhere. With no name (and on a
+     * chart for someone else, never the buyer's) it is the title's own words,
+     * "Your-Human-Design.pdf" -- it was "Human-Design-Human-Design.pdf".
      */
-    const safe = (reading.birth?.name ?? reading.buyer?.name ?? "Human Design")
+    const safe = (reading.birth?.name ?? buyerNameFor(reading) ?? "")
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
       .replace(/[^A-Za-z0-9]+/g, "-")
@@ -91,7 +94,7 @@ export default guard(
       headers: {
         "Content-Type": "application/pdf",
         "Content-Length": String(body.byteLength),
-        "Content-Disposition": `attachment; filename="${safe || "Human-Design"}-Human-Design.pdf"`,
+        "Content-Disposition": `attachment; filename="${safe || "Your"}-Human-Design.pdf"`,
         // A reading is private and the link is a bearer token. Nothing in between
         // may keep this.
         "Cache-Control": "no-store, private",

@@ -26,7 +26,6 @@
 
 import { profileWithNames } from "./mechanics.mjs";
 import { fix } from "../../shared/fixMock.mjs";
-import { AUTHORITY_CENTER, NO_CENTER } from "../../shared/fixCopy.mjs";
 
 export const DISCLAIMER =
   "This reading describes a Human Design chart and is offered for self-reflection. " +
@@ -208,8 +207,7 @@ export function firstProblem(
     centreStateProblem(reading, definedCenters, undefinedCenters, openCenters) ??
     oldWordProblem(reading) ??
     trackRowProblem(reading) ??
-    // MOCK FIX 9/15 (branch only): 9A near-miss matching, 9B one strict list per type.
-    (fix("9A") ? nearMissProblem(reading, type) : fix("9B") ? strictWordProblem(reading, type) : null)
+    nearMissProblem(reading, type)
   );
 }
 
@@ -363,20 +361,16 @@ export function oldWordProblem(raw) {
   return null;
 }
 
-/* ------------------------------------------------ MOCK FIX 9 / 15 (branch only) */
 /**
- * Two live misses on 10/21: a phone reading printed "Because your not-sf
+ * NEAR MISSES (10/21 live test, bugs 9 and 15; Jeremy's pick 9A). Two slips got
+ * past the exact-word checks: a phone reading printed "Because your not-sf
  * feeling is frustration" (a garbled "not-self"), and a Projector reading said
  * "your energy becomes depleted and frustrated" (a Generator's word, in a form
- * the exact-word checks do not know). Two ways to close both:
- *
- *   9A NEAR MISSES. The words already banned, matched loosely: a "not-" word
- *      within two letters of "self", and any form of another type's word
- *      ("frustrated", "bitterly") where the reader is said to feel it, in the
- *      on / off track content -- the same places the checks look today.
- *   9B ONE STRICT LIST PER TYPE. Each type may use only its own two feeling
- *      words: any form of another type's word ANYWHERE in the reading is
- *      refused, and so is any "not-" word that is not plain English.
+ * those checks do not know). So the words already banned are matched loosely:
+ * a "not-" word within two letters of "self", and any form of another type's
+ * word ("frustrated", "bitterly") where the reader is said to feel it, in the
+ * on / off track content -- the same places the checks look. Run on the 16
+ * readings on file it refused the three real slips and no good reading.
  */
 const FEELING_FORMS = {
   Peace: String.raw`peace\w*`,
@@ -388,7 +382,7 @@ const FEELING_FORMS = {
   Surprise: String.raw`surpris\w*`,
   Disappointment: String.raw`disappoint\w*`,
 };
-/** "not-" words that are plain English (9A and 9B). */
+/** "not-" words that are plain English. */
 const NOT_WORDS_OK = new Set(["so", "yet", "too", "for", "quite", "very", "just", "only", "now", "all", "always", "knowing", "doing"]);
 const NOT_HYPHEN = /\bnot[-‐‑]([a-z]{1,12})\b/gi;
 /** Letters added, dropped, changed or swapped (optimal string alignment). */
@@ -416,7 +410,7 @@ export function nearMissProblem(raw, type) {
       // The exact word is oldWordProblem's already; this is for the misspellings.
       if (NOT_WORDS_OK.has(w) || w === "self" || w === "selves") continue;
       if (lettersApart(w, "self") <= 2)
-        return `The reading says "${m[0]}" in ${where} -- a misspelt "not-self": "${quoteAt(text, m.index, m[0].length)}"`;
+        return `The reading says "${m[0]}" in ${where} -- a misspelled "not-self": "${quoteAt(text, m.index, m[0].length)}"`;
     }
     if (!onTrack || !own) continue;
     for (const [word, form] of Object.entries(FEELING_FORMS)) {
@@ -424,25 +418,6 @@ export function nearMissProblem(raw, type) {
       const m = new RegExp(`${FELT_BEFORE}(${form})\\b`, "i").exec(text);
       if (m)
         return `The reading gives a ${type} "${m[1]}" in ${where}, a form of another type's word ${word} (theirs are ${own.signature} and ${own.notSelf}): "${quoteAt(text, m.index, m[0].length)}"`;
-    }
-  }
-  return null;
-}
-
-export function strictWordProblem(raw, type) {
-  const own = TYPE_WORDS[type] ?? null;
-  for (const [where, text] of writtenText(raw)) {
-    for (const m of text.matchAll(NOT_HYPHEN)) {
-      const w = m[1].toLowerCase();
-      if (!NOT_WORDS_OK.has(w) && w !== "self" && w !== "selves")
-        return `The reading says "${m[0]}" in ${where}, which is not a word: "${quoteAt(text, m.index, m[0].length)}"`;
-    }
-    if (!own) continue;
-    for (const [word, form] of Object.entries(FEELING_FORMS)) {
-      if (word === own.signature || word === own.notSelf) continue;
-      const m = new RegExp(`\\b(${form})\\b`, "i").exec(text);
-      if (m)
-        return `The reading uses "${m[1]}" in ${where}; a ${type}'s feeling words are ${own.signature} and ${own.notSelf} only: "${quoteAt(text, m.index, m[0].length)}"`;
     }
   }
   return null;
@@ -1259,6 +1234,23 @@ export function parseReading(raw) {
 }
 
 /**
+ * THE CENTER EACH AUTHORITY SPEAKS FROM, for the side note beside "How you
+ * decide" (10/21 live test, bug 14; Jeremy's pick 14B). The note printed the
+ * Definition ("CENTER: Single") for Self-Projected, Ego, Mental and Lunar.
+ * Mental and Lunar have no center of their own, so they get no note: the line
+ * above it already says how they decide.
+ */
+export const AUTHORITY_CENTER = Object.freeze({
+  Emotional: "Solar Plexus",
+  Sacral: "Sacral",
+  Splenic: "Spleen",
+  Ego: "Heart",
+  "Ego Manifested": "Heart",
+  "Ego Projected": "Heart",
+  "Self-Projected": "G",
+});
+
+/**
  * The chart facts beside each section, ported from the app -- with one fix.
  *
  * The app prints "Decided over time, not in the moment." beside EVERY
@@ -1271,15 +1263,6 @@ export function parseReading(raw) {
  * disagreeing about somebody's authority is worse than one being wrong.
  */
 export function marginNotes(c) {
-  const defined = (c && c.definedCenters) || [];
-  const decidingCentre = defined.includes("Solar Plexus")
-    ? "Solar Plexus"
-    : defined.includes("Sacral")
-      ? "Sacral"
-      : defined.includes("Spleen")
-        ? "Spleen"
-        : (c && c.definition) || "";
-
   const HOW = {
     Emotional: "Decided over time, not in the moment.",
     Sacral: "Answered in the moment, in the body.",
@@ -1295,20 +1278,7 @@ export function marginNotes(c) {
   };
   const authority = (c && c.authority) || "";
   const profileNames = profileWithNames(c && c.profile).replace(/^[^—]*—\s*/, "");
-  /**
-   * MOCK FIX 14 (10/21 live test): the CENTER note names the authority's own
-   * center -- it printed the Definition ("CENTER: Single") for Self-Projected,
-   * Ego, Mental and Lunar. Mental and Lunar have no center of their own:
-   * 14A says so in words, 14B leaves the note out.
-   */
   const ownCentre = AUTHORITY_CENTER[authority] ?? null;
-  const centreRow = !fix("14A", "14B")
-    ? [["CENTER", decidingCentre]]
-    : ownCentre
-      ? [["CENTER", ownCentre]]
-      : fix("14A") && NO_CENTER[authority]
-        ? [["CENTER", NO_CENTER[authority]]]
-        : [];
 
   return {
     [INTERPRETATION[0]]: [
@@ -1317,7 +1287,7 @@ export function marginNotes(c) {
     ],
     [INTERPRETATION[1]]: [
       [`${authority.toUpperCase()} AUTHORITY`.trim(), HOW[authority] || ""],
-      ...centreRow,
+      ...(ownCentre ? [["CENTER", ownCentre]] : []),
     ],
     [INTERPRETATION[2]]: [
       [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],

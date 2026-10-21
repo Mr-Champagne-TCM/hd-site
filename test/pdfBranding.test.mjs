@@ -7,6 +7,7 @@ import {
   GUIDE_URL,
   ONWARD_NOTE,
   TITLE_MARK,
+  TITLE_MARK_CHART,
   WORDMARK,
   QR_CAPTION,
   readingPdf,
@@ -46,9 +47,13 @@ test("the brand lines are Jeremy's wording, 'by' lowercase", () => {
   assert.equal(GUIDE_URL, "thechampagnemethod.co/library/bodygraph");
   assert.equal(
     ONWARD_NOTE,
+    // W12 (10/21): each free page at its own address; the guide is not at .../human-design.
     "Every word above is explained in The Human Design library, and the drawing on page 1 in " +
-      "“Reading your bodygraph.” Both are free, at thechampagnemethod.co/library/human-design.",
+      "“Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
+      "and thechampagnemethod.co/library/bodygraph.",
   );
+  // W12: a chart with no written reading is not called an interpretation.
+  assert.equal(TITLE_MARK_CHART, "HUMAN DESIGN CHART by THE CHAMPAGNE METHOD");
 });
 
 test("page 1: eyebrow, name, birth line; every later page: the running brand line", async () => {

@@ -159,7 +159,7 @@ export default guard("chart", async (request, context) => {
         url,
         links: SITE,
         pending: false,
-        // MOCK FIX 16 (branch only): a chart for someone new says "their".
+        // A chart bought for someone new says "their" (bug 16, 10/21).
         someoneNew: reading.fresh === true,
       });
       /*

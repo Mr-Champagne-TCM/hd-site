@@ -1,18 +1,8 @@
 import { TIERS, money } from "../../shared/pricing.mjs";
 import { emailFooter } from "./emailFooter.mjs";
-import { firstName } from "../../shared/chartName.mjs";
+import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
-import { fix } from "../../shared/fixMock.mjs";
 import { receiptDate } from "./deliveryEmail.mjs";
-
-/** MOCK FIX 8B: "Projector · 4/1 · Self-Projected authority" (readingHandler's chartLine, kept local). */
-function chartLine(output) {
-  if (!output) return null;
-  const parts = [output.type, output.profile, output.authority ? `${output.authority} authority` : null]
-    .map((x) => (typeof x === "string" ? x.trim() : ""))
-    .filter(Boolean);
-  return parts.length ? parts.join(" · ") : null;
-}
 
 /**
  * THE "EMAIL ME MY CHARTS" EMAIL (release 2, Jeremy 10/20), two ways:
@@ -58,15 +48,15 @@ const word = (tier) => (TIERS[tier]?.label ?? "The chart").replace(/^The\s+/i, "
 
 /** One chart, as the email names it: whose, what, and when and where (no time). */
 export function chartCard(reading) {
-  const whose = reading.birth?.name ?? (firstName(reading.buyer?.name) || null);
+  const whose = reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
   const title = whose ? `${whose}’s ${word(reading.tier)}` : `Your ${word(reading.tier)}`;
   const label = TIERS[reading.tier]?.label ?? "The chart";
   const when = sayDate(reading.birth?.date);
   const where = reading.birth?.place ?? null;
   /**
-   * MOCK FIX 8 (10/21 live test): a record from before 16 October keeps no
-   * birth details, so its row read only "Your reading · The reading".
-   *   8A says when it was bought; 8B says what the chart is.
+   * A RECORD FROM BEFORE 16 OCTOBER keeps no birth details, so its row read
+   * only "Your reading · The reading" (10/21 live test, bug 8). It says when
+   * it was bought: what a buyer remembers ("the one I bought in October").
    */
   const old = !reading.pending && !when && !where;
   const bought = Number.isFinite(reading.purchasedAt) ? receiptDate(reading.purchasedAt * 1000) : null;
@@ -74,11 +64,9 @@ export function chartCard(reading) {
     ? reading.birth
       ? `${label} · paid, birth details waiting to be confirmed`
       : `${label} · paid, birth details not entered yet`
-    : old && fix("8A") && bought
+    : old && bought
       ? `${label} · bought ${bought}`
-      : old && fix("8B") && chartLine(reading.output)
-        ? `${label} · ${chartLine(reading.output)}`
-        : [label, when, where].filter(Boolean).join(" · ");
+      : [label, when, where].filter(Boolean).join(" · ");
   const action = reading.pending ? (reading.birth ? "Confirm the birth details" : "Enter the birth details") : "Open";
   return { title, line, action };
 }

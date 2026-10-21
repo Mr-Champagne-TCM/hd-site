@@ -1,6 +1,4 @@
-import { TIERS, priceFor, CHECKOUT_NEXT_STEP } from "../../shared/pricing.mjs";
-import { fix } from "../../shared/fixMock.mjs";
-import { checkoutNextStepKept } from "../../shared/fixCopy.mjs";
+import { TIERS, priceFor, CHECKOUT_NEXT_STEP, checkoutNextStepKept } from "../../shared/pricing.mjs";
 
 /**
  * What we ask Stripe for, worked out here so it can be tested without a network.
@@ -116,8 +114,8 @@ export async function checkoutCredit({ body, secret, level, head, readLink, now 
   if (!h) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
   const cents = upgradeCredit({ headTier: h.tier, level });
   return cents > 0
-    ? // MOCK FIX 4 (branch only): whether the chart it grows keeps its details (nothing to type).
-      { alreadyPaidCents: cents, upgrades: h.id, fresh: false, ...(fix("4") ? { kept: Boolean(h.birth) } : {}) }
+    ? // `kept`: the chart it grows keeps its birth details, so there is nothing to type (fix 4, 10/21).
+      { alreadyPaidCents: cents, upgrades: h.id, fresh: false, kept: Boolean(h.birth) }
     : { alreadyPaidCents: 0, upgrades: null, fresh: false };
 }
 
@@ -210,10 +208,11 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
     phone_number_collection: { enabled: false },
     /*
      * A line under the Pay button saying what comes next (fix 14B).
-     * custom_text.submit is on the pinned API version (2024-06-20).
+     * custom_text.submit is on the pinned API version (2024-06-20). An upgrade
+     * whose details are kept is told so, not "about 2 minutes" of typing (fix 4,
+     * 10/21: every upgrade said it).
      */
-    // MOCK FIX 4: an upgrade whose details are kept is told so, not "about 2 minutes" of typing.
-    custom_text: { submit: { message: fix("4") && upgrades && kept ? checkoutNextStepKept(level) : CHECKOUT_NEXT_STEP } },
+    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level) : CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *

@@ -101,7 +101,15 @@ export async function interpretOne({
   if (typeof deliver?.email === "function" && grantSecret && origin) {
     const url = `${origin}/r/${mintReadingLink({ id, tier: reading.tier }, grantSecret)}`;
     try {
-      await deliver.email({ to: reading.buyer?.email ?? null, name: reading.buyer?.name ?? null, chartName: reading.birth?.name ?? null, url, tier: reading.tier });
+      await deliver.email({
+        to: reading.buyer?.email ?? null,
+        name: reading.buyer?.name ?? null,
+        chartName: reading.birth?.name ?? null,
+        url,
+        tier: reading.tier,
+        // A reading bought for someone new says "their" (bug 16, 10/21).
+        someoneNew: reading.fresh === true,
+      });
     } catch (e) {
       // The reading is on the page; the email is the copy. Ours to follow up.
       await noteFailure(health, "reading-ready-email", { detail: `${e?.message ?? e?.name ?? "send failed"}`.slice(0, 80), now });

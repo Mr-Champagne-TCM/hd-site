@@ -173,7 +173,7 @@ export async function handleClaim({
       kept,
       amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
       paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
-      // MOCK FIX 16 (branch only): a chart for someone new says "their".
+      // A chart bought for someone new says "their" (bug 16, 10/21).
       someoneNew: session?.metadata?.fresh === "1",
     });
     let sent;
