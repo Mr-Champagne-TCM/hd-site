@@ -12,6 +12,8 @@ import {
 import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs";
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
+import { fix } from "../shared/fixMock.mjs";
+import { NOON_NOTE_A, NOON_NOTE_B } from "../shared/fixCopy.mjs";
 
 /**
  * "YOUR CHART AT A GLANCE", in the PDFs' order (Jeremy 10/16): the gold box of
@@ -53,8 +55,18 @@ export default function Glance({ data, says = null, showActivations = false }: P
       ? ([["Undefined centers", list(data.undefinedCenters, "None"), CENTERS]] as Array<[string, string, string]>)
       : []),
     ["Open centers", list(data.openCenters, "None"), CENTERS],
-    ["Channels", data.channels && data.channels.length ? data.channels.join("\n") : "None", CHANNELS],
+    // MOCK FIX 2A: no Channels row where the chart carries none (the summary); a chart with none still says "None".
+    ...(fix("2A") && !Array.isArray(data.channels)
+      ? []
+      : ([["Channels", data.channels && data.channels.length ? data.channels.join("\n") : "None", CHANNELS]] as Array<
+          [string, string, string]
+        >)),
   ];
+  // MOCK FIX 17A: with no birth time the centers and channels are marked provisional too.
+  const valueProvisional = (label: string) =>
+    fix("17A") && data.timeKnown === false && /centers$|^Channels$/.test(label);
+  // MOCK FIX 17: one sentence for an unknown time, the same on the page, the PDF and the phone.
+  const noonNote = fix("17A") ? NOON_NOTE_A : fix("17B") ? NOON_NOTE_B : data.note;
 
   const sides = SIDES.map((s: { key: string; label: string; sub: string }) => ({
     ...s,
@@ -84,7 +96,9 @@ export default function Glance({ data, says = null, showActivations = false }: P
                 </a>
               </dt>
               <dd className="text-[17px] leading-relaxed text-brand-paper">
-                {value}.{sentence ? ` ${sentence}` : ""}
+                {/* MOCK FIX W1: a bare value carries no period (the summary); a value with its sentence keeps it. */}
+                {fix("W1") && !sentence ? value : `${value}.`}
+                {sentence ? ` ${sentence}` : ""}
                 {provisional.has(field) && (
                   <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                     provisional
@@ -96,9 +110,9 @@ export default function Glance({ data, says = null, showActivations = false }: P
         })}
       </dl>
 
-      {!data.timeKnown && data.note && (
+      {!data.timeKnown && noonNote && (
         <p className="mt-3 rounded-xl border border-brand-gold/30 bg-brand-gold/[0.06] px-4 py-3 text-[15px] leading-relaxed text-brand-paper/90">
-          {data.note}
+          {noonNote}
         </p>
       )}
 
@@ -113,7 +127,14 @@ export default function Glance({ data, says = null, showActivations = false }: P
                 {label}
               </a>
             </dt>
-            <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">{value}</dd>
+            <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">
+              {value}
+              {valueProvisional(label) && (
+                <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
+                  provisional
+                </span>
+              )}
+            </dd>
           </div>
         ))}
       </dl>

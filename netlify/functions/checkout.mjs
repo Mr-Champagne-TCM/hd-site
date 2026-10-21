@@ -81,7 +81,7 @@ export default guard("checkout", async (request) => {
    * purchase. "Start a new chart for someone else" is full price.
    */
   const readings = getStore({ name: "readings", consistency: "strong" });
-  const { alreadyPaidCents, upgrades, fresh } = await checkoutCredit({
+  const { alreadyPaidCents, upgrades, fresh, kept } = await checkoutCredit({
     body,
     secret: grantSecret,
     level,
@@ -101,7 +101,7 @@ export default guard("checkout", async (request) => {
   });
 
   try {
-    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh }));
+    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh, kept }));
     console.log(
       `POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${upgrades ? ", upgrade" : ""}${fresh ? ", someone new" : ""}${product ? "" : ", inline product"})`,
     );

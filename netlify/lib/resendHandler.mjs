@@ -169,6 +169,9 @@ export async function handleResend({
       amountCents: reading.paidCents ?? null,
       paidAt: reading.purchasedAt ? reading.purchasedAt * 1000 : null,
       chartName: reading.birth?.name ?? null,
+      // MOCK FIXES 16 + W7 (branch only): "their" for someone new; a fresh link says so.
+      someoneNew: reading.fresh === true,
+      freshLink: !reading.pending,
     });
 
     let sent;

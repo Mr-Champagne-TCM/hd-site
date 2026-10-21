@@ -25,6 +25,7 @@ import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
 import { customerText } from "../shared/customerMessages.mjs";
+import { fix } from "../shared/fixMock.mjs";
 
 /**
  * The offer page.
@@ -186,13 +187,25 @@ function Example() {
   );
 }
 
+/**
+ * MOCK FIX W8 (branch fix-mock-1021): the someone-new cards describe THEIR
+ * chart. They said "your centers, your incarnation cross" to a buyer starting
+ * a chart for someone else.
+ */
+const THEIR = {
+  summary: "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.",
+  chart: "Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates.",
+  readingLead: "Their chart, plus about 1,200 words written to it:",
+  readingTicks: ["How they decide", "How they meet the world", "What they take in from others", "Four small things to try"],
+};
+
 /** Fix 2, option B (Jeremy 10/20 "1B"): the reading's card in four plain ticks. */
-function ReadingTicks() {
+function ReadingTicks({ their = false }: { their?: boolean }) {
   return (
     <div className="mt-3">
-      <p className="text-[15px] leading-relaxed text-brand-paper/85">{CARDS.readingLead}</p>
+      <p className="text-[15px] leading-relaxed text-brand-paper/85">{their ? THEIR.readingLead : CARDS.readingLead}</p>
       <ul className="mt-2 space-y-1">
-        {CARDS.readingTicks.map((t) => (
+        {(their ? THEIR.readingTicks : CARDS.readingTicks).map((t) => (
           <li key={t} className="flex gap-2 text-[15px] text-brand-paper/90">
             <span aria-hidden className="text-brand-teal">
               ✓
@@ -315,10 +328,12 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
               </p>
             )}
             {tier.sku === READING.sku ? (
-              <ReadingTicks />
+              <ReadingTicks their={fresh && fix("W8")} />
             ) : (
               <>
-                <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">{tier.blurb}</p>
+                <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">
+                  {fresh && fix("W8") ? (tier.sku === SUMMARY.sku ? THEIR.summary : THEIR.chart) : tier.blurb}
+                </p>
                 <LibraryNote sku={tier.sku} />
               </>
             )}

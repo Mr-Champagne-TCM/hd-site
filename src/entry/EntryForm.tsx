@@ -16,6 +16,7 @@ import MailtoText from "../MailtoText";
 import { customerText } from "../../shared/customerMessages.mjs";
 import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
 import { CHART_NAME_MAX, chartTitle, cleanChartName, firstName } from "../../shared/chartName.mjs";
+import { fix } from "../../shared/fixMock.mjs";
 
 /**
  * The way in.
@@ -264,19 +265,42 @@ export default function EntryForm({
    */
   const missing = (() => {
     if (!date) return other ? "the day they were born." : "the day you were born.";
+    // MOCK FIX 19: someone new's form says "they" on every line.
+    const they = other && fix("19");
     if (!place)
       return (
-        "where you were born. Start typing the town, then pick it from the list — " +
+        (they ? "where they were born. " : "where you were born. ") +
+        "Start typing the town, then pick it from the list — " +
         "the letters on their own are not enough, because the reading needs the " +
         "coordinates and the timezone that come with the choice."
       );
     if (timeKnown !== false && !timeReady)
       return (
-        "the time you were born — or tick “I don’t know my birth time”, " +
+        (they
+          ? "the time they were born — or tick “I don’t know their birth time”, "
+          : "the time you were born — or tick “I don’t know my birth time”, ") +
         "which is a perfectly good answer and changes less than you would think."
       );
     return null;
   })();
+  /**
+   * MOCK FIX 1 (10/21 live test, bug 1): count what is missing. A blank form
+   * said "One thing left: the day you were born." with three things missing.
+   * One missing keeps today's longer sentence; two or three are named together.
+   */
+  const missingParts = [
+    !date ? "date" : null,
+    !place ? "place" : null,
+    timeKnown !== false && !timeReady ? "time" : null,
+  ].filter(Boolean) as string[];
+  const missingLine =
+    fix("1") && missingParts.length > 1
+      ? `${missingParts.length === 3 ? "Three" : "Two"} things left: the ${
+          missingParts.length === 3 ? "date, the place and the time" : missingParts.join(" and the ")
+        } ${other ? "they were" : "you were"} born.`
+      : missing
+        ? `One thing left: ${missing}`
+        : null;
 
   async function submit(e: React.FormEvent | null) {
     e?.preventDefault();
@@ -566,7 +590,9 @@ export default function EntryForm({
                   className={field}
                 />
                 <span className="mt-1.5 block text-[14px] leading-snug text-brand-muted">
-                  {other
+                  {other && fix("19") && !cleanChartName(who)
+                    ? "Their first name, if you add it, becomes the title of their chart."
+                    : other
                     ? `It is the title of their chart: “${chartTitle(who)}”.`
                     : correcting
                       ? `It is the title of this chart: “${chartTitle(who)}”.`
@@ -587,6 +613,7 @@ export default function EntryForm({
               value={time}
               onChange={setTime}
               unknown={timeKnown === false}
+              their={other && fix("19")}
               onUnknownChange={(u) => {
                 setTimeKnown(u ? false : null);
                 if (u) setTime("");
@@ -603,9 +630,9 @@ export default function EntryForm({
           </p>
         )}
 
-        {missing && state.at !== "working" && (
+        {missingLine && state.at !== "working" && (
           <p className="mt-6 max-w-[52ch] text-[15px] leading-relaxed text-brand-muted">
-            One thing left: {missing}
+            {missingLine}
           </p>
         )}
 

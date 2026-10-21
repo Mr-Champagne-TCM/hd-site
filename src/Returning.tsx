@@ -5,6 +5,7 @@ import { TIERS, money } from "../shared/pricing.mjs";
 import { correctionNote, grownNote } from "../shared/correctionNote.mjs";
 import MailtoText from "./MailtoText";
 import { customerText } from "../shared/customerMessages.mjs";
+import { fix } from "../shared/fixMock.mjs";
 
 /**
  * THE RETURNING BUYER (release 2), the pieces more than one page uses:
@@ -271,7 +272,12 @@ export function ConfirmKept({
       </div>
       <div className="mt-7 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap">
         <button type="button" onClick={confirm} disabled={state.at === "working"} className={btn}>
-          {state.at === "working" ? "Working…" : RETURNING.confirmYes}
+          {/* MOCK FIX 5: the button names what was bought ("make my chart" on a chart upgrade). */}
+          {state.at === "working"
+            ? "Working…"
+            : fix("5")
+              ? `These are right — make my ${what}`
+              : RETURNING.confirmYes}
         </button>
         <button type="button" onClick={onChange} className={btnQuiet}>
           {RETURNING.changeDetail}

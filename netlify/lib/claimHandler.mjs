@@ -173,6 +173,8 @@ export async function handleClaim({
       kept,
       amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
       paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
+      // MOCK FIX 16 (branch only): a chart for someone new says "their".
+      someoneNew: session?.metadata?.fresh === "1",
     });
     let sent;
     try {

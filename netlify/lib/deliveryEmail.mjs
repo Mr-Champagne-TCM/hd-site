@@ -1,6 +1,17 @@
 import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
+import { fix } from "../../shared/fixMock.mjs";
+
+/**
+ * MOCK FIX 16 (branch fix-mock-1021): what a chart for SOMEONE NEW is ready
+ * with -- their centers, their cross -- where it said "your".
+ */
+const READY_THEIR = Object.freeze({
+  0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their incarnation cross"],
+  1: ["Their bodygraph, drawn", "Their channels and activated gates", "A PDF to keep"],
+  2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
+});
 
 /**
  * The delivery email, which is a door and not the product.
@@ -174,7 +185,12 @@ export function deliveryEmail({
   paidAt = null,
   footer = "E",
   footerColor,
+  /** MOCK FIX 16: bought from "Start a new chart for someone else". */
+  someoneNew = false,
+  /** MOCK FIX W7: sent from "Email me this link". */
+  freshLink = false,
 }) {
+  const their = fix("16") && someoneNew;
   const word = tierWord(tier);
   // The footer is a theme (emailFooter.mjs): "E", side by side, Jeremy's pick 10/16.
   const end = emailFooter(footer, links, footerColor ? { coachColor: footerColor } : undefined);
@@ -199,7 +215,9 @@ export function deliveryEmail({
 
   const subject = pending
     ? `Receipt: ${buyerWhose} Human Design ${word}${amount ? `, ${amount}` : ""}`
-    : `${chartWhose} Human Design ${word} is ready`;
+    : fix("W7") && freshLink
+      ? `A fresh link to ${chartWhose === "Your" ? "your" : chartWhose} Human Design ${word}`
+      : `${chartWhose} Human Design ${word} is ready`;
 
   /**
    * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs
@@ -212,7 +230,10 @@ export function deliveryEmail({
     [
       links.hd101,
       "The Human Design library",
-      "Every part of a chart, one layer at a time, and every word in your reading explained.",
+      // MOCK FIX W3: the buyer's own tier, not a reading they may not have.
+      fix("W3") && tier < 2
+        ? `Every part of a chart, one layer at a time, and every word in ${their ? "their" : "your"} ${word} explained.`
+        : "Every part of a chart, one layer at a time, and every word in your reading explained.",
     ],
     [
       links.bodygraph,
@@ -221,7 +242,8 @@ export function deliveryEmail({
       "The picture itself — what the shapes mean, and why some are colored in and some are not.",
     ],
   ];
-  const resourcesHead = pending ? "While you wait, free in the library" : "Free in the library";
+  // MOCK FIX W5: a receipt has nothing to wait for -- the next step is the buyer's.
+  const resourcesHead = pending && !fix("W5") ? "While you wait, free in the library" : "Free in the library";
 
   /**
    * WHAT ELSE THERE IS, on the ready email only, and only for a tier that can
@@ -238,10 +260,15 @@ export function deliveryEmail({
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
   const keptLine =
-    `Your ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
+    `${their ? chartWhose : "Your"} ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
     "sends you a fresh one, as often as you need.";
 
-  const ready = READY[tier] ?? READY[2];
+  const ready0 = READY[tier] ?? READY[2];
+  const ready = their
+    ? { lead: ready0.lead.replace(/^Your chart and your/, `${chartWhose} chart and`).replace(/^Your/, chartWhose), ticks: READY_THEIR[tier] ?? READY_THEIR[2] }
+    : fix("W7") && freshLink
+      ? { ...ready0, lead: `Here is a fresh link to ${chartWhose === "Your" ? "your" : chartWhose} ${word}, as asked.` }
+      : ready0;
   const receiptRows = [
     ["What", `Human Design: ${label.toLowerCase()}`],
     ...(amount !== null ? [["Amount paid", amount]] : []),
@@ -252,12 +279,17 @@ export function deliveryEmail({
   const nextLine = kept
     ? "Your birth details are kept from your chart, so there is nothing to type — only a look, " +
       "to be sure they are right."
-    : "Your birth date, time and place. Your chart is made from them, and the time can be left " +
-      "out if you don’t know it.";
+    : their
+      ? "Their birth date, time and place. Their chart is made from them, and the time can be left " +
+        "out if it isn’t known."
+      : "Your birth date, time and place. Your chart is made from them, and the time can be left " +
+        "out if you don’t know it.";
   const action = pending
     ? kept
       ? "Confirm your birth details"
-      : "Enter your birth details"
+      : their
+        ? "Enter their birth details"
+        : "Enter your birth details"
     : top
       ? "Open your reading"
       : `Open your ${word}`;

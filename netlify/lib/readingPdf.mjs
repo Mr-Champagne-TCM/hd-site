@@ -21,6 +21,8 @@ import { chartTitle } from "../../shared/chartName.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
+import { fix } from "../../shared/fixMock.mjs";
+import { AUTHORITY_CENTER, NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -172,6 +174,21 @@ export const GUIDE_PROMPT = "How to read your bodygraph →";
 /** Under the QR, two short lines (fix 17A, 10/19). */
 export const QR_CAPTION = Object.freeze(["Scan: how to read", "your bodygraph"]);
 
+/**
+ * MOCK FIX W12 (branch only): the note gives each free page its own address.
+ * It said both were "at .../library/human-design", where the bodygraph guide
+ * is not.
+ */
+const ONWARD_NOTE_W12 =
+  "Every word above is explained in The Human Design library, and the drawing on " +
+  "page 1 in “Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
+  "and thechampagnemethod.co/library/bodygraph.";
+const onwardNote = (onPage = false) => {
+  const t = fix("W12") ? ONWARD_NOTE_W12 : ONWARD_NOTE;
+  return onPage ? t.replace("Every word above", "Every word on page 2") : t;
+};
+const ONWARD_LINKS_W12 = Object.freeze([...ONWARD_LINKS, ["thechampagnemethod.co/library/bodygraph", BODYGRAPH_GUIDE]]);
+
 const NOON_NOTE =
   "Birth time was not known, so this chart is cast at noon. Type, " +
   "Authority and Profile should be treated as provisional.";
@@ -193,6 +210,15 @@ class Doc {
     this.head = null;
     /** Clickable areas, page by page -- also handed back for the tests. */
     this.links = [];
+    /** MOCK FIX 6 (branch only): the page a closing block landed on alone, and the page to tighten. */
+    this.alone = null;
+    this.squeeze = null;
+    this.keepClosing = false;
+  }
+
+  /** MOCK FIX 6: a closing block about to be drawn; was it pushed onto a page of its own? */
+  closing() {
+    if (this.atTop && this.alone === null) this.alone = this.pageNo;
   }
 
   link(r, uri, pad = 1.5, kind = undefined) {
@@ -273,6 +299,11 @@ class Doc {
     this.y += h;
   }
 
+  /** MOCK FIX 6B: white space only (never the room under drawn text), which gives way on the squeezed page. */
+  space(h) {
+    this.y += this.squeeze && this.squeeze.page === this.pageNo ? h * this.squeeze.f : h;
+  }
+
   draw(l, x = MARGIN, spans = null) {
     drawLayout(this.pdf, l, x, this.y);
     if (spans) this.termLinks(l, 0, l.lineCount, x, this.y, spans);
@@ -338,7 +369,26 @@ class Doc {
  * or -- with `inspect` set, for the tests -- to `{ bytes, links, runs }`: every
  * link box and every run of text drawn, page by page.
  */
-export async function readingPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false }) {
+export async function readingPdf(args) {
+  if (!fix("6A", "6B")) return buildPdf(args);
+  /**
+   * MOCK FIX 6 (10/21 live test, bug 6): no page holds only a closing block
+   * (the page-2 note, the coaching card).
+   *   6A keep together: the block before it always goes with it.
+   *   6B pull it up: the page before tightens its spacing until it fits;
+   *      only if it cannot (the card is tall) does 6A's rule apply.
+   */
+  if (fix("6A")) return buildPdf(args, { keepClosing: true });
+  const first = await buildPdf({ ...args, inspect: true });
+  if (first.alone === null) return args.inspect ? first : first.bytes;
+  for (const f of [0.9, 0.8, 0.7, 0.6]) {
+    const r = await buildPdf({ ...args, inspect: true }, { squeeze: { page: first.alone - 1, f } });
+    if (r.alone === null) return args.inspect ? r : r.bytes;
+  }
+  return buildPdf(args, { keepClosing: true });
+}
+
+async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false }, opts = {}) {
   const qr = (() => {
     try {
       return QRCode.create(BODYGRAPH_GUIDE, { errorCorrectionLevel: "M" });
@@ -373,6 +423,7 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
     pdf.registerFont("svgBold", OUTFIT_600);
 
     const d = new Doc(pdf);
+    Object.assign(d, opts);
     const runs = [];
     if (inspect) hooks.onText = (r) => runs.push({ page: d.pageNo, ...r });
     /**
@@ -381,7 +432,7 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
      */
     const text = tier >= 2 && typeof reading === "string" && reading.trim() ? reading.replace(/\r\n?/g, "\n") : null;
 
-    bodygraphPage(d, { name, output, birth, qr });
+    bodygraphPage(d, { name, output, birth, qr, tier });
     glancePage(d, { output, tier, reading: text });
     // Same gate as the phone: a reading that can be laid out in the new order
     // gets the new order; anything else keeps its words as plain paragraphs.
@@ -398,7 +449,11 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
     const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve(inspect ? { bytes, links: d.links, runs, pages } : bytes);
+      resolve(
+        inspect
+          ? { bytes, links: d.links, runs, pages, ...(fix("6A", "6B") ? { alone: d.alone } : {}) }
+          : bytes,
+      );
     });
     pdf.end();
   });
@@ -429,13 +484,15 @@ function profileWords(profile) {
   return [...digits].map((x) => PROFILE_LINE_NAMES[x]).filter(Boolean).join(" / ");
 }
 
-function bodygraphPage(d, { name, output, birth, qr }) {
+function bodygraphPage(d, { name, output, birth, qr, tier }) {
   const c = output ?? {};
   const pdf = d.pdf;
   d.start();
   const eyebrow = paint(8, MARK, true, 0.19);
-  drawText(pdf, TITLE_MARK, MARGIN, d.y + 8, eyebrow);
-  d.linkText(TITLE_MARK, MARGIN, d.y + 8, eyebrow, SHOP);
+  // MOCK FIX W12: a chart without a written reading is not called an interpretation.
+  const titleMark = fix("W12") && Number.isInteger(tier) && tier < 2 ? TITLE_MARK.replace("INTERPRETATION", "CHART") : TITLE_MARK;
+  drawText(pdf, titleMark, MARGIN, d.y + 8, eyebrow);
+  d.linkText(titleMark, MARGIN, d.y + 8, eyebrow, SHOP);
   d.gap(16);
   drawText(pdf, chartTitle(name), MARGIN, d.y + 19, paint(24, INK, true));
   d.gap(25);
@@ -461,7 +518,8 @@ function bodygraphPage(d, { name, output, birth, qr }) {
   d.gap(13);
 
   if (c.timeKnown === false) {
-    d.block(d.L(NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
+    // MOCK FIX 17: the page's own sentence, word for word.
+    d.block(d.L(fix("17A") ? NOON_NOTE_A : fix("17B") ? NOON_NOTE_B : NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
   }
 
   // The chart is aspect-locked, the key is aspect-locked and as wide as the
@@ -478,7 +536,8 @@ function bodygraphPage(d, { name, output, birth, qr }) {
   const raw = typeof c.bodygraphSvg === "string" ? c.bodygraphSvg : null;
   if (raw) {
     try {
-      SVGtoPDF(pdf, printSwap(raw).svg, left, d.y, {
+      // MOCK FIX W13: the drawing names the center as the tables do.
+      SVGtoPDF(pdf, printSwap(fix("W13") ? raw.replace(/>EGO</g, ">HEART<") : raw).svg, left, d.y, {
         width: chartW,
         height: chartH,
         preserveAspectRatio: "xMidYMid meet",
@@ -643,46 +702,53 @@ function glancePage(d, { output, tier, reading }) {
   const glanceHref = [typeLink(c.type), typeLink(c.type), AUTHORITY, profileLink(c.profile), typeLink(c.type), typeLink(c.type)];
 
   const boxTop = d.y;
-  d.gap(9);
+  d.space(9);
   rows.forEach(([label, value], i) => {
     const sentence = says[SUMMARY_KEYS[i]] ?? "";
     const t = sentence ? `${value}. ${sentence}` : `${value}.`;
     const l = d.L(t, valuePaint, CONTENT_W - 138);
     if (i > 0) d.rect(MARGIN + 14, d.y, W - MARGIN * 2 - 28, 0.6, HAIR_WARM);
-    d.gap(6);
+    d.space(6);
     drawText(pdf, label, MARGIN + 16, d.y + 8, labelPaint);
     d.linkText(label, MARGIN + 16, d.y + 8, labelPaint, glanceHref[i]);
     // 122, not 90: "WHEN IT'S OFF TRACK" needs the room.
     drawLayout(pdf, l, MARGIN + 122, d.y - 2);
-    d.gap(Math.max(l.height, 14) + 4);
+    d.gap(Math.max(l.height, 14));
+    d.space(4);
   });
-  d.gap(6);
+  d.space(6);
   d.rect(MARGIN, boxTop, CONTENT_W, 1, RULE);
   d.rect(MARGIN, d.y, CONTENT_W, 1, RULE);
   d.rect(MARGIN, boxTop, 1, d.y - boxTop, RULE);
   d.rect(W - MARGIN - 1, boxTop, 1, d.y - boxTop, RULE);
-  d.gap(22);
+  d.space(22);
 
   drawText(pdf, "YOUR CHART VALUES", MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.17));
   d.gap(13);
   d.rule(RULE, 0.8);
-  d.gap(2);
+  d.space(2);
 
   const valueRow = (label, value, href) => {
     const l = d.L(value, paint(10, INK), CONTENT_W - 110);
     d.need(l.height + 10);
-    d.gap(5);
+    d.space(5);
     const lp = paint(8, DIM, false, 0.06);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, lp);
     d.linkText(label.toUpperCase(), MARGIN, d.y + 8, lp, href);
     drawLayout(pdf, l, MARGIN + 110, d.y - 1);
-    d.gap(Math.max(l.height, 12) + 4);
+    d.gap(Math.max(l.height, 12));
+    d.space(4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
 
   const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
   valueRow("Definition", c.definition ?? "", DEFINITION);
-  valueRow("Incarnation cross", c.incarnationCross ?? "", crossLink(c.incarnationCross));
+  // MOCK FIX W14: "Cross of the Vessel of Love", "the" in lowercase like the other names.
+  valueRow(
+    "Incarnation cross",
+    fix("W14") ? String(c.incarnationCross ?? "").replace(/\bCross of The\b/g, "Cross of the") : (c.incarnationCross ?? ""),
+    crossLink(c.incarnationCross),
+  );
   valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS);
   /**
    * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`
@@ -703,7 +769,7 @@ function glancePage(d, { output, tier, reading }) {
     const rowsN = Math.ceil(acts.length / cols);
     const h = rowsN * rowH;
     d.need(h + 10);
-    d.gap(5);
+    d.space(5);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, paint(8, DIM, false, 0.06));
     const colW = (CONTENT_W - 110) / cols;
     const nameP = paint(9, BODY2);
@@ -715,7 +781,8 @@ function glancePage(d, { output, tier, reading }) {
       drawText(pdf, nm, cx, cy, nameP);
       drawText(pdf, `${a.gate}.${a.line}`, cx + measure(pdf, nm, nameP), cy, gateP);
     });
-    d.gap(h + 4);
+    d.gap(h);
+    d.space(4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
   const pers = Array.isArray(c.personality) ? c.personality : [];
@@ -731,12 +798,18 @@ function glancePage(d, { output, tier, reading }) {
     // five across instead of four, which pays for the heading and the line.
     const how = d.L(TECH_HOW, paint(8, DIM), CONTENT_W);
     const head = `${techTitle(pers.length + des.length)} ${TECH_TITLE_NOTE}`.toUpperCase();
+    if (d.keepClosing) {
+      // MOCK FIX 6A: the whole technical block travels with the closing note under it.
+      const rowsH = [pers, des].filter((a) => a.length).reduce((n, a) => n + 5 + Math.ceil(a.length / 5) * 12 + 4 + 0.5, 0);
+      const note = d.L(onwardNote(), paint(9, DIM), CONTENT_W);
+      d.need(8 + 12 + how.height + 4 + 0.8 + rowsH + 14 + note.height);
+    }
     d.need(8 + 12 + how.height + 4 + 40);
-    d.gap(8);
+    d.space(8);
     drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
     d.gap(12);
     d.draw(how);
-    d.gap(4);
+    d.space(4);
     d.rule(RULE, 0.8);
     if (pers.length) activationRow("Personality", pers);
     if (des.length) activationRow("Design", des);
@@ -748,16 +821,21 @@ function glancePage(d, { output, tier, reading }) {
   if (tier < 2) return nextStepsPage(d, tier);
 
   // The onward pointer: both free pages, in the voice of an invitation.
-  const onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
-  d.gap(14);
+  let onward = d.L(onwardNote(), paint(9, DIM), CONTENT_W);
+  d.space(14);
   d.need(onward.height);
+  if (fix("6A", "6B")) {
+    d.closing();
+    // MOCK FIX 6: off page 2 the note names the page, as the chart tier's does ("above" pointed at nothing).
+    if (d.pageNo !== 2) onward = d.L(onwardNote(true), paint(9, DIM), CONTENT_W);
+  }
   const noteTop = d.y;
   d.draw(onward);
   linkOnward(d, onward, noteTop);
 }
 
 function linkOnward(d, layout, top) {
-  for (const [phrase, uri] of ONWARD_LINKS) {
+  for (const [phrase, uri] of fix("W12") ? ONWARD_LINKS_W12 : ONWARD_LINKS) {
     for (const r of phraseRects(d.pdf, layout, phrase)) {
       d.link({ left: r.left + MARGIN, top: r.top + top, right: r.right + MARGIN, bottom: r.bottom + top }, uri);
     }
@@ -801,12 +879,12 @@ function sectionLabel(d, text) {
  */
 function nextStepsPage(d, tier) {
   const o = offerLayouts(d, tier);
-  let onward = d.L(ONWARD_NOTE, paint(10, INK), CONTENT_W);
+  let onward = d.L(onwardNote(), paint(10, INK), CONTENT_W);
   const total = 10 + 23 + onward.height + 34 + 23 + (o ? o.body.height : 0);
   if (d.pageNo >= 3 && d.y + 40 + total <= d.bottom) {
     d.gap(40);
   } else {
-    onward = d.L(ONWARD_NOTE_PAGE, paint(10, INK), CONTENT_W);
+    onward = d.L(onwardNote(true), paint(10, INK), CONTENT_W);
     d.start(NEXT_STEPS_HEAD);
     d.gap(10);
   }
@@ -1052,7 +1130,8 @@ function readingPages(d, c, v) {
   }
 
   const panel = coachLayouts(d);
-  takeaways(d, v.takeaways, disclaimerLayout(d).height + 28, c);
+  // MOCK FIX 6A: the last thing to try travels with the coaching card, so the card never ends the PDF alone.
+  takeaways(d, v.takeaways, d.keepClosing ? coachNeed(d, panel) + 8 : disclaimerLayout(d).height + 28, c);
   coachPanel(d, panel);
   disclaimer(d);
 }
@@ -1072,10 +1151,17 @@ function coachLayouts(d) {
   };
 }
 
+/** MOCK FIX 6A: the room the card and the disclaimer under it take. */
+function coachNeed(d, { head, body, link }) {
+  const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
+  return 16 + h + 20 + disclaimerLayout(d).height + 2;
+}
+
 function coachPanel(d, { head, body, link }) {
   const pdf = d.pdf;
   const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
   d.need(16 + h + 20 + disclaimerLayout(d).height + 2);
+  if (fix("6A", "6B")) d.closing();
   d.gap(16);
   const top = d.y;
   pdf.save();

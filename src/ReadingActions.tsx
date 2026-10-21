@@ -5,6 +5,7 @@ import MailtoText from "./MailtoText";
 import { PageEnd } from "./FooterTheme";
 import { SomeoneElseSection } from "./Returning";
 import { TIERS } from "../shared/pricing.mjs";
+import { fix } from "../shared/fixMock.mjs";
 import {
   AUTHORITY_NOTES,
   STRATEGY_NOTES,
@@ -162,7 +163,12 @@ export default function ReadingActions({
           <Resource
             href={SITE.hd101}
             title="The Human Design library"
-            blurb="Every part of a chart, one layer at a time, and every word in your reading explained."
+            blurb={
+              // MOCK FIX W3: it names what this buyer has, not a reading they may not have.
+              fix("W3") && tier < 2
+                ? `Every part of a chart, one layer at a time, and every word in your ${tier === 1 ? "chart" : "summary"} explained.`
+                : "Every part of a chart, one layer at a time, and every word in your reading explained."
+            }
           />
           <Resource
             href={SITE.bodygraph}
@@ -370,7 +376,7 @@ function Resource({
  * first send of anything worth keeping. One wording that is true whenever it
  * is read beats two wordings that need a state to choose between them.
  */
-function Resend({ token }: { token: string }) {
+function Resend({ token, bare = false }: { token: string; bare?: boolean }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">(
     "idle",
   );
@@ -402,13 +408,18 @@ function Resend({ token }: { token: string }) {
 
   return (
     <section>
-      <h2 className="font-display text-[20px] font-medium text-brand-paper">
-        Keeping it
-      </h2>
-      <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-        Your reading is kept for a year, so the link can be sent to you whenever
-        you need it — to the address on your purchase, and only there.
-      </p>
+      {/* MOCK FIX W6 (`bare`): on the expired page the button alone; the page above already says this. */}
+      {!bare && (
+        <>
+          <h2 className="font-display text-[20px] font-medium text-brand-paper">
+            Keeping it
+          </h2>
+          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
+            Your reading is kept for a year, so the link can be sent to you whenever
+            you need it — to the address on your purchase, and only there.
+          </p>
+        </>
+      )}
       {state === "sent" ? (
         <p className="mt-4 text-[16px] text-brand-teal">
           On its way. It goes to the address you bought it with.

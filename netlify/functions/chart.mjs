@@ -159,6 +159,8 @@ export default guard("chart", async (request, context) => {
         url,
         links: SITE,
         pending: false,
+        // MOCK FIX 16 (branch only): a chart for someone new says "their".
+        someoneNew: reading.fresh === true,
       });
       /*
        * RINGING THE WRITER (reading tier) happens above, before this: fire and

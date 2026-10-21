@@ -17,6 +17,7 @@ import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 import { ConfirmKept, ReadingNotes } from "./Returning";
+import { fix } from "../shared/fixMock.mjs";
 
 /**
  * What a delivery link opens.
@@ -215,7 +216,12 @@ export default function ReadingPage({ token }: { token: string }) {
               : "That link could not be opened"}
         </h1>
         <div className="mt-5 max-w-[60ch]">
-          <Panel>{state.message}</Panel>
+          <Panel>
+            {/* MOCK FIX W6: the panel does not open by repeating the heading above it. */}
+            {fix("W6") && !state.expired && !state.ours
+              ? state.message.replace(/^That link could not be opened\.\s*/, "")
+              : state.message}
+          </Panel>
         </div>
         {/*
           An expired link is not a dead end and must not read as one, so the way
@@ -291,7 +297,7 @@ export default function ReadingPage({ token }: { token: string }) {
               year.
             </p>
             <div className="mt-4">
-              <Resend token={token} />
+              <Resend token={token} bare={fix("W6")} />
             </div>
             <p className="mt-6 text-[15px] leading-relaxed text-brand-muted">
               If that does not reach you,{" "}

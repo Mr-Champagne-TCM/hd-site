@@ -26,7 +26,10 @@ export default function TimeField({
   onChange,
   unknown,
   onUnknownChange,
+  their = false,
 }: {
+  /** MOCK FIX 19 (branch fix-mock-1021): someone new's form, "their birth time". */
+  their?: boolean;
   /** "HH:MM" in 24-hour form, or "" while incomplete. */
   value: string;
   onChange: (hhmm: string) => void;
@@ -116,7 +119,9 @@ export default function TimeField({
           className="mt-0.5 h-4 w-4 accent-[#3FE0C5]"
         />
         <span>
-          <span className="text-[15px] text-brand-muted">{ENTRY.timeUnknownLabel}</span>
+          <span className="text-[15px] text-brand-muted">
+            {their ? ENTRY.timeUnknownLabel.replace("my birth time", "their birth time") : ENTRY.timeUnknownLabel}
+          </span>
           {unknown && (
             <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
               {ENTRY.timeUnknownHelp}

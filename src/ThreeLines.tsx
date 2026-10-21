@@ -1,4 +1,5 @@
 import { AUTHORITY_GLANCE, PROFILE_GLANCE, TYPE_GLANCE } from "../shared/libraryGlance.mjs";
+import { fix } from "../shared/fixMock.mjs";
 
 /**
  * FIX 1A (Jeremy 10/19): "Your chart in three lines", a plain way in at the
@@ -13,7 +14,13 @@ import { AUTHORITY_GLANCE, PROFILE_GLANCE, TYPE_GLANCE } from "../shared/library
  * profile's one-liner as the third line instead.
  */
 
-type Chart = { type?: string; authority?: string; profile?: string | number };
+type Chart = {
+  type?: string;
+  authority?: string;
+  profile?: string | number;
+  provisional?: string[];
+  bodygraphSvg?: string;
+};
 
 const GLANCE_TYPE = TYPE_GLANCE as Record<string, string>;
 const GLANCE_AUTH = AUTHORITY_GLANCE as Record<string, string>;
@@ -37,6 +44,17 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
   ];
   const shown = rows.filter(([, , line]) => line);
   if (!shown.length) return null;
+  /**
+   * MOCK FIX 3 (10/21 live test, bug 3): with no birth time the box marks the
+   * values that can move, as the table below it already does. It stated Type,
+   * Authority and Profile plainly while the table called them provisional.
+   */
+  const unsure = new Set(fix("3") ? (chart.provisional ?? []) : []);
+  const rowField: Record<string, string> = {
+    "Your energy": "type",
+    "How you decide": "authority",
+    "How you meet the world": "profile",
+  };
   return (
     <section
       aria-labelledby="three-lines"
@@ -54,6 +72,11 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             <p className="text-[17px] leading-relaxed text-brand-paper">
               <span className="font-semibold text-brand-teal">{label}</span>
               {value ? <span className="text-brand-muted"> · {value}</span> : null}
+              {unsure.has(rowField[label]) && (
+                <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
+                  provisional
+                </span>
+              )}
               <br />
               {line}
             </p>
@@ -70,6 +93,9 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             </a>
             , a short walk through it.
           </>
+        ) : fix("W2") && chart.bodygraphSvg === undefined ? (
+          // MOCK FIX W2: the summary has no drawing, so it does not promise one.
+          "Below: your chart at a glance, and what these three mean."
         ) : (
           "Below: your chart and its tables."
         )}

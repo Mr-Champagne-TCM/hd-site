@@ -2,6 +2,17 @@ import { TIERS, money } from "../../shared/pricing.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { firstName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
+import { fix } from "../../shared/fixMock.mjs";
+import { receiptDate } from "./deliveryEmail.mjs";
+
+/** MOCK FIX 8B: "Projector · 4/1 · Self-Projected authority" (readingHandler's chartLine, kept local). */
+function chartLine(output) {
+  if (!output) return null;
+  const parts = [output.type, output.profile, output.authority ? `${output.authority} authority` : null]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
 
 /**
  * THE "EMAIL ME MY CHARTS" EMAIL (release 2, Jeremy 10/20), two ways:
@@ -52,11 +63,22 @@ export function chartCard(reading) {
   const label = TIERS[reading.tier]?.label ?? "The chart";
   const when = sayDate(reading.birth?.date);
   const where = reading.birth?.place ?? null;
+  /**
+   * MOCK FIX 8 (10/21 live test): a record from before 16 October keeps no
+   * birth details, so its row read only "Your reading · The reading".
+   *   8A says when it was bought; 8B says what the chart is.
+   */
+  const old = !reading.pending && !when && !where;
+  const bought = Number.isFinite(reading.purchasedAt) ? receiptDate(reading.purchasedAt * 1000) : null;
   const line = reading.pending
     ? reading.birth
       ? `${label} · paid, birth details waiting to be confirmed`
       : `${label} · paid, birth details not entered yet`
-    : [label, when, where].filter(Boolean).join(" · ");
+    : old && fix("8A") && bought
+      ? `${label} · bought ${bought}`
+      : old && fix("8B") && chartLine(reading.output)
+        ? `${label} · ${chartLine(reading.output)}`
+        : [label, when, where].filter(Boolean).join(" · ");
   const action = reading.pending ? (reading.birth ? "Confirm the birth details" : "Enter the birth details") : "Open";
   return { title, line, action };
 }

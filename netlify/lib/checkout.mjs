@@ -1,4 +1,6 @@
 import { TIERS, priceFor, CHECKOUT_NEXT_STEP } from "../../shared/pricing.mjs";
+import { fix } from "../../shared/fixMock.mjs";
+import { checkoutNextStepKept } from "../../shared/fixCopy.mjs";
 
 /**
  * What we ask Stripe for, worked out here so it can be tested without a network.
@@ -114,7 +116,8 @@ export async function checkoutCredit({ body, secret, level, head, readLink, now 
   if (!h) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
   const cents = upgradeCredit({ headTier: h.tier, level });
   return cents > 0
-    ? { alreadyPaidCents: cents, upgrades: h.id, fresh: false }
+    ? // MOCK FIX 4 (branch only): whether the chart it grows keeps its details (nothing to type).
+      { alreadyPaidCents: cents, upgrades: h.id, fresh: false, ...(fix("4") ? { kept: Boolean(h.birth) } : {}) }
     : { alreadyPaidCents: 0, upgrades: null, fresh: false };
 }
 
@@ -173,7 +176,7 @@ const READY = new Set();
  * inline product so a sale is never lost over it -- a retry code then does not
  * reach that one purchase, and the checkout says so to Jeremy.
  */
-export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false }) {
+export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false }) {
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);
   const due = priceFor(tier, alreadyPaidCents);
@@ -209,7 +212,8 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * A line under the Pay button saying what comes next (fix 14B).
      * custom_text.submit is on the pinned API version (2024-06-20).
      */
-    custom_text: { submit: { message: CHECKOUT_NEXT_STEP } },
+    // MOCK FIX 4: an upgrade whose details are kept is told so, not "about 2 minutes" of typing.
+    custom_text: { submit: { message: fix("4") && upgrades && kept ? checkoutNextStepKept(level) : CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *

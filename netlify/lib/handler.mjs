@@ -3,6 +3,7 @@ import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
 import { buildCorrection, historyEntry } from "./correction.mjs";
 import { customerError, engineKind } from "./failures.mjs";
+import { fix } from "../../shared/fixMock.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -179,7 +180,12 @@ export async function handleChart({
 
   let upstream;
   try {
-    upstream = await engine({ birth: scrubbed, tier: entitled.tier });
+    // MOCK FIX 2B: a summary asks for the chart tier's answer too, and keeps only its channel list (below).
+    upstream = await engine({ birth: scrubbed, tier: fix("2B") ? Math.max(entitled.tier, 1) : entitled.tier });
+    if (fix("2B") && entitled.tier === 0 && upstream?.ok && upstream.payload) {
+      const { bodygraphSvg, activatedGates, personality, design, ...summary } = upstream.payload;
+      upstream = { ...upstream, payload: summary };
+    }
   } catch (e) {
     /**
      * SLOW AND DOWN ARE TOLD APART. The engine call carries its own deadline
@@ -290,6 +296,19 @@ export async function handleChart({
         extra = { history: entry ? [entry] : null, correction };
       } else {
         extra = { correction: buildCorrection({ type: "first-details", before, after: upstream.payload, at: now }) };
+      }
+    } else if (fix("W15") && filling?.pending && useKept && filling.grewFrom) {
+      /**
+       * MOCK FIX W15 (10/21 live test): kept details, confirmed, on an upgrade
+       * of a chart that was CORRECTED -- the correction travels with it, so the
+       * reading keeps "Your correction" (Maya's vanished once her chart became
+       * a reading). Nothing new is worked out; the chart's own note is carried.
+       */
+      try {
+        const source = await loadReading(readings, filling.grewFrom, now);
+        if (source?.correction) extra = { correction: source.correction };
+      } catch {
+        /* a note is a nicety; the chart is not held up for it */
       }
     }
 
