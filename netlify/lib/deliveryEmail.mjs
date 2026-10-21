@@ -267,7 +267,7 @@ export function deliveryEmail({
   const ready = their
     ? { lead: ready0.lead.replace(/^Your chart and your/, `${chartWhose} chart and`).replace(/^Your/, chartWhose), ticks: READY_THEIR[tier] ?? READY_THEIR[2] }
     : fix("W7") && freshLink
-      ? { ...ready0, lead: `Here is a fresh link to ${chartWhose === "Your" ? "your" : chartWhose} ${word}, as asked.` }
+      ? { ...ready0, lead: `Here is the fresh link you asked for — ${chartWhose === "Your" ? "your" : chartWhose} ${word}.` }
       : ready0;
   const receiptRows = [
     ["What", `Human Design: ${label.toLowerCase()}`],
@@ -290,9 +290,11 @@ export function deliveryEmail({
       : their
         ? "Enter their birth details"
         : "Enter your birth details"
-    : top
-      ? "Open your reading"
-      : `Open your ${word}`;
+    : their
+      ? `Open ${chartWhose === "Your" ? "their" : chartWhose} ${top ? "reading" : word}`
+      : top
+        ? "Open your reading"
+        : `Open your ${word}`;
 
   const text = [
     greeting,
