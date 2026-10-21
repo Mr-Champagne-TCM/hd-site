@@ -433,6 +433,11 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
       const p = { journey: r.journey };
       const docName = () => r.where;
       c.saw(p.journey);
+      // A stored reading was delivered before the fix; what matters now is
+      // that the shop's checker would refuse it. Its findings are held, then
+      // judged by that checker below.
+      const found = [];
+      const flag = (...a) => (r.journey === "stored readings" ? found.push(a) : c.fail(...a));
       const placeholder = JSON.stringify(w).includes("[RIG PLACEHOLDER]");
       if (placeholder) continue;
       const own = FEELINGS[out.type] ?? [];
@@ -453,14 +458,19 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         const near = (t.startsWith("nots") && /^not-?s/i.test(tok) && editDistance(t, "notself") <= 3) || (t.startsWith("sig") && editDistance(t, "signature") <= 2);
         if (near) {
           seenTok.add(t);
-          c.fail(p.journey, docName(p), `"${tok}" is a near miss of the banned "${t.startsWith("sig") ? "signature" : "not-self"}"`, around(all, all.indexOf(tok), tok.length));
+          flag(p.journey, docName(p), `"${tok}" is a near miss of the banned "${t.startsWith("sig") ? "signature" : "not-self"}"`, around(all, all.indexOf(tok), tok.length));
         }
       }
       for (const f of othersNeg) {
-        for (const h of hits(track, new RegExp(`\\b${f}\\w*`, "i"))) c.fail(p.journey, `${docName(p)}, on track / off track`, `"${h.match}" is another type's feeling word (a ${out.type}'s are ${out.signature} / ${out.notSelfTheme})`, h.ctx);
+        for (const h of hits(track, new RegExp(`\\b${f}\\w*`, "i"))) flag(p.journey, `${docName(p)}, on track / off track`, `"${h.match}" is another type's feeling word (a ${out.type}'s are ${out.signature} / ${out.notSelfTheme})`, h.ctx);
       }
       for (const f of othersPos) {
-        for (const h of hits(track, new RegExp(`\\bfeel\\w*\\s+(?:\\w+\\s+){0,3}${f}\\w*`, "i"))) c.fail(p.journey, `${docName(p)}, on track / off track`, `"${h.match}": another type's feeling word (a ${out.type}'s are ${out.signature} / ${out.notSelfTheme})`, h.ctx);
+        for (const h of hits(track, new RegExp(`\\bfeel\\w*\\s+(?:\\w+\\s+){0,3}${f}\\w*`, "i"))) flag(p.journey, `${docName(p)}, on track / off track`, `"${h.match}": another type's feeling word (a ${out.type}'s are ${out.signature} / ${out.notSelfTheme})`, h.ctx);
+      }
+      if (found.length) {
+        const why = await shopProblem(w, out, checker);
+        if (why) (c.delivered ??= []).push(`${r.where}: ${found.length} finding(s); the shop's checker now refuses it (${String(why).slice(0, 90)})`);
+        else for (const a of found) c.fail(...a);
       }
     }
     // The shop's own checker, probed with the near-misses it must refuse.
@@ -472,6 +482,7 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
     // A probe that found nothing to probe from is said, not passed in silence.
     c.probed = probe.length;
     c.note = probe.length ? `The shop's checker was probed with ${probe.length} near-misses (${[...new Set(probe.map((p) => p.type))].join(", ")}).` : "The shop's checker was NOT probed: no real (non-placeholder) reading on this run's pages that the checker accepts as it is.";
+    if (c.delivered?.length) c.note += ` Stored readings delivered before the fix, now refused by the checker: ${c.delivered.join("; ")}.`;
   }
 
   /* ----------------------------------- 11. doubled sentences (W, AI) */
@@ -851,6 +862,16 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
  * Every near-miss must be refused. `stand` replaces the shop's firstProblem
  * (the self-test probes a checker it knows the answers of).
  */
+/** The shop's own checker on a stored reading: the problem it names, or null when it would let it through. */
+async function shopProblem(written, o, stand = null) {
+  const lib = (f) => import(pathToFileURL(join(REPO, "netlify", "lib", f)).href);
+  const { renderReading } = await lib("structured.mjs");
+  const firstProblem = stand?.firstProblem ?? (await lib("interpretation.mjs")).firstProblem;
+  const { formFromWritten } = await import("../harness/fakeGemini.mjs");
+  const built = renderReading(formFromWritten(written), o);
+  return built.problem ?? firstProblem(built.text, o.type, o.profile, o.openCenters, o.undefinedCenters, o.definedCenters);
+}
+
 async function checkerProbe(run, stand = null) {
   const lib = (f) => import(pathToFileURL(join(REPO, "netlify", "lib", f)).href);
   const { renderReading } = await lib("structured.mjs");

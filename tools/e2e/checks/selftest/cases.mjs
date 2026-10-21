@@ -234,7 +234,8 @@ export const CASES = [
       m.phoneFile("kotlin/Entry.kt", 'Text("Charted at noon: treat Type, Authority and Profile as provisional.")\n');
     },
     bad: [
-      { name: "#3: the three-lines box with no provisional mark", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Charted at noon: these are provisional\.\n?/m, "")), expect: /three-lines box states Type, Authority and Profile with no provisional mark/ },
+      // Every mark in the box goes: the line under it (live code) and the one on each row (fix 3).
+      { name: "#3: the three-lines box with no provisional mark", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/(Your chart in three lines)([\s\S]*?)(Below:|Your chart at a glance)/, (_, a, box, b) => a + box.replace(/^Charted at noon: these are provisional\.\n?/m, "").replace(/provisional/gi, "") + b)), expect: /three-lines box states Type, Authority and Profile with no provisional mark/ },
       { name: "#3: PDF page 1 with no provisional mark", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 0 ? t.replace(/ · provisional/g, "").replace(/provisional/gi, "") : t))), expect: /page 1 states Type \/ Profile \/ Authority with no provisional mark/ },
       { name: "#17: Type provisional, its centers not", plant: (m) => m.edit(m.pages[0], (t) => setRow(t, "DEFINED CENTERS", getRow(t, "DEFINED CENTERS").replace(/PROVISIONAL$/, ""))), expect: /Type is provisional but DEFINED CENTERS/ },
       { name: "#17: Type provisional, its channels not", plant: (m) => m.edit(m.pages[0], (t) => markChannels(t, false)), expect: /Type is provisional but CHANNELS/ },
@@ -422,7 +423,8 @@ export const CASES = [
       { name: "#9: not-sf in the off-track line", plant: (m) => m.editApi(m.pages[0], (a) => (a.written.summary["Not-self"] = `Because your not-sf feeling is ${a.output.notSelfTheme.toLowerCase()}, it is a signal to pause.`)), expect: /"not-sf" is a near miss of the banned "not-self"/ },
       { name: "signiture in the on-track line", plant: (m) => m.editApi(m.pages[0], (a) => (a.written.summary.Signature = `Your signiture feeling is ${a.output.signature.toLowerCase()}.`)), expect: /"signiture" is a near miss of the banned "signature"/ },
       { name: "#15: another type's feeling word on track / off track", plant: (m) => m.editApi(m.pages[0], (a) => { const other = (FEELINGS[a.output.type] ?? []).includes("frustrat") ? "bitter" : "frustrated"; a.written.sections.find((x) => /on track/i.test(x.heading)).paragraphs.push(`When you force things, your energy becomes depleted and ${other}.`); }), expect: /"(frustrated|bitter)" is another type's feeling word/ },
-      { name: "#15 in a stored live reading", plant: (m) => { const a = m.api(m.pages[0]); const w = JSON.parse(JSON.stringify(a.written)); const other = (FEELINGS[a.output.type] ?? []).includes("frustrat") ? "bitterness" : "frustration"; w.sections.find((x) => /on track/i.test(x.heading)).paragraphs.push(`Pushing brings ${other}.`); m.fixture("stored.json", [{ tier: 2, output: a.output, written: w }]); }, expect: /stored live reading stored\.json#0.*another type's feeling word/ },
+      // A stored reading fails only when the shop's checker would still let it through.
+      { name: "#15 in a stored live reading the checker would let through", plant: (m) => { m.opts.checker = PERMISSIVE; const a = m.api(m.pages[0]); const w = JSON.parse(JSON.stringify(a.written)); const other = (FEELINGS[a.output.type] ?? []).includes("frustrat") ? "bitterness" : "frustration"; w.sections.find((x) => /on track/i.test(x.heading)).paragraphs.push(`Pushing brings ${other}.`); m.fixture("stored.json", [{ tier: 2, output: a.output, written: w }]); }, expect: /stored live reading stored\.json#0.*another type's feeling word/ },
       { name: "AI5: the shop's checker lets the near-misses through", plant: (m) => (m.opts.checker = PERMISSIVE), expect: /lets "not-sf" through/ },
     ],
   },

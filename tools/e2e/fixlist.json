@@ -1,4 +1,275 @@
 {
   "_about": "Every change the next release MEANS to make, so the run can fail on any change it does not (tools/e2e/regress.mjs). One entry per fix, named by its error-set id. Add the entry with the fix, in the same commit. Patterns are regexes on lines as checks/baseline.mjs masks them. Empty = the code is meant to say exactly what the baseline said.",
-  "fixes": []
+  "fixes": [
+    {
+      "id": "1",
+      "about": "a blank form counts what is missing, not 'One thing left'",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d-form(-typing)?$",
+      "minus": ["^One thing left: the day (you|they) were born\\.$"],
+      "plus": ["^Three things left: the date, the place and the time (you|they) were born\\.$"]
+    },
+    {
+      "id": "3",
+      "about": "with no birth time the three-lines box marks Type, Authority and Profile provisional",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d(-old\\d)?$",
+      "minus": [
+        "^Your energy · (Manifestor|Generator|Manifesting Generator|Projector|Reflector)$",
+        "^How you decide · (Emotional|Sacral|Splenic|Ego|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar)$",
+        "^How you meet the world · Profile \\d/\\d$"
+      ],
+      "plus": [
+        "^Your energy · (Manifestor|Generator|Manifesting Generator|Projector|Reflector)PROVISIONAL$",
+        "^How you decide · (Emotional|Sacral|Splenic|Ego|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar)PROVISIONAL$",
+        "^How you meet the world · Profile \\d/\\dPROVISIONAL$"
+      ]
+    },
+    {
+      "id": "4",
+      "about": "an upgrade that keeps its birth details is told so under Stripe's Pay button (Stripe pages are not in the text baseline; checked by stripe-next-step)",
+      "docs": "^page [a-zA-Z0-9]+-\\d-upgrade-t\\d-stripe$",
+      "minus": ["^Next: your birth date, time and place \\(about 2 minutes\\)\\.$"],
+      "plus": ["^Next: one look at your kept birth details, then your (chart is drawn|reading is written)\\.$"]
+    },
+    {
+      "id": "5",
+      "about": "the confirm button on a chart upgrade says 'make my chart'",
+      "docs": "^page [a-zA-Z0-9]+-\\d-upgrade-t1-confirm$",
+      "minus": ["^These are right — make my reading$"],
+      "plus": ["^These are right — make my chart$"]
+    },
+    {
+      "id": "6",
+      "about": "no closing block alone on a page: Theo's page-3 note is pulled up (9 pages to 8, every later page one earlier); Maya's, Sage's (Morgan) and Ellis's last thing to try goes over with the coaching card",
+      "docs": "^(page theo-2-upgrade-t2(-old\\d)?|pdf theo-2-upgrade-t2 p3)$",
+      "minus": [
+        "^Download your full reading \\(PDF, 9 pages\\)$",
+        "^Your full reading as a PDF: 9 pages, with the chart at print size, its values and the written reading\\.$",
+        "^Your chart at a glance HUMAN DESIGN by THE CHAMPAGNE METHOD COACHING AND CONSULTING$"
+      ],
+      "plus": [
+        "^Download your full reading \\(PDF, 8 pages\\)$",
+        "^Your full reading as a PDF: 8 pages, with the chart at print size, its values and the written reading\\.$"
+      ],
+      "moves": "^pdf (theo-2-upgrade-t2|maya-3-upgrade-t2|sage-3-someone-new-t2|egoM-1-buy-t2) p\\d+$",
+      "dropsDocs": "^pdf theo-2-upgrade-t2 p9$"
+    },
+    {
+      "id": "7",
+      "about": "'Email me my charts' reads eight records at a time: speed only, no words change (checked by my-charts-time)",
+      "docs": "^email my-charts \\| "
+    },
+    {
+      "id": "8",
+      "about": "an older record says when it was bought (and the time, when another row has the same day); an older record of a newer one's chart is listed once",
+      "docs": "^email my-charts \\| Your Human Design charts, with fresh links$",
+      "minus": ["^Your (summary|chart|reading) — The (summary|chart|reading)$"],
+      "plus": ["^Your (summary|chart|reading) — The (summary|chart|reading) · bought (January|February|March|April|May|June|July|August|September|October|November|December) \\d{1,2}, \\d{4}( at \\d{1,2}:\\d{2} [AP]M)?$"]
+    },
+    {
+      "id": "9+15",
+      "about": "the checker refuses near misses; Rowan's live reading is bug 15's ('depleted and frustrated'), so it is refused and the rig's next draft drops that sentence (the paragraph re-wraps)",
+      "docs": "^(page rowan-3-upgrade-t2(-old\\d)?|pdf rowan-3-upgrade-t2 p\\d+)$",
+      "minus": [
+        "your energy becomes depleted and frustrated\\.",
+        "^daily experience\\. If you try to force recognition",
+        "^Noticing this feeling serves",
+        "^pushing, and return to resting"
+      ],
+      "plus": [
+        "daily experience\\. Noticing this feeling serves",
+        "^withdraw from pushing, and return to resting",
+        "^you again\\.$"
+      ]
+    },
+    {
+      "id": "14",
+      "about": "the CENTER side note names the authority's own center (G, Heart...), and Mental and Lunar get none",
+      "docs": "^(page|pdf) (mental-1-buy-t2|reflector-2-upgrade-t2|egoM-1-buy-t2|rowan-3-upgrade-t2)(-old\\d)?( p\\d+)?$",
+      "minus": ["^CENTER$", "^(Single|Split|Triple Split|Quadruple Split|None)$"],
+      "plus": ["^(Solar Plexus|Sacral|Spleen|Heart|G)$"]
+    },
+    {
+      "id": "16",
+      "about": "someone-new emails say 'their': Quinn's summary is ready, their centers, enter their birth details, their bodygraph in what else there is",
+      "docs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| ",
+      "minus": [
+        "^✓ Your (bodygraph, drawn|definition and your centers|incarnation cross|channels and activated gates)$",
+        "^✓ About 1,200 words written to your chart$",
+        "^Enter your birth details:$",
+        "^Your birth date, time and place\\. Your chart is made from them, and the time can be left out if you don’t know it\\.$",
+        "^Open your (summary|chart|reading):$",
+        "^Your (summary|chart|reading) is ready\\.$",
+        "^Your chart and your written reading are ready\\.$",
+        "^Your (summary|chart|reading) is kept for a year\\. ",
+        "^The chart contains your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates\\. "
+      ],
+      "plus": [
+        "^✓ Their (bodygraph, drawn|definition and their centers|incarnation cross|channels and activated gates)$",
+        "^✓ About 1,200 words written to their chart$",
+        "^Enter their birth details:$",
+        "^Their birth date, time and place\\. Their chart is made from them, and the time can be left out if it isn’t known\\.$",
+        "^Open ([A-Z][a-z]+’s|their) (summary|chart|reading):$",
+        "^([A-Z][a-z]+’s|Their) (summary|chart|reading) is ready\\.$",
+        "^([A-Z][a-z]+’s|Their) chart and written reading are ready\\.$",
+        "^([A-Z][a-z]+’s|Their) (summary|chart|reading) is kept for a year\\. ",
+        "^The chart contains their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates\\. ",
+        "every word in their (summary|chart|reading) explained\\.$"
+      ]
+    },
+    {
+      "id": "19",
+      "about": "someone new's form says 'their birth time', and before a name is typed the hint does not promise 'Your Human Design'",
+      "docs": "^page [a-zA-Z0-9]+-\\d-someone-new-t\\d-form(-filled)?$",
+      "minus": ["^I don’t know my birth time$", "^It is the title of their chart: “Your Human Design”\\.$"],
+      "plus": ["^I don’t know their birth time$", "^Their first name, if you add it, becomes the title of their chart\\.$"]
+    },
+    {
+      "id": "check-audit",
+      "about": "under 'Start a new chart for someone else' the terms speak of their birth details (found by the 10/21 check audit, with 19 and W8)",
+      "docs": "^page [a-zA-Z0-9]+-\\d-someone-new-t\\d-tiers$",
+      "minus": ["And if your birth details went in wrong, write to"],
+      "plus": ["And if their birth details went in wrong, write to"]
+    },
+    {
+      "id": "gift-name",
+      "about": "a chart for someone else, bought with no name, is 'Your Human Design' like any chart with no name, never the buyer's name (rig, journey egoP)",
+      "docs": "^((page|pdf) egoP-3-someone-new-t1( p1)?|email my-charts \\| Your Human Design charts, with fresh links)$",
+      "minus": ["^[A-Z][a-z]+ Testwell’s Human Design$", "^[A-Z][a-z]+’s chart — The chart · April 2, 1966 · Boise, Idaho$"],
+      "plus": ["^Your Human Design$", "^Your chart — The chart · April 2, 1966 · Boise, Idaho$"],
+      "addsDocs": "^email egoP-3-someone-new-t1 \\| Your Human Design chart is ready$",
+      "dropsDocs": "^email egoP-3-someone-new-t1 \\| [A-Z][a-z]+ Testwell’s Human Design chart is ready$"
+    },
+    {
+      "id": "W1",
+      "about": "a bare table value carries no period (the summary's 'Projector.')",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t[01](-old\\d)?$",
+      "minus": [
+        "^(Manifestor|Generator|Manifesting Generator|Projector|Reflector)\\.(PROVISIONAL)?$",
+        "^(Inform before acting|Wait to respond|Wait to respond, then inform|Wait for the invitation|Wait a lunar cycle)\\.(PROVISIONAL)?$",
+        "^(Emotional|Sacral|Splenic|Ego|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar)\\.(PROVISIONAL)?$",
+        "^\\d/\\d — [A-Z][a-z]+( [A-Z][a-z]+)? / [A-Z][a-z]+( [A-Z][a-z]+)?\\.(PROVISIONAL)?$",
+        "^The feeling is (peace|anger|satisfaction|frustration|success|bitterness|surprise|disappointment)\\.(PROVISIONAL)?$"
+      ],
+      "plus": [
+        "^(Manifestor|Generator|Manifesting Generator|Projector|Reflector)(PROVISIONAL)?$",
+        "^(Inform before acting|Wait to respond|Wait to respond, then inform|Wait for the invitation|Wait a lunar cycle)(PROVISIONAL)?$",
+        "^(Emotional|Sacral|Splenic|Ego|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar)(PROVISIONAL)?$",
+        "^\\d/\\d — [A-Z][a-z]+( [A-Z][a-z]+)? / [A-Z][a-z]+( [A-Z][a-z]+)?(PROVISIONAL)?$",
+        "^The feeling is (peace|anger|satisfaction|frustration|success|bitterness|surprise|disappointment)(PROVISIONAL)?$"
+      ]
+    },
+    {
+      "id": "W2",
+      "about": "the summary has no drawing, so the three-lines box does not promise 'your chart and its tables'",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t0$",
+      "minus": ["^Below: your chart and its tables\\.$"],
+      "plus": ["^Below: your chart at a glance, and what these three mean\\.$"]
+    },
+    {
+      "id": "W3",
+      "about": "the library line names what the buyer has (summary or chart), on the page and in the emails",
+      "docs": "^(page [a-zA-Z0-9]+-\\d-[a-z-]+-t[01](-old\\d)?$|email [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d \\| )",
+      "minus": ["every word in your reading explained\\.$"],
+      "plus": ["every word in your (summary|chart) explained\\.$"]
+    },
+    {
+      "id": "W5",
+      "about": "the receipt's library heading: not 'While you wait', nothing is being waited for",
+      "docs": "^email [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d \\| ",
+      "minus": ["^WHILE YOU WAIT, FREE IN THE LIBRARY:$"],
+      "plus": ["^FREE IN THE LIBRARY:$"]
+    },
+    {
+      "id": "W6",
+      "about": "link pages say each thing once: the expired page's button stands alone; the cut-short panel does not repeat its heading",
+      "docs": "^page link-(expired|expired-sent|cut-short)$",
+      "minus": [
+        "^Keeping it$",
+        "^Your reading is kept for a year, so the link can be sent to you whenever you need it — to the address on your purchase, and only there\\.$",
+        "^That link could not be opened\\. Reading links are long, and some apps cut them short"
+      ],
+      "plus": ["^Reading links are long, and some apps cut them short — opening it again from the email it came in usually works\\.$"]
+    },
+    {
+      "id": "W7",
+      "about": "the email after 'Email me this link' says it is a fresh link (a new subject, so a new document)",
+      "docs": "^email link-expired \\| ",
+      "addsDocs": "^email link-expired \\| A fresh link to [A-Z][a-z]+ Testwell’s Human Design (summary|chart|reading)$",
+      "dropsDocs": "^email link-expired \\| [A-Z][a-z]+ Testwell’s Human Design (summary|chart|reading) is ready$"
+    },
+    {
+      "id": "W8",
+      "about": "the someone-new cards describe their chart, on all three",
+      "docs": "^page [a-zA-Z0-9]+-\\d-someone-new-t\\d-tiers$",
+      "minus": [
+        "^Type, Strategy, Authority, Profile, Definition, your centers, your incarnation cross\\.$",
+        "^Your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates\\.$",
+        "^Your chart, plus about 1,200 words written to it:$",
+        "^How you decide$",
+        "^How you meet the world$",
+        "^What you take in from others$"
+      ],
+      "plus": [
+        "^Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross\\.$",
+        "^Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates\\.$",
+        "^Their chart, plus about 1,200 words written to it:$",
+        "^How they decide$",
+        "^How they meet the world$",
+        "^What they take in from others$"
+      ]
+    },
+    {
+      "id": "W10",
+      "about": "the date hint in US order, as the boxes are",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d-form-typing$",
+      "minus": ["^Month, day, then the four-digit year — 06251985 for 25 June 1985$"],
+      "plus": ["^Month, day, then the four-digit year — 06251985 for June 25, 1985$"]
+    },
+    {
+      "id": "W12",
+      "about": "the chart PDF is a CHART, not an INTERPRETATION",
+      "docs": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t1 p1$",
+      "minus": ["^HUMAN DESIGN INTERPRETATION by THE CHAMPAGNE METHOD$"],
+      "plus": ["^HUMAN DESIGN CHART by THE CHAMPAGNE METHOD$"]
+    },
+    {
+      "id": "W12",
+      "about": "the PDF's onward note gives each free page its own address (the bodygraph guide is not at .../human-design)",
+      "docs": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d p\\d+$",
+      "minus": [
+        "^bodygraph\\.” Both are free, at thechampagnemethod\\.co/library/human-design\\.$",
+        "^free, at thechampagnemethod\\.co/library/human-design\\.$"
+      ],
+      "plus": [
+        "^bodygraph\\.” Both are free: thechampagnemethod\\.co/library/human-design$",
+        "^and thechampagnemethod\\.co/library/bodygraph\\.$",
+        "^free: thechampagnemethod\\.co/library/human-design and thechampagnemethod\\.co/library/bodygraph\\.$"
+      ]
+    },
+    {
+      "id": "W15",
+      "about": "a corrected chart's note travels with its upgrade: Maya's reading keeps 'Your correction'",
+      "docs": "^page maya-3-upgrade-t2(-old\\d)?$",
+      "plus": [
+        "^YOUR CORRECTION$",
+        "^Birth time changed from \\d{1,2}:\\d{2} [AP]M to \\d{1,2}:\\d{2} [AP]M — your chart is cast from the corrected details\\.$",
+        "^Your Type, Profile and Authority are the same\\.$"
+      ]
+    },
+    {
+      "id": "end-rule",
+      "about": "the form's closing rule says nothing until every field is answered ('That's everything' over 'Three things left' read as a contradiction)",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d-form(-typing)?$",
+      "minus": ["^THAT’S EVERYTHING$"]
+    },
+    {
+      "id": "gift-subject",
+      "about": "a chart for someone else with no name: the ready email's subject says 'Their', not the buyer's 'Your'",
+      "docs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| ",
+      "addsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Their Human Design (summary|chart|reading) is ready$",
+      "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Your Human Design (summary|chart|reading) is ready$",
+      "minus": ["^Your Human Design (summary|chart|reading) is ready$"],
+      "plus": ["^Their Human Design (summary|chart|reading) is ready$"]
+    }
+  ]
 }
