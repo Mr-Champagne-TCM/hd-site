@@ -1,0 +1,4 @@
+{
+  "_about": "Every change the next release MEANS to make, so the run can fail on any change it does not (tools/e2e/regress.mjs). One entry per fix, named by its error-set id. Add the entry with the fix, in the same commit. Patterns are regexes on lines as checks/baseline.mjs masks them. Empty = the code is meant to say exactly what the baseline said.",
+  "fixes": []
+}
