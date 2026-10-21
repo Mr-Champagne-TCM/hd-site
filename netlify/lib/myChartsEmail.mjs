@@ -129,7 +129,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
   </td></tr>`,
           )
           .join("\n  ") +
-        `\n  ${row(`${esc(fresh.replace(/ or ask again on the Email me my charts page\.$/, ""))} Or ask again on the <a href="${esc(askPage)}" style="color:${TEAL};text-decoration:underline">Email me my charts</a> page.`, "4px 0 22px", `font-size:15px;color:${MUTED}`)}`
+        `\n  ${row(`${esc(fresh.replace(/ or ask again on the Email me my charts page\.$/, ""))} or ask again on the <a href="${esc(askPage)}" style="color:${TEAL};text-decoration:underline">Email me my charts</a> page.`, "4px 0 22px", `font-size:15px;color:${MUTED}`)}`
   }
 
   ${row("Start a new chart", "0 0 6px", small)}

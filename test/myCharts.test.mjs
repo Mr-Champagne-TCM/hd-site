@@ -257,3 +257,9 @@ test("the page posts the address and shows only the same 'Sent' words", () => {
   const copy = readFileSync(new URL("../src/copy.ts", import.meta.url), "utf8");
   assert.match(copy, /If \$\{email\} has charts here, a fresh link to each one is on its way to it\./);
 });
+
+test("the list email's fresh-link line reads as one sentence (no stray capital)", () => {
+  const reading = { tier: 1, pending: false, birth: KEPT("Alex"), buyer: { name: "Alex Rivera" } };
+  const { html } = myChartsEmail({ charts: [{ reading, url: "u" }], links: SITE, origin: ORIGIN });
+  assert.match(html, /sends you a fresh one, or ask again on the <a/);
+});
