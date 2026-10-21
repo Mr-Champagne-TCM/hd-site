@@ -1037,6 +1037,25 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
   return null;
 }
 
+/**
+ * CAN A STORED READING BE LAID OUT IN THE NEW ORDER? The DISPLAY gate (page and
+ * PDF), not the writer's validator.
+ *
+ * Found 10/21 preparing the updated-PDF note: the 10/5 rename (OLD_HEADINGS)
+ * taught every reader of the text the old heading, but not `structureProblem`,
+ * so every reading written before 10/5 failed this gate and fell back to plain
+ * paragraphs -- on the page and in the PDF -- although `buildReadingView`
+ * already reads the old heading. The validator stays strict (a NEW reading
+ * must use the new heading); only what is shown maps the old one.
+ */
+export function displayProblem(raw) {
+  const text = sanitize(raw)
+    .split("\n")
+    .map((l) => OLD_HEADINGS[l.trim()] ?? l)
+    .join("\n");
+  return structureProblem(text);
+}
+
 export function structureProblem(raw) {
   const lines = sanitize(raw)
     .split("\n")

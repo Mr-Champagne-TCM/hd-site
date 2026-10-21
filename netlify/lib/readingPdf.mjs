@@ -2,7 +2,7 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { TIERS } from "../../shared/pricing.mjs";
-import { DISCLAIMER, TAKEAWAYS, marginNotes, structureProblem, summaryRows } from "./interpretation.mjs";
+import { DISCLAIMER, TAKEAWAYS, displayProblem, marginNotes, summaryRows } from "./interpretation.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 import { ROBOTO_400, ROBOTO_700 } from "./fonts/roboto.mjs";
@@ -385,7 +385,7 @@ export async function readingPdf({ tier, name, output, links: _links, reading = 
     glancePage(d, { output, tier, reading: text });
     // Same gate as the phone: a reading that can be laid out in the new order
     // gets the new order; anything else keeps its words as plain paragraphs.
-    const view = text && structureProblem(text) === null ? buildReadingView(output, text) : null;
+    const view = text && displayProblem(text) === null ? buildReadingView(output, text) : null;
     if (view) {
       startHere(d, view, output);
       readingPages(d, output, view);

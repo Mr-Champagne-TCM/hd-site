@@ -1,6 +1,6 @@
 import { loadCurrent, loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
-import { marginNotes, parseReading, structureProblem } from "./interpretation.mjs";
+import { displayProblem, marginNotes, parseReading } from "./interpretation.mjs";
 import { buildReadingView } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
@@ -277,7 +277,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      * mode), which keeps the old shape.
      */
     view:
-      reading.tier >= 2 && typeof reading.reading === "string" && structureProblem(reading.reading) === null
+      reading.tier >= 2 && typeof reading.reading === "string" && displayProblem(reading.reading) === null
         ? buildReadingView(reading.output, reading.reading)
         : null,
     /** The PDF's birth line, when the record keeps birth details (16 Oct 2026 on). */

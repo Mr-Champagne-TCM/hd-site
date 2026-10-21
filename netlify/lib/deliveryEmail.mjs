@@ -75,7 +75,7 @@ function afterDash(s) {
   return CHART_TERMS.test(s) ? s : lowerFirst(s);
 }
 
-const esc = (s) =>
+export const esc = (s) =>
   String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -83,12 +83,12 @@ const esc = (s) =>
     .replace(/"/g, "&quot;");
 
 /** Brand, in the few places an email client will honour them. */
-const GOLD = "#c9a227";
-const TEAL = "#3fe0c5";
-const PAPER = "#e9e4f2";
-const MUTED = "#b4a8ce";
-const GROUND = "#1a1040";
-const PANEL = "#241a4e";
+export const GOLD = "#c9a227";
+export const TEAL = "#3fe0c5";
+export const PAPER = "#e9e4f2";
+export const MUTED = "#b4a8ce";
+export const GROUND = "#1a1040";
+export const PANEL = "#241a4e";
 
 /**
  * A button that survives Outlook, which draws no CSS it was not asked to.
@@ -97,7 +97,7 @@ const PANEL = "#241a4e";
  * as a button everywhere. A styled <a> collapses to a text link in several
  * clients, which is exactly what this email was trying to stop being.
  */
-function button(href, text) {
+export function button(href, text) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px">
   <tr><td align="center" bgcolor="${TEAL}" style="border-radius:999px">
     <a href="${esc(href)}" style="display:inline-block;padding:15px 30px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:17px;font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px">${esc(text)}</a>
