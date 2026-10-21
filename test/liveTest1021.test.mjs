@@ -6,7 +6,7 @@ import { loadComponents, text } from "./support/render.mjs";
 import { deliveryEmail } from "../netlify/lib/deliveryEmail.mjs";
 import { checkoutCredit, sessionParams } from "../netlify/lib/checkout.mjs";
 import { chainHead, chartsForEmail, recordPurchase, BACKFILL_KEY } from "../netlify/lib/charts.mjs";
-import { chartCard } from "../netlify/lib/myChartsEmail.mjs";
+import { chartCard, myChartsEmail } from "../netlify/lib/myChartsEmail.mjs";
 import { AUTHORITY_CENTER, INTERPRETATION, marginNotes, nearMissProblem } from "../netlify/lib/interpretation.mjs";
 import { ONWARD_LINKS, ONWARD_NOTE, TITLE_MARK, TITLE_MARK_CHART, readingPdf } from "../netlify/lib/readingPdf.mjs";
 import { handleChart } from "../netlify/lib/handler.mjs";
@@ -325,10 +325,19 @@ test("#6 when it cannot be pulled up, the block before it goes with it, and the 
   // No written reading: page 2 is too full for any squeeze to help.
   const r = await pdf({ reading: null });
   assert.equal(r.alone, null);
+  assert.notEqual(notePage(r), 2, "this layout was meant to need the fallback");
   const on = r.runs.filter((x) => x.page === notePage(r)).map((x) => x.text).join(" ");
-  if (notePage(r) !== 2) {
-    assert.match(on, /Every word on page 2 is explained/, "off page 2, 'above' points at nothing");
-    assert.match(on, /PERSONALITY|DESIGN/, "the note went over without the block before it");
+  assert.match(on, /Every word on page 2 is explained/, "off page 2, 'above' points at nothing");
+  assert.match(on, /TECHNICAL VALUES/, "the note went over without the block before it");
+});
+
+test("#6 THE NOTE NEVER SITS UNDER A STRAY ROW of planet numbers on an almost empty page", async () => {
+  // The 10/21 rig: page 3 held only the Design row and the note (7% filled).
+  // That counts as alone: pulled up, or the whole block goes with the note.
+  for (const n of [0, 1, 2, 3]) {
+    const r = await pdf({ reading: null, output: { ...OUTPUT, channels: OUTPUT.channels.slice(0, n) } });
+    const head = r.runs.find((x) => /^TECHNICAL VALUES/.test(x.text));
+    assert.equal(notePage(r), head.page, `${n} channels: the note is on page ${notePage(r)}, its block's heading on ${head.page}`);
   }
 });
 
@@ -375,6 +384,18 @@ test("#8 AN OLDER RECORD SAYS WHEN IT WAS BOUGHT, not 'Your reading · The readi
   // A record with its details keeps when and where.
   const kept = { ...old, birth: ALEX };
   assert.equal(chartCard(kept).line, "The reading · July 22, 1991 · Denver, Colorado");
+});
+
+test("#8 TWO OLDER RECORDS BOUGHT ON ONE DAY SAY THE TIME TOO, so no two rows read the same", () => {
+  const at = (iso) => ({ tier: 2, pending: false, birth: null, buyer: { name: null }, purchasedAt: Date.parse(iso) / 1000 });
+  const m = myChartsEmail({
+    charts: [at("2026-10-04T15:12:00Z"), at("2026-10-04T20:40:00Z"), at("2026-10-06T17:00:00Z")].map((reading, i) => ({ reading, url: `https://x/r/${i}` })),
+    links: LINKS,
+    origin: "https://x",
+  });
+  assert.match(m.text, /Your reading — The reading · bought October 4, 2026 at 10:12 AM/);
+  assert.match(m.text, /Your reading — The reading · bought October 4, 2026 at 3:40 PM/);
+  assert.match(m.text, /Your reading — The reading · bought October 6, 2026\n/, "a date no other row has needs no time");
 });
 
 test("#8 AN OLDER RECORD OF A NEWER ONE'S CHART IS LISTED ONCE -- never a reading behind a summary", async () => {
@@ -441,6 +462,15 @@ test("#9 #15 another type's word OUTSIDE on / off track, or not felt by the read
   assert.equal(check(raw, PROJECTOR), null);
 });
 
+test("#9 A MISSPELLED 'signature' IS REFUSED in the on-track lines (the rig's probe: 'signiture')", () => {
+  for (const slip of ["signiture", "signture", "Signatrue"]) {
+    const raw = chainReading(PROJECTOR, { [S6]: `Your ${slip} feeling is success when you wait to be invited. It is a signal, not a verdict.` });
+    assert.match(nearMissProblem(raw, "Projector") ?? "", new RegExp(`"${slip}".*misspelled "signature"`), slip);
+  }
+  const fine = chainReading(PROJECTOR, { [S6]: "A significant signal of success is being invited in. Bitterness is the sign that you went uninvited, and it passes." });
+  assert.equal(nearMissProblem(fine, "Projector"), null);
+});
+
 test("#9 #15 the reading on file still passes the whole chain", () => {
   assert.equal(nearMissProblem(TEXT, "Manifesting Generator"), null);
 });
@@ -487,6 +517,13 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
   assert.match(r.text, /Morgan’s chart and written reading are ready\./);
   assert.match(r.text, /About 1,200 words written to their chart/);
   assert.match(r.text, /Open Morgan’s reading:/);
+});
+
+test("#16 WHAT ELSE THERE IS, for someone new: their bodygraph, their channels", () => {
+  const m = mail({ tier: 0, chartName: "Quinn", someoneNew: true });
+  assert.match(m.text, /The chart contains their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates\./);
+  assert.match(mail({ tier: 0 }).text, /The chart contains your bodygraph, drawn/);
+  assert.equal(TIERS[0].theirBlurb, "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.");
 });
 
 test("A CHART FOR SOMEONE ELSE NEVER CARRIES THE BUYER'S NAME, even with none typed", () => {

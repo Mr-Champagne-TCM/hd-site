@@ -213,11 +213,18 @@ class Doc {
     this.aloneKind = null;
     this.squeeze = null;
     this.keepClosing = false;
+    /** White space given by `space`, page by page, and where the page-2 note ended. */
+    this.spaced = {};
+    this.noteEnd = null;
   }
 
-  /** A closing block about to be drawn: was it pushed onto a page of its own? */
-  closing(kind) {
-    if (this.atTop && this.alone === null) {
+  /**
+   * A closing block about to be drawn: was it pushed onto a page of its own?
+   * `split`: it is on a page with only the tail of the block before it (the
+   * last row of planet numbers, under no heading), which is as good as alone.
+   */
+  closing(kind, split = false) {
+    if ((this.atTop || split) && this.alone === null) {
       this.alone = this.pageNo;
       this.aloneKind = kind;
     }
@@ -304,6 +311,7 @@ class Doc {
   /** White space only (never the room under drawn text), which gives way on the squeezed page. */
   space(h) {
     this.y += this.squeeze && this.squeeze.page === this.pageNo ? h * this.squeeze.f : h;
+    this.spaced[this.pageNo] = (this.spaced[this.pageNo] ?? 0) + h;
   }
 
   draw(l, x = MARGIN, spans = null) {
@@ -381,21 +389,26 @@ export async function readingPdf(args) {
   const first = await buildPdf(args);
   if (first.alone === null) return out(first);
   /**
-   * Each try is a whole build, and the download waits on them, so none is
-   * wasted. Only page 2 has white space that gives (`space`), so only the
-   * page-2 note can be pulled up -- never the card, after the reading's pages.
-   * The gentlest squeeze is tried first; then the most page 2 can give, and if
-   * that is not enough nothing in between is. The gentlest that fits wins.
+   * Each try is a whole build, and the download (and the reading page's page
+   * count) waits on them, so at most three. Only page 2 has white space that
+   * gives (`space`), so only the page-2 note can be pulled up -- never the
+   * card, after the reading's pages. The most page 2 can give is tried first:
+   * if that is not enough, nothing gentler is. If it is, everything on that
+   * page sits higher by the white space it gave, so where the note ended says
+   * which gentler squeeze (0.9, 0.8, 0.7 of the space) still fits; the
+   * gentlest that does is built.
    */
-  const squeezed = (f) => buildPdf(args, { squeeze: { page: first.alone - 1, f } });
+  const page = first.alone - 1;
+  const squeezed = (f) => buildPdf(args, { squeeze: { page, f } });
   if (first.aloneKind === "note") {
-    const gentle = await squeezed(0.9);
-    if (gentle.alone === null) return out(gentle);
     const most = await squeezed(0.6);
     if (most.alone === null) {
-      for (const f of [0.8, 0.7]) {
-        const r = await squeezed(f);
-        if (r.alone === null) return out(r);
+      const room = most.noteEnd?.page === page ? most.bottom - most.noteEnd.y : 0;
+      const given = most.spaced[page] ?? 0;
+      const f = [0.9, 0.8, 0.7].find((f) => (f - 0.6) * given <= room);
+      if (f) {
+        const gentler = await squeezed(f);
+        if (gentler.alone === null) return out(gentler);
       }
       return out(most);
     }
@@ -464,7 +477,7 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind });
+      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind, spaced: d.spaced, noteEnd: d.noteEnd, bottom: d.bottom });
     });
     pdf.end();
   });
@@ -797,6 +810,7 @@ function glancePage(d, { output, tier, reading }) {
   };
   const pers = Array.isArray(c.personality) ? c.personality : [];
   const des = Array.isArray(c.design) ? c.design : [];
+  let techPage = null;
   if (tier >= 2 && pers.length + des.length > 0) {
     /**
      * FIX 6A (Jeremy 10/19): the same grid, NAMED AND EXPLAINED -- the page
@@ -817,6 +831,7 @@ function glancePage(d, { output, tier, reading }) {
     d.need(8 + 12 + how.height + 4 + 40);
     d.space(8);
     drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
+    techPage = d.pageNo;
     d.gap(12);
     d.draw(how);
     d.space(4);
@@ -834,12 +849,13 @@ function glancePage(d, { output, tier, reading }) {
   let onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
   d.space(14);
   d.need(onward.height);
-  d.closing("note");
+  d.closing("note", techPage !== null && d.pageNo !== techPage);
   // Off page 2 the note names the page, as the chart tier's does ("above" pointed at nothing).
   if (d.pageNo !== 2) onward = d.L(ONWARD_NOTE_PAGE, paint(9, DIM), CONTENT_W);
   const noteTop = d.y;
   d.draw(onward);
   linkOnward(d, onward, noteTop);
+  d.noteEnd = { page: d.pageNo, y: d.y };
 }
 
 function linkOnward(d, layout, top) {

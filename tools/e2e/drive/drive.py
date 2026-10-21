@@ -114,7 +114,8 @@ def fill_birth(page, birth, name, unknown=None):
     page.keyboard.type(b["type"], delay=25)
     page.locator("[role=option] button", has_text=b["pick"]).first.click(timeout=15_000)
     if b["time"] is None or unknown:
-        page.get_by_label(re.compile("know my birth time", re.I)).check()
+        # "their birth time" on someone new's form (fix 19).
+        page.get_by_label(re.compile("know (my|their) birth time", re.I)).check()
     else:
         set_time(page, b["time"])
 

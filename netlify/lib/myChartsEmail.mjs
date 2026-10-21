@@ -46,8 +46,16 @@ function button(href, text, { small = false } = {}) {
 /** "summary" / "chart" / "reading". */
 const word = (tier) => (TIERS[tier]?.label ?? "The chart").replace(/^The\s+/i, "").toLowerCase();
 
-/** One chart, as the email names it: whose, what, and when and where (no time). */
-export function chartCard(reading) {
+/** "3:12 PM", in Jeremy's own time zone, as the receipt's date is. */
+const boughtAt = (ms) =>
+  new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
+
+/**
+ * One chart, as the email names it: whose, what, and when and where (no birth
+ * time). `atTime`: an older record names the time it was bought too, when the
+ * date alone would read the same as another row's.
+ */
+export function chartCard(reading, { atTime = false } = {}) {
   const whose = reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
   const title = whose ? `${whose}’s ${word(reading.tier)}` : `Your ${word(reading.tier)}`;
   const label = TIERS[reading.tier]?.label ?? "The chart";
@@ -65,7 +73,7 @@ export function chartCard(reading) {
       ? `${label} · paid, birth details waiting to be confirmed`
       : `${label} · paid, birth details not entered yet`
     : old && bought
-      ? `${label} · bought ${bought}`
+      ? `${label} · bought ${bought}${atTime ? ` at ${boughtAt(reading.purchasedAt * 1000)}` : ""}`
       : [label, when, where].filter(Boolean).join(" · ");
   const action = reading.pending ? (reading.birth ? "Confirm the birth details" : "Enter the birth details") : "Open";
   return { title, line, action };
@@ -81,7 +89,18 @@ export function myChartsEmail({ charts = [], links, origin }) {
     `A chart for someone new — or a new one for you — starts fresh: ${prices[0]}, ${prices[1]} or ${prices[2]}.`;
 
   const subject = none ? "Your Human Design charts: none under this email" : "Your Human Design charts, with fresh links";
-  const cards = charts.map(({ reading, url }) => ({ ...chartCard(reading), url }));
+  /**
+   * TWO ROWS NEVER READ THE SAME (bug 8): older records bought on one day
+   * ("Your reading · bought October 4, 2026", four times over in the rig's
+   * inbox) say the time of day as well.
+   */
+  const plain = charts.map(({ reading }) => chartCard(reading));
+  const seen = new Map();
+  for (const c of plain) seen.set(`${c.title}|${c.line}`, (seen.get(`${c.title}|${c.line}`) ?? 0) + 1);
+  const cards = charts.map(({ reading, url }, i) => ({
+    ...(seen.get(`${plain[i].title}|${plain[i].line}`) > 1 ? chartCard(reading, { atTime: true }) : plain[i]),
+    url,
+  }));
 
   const lead = none
     ? [

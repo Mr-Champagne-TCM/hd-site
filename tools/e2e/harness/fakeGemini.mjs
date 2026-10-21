@@ -18,6 +18,7 @@
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { nearMissProblem } from "../../../netlify/lib/interpretation.mjs";
 
 const INTERPRETATION = [
   "Your energy, and how it starts",
@@ -164,20 +165,49 @@ export function loadReadingFixtures(dir) {
   return out;
 }
 
+/**
+ * THE NEXT DRAFT, after the shop refused a stored reading. Replayed word for
+ * word, a reading the checker now refuses (Rowan's live reading is bug 15's
+ * "depleted and frustrated") would be refused five times over, and the run
+ * would show an outage the live shop would not have: the model writes again.
+ * So a repeat request for the same chart gets the stored words without the
+ * sentences the shop's own near-miss check names -- the smallest rewrite that
+ * passes, and a no-op for a reading with no near miss.
+ */
+const ON_TRACK = INTERPRETATION[5];
+export function nextDraft(form, type) {
+  const named = (heading) => (s) => nearMissProblem(`${heading}\n\n${s}\n`, type) !== null;
+  const keep = (text, bad) =>
+    typeof text === "string" ? text.split(/(?<=[.!?])\s+/).filter((s) => !bad(s)).join(" ") : text;
+  const onTrack = named(ON_TRACK);
+  const anywhere = named(INTERPRETATION[1]);
+  const sec = (s, bad) => (s ? { ...s, lede: keep(s.lede, bad), paragraphs: (s.paragraphs ?? []).map((p) => keep(p, bad)) } : s);
+  const out = JSON.parse(JSON.stringify(form));
+  out.summary.signature = keep(out.summary.signature, onTrack);
+  out.summary.notSelf = keep(out.summary.notSelf, onTrack);
+  for (const slot of SLOTS) out[slot] = sec(out[slot], slot === "working" ? onTrack : anywhere);
+  out.takeaways = (out.takeaways ?? []).map((t) => keep(t, anywhere));
+  return out;
+}
+
 export function fakeGemini({ dir, fixturesDir }) {
   mkdirSync(dir, { recursive: true });
   const fixtures = loadReadingFixtures(fixturesDir);
   const asked = [];
+  const tries = new Map(); // chart -> requests so far this run
   async function api(request) {
     const body = await request.json().catch(() => null);
     const text = body?.contents?.[0]?.parts?.map((p) => p.text ?? "").join("") ?? "";
     const f = facts(text);
     const key = `${f.personality}|${f.design}`;
+    const again = (tries.get(key) ?? 0) > 0;
+    tries.set(key, (tries.get(key) ?? 0) + 1);
     // Newest stored reading for this chart wins (the live shop's latest words).
     const hit = fixtures.filter((x) => x.key === key).sort((a, b) => (b.record.purchasedAt ?? 0) - (a.record.purchasedAt ?? 0))[0];
-    const form = hit ? formFromWritten(hit.record.written) : placeholderForm(f);
+    const stored = hit ? formFromWritten(hit.record.written) : null;
+    const form = stored ? (again ? nextDraft(stored, f.type) : stored) : placeholderForm(f);
     const n = asked.length + 1;
-    const entry = { n, at: Date.now(), type: f.type, authority: f.authority, profile: f.profile, cross: f.cross, source: hit ? hit.source : "placeholder" };
+    const entry = { n, at: Date.now(), type: f.type, authority: f.authority, profile: f.profile, cross: f.cross, source: hit ? `${hit.source}${again ? " (next draft)" : ""}` : "placeholder" };
     asked.push(entry);
     writeFileSync(join(dir, `${String(n).padStart(3, "0")}.json`), JSON.stringify({ ...entry, facts: text, form }, null, 1));
     return new Response(

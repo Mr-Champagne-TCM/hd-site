@@ -258,7 +258,7 @@ export function deliveryEmail({
   const upgradeLine =
     pending || top || !sellable(tier + 1)
       ? null
-      : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.blurb)} ` +
+      : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.[their ? "theirBlurb" : "blurb"])} ` +
         `It is offered on the page above, and what you have already paid comes off the price ` +
         `there — nobody pays twice for the same thing.`;
 

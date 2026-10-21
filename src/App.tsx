@@ -191,8 +191,6 @@ function Example() {
  * centers, your incarnation cross" to a buyer starting a chart for someone else.
  */
 const THEIR = {
-  summary: "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.",
-  chart: "Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates.",
   readingLead: "Their chart, plus about 1,200 words written to it:",
   readingTicks: ["How they decide", "How they meet the world", "What they take in from others", "Four small things to try"],
 };
@@ -330,7 +328,7 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
             ) : (
               <>
                 <p className="mt-3 text-[15px] leading-relaxed text-brand-paper/80">
-                  {fresh ? (tier.sku === SUMMARY.sku ? THEIR.summary : THEIR.chart) : tier.blurb}
+                  {fresh ? tier.theirBlurb : tier.blurb}
                 </p>
                 <LibraryNote sku={tier.sku} />
               </>

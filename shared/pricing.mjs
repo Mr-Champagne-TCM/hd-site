@@ -16,6 +16,8 @@ export const SUMMARY = {
   checkoutName: "Human Design summary",
   checkoutDescription: "Your chart's key facts in plain words: type, strategy, authority, profile and more.",
   blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your incarnation cross.",
+  /** The same, to a buyer starting a chart for someone else (W8, 10/21): THEIR centers. */
+  theirBlurb: "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.",
 };
 
 export const CHART = {
@@ -25,6 +27,7 @@ export const CHART = {
   checkoutName: "Human Design chart",
   checkoutDescription: "Your bodygraph drawn, your chart's values, and a PDF to keep.",
   blurb: "Your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates.",
+  theirBlurb: "Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates.",
 };
 
 export const READING = {
@@ -34,6 +37,7 @@ export const READING = {
   checkoutName: "Human Design reading",
   checkoutDescription: "Your chart, a written reading of about 1,200 words, and a PDF to keep.",
   blurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
+  theirBlurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */

@@ -370,7 +370,9 @@ export function oldWordProblem(raw) {
  * a "not-" word within two letters of "self", and any form of another type's
  * word ("frustrated", "bitterly") where the reader is said to feel it, in the
  * on / off track content -- the same places the checks look. Run on the 16
- * readings on file it refused the three real slips and no good reading.
+ * readings on file it refused the three real slips and no good reading. The
+ * same goes for "signature", already banned there: "signiture", "signture"
+ * (the 10/21 rig's probe of this checker) are refused with it.
  */
 const FEELING_FORMS = {
   Peace: String.raw`peace\w*`,
@@ -412,7 +414,14 @@ export function nearMissProblem(raw, type) {
       if (lettersApart(w, "self") <= 2)
         return `The reading says "${m[0]}" in ${where} -- a misspelled "not-self": "${quoteAt(text, m.index, m[0].length)}"`;
     }
-    if (!onTrack || !own) continue;
+    if (!onTrack) continue;
+    for (const m of text.matchAll(/\bsig\p{L}{4,9}\b/giu)) {
+      const w = m[0].toLowerCase();
+      // The exact word (and its plural) is oldWordProblem's already.
+      if (w !== "signature" && w !== "signatures" && lettersApart(w, "signature") <= 2)
+        return `The reading says "${m[0]}" in ${where} -- a misspelled "signature", where readers see "when it's on track": "${quoteAt(text, m.index, m[0].length)}"`;
+    }
+    if (!own) continue;
     for (const [word, form] of Object.entries(FEELING_FORMS)) {
       if (word === own.signature || word === own.notSelf) continue;
       const m = new RegExp(`${FELT_BEFORE}(${form})\\b`, "i").exec(text);
