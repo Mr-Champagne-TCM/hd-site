@@ -158,6 +158,9 @@ if (fresh) {
 /* ------------------------------------------------------------- checks ---- */
 const { runChecks } = await import("./checks/index.mjs");
 const results = await runChecks({ runDir, baselineDir: BASELINE });
+// Every changed word must be one a fix on tools/e2e/fixlist.json meant to change.
+const { regressCheck } = await import("./regress.mjs");
+results.checks.push(regressCheck(results.diff));
 writeFileSync(join(runDir, "results.json"), JSON.stringify(results, null, 1));
 
 if (arg("update-baseline")) {

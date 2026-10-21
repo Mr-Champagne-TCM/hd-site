@@ -205,6 +205,7 @@ def journey(browser, j):
     manifest["journeys"].append(jr)
     token = None
     birth = None
+    own_tokens = []  # this buyer's links so far, oldest first (someone-new charts are their own)
     for i, st in enumerate(j["steps"]):
         sid = f"{j['id']}-{i + 1}-{st['do']}-t{st['tier']}"
         step = {"id": sid, "do": st["do"], "tier": st["tier"], "birth": st.get("birth") or birth, "name": st.get("name")}
@@ -232,6 +233,7 @@ def journey(browser, j):
                 submitted(page)
                 settle(page, 800)
                 token = result(page, ctx, sid, meta, st["tier"])
+                own_tokens.append(token)
             elif st["do"] == "upgrade":
                 page.goto(f"{SHOP}/u/{quote(token)}", wait_until="networkidle")
                 settle(page)
@@ -255,6 +257,13 @@ def journey(browser, j):
                 page.wait_for_timeout(1500)
                 settle(page, 800)
                 token = result(page, ctx, sid, {**meta, "upgrade": True, "birth": birth}, st["tier"])
+                # The buyer's earlier links, opened again now the chart has grown: what the
+                # link in an older email shows (live 10/21: run1-oldlink, run1-oldchartlink).
+                for k, old in enumerate(own_tokens):
+                    page.goto(f"{SHOP}/r/{quote(old)}", wait_until="networkidle")
+                    settle(page)
+                    capture(page, f"{sid}-old{k + 1}", {**meta, "kind": "old-link", "upgrade": True, "birth": birth})
+                own_tokens.append(token)
             elif st["do"] == "someone-new":
                 page.goto(f"{SHOP}/u/{quote(token)}#new", wait_until="networkidle")
                 settle(page)

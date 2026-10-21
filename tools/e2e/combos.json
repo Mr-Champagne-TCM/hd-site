@@ -1,5 +1,5 @@
 {
-  "_about": "Every buyer journey the rig drives. A step without \"name\" leaves the chart-name box as the form prefills it; \"\" clears it (no name). Births are MADE UP (tools/e2e/find-births.mjs walks dates arithmetically; the named ones are the live-test people of 10/21, also made up). 'pick' is the town exactly as the place list prints it. Paths: buy = a new purchase from the offer page; upgrade = For me, from the record before it (/u/<token>); someone-new = from a /u/ page, Start a new chart for someone else. A reading for a chart with a stored live reading replays those words; any other chart gets a marked placeholder.",
+  "_about": "Every buyer journey the rig drives. A step without \"name\" leaves the chart-name box as the form prefills it; \"\" clears it (no name). Births are MADE UP (tools/e2e/find-births.mjs walks dates arithmetically; the named ones are the live-test people of 10/21, also made up). 'pick' is the town exactly as the place list prints it. Paths: buy = a new purchase from the offer page; upgrade = For me, from the record before it (/u/<token>); someone-new = from a /u/ page, Start a new chart for someone else. A reading for a chart with a stored live reading replays those words; any other chart gets a marked placeholder. Rowan, Maya, Theo and Sage type their full names in the name box, as the live testers did on 10/21 (tools/e2e/parity/pages.mjs compares those pages with the live captures); the other journeys leave the box as prefilled.",
   "buyerEmail": "rig-buyer@example.com",
   "births": {
     "rowan": { "date": "1990-02-11", "time": "06:25", "type": "Albuquerque", "pick": "Albuquerque, New Mexico", "zone": "America/Denver", "shape": "Projector, Self-Projected, 1 channel" },
@@ -19,13 +19,13 @@
   },
   "journeys": [
     { "id": "rowan", "buyer": "Rowan Testwell", "about": "summary -> For me chart -> For me reading (Self-Projected)",
-      "steps": [ { "do": "buy", "tier": 0, "birth": "rowan" }, { "do": "upgrade", "tier": 1 }, { "do": "upgrade", "tier": 2 } ] },
+      "steps": [ { "do": "buy", "tier": 0, "birth": "rowan", "name": "Rowan Testwell" }, { "do": "upgrade", "tier": 1 }, { "do": "upgrade", "tier": 2 } ] },
     { "id": "maya", "buyer": "Maya Testwell", "about": "summary -> Change a detail on the chart upgrade -> reading",
-      "steps": [ { "do": "buy", "tier": 0, "birth": "maya" }, { "do": "upgrade", "tier": 1, "correct": { "time": "23:05" } }, { "do": "upgrade", "tier": 2 } ] },
+      "steps": [ { "do": "buy", "tier": 0, "birth": "maya", "name": "Maya Testwell" }, { "do": "upgrade", "tier": 1, "correct": { "time": "23:05" } }, { "do": "upgrade", "tier": 2 } ] },
     { "id": "theo", "buyer": "Theo Testwell", "about": "unknown time: summary -> reading in one step",
-      "steps": [ { "do": "buy", "tier": 0, "birth": "theo" }, { "do": "upgrade", "tier": 2 } ] },
+      "steps": [ { "do": "buy", "tier": 0, "birth": "theo", "name": "Theo Testwell" }, { "do": "upgrade", "tier": 2 } ] },
     { "id": "sage", "buyer": "Sage Testwell", "about": "chart bought new (5 channels); then someone new from Sage's link",
-      "steps": [ { "do": "buy", "tier": 1, "birth": "sage" }, { "do": "someone-new", "tier": 0, "birth": "quinn", "name": "Quinn" }, { "do": "someone-new", "tier": 2, "birth": "ch3", "name": "Morgan" } ] },
+      "steps": [ { "do": "buy", "tier": 1, "birth": "sage", "name": "Sage Testwell" }, { "do": "someone-new", "tier": 0, "birth": "quinn", "name": "Quinn" }, { "do": "someone-new", "tier": 2, "birth": "ch3", "name": "Morgan" } ] },
     { "id": "jordan", "buyer": "Jordan Testwell", "about": "reading bought new with the $0 code, no name on the chart",
       "steps": [ { "do": "buy", "tier": 2, "birth": "jordan", "name": "", "promo": "RIGFREE100" } ] },
     { "id": "reflector", "buyer": "Robin Testwell", "about": "Reflector (0 channels, Lunar): chart, then reading",
