@@ -6,7 +6,30 @@
  * and a Stripe receipt that says another.
  *
  * Cents, not dollars. Floating-point money is how $11.11 becomes $11.109999.
+ *
+ * THE SPLIT (Jeremy 10/22): "gates/channels go to summary (with no
+ * explanation). Keep all 26 activations in the reading tier... chart option
+ * should only show the BG as upgrade."
+ *
+ *                                   summary   chart   reading
+ *   chart values, centers, cross       yes      yes     yes
+ *   channels + activated gates         yes      yes     yes    (values only)
+ *   the bodygraph drawing + its PDF     -       yes     yes    <- the chart's reason
+ *   the 26 activations                  -        -      yes
+ *   the written reading                 -        -      yes
  */
+import { fix } from "./fixMock.mjs";
+
+/**
+ * The chart card's words, two ways (MOCK 10/22, Jeremy picks; ?fix=T1B /
+ * HD_FIX=T1B shows B). Both name only the drawing and its PDF as what the
+ * chart adds; each also reads after "The chart contains ..." (the emails, the
+ * PDF), so it starts in lower case there.
+ */
+const CHART_A = "Everything in the summary, plus your bodygraph drawn: a page you can share and a PDF you keep.";
+const CHART_A_THEIR = "Everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep.";
+const CHART_B = "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
+const CHART_B_THEIR = "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
 
 export const SUMMARY = {
   sku: "hd_summary",
@@ -14,10 +37,12 @@ export const SUMMARY = {
   label: "The summary",
   /** On Stripe's checkout (fix 14B, 10/19): the product's own name and a plain line. */
   checkoutName: "Human Design summary",
-  checkoutDescription: "Your chart's key facts in plain words: type, strategy, authority, profile and more.",
-  blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your incarnation cross.",
+  checkoutDescription: "Your chart's key facts: type, strategy, authority, profile, centers, channels and activated gates.",
+  blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your channels and activated gates, your incarnation cross.",
   /** The same, to a buyer starting a chart for someone else (W8, 10/21): THEIR centers. */
-  theirBlurb: "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.",
+  theirBlurb: "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.",
+  /** The first step: nothing is added to anything. */
+  adds: null,
 };
 
 export const CHART = {
@@ -26,8 +51,10 @@ export const CHART = {
   label: "The chart",
   checkoutName: "Human Design chart",
   checkoutDescription: "Your bodygraph drawn, your chart's values, and a PDF to keep.",
-  blurb: "Your bodygraph, drawn — a page you can share and a PDF you keep — with your channels and activated gates.",
-  theirBlurb: "Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates.",
+  blurb: fix("T1B") ? CHART_B : CHART_A,
+  theirBlurb: fix("T1B") ? CHART_B_THEIR : CHART_A_THEIR,
+  /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
+  adds: "Your bodygraph, drawn, and its PDF to keep.",
 };
 
 export const READING = {
@@ -38,6 +65,9 @@ export const READING = {
   checkoutDescription: "Your chart, a written reading of about 1,200 words, and a PDF to keep.",
   blurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
   theirBlurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
+  /** Under its price on "The same chart, a step further": what it adds to a chart, and to a summary. */
+  adds: "All twenty-six activations and the written reading.",
+  addsToSummary: "Your bodygraph drawn, all twenty-six activations and the written reading.",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */

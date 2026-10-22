@@ -12,6 +12,7 @@
  */
 
 import { profileWithNames } from "./mechanics";
+import { gateList } from "../shared/gateList.mjs";
 
 export type SummaryData = {
   type: string;
@@ -31,6 +32,8 @@ export type SummaryData = {
   note?: string;
   provisional?: string[];
   channels?: string[];
+  /** The activated gate numbers (10/22: on the summary too, as values with no explanation). */
+  activatedGates?: number[];
   /**
    * Present from the chart tier upward, absent on the free summary. Typed
    * `unknown` rather than `string` on purpose: it arrives from the network, it
@@ -118,8 +121,16 @@ export default function Summary({ data }: { data: SummaryData }) {
           and the PDF is chart-tier, so the page showing less than the document
           it hands over was simply wrong.
         */}
-        {data.channels && data.channels.length > 0 && (
-          <Row label="Channels">{data.channels.join(" · ")}</Row>
+        {/*
+          AND THE ACTIVATED GATES, AS NUMBERS (Jeremy 10/22: "gates/channels go
+          to summary (with no explanation)"). A chart with no channel says
+          "None"; an older answer with no list at all shows no row.
+        */}
+        {Array.isArray(data.channels) && (
+          <Row label="Channels">{data.channels.length ? data.channels.join(" · ") : "None"}</Row>
+        )}
+        {Array.isArray(data.activatedGates) && (
+          <Row label="Activated gates">{gateList(data.activatedGates)}</Row>
         )}
       </dl>
 

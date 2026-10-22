@@ -17,7 +17,8 @@ import Summary, { type SummaryData } from "./Summary";
  * "my name is OK"): September 17, 1983, 3:17 AM, Wichita Falls, Texas, copied
  * from his real shop record (engine 0.5.0), the same chart as the readings
  * page and the library's example charts. Birth time known, so nothing is
- * provisional and there is no noon note. The summary tier shows no channels.
+ * provisional and there is no noon note. Since 10/22 the summary carries the
+ * channels and the activated gates too, as values (his record's own lists).
  */
 const EXAMPLE: SummaryData = {
   type: "Manifesting Generator",
@@ -33,6 +34,8 @@ const EXAMPLE: SummaryData = {
   // lit gate (undefined); Head and G carry none (open).
   undefinedCenters: ["Ajna", "Heart", "Spleen", "Solar Plexus", "Root"],
   openCenters: ["Head", "G"],
+  channels: ["20-34 (Charisma)"],
+  activatedGates: [4, 6, 9, 11, 12, 20, 26, 28, 33, 34, 36, 45, 47, 50, 60],
   timeKnown: true,
 };
 

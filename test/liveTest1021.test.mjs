@@ -221,8 +221,9 @@ const app = await loadComponents("src", "App.tsx");
 
 test("W8 THE SOMEONE-NEW CARDS DESCRIBE THEIR CHART, on all three", () => {
   const page = text(app.render("Tiers", { fresh: true }));
-  assert.match(page, /Definition, their centers, their incarnation cross\./);
-  assert.match(page, /Their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates\./);
+  // The 10/22 split: their channels and gates on the summary, the drawing as the chart's reason.
+  assert.match(page, /Definition, their centers, their channels and activated gates, their incarnation cross\./);
+  assert.match(page, /Everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep\./);
   assert.match(page, /Their chart, plus about 1,200 words written to it: ✓ How they decide ✓ How they meet the world/);
   assert.doesNotMatch(page, /your centers|your incarnation cross|How you decide/);
 });
@@ -517,7 +518,7 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
   const m = mail({ tier: 0, chartName: "Quinn", someoneNew: true });
   assert.equal(m.subject, "Quinn’s Human Design summary is ready");
   assert.match(m.text, /^Hello Jeremy Champagne,\n\nQuinn’s summary is ready\./);
-  assert.match(m.text, /✓ Their definition and their centers\n {2}✓ Their incarnation cross/);
+  assert.match(m.text, /✓ Their definition and their centers\n {2}✓ Their channels and activated gates\n {2}✓ Their incarnation cross/);
   assert.match(m.text, /Open Quinn’s summary:/);
   assert.match(m.text, /Quinn’s summary is kept for a year/);
   assert.match(m.text, /every word in their summary explained/);
@@ -530,9 +531,9 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
 
 test("#16 WHAT ELSE THERE IS, for someone new: their bodygraph, their channels", () => {
   const m = mail({ tier: 0, chartName: "Quinn", someoneNew: true });
-  assert.match(m.text, /The chart contains their bodygraph, drawn — a page you can share and a PDF you keep — with their channels and activated gates\./);
-  assert.match(mail({ tier: 0 }).text, /The chart contains your bodygraph, drawn/);
-  assert.equal(TIERS[0].theirBlurb, "Type, Strategy, Authority, Profile, Definition, their centers, their incarnation cross.");
+  assert.match(m.text, /The chart contains everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep\./);
+  assert.match(mail({ tier: 0 }).text, /The chart contains everything in the summary, plus your bodygraph drawn/);
+  assert.equal(TIERS[0].theirBlurb, "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.");
 });
 
 test("A CHART FOR SOMEONE ELSE NEVER CARRIES THE BUYER'S NAME, even with none typed", () => {

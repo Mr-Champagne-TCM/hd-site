@@ -120,11 +120,12 @@ export function receiptDate(ms) {
 const READY = Object.freeze({
   0: {
     lead: "Your summary is ready.",
-    ticks: ["Type, Strategy, Authority and Profile", "Your definition and your centers", "Your incarnation cross"],
+    ticks: ["Type, Strategy, Authority and Profile", "Your definition and your centers", "Your channels and activated gates", "Your incarnation cross"],
   },
   1: {
     lead: "Your chart is ready.",
-    ticks: ["Your bodygraph, drawn", "Your channels and activated gates", "A PDF to keep"],
+    // The drawing first: it is what the chart adds (10/22); the values come with it.
+    ticks: ["Your bodygraph, drawn", "Your chart values, with your channels and activated gates", "A PDF to keep"],
   },
   2: {
     lead: "Your chart and your written reading are ready.",
@@ -137,8 +138,8 @@ const READY = Object.freeze({
  * (10/21 live test, bug 16: it said "your" to the buyer).
  */
 const READY_THEIR = Object.freeze({
-  0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their incarnation cross"],
-  1: ["Their bodygraph, drawn", "Their channels and activated gates", "A PDF to keep"],
+  0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their channels and activated gates", "Their incarnation cross"],
+  1: ["Their bodygraph, drawn", "Their chart values, with their channels and activated gates", "A PDF to keep"],
   2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
 });
 

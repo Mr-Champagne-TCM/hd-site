@@ -25,7 +25,7 @@
  */
 
 import { profileWithNames } from "./mechanics.mjs";
-import { fix } from "../../shared/fixMock.mjs";
+import { crossName } from "../../shared/crossName.mjs";
 
 export const DISCLAIMER =
   "This reading describes a Human Design chart and is offered for self-reflection. " +
@@ -115,7 +115,8 @@ export function chartFactsOnly(output, { form = false } = {}) {
     form
       ? `When it's off track, the feeling is: ${output?.notSelfTheme ?? ""}`
       : `Not-Self Theme: ${output?.notSelfTheme ?? ""}`,
-    `Incarnation Cross: ${output?.incarnationCross ?? ""}`,
+    // W14: the model is given the name as the shop prints it, so its words say "Cross of the" too.
+    `Incarnation Cross: ${crossName(output?.incarnationCross)}`,
     `Defined centers: ${list(output?.definedCenters)}`,
     `Undefined centers (not colored in, but carrying gates): ${list(output?.undefinedCenters)}`,
     `Open centers (not colored in, with no gates at all): ${list(output?.openCenters)}`,
@@ -1466,7 +1467,7 @@ export function marginNotes(c) {
       [`PROFILE ${(c && c.profile) || ""}`.trim(), profileNames],
       // "(11/12 | 6/36)" kept on one line in the narrow margin, as the phone
       // has it: no-break spaces around the bar.
-      ["INCARNATION CROSS", ((c && c.incarnationCross) || "").replace(" | ", " | ").replace(fix("W14") ? /\bCross of The\b/g : /$^/, "Cross of the")], // MOCK FIX W14: lowercase "the"
+      ["INCARNATION CROSS", crossName((c && c.incarnationCross) || "").replace(" | ", " | ")], // W14: "Cross of the", lowercase "the" (shared/crossName.mjs)
     ],
     // No center lists beside "What is consistently yours" / "What you take in
     // from others" (Jeremy 10/16, call 5 -- trim repeats in the MARGINS

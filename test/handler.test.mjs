@@ -67,7 +67,39 @@ test("a first request reaches the engine and comes back", async () => {
   const res = await post({ engine });
   assert.equal(res.status, 200);
   assert.equal(engine.calls.length, 1);
-  assert.equal(engine.calls[0].tier, 0, "the edge always asks for tier 0");
+  // The summary asks for the chart tier's answer (its channels and gates) and keeps only its share (10/22).
+  assert.equal(engine.calls[0].tier, 1, "the summary asks for the chart-level answer");
+});
+
+/**
+ * THE TIER SPLIT (Jeremy 10/22): "gates/channels go to summary (with no
+ * explanation)... chart option should only show the BG as upgrade". The
+ * summary keeps the channel list and the gate numbers -- never the drawing,
+ * the channel directions or the activations -- on its answer AND its record.
+ */
+test("the summary keeps channels and activated gates, never the drawing", async () => {
+  const chartAnswer = {
+    type: "Projector", strategy: "Wait for the invitation", authority: "Self-Projected", profile: "4/1",
+    definition: "Single", notSelfTheme: "Bitterness", signature: "Success",
+    incarnationCross: "Right Angle Cross of The Sphinx (1/2 | 7/13)",
+    definedCenters: ["Throat", "G"], undefinedCenters: ["Head"], openCenters: ["Heart"], timeKnown: true,
+    channels: ["1-8 (Inspiration)"], channelLines: ["1-8 Inspiration: G to Throat"], activatedGates: [8, 1, 13],
+    bodygraphSvg: "<svg/>", personality: [{ planet: "SUN", gate: 1, line: 1 }], design: [],
+  };
+  const engine = fakeEngine({ ok: true, status: 200, payload: chartAnswer });
+  const readings = memoryStore();
+  const secret = randomBytes(32).toString("hex");
+  const id = "a".repeat(32);
+  await saveReading(readings, { id, tier: 0, output: null, purchasedAt: T0 });
+  const res = await post({ engine, readings, grantSecret: secret, body: JSON.stringify({ birth: BIRTH, reading: mintReadingLink({ id, tier: 0 }, secret, T0) }) });
+  assert.equal(res.status, 200);
+  assert.equal(engine.calls[0].tier, 1);
+  for (const answer of [JSON.parse(res.body), (await loadReading(readings, id, T0)).output]) {
+    assert.deepEqual(answer.channels, ["1-8 (Inspiration)"]);
+    assert.deepEqual(answer.activatedGates, [8, 1, 13]);
+    for (const k of ["bodygraphSvg", "channelLines", "personality", "design"]) assert.equal(answer[k], undefined, k);
+    assert.equal(answer.type, "Projector");
+  }
 });
 
 /**
@@ -130,7 +162,8 @@ test("nothing but the named birth fields reaches the engine", async () => {
     ip: "8.8.8.8", now: T0, store: fakeStore(), engine,
   });
   assert.deepEqual(Object.keys(engine.calls[0].birth).sort(), ["date", "timeKnown", "zone"]);
-  assert.equal(engine.calls[0].tier, 0, "a caller must not be able to ask for a paid tier here");
+  // Tier 1 is the summary's own ask (its channels and gates); a caller's "tier: 2" changes nothing.
+  assert.equal(engine.calls[0].tier, 1, "a caller must not be able to ask for a paid tier here");
 });
 
 test("an unreachable engine says so plainly, and says nothing was charged", async () => {
