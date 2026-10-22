@@ -28,6 +28,8 @@ export const AUTHORITY = topic("authority");
 export const CENTERS = topic("centers");
 export const DEFINITION = topic("definition");
 export const CHANNELS = topic("channels");
+/** The library's own section on gates (10/22): the "Activated gates" row links here, not to #channels. */
+export const GATES = topic("gates");
 export const PROFILES = topic("profiles");
 export const CROSSES = topic("crosses");
 export const TYPES = topic("types");

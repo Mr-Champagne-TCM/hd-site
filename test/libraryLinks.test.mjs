@@ -30,6 +30,9 @@ test("ids match the library's own scheme, case for case with the phone's test", 
   assert.equal(L.crossLink("Juxtaposition Cross (99/2 | 3/4)"), L.CROSSES);
   assert.equal(L.profileLink(""), L.PROFILES);
   assert.equal(L.channelLink("?"), L.CHANNELS);
+  // The "Activated gates" row has the library's own gates section (10/22), not the channels one.
+  assert.equal(a(L.GATES), "gates");
+  assert.notEqual(L.GATES, L.CHANNELS);
   assert.equal(L.typeLink(""), L.TYPES);
   assert.equal(L.SHOP, "https://humandesign.thechampagnemethod.co/");
   assert.equal(L.LIBRARY, "https://thechampagnemethod.co/library/human-design/");
@@ -41,7 +44,7 @@ test("every anchor the shop can produce is one the phone produces", () => {
     ...["1/3", "1/4", "2/4", "2/5", "3/5", "3/6", "4/6", "4/1", "5/1", "5/2", "6/2", "6/3"].map(L.profileLink),
     ...[1, 2, 3, 4, 5, 6].map((n) => L.lineLink(`Line ${n}`)),
     ...Object.keys(G.CHANNEL).map(L.channelLink),
-    L.AUTHORITY, L.CENTERS, L.DEFINITION, L.CHANNELS, L.PROFILES, L.CROSSES, L.TYPES,
+    L.AUTHORITY, L.CENTERS, L.DEFINITION, L.CHANNELS, L.GATES, L.PROFILES, L.CROSSES, L.TYPES,
   ];
   for (const u of ours) assert.ok(targets.has(u), `${u} is not one of the phone's targets`);
   assert.equal(Object.keys(G.CHANNEL).length, 36);

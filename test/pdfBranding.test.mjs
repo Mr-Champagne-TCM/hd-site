@@ -123,7 +123,8 @@ test("chart words open their own library entry (Claude Test Four, as the phone c
   assert.equal(on(2, "definition"), 1);
   assert.equal(on(2, "cross-r-eden"), 1);
   assert.equal(on(2, "centers"), 3);
-  assert.equal(on(2, "channels"), 2); // the Channels row and the Activated gates row (10/22)
+  assert.equal(on(2, "channels"), 1); // the Channels row
+  assert.equal(on(2, "gates"), 1); // the Activated gates row: the library's own gates section (10/22)
   assert.equal(lib.filter((l) => l.page >= 3 && l.page <= 4 && l.uri === topic("centers")).length, 9);
   for (const ch of ["20-57", "26-44", "28-38"]) {
     assert.equal(lib.filter((l) => l.page >= 3 && l.page <= 4 && l.uri === topic(`channel-${ch}`)).length, 1, ch);

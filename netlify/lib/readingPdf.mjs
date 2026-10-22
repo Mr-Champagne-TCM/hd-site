@@ -29,6 +29,7 @@ import {
   CENTERS,
   CHANNELS,
   DEFINITION,
+  GATES,
   LIBRARY,
   SHOP,
   SITE_URL,
@@ -928,7 +929,7 @@ function glancePage(d, { output, tier, reading }) {
   valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS, "channels");
   // The gate numbers, as the page lists them (10/22: values only, every tier).
   if (Array.isArray(c.activatedGates)) {
-    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS, "gates", marked?.has("gates") ? GATES_NOTE : null);
+    valueRow("Activated gates", gateList(c.activatedGates), GATES, "gates", marked?.has("gates") ? GATES_NOTE : null);
   }
   if (d.pageNo !== valuesFrom) d.spilled = valuesFrom;
 

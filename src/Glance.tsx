@@ -5,6 +5,7 @@ import {
   CENTERS,
   CHANNELS,
   DEFINITION,
+  GATES,
   crossLink,
   profileLink,
   typeLink,
@@ -88,7 +89,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
       ? ([["Channels", data.channels.length ? data.channels.join("\n") : "None", CHANNELS]] as Array<[string, string, string]>)
       : []),
     ...(Array.isArray(data.activatedGates)
-      ? ([["Activated gates", gateList(data.activatedGates), CHANNELS]] as Array<[string, string, string]>)
+      ? ([["Activated gates", gateList(data.activatedGates), GATES]] as Array<[string, string, string]>)
       : []),
   ];
   // The engine's note for an unknown time, on a record with no spread; its dash written as a dash (W4).
