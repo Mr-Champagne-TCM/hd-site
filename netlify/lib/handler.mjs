@@ -3,7 +3,6 @@ import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
 import { buildCorrection, historyEntry } from "./correction.mjs";
 import { customerError, engineKind } from "./failures.mjs";
-import { fix } from "../../shared/fixMock.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -180,12 +179,8 @@ export async function handleChart({
 
   let upstream;
   try {
-    // MOCK FIX 2B: a summary asks for the chart tier's answer too, and keeps only its channel list (below).
-    upstream = await engine({ birth: scrubbed, tier: fix("2B") ? Math.max(entitled.tier, 1) : entitled.tier });
-    if (fix("2B") && entitled.tier === 0 && upstream?.ok && upstream.payload) {
-      const { bodygraphSvg, activatedGates, personality, design, ...summary } = upstream.payload;
-      upstream = { ...upstream, payload: summary };
-    }
+    upstream = await engine({ birth: scrubbed, tier: Math.max(entitled.tier, 1) });
+    if (entitled.tier === 0 && upstream?.ok && upstream.payload) upstream = { ...upstream, payload: summaryOnly(upstream.payload) };
   } catch (e) {
     /**
      * SLOW AND DOWN ARE TOLD APART. The engine call carries its own deadline
@@ -360,6 +355,32 @@ export async function handleChart({
   }
 
   return json(200, upstream.payload);
+}
+
+/**
+ * THE SUMMARY'S SHARE OF A CHART (Jeremy 10/22: "gates/channels go to summary
+ * (with no explanation)"; "chart option should only show the BG as upgrade").
+ *
+ * The engine's tier 0 answer has no channels and no gates, so the summary asks
+ * for the chart tier's answer and keeps, beside the chart-level values, only
+ * the channel list (as the chart names them, "1-8 (Inspiration)") and the
+ * activated gate numbers. NEVER the drawing: the bodygraph and its PDF are
+ * what the chart tier adds, so they are dropped here, before the record is
+ * written and before the page is answered. Nothing else of the chart tier's
+ * answer (its channel directions) travels either; a field is kept only by name.
+ */
+const SUMMARY_FIELDS = [
+  "type", "strategy", "authority", "profile", "definition", "notSelfTheme", "signature", "incarnationCross",
+  "definedCenters", "undefinedCenters", "openCenters", "timeKnown", "chartedAt", "note", "provisional",
+  "engineVersion", "computedAt",
+  // new at the summary, 10/22: values only, no explanation
+  "channels", "activatedGates",
+];
+
+export function summaryOnly(payload) {
+  const out = {};
+  for (const k of SUMMARY_FIELDS) if (payload[k] !== undefined) out[k] = payload[k];
+  return out;
 }
 
 function json(status, payload, headers = {}) {

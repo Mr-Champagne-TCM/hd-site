@@ -6,10 +6,15 @@
  * now / green proposed, one change per page). Only these remain; every chosen
  * fix is written in plainly:
  *
- *   2A / 2B    the summary's "Channels: None"
  *   17A / 17B  an unknown birth time, told two ways (W4's dash rides with it)
- *   W13        "EGO" in the drawing
- *   W14        "Cross of The ..."
+ *   W13B       "HEART (EGO)" on two lines ("HEART" over a smaller "(EGO)");
+ *   W13C       "HEART (EGO)" on one line, 10 units left of the engine's spot
+ *              (one line at the engine's spot is the default on this branch,
+ *              shared/heartLabel.mjs)
+ *
+ * Written in plainly on mock-tiers-1022 (Jeremy's calls, 10/22): 2A / 2B (the
+ * summary keeps channels and activated gates, the new tier split), W13 ("HEART
+ * (EGO)" on the drawing) and W14 ("Cross of the ...", shared/crossName.mjs).
  *
  * Same pattern as the earlier `?ux=` / `?mock=` mocks:
  *

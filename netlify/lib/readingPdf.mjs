@@ -23,6 +23,9 @@ import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import { fix } from "../../shared/fixMock.mjs";
 import { NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
+import { crossName } from "../../shared/crossName.mjs";
+import { gateList } from "../../shared/gateList.mjs";
+import { heartLabel, heartMode } from "../../shared/heartLabel.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -559,8 +562,8 @@ function bodygraphPage(d, { name, output, birth, qr, tier }) {
   const raw = typeof c.bodygraphSvg === "string" ? c.bodygraphSvg : null;
   if (raw) {
     try {
-      // MOCK FIX W13: the drawing names the center as the tables do.
-      SVGtoPDF(pdf, printSwap(fix("W13") ? raw.replace(/>EGO</g, ">HEART<") : raw).svg, left, d.y, {
+      // W13 (10/22 mock): "HEART (EGO)", as the tables name the center (HD_FIX=W13B two lines, W13C nudged).
+      SVGtoPDF(pdf, printSwap(heartLabel(raw, heartMode(fix))).svg, left, d.y, {
         width: chartW,
         height: chartH,
         preserveAspectRatio: "xMidYMid meet",
@@ -766,12 +769,8 @@ function glancePage(d, { output, tier, reading }) {
 
   const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
   valueRow("Definition", c.definition ?? "", DEFINITION);
-  // MOCK FIX W14: "Cross of the Vessel of Love", "the" in lowercase like the other names.
-  valueRow(
-    "Incarnation cross",
-    fix("W14") ? String(c.incarnationCross ?? "").replace(/\bCross of The\b/g, "Cross of the") : (c.incarnationCross ?? ""),
-    crossLink(c.incarnationCross),
-  );
+  // W14: "Cross of the Vessel of Love", "the" in lowercase like the other names.
+  valueRow("Incarnation cross", crossName(c.incarnationCross), crossLink(c.incarnationCross));
   valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS);
   /**
    * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`
@@ -782,6 +781,10 @@ function glancePage(d, { output, tier, reading }) {
   if (Array.isArray(c.undefinedCenters)) valueRow("Undefined centers", list(c.undefinedCenters, "None"), CENTERS);
   valueRow("Open centers", list(c.openCenters, "None"), CENTERS);
   valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS);
+  // The gate numbers, as the page lists them (10/22: values only, every tier).
+  if (Array.isArray(c.activatedGates)) {
+    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS);
+  }
 
   // The activations, in a four-up grid -- the READING tier's, never sold with
   // the chart tier.

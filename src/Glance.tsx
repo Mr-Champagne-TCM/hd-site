@@ -13,6 +13,8 @@ import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs"
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 import { fix } from "../shared/fixMock.mjs";
+import { crossName } from "../shared/crossName.mjs";
+import { gateList } from "../shared/gateList.mjs";
 import { NOON_NOTE_A, NOON_NOTE_B } from "../shared/fixCopy.mjs";
 
 /**
@@ -48,19 +50,27 @@ export default function Glance({ data, says = null, showActivations = false }: P
   const list = (v: string[] | undefined, none: string) => (v && v.length ? v.join(", ") : none);
   const values: Array<[string, string, string]> = [
     ["Definition", data.definition, DEFINITION],
-    ["Incarnation cross", data.incarnationCross, crossLink(data.incarnationCross)],
+    ["Incarnation cross", crossName(data.incarnationCross), crossLink(data.incarnationCross)],
     ["Defined centers", list(data.definedCenters, "None — Reflector"), CENTERS],
     // Absent on readings stored before the third state existed -- see readingPdf.
     ...(Array.isArray(data.undefinedCenters)
       ? ([["Undefined centers", list(data.undefinedCenters, "None"), CENTERS]] as Array<[string, string, string]>)
       : []),
     ["Open centers", list(data.openCenters, "None"), CENTERS],
-    // MOCK FIX 2A: no Channels row where the chart carries none (the summary); a chart with none still says "None".
-    ...(fix("2A") && !Array.isArray(data.channels)
-      ? []
-      : ([["Channels", data.channels && data.channels.length ? data.channels.join("\n") : "None", CHANNELS]] as Array<
-          [string, string, string]
-        >)),
+    /**
+     * CHANNELS AND ACTIVATED GATES, ON EVERY TIER (Jeremy 10/22: "gates/channels
+     * go to summary (with no explanation)"). Values only: the channels as the
+     * chart names them, the gates as numbers. A summary stored before 10/22
+     * carries neither, so it gets no row rather than a "None" that would be
+     * untrue (the 10/21 live test's "Channels: None"); a chart that truly has
+     * no channel still says "None".
+     */
+    ...(Array.isArray(data.channels)
+      ? ([["Channels", data.channels.length ? data.channels.join("\n") : "None", CHANNELS]] as Array<[string, string, string]>)
+      : []),
+    ...(Array.isArray(data.activatedGates)
+      ? ([["Activated gates", gateList(data.activatedGates), CHANNELS]] as Array<[string, string, string]>)
+      : []),
   ];
   // MOCK FIX 17A: with no birth time the centers and channels are marked provisional too.
   const valueProvisional = (label: string) =>
