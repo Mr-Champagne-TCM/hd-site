@@ -27,7 +27,10 @@ export default function TimeField({
   unknown,
   onUnknownChange,
   their = false,
+  askUnknown = true,
 }: {
+  /** MOCK TIME: the "add your birth time" form has no "I don’t know" -- they have just found it. */
+  askUnknown?: boolean;
   /** Someone new's form: "I don’t know their birth time" (bug 19, 10/21). */
   their?: boolean;
   /** "HH:MM" in 24-hour form, or "" while incomplete. */
@@ -111,6 +114,7 @@ export default function TimeField({
         offered first, to somebody assumed to have an answer, and the fallback
         waits underneath for the ones who do not.
       */}
+      {askUnknown && (
       <label className="mt-4 flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
@@ -129,6 +133,7 @@ export default function TimeField({
           )}
         </span>
       </label>
+      )}
 
       {/*
         FIX 15B (Jeremy 10/19): why the time matters, folded under the field,

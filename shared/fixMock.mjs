@@ -10,6 +10,11 @@
  *   17A / 17B  an unknown birth time, told two ways (W4's dash rides with it)
  *   W13        "EGO" in the drawing
  *   W14        "Cross of The ..."
+ *   TIME       an unknown birth time, measured (mock 10/22): the one line, the
+ *              day drawn with its rows, PROVISIONAL only on what changes
+ *              (netlify/lib/birthSpread.mjs, shared/timeSpread.mjs)
+ *   TIMEBAR    with TIME: the day drawn without rows
+ *   TIMEOFFERB with TIME: the second wording of "Found your birth time?"
  *
  * Same pattern as the earlier `?ux=` / `?mock=` mocks:
  *

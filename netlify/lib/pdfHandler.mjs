@@ -2,6 +2,7 @@ import { loadCurrent, readReadingLink } from "./reading.mjs";
 import { customerError } from "./failures.mjs";
 import { buyerNameFor } from "../../shared/chartName.mjs";
 import { messagePage } from "./messagePage.mjs";
+import { SHOP } from "../../shared/libraryLinks.mjs";
 
 /**
  * GET /api/pdf, with the store, the builder and the clock passed in, so every
@@ -85,6 +86,8 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
       reading: reading.reading ?? null,
       // THE BIRTH LINE under the name (Jeremy 10/16).
       birth: reading.birth ?? null,
+      // MOCK TIME: where "add it here" opens -- this link's own page, the time box.
+      addTimeUrl: `${SHOP}r/${encodeURIComponent(token)}#add-time`,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e?.message})`);

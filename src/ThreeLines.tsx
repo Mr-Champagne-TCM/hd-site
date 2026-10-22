@@ -1,4 +1,6 @@
 import { AUTHORITY_GLANCE, PROFILE_GLANCE, TYPE_GLANCE } from "../shared/libraryGlance.mjs";
+import { markedFields } from "../shared/timeSpread.mjs";
+import { Tag, measuredSpread } from "./TimeSpread";
 
 /**
  * FIX 1A (Jeremy 10/19): "Your chart in three lines", a plain way in at the
@@ -49,6 +51,8 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
    * and Profile plainly while the table called them provisional).
    */
   const unsure = new Set(chart.provisional ?? []);
+  // MOCK TIME: only what really changes that day, and the tag beside the label.
+  const measured = measuredSpread(chart) ? markedFields(chart) : null;
   const rowField: Record<string, string> = {
     "Your energy": "type",
     "How you decide": "authority",
@@ -70,8 +74,9 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             </span>
             <p className="text-[17px] leading-relaxed text-brand-paper">
               <span className="font-semibold text-brand-teal">{label}</span>
+              {measured?.has(rowField[label]) && <Tag className="ml-2" />}
               {value ? <span className="text-brand-muted"> · {value}</span> : null}
-              {unsure.has(rowField[label]) && (
+              {!measured && unsure.has(rowField[label]) && (
                 <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                   provisional
                 </span>

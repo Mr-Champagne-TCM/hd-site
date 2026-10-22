@@ -14,6 +14,8 @@ import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 import { fix } from "../shared/fixMock.mjs";
 import { NOON_NOTE_A, NOON_NOTE_B } from "../shared/fixCopy.mjs";
+import { markedFields } from "../shared/timeSpread.mjs";
+import { Tag, measuredSpread } from "./TimeSpread";
 
 /**
  * "YOUR CHART AT A GLANCE", in the PDFs' order (Jeremy 10/16): the gold box of
@@ -36,6 +38,13 @@ const link = "transition-colors hover:text-brand-teal";
 
 export default function Glance({ data, says = null, showActivations = false }: Props) {
   const provisional = new Set(data.provisional ?? []);
+  /**
+   * MOCK TIME: with a measured spread, only the lines that really change that
+   * day are marked, and the mark sits beside the LABEL (Jeremy 10/22: "next to
+   * section header"). The one line about the time is above, under the three lines.
+   */
+  const spread = measuredSpread(data);
+  const marked = spread ? markedFields(data) : null;
   const rows: Array<[string, string, string, string, keyof SummaryData]> = [
     ["Type", data.type, "Type", typeLink(data.type), "type"],
     ["Strategy", data.strategy, "Strategy", typeLink(data.type), "strategy"],
@@ -46,6 +55,17 @@ export default function Glance({ data, says = null, showActivations = false }: P
   ];
 
   const list = (v: string[] | undefined, none: string) => (v && v.length ? v.join(", ") : none);
+  /** The field behind each values row (mock TIME's tags). */
+  const valueField: Record<string, string> = {
+    Definition: "definition",
+    "Incarnation cross": "incarnationCross",
+    "Defined centers": "definedCenters",
+    "Undefined centers": "undefinedCenters",
+    "Open centers": "openCenters",
+    Channels: "channels",
+    Gates: "gates",
+  };
+  const gates = (data as { activatedGates?: number[] }).activatedGates;
   const values: Array<[string, string, string]> = [
     ["Definition", data.definition, DEFINITION],
     ["Incarnation cross", data.incarnationCross, crossLink(data.incarnationCross)],
@@ -61,6 +81,8 @@ export default function Glance({ data, says = null, showActivations = false }: P
       : ([["Channels", data.channels && data.channels.length ? data.channels.join("\n") : "None", CHANNELS]] as Array<
           [string, string, string]
         >)),
+    // MOCK TIME: the gate list (the tiers mock puts it on every tier), so its tag can be seen.
+    ...(spread && Array.isArray(gates) ? ([["Gates", gates.join(", "), CHANNELS]] as Array<[string, string, string]>) : []),
   ];
   // MOCK FIX 17A: with no birth time the centers and channels are marked provisional too.
   const valueProvisional = (label: string) =>
@@ -90,16 +112,17 @@ export default function Glance({ data, says = null, showActivations = false }: P
                 (i ? "border-t border-brand-gold/15" : "")
               }
             >
-              <dt className="pt-[3px] font-sans text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-gold">
+              <dt className="flex flex-wrap content-start items-baseline self-start gap-x-2 gap-y-1 pt-[3px] font-sans text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-gold">
                 <a href={href} rel="noreferrer" className={link}>
                   {label}
                 </a>
+                {marked?.has(field) && <Tag className="font-normal" />}
               </dt>
               <dd className="text-[17px] leading-relaxed text-brand-paper">
                 {/* A bare value carries no period (W1: the summary's "Projector."); one with its sentence keeps it. */}
                 {sentence ? `${value}.` : value}
                 {sentence ? ` ${sentence}` : ""}
-                {provisional.has(field) && (
+                {!marked && provisional.has(field) && (
                   <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                     provisional
                   </span>
@@ -110,7 +133,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
         })}
       </dl>
 
-      {!data.timeKnown && noonNote && (
+      {!data.timeKnown && noonNote && !spread && (
         <p className="mt-3 rounded-xl border border-brand-gold/30 bg-brand-gold/[0.06] px-4 py-3 text-[15px] leading-relaxed text-brand-paper/90">
           {noonNote}
         </p>
@@ -122,14 +145,15 @@ export default function Glance({ data, says = null, showActivations = false }: P
       <dl>
         {values.map(([label, value, href]) => (
           <div key={label} className="grid gap-1 border-b border-white/[0.06] py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
-            <dt className="pt-[3px] font-sans text-[13px] uppercase tracking-[0.1em] text-brand-muted">
+            <dt className="flex flex-wrap content-start items-baseline self-start gap-x-2 gap-y-1 pt-[3px] font-sans text-[13px] uppercase tracking-[0.1em] text-brand-muted">
               <a href={href} rel="noreferrer" className={link}>
                 {label}
               </a>
+              {marked?.has(valueField[label]) && <Tag />}
             </dt>
             <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">
               {value}
-              {valueProvisional(label) && (
+              {!marked && valueProvisional(label) && (
                 <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                   provisional
                 </span>
@@ -151,6 +175,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
           <summary className="cursor-pointer select-none font-sans text-[14px] font-semibold text-brand-gold">
             {techTitle(sides.reduce((n: number, s: { list: Activation[] }) => n + s.list.length, 0))}{" "}
             <span className="font-normal text-brand-muted">{TECH_TITLE_NOTE}</span>
+            {marked?.has("planetNumbers") && <Tag className="ml-2 inline-block font-normal" />}
           </summary>
           <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-brand-paper/85">{TECH_HOW}</p>
           <dl className="mt-2">
