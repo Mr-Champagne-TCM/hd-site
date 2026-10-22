@@ -330,7 +330,7 @@ export const CASES = [
     bad: [
       { name: "#1: one thing left on a blank form", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Three things left:.*$/m, "One thing left: the day you were born.")), expect: /says one thing is left/ },
       { name: "two things left on a blank form", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Three things left:.*$/m, "Two things left: the place and the time.")), expect: /says two things are left/ },
-      { name: "That's everything over a blank form", plant: (m) => m.edit(m.pages[0], (t) => t.replace("THREE THINGS LEFT", "THAT’S EVERYTHING")), expect: /"That's everything" heading while three things are missing/ },
+      { name: "That's everything over a blank form", plant: (m) => m.edit(m.pages[0], (t) => append(t, "THAT’S EVERYTHING")), expect: /"That's everything" heading while three things are missing/ },
     ],
   },
 
@@ -496,7 +496,7 @@ export const CASES = [
       // Right as it is: a line about expired links in general.
       m.addPage({ id: "readings-site-unknown", kind: "readings-site-unknown" }, `${text.replace(/This link has expired/g, "This link was not found")}\nAn expired link offers a fresh one; this one was never made.\n`);
     },
-    bad: [{ name: "#18: a link that never existed called expired", plant: (m) => m.edit(m.page("readings-site-unknown"), (t) => t.replace("This link was not found", "This link has expired")), expect: /says the link has expired/ }],
+    bad: [{ name: "#18: a link that never existed called expired", plant: (m) => m.edit(m.page("readings-site-unknown"), (t) => append(t, "This link has expired")), expect: /says the link has expired/ }],
   },
 
   /* ------------------------------------------------- #10 #11 #12 ---- */
