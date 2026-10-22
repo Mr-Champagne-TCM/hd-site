@@ -127,7 +127,7 @@ test("'signature' as ordinary English is not judged outside the on / off track c
     assert.equal(check(placed(where, "Listening first is your signature move."), CHART), null, where);
   }
   // A takeaway's sentence is not the tag: only the tag is on / off track content.
-  assert.equal(check(placed("takeaway", "(Sacral) The next time you answer a small question, you might answer in your signature way and notice how it lands, so it is familiar later."), CHART), null);
+  assert.equal(check(placed("takeaway", "(Sacral) The next time you answer a small question, you might answer in your signature way. Notice how it lands, so it is familiar later."), CHART), null);
 });
 
 test("headings, labels and the disclaimer are ours and never judged", () => {

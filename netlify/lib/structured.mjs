@@ -53,6 +53,16 @@ const TRACK_SLOT =
   'ONE sentence, at most 22 words, on how it feels. Never the words "signature" or "not-self": the page says "when it\'s on track" / "when it\'s off track".' +
   // 10/7: Manifestors kept writing "Your frustration..." (a Generator's word).
   " Name the feeling only with the reader's own word from the facts, never another type's.";
+/**
+ * A TRY-THIS LINE (Jeremy 10/21 shape A; 10/22 two sentences). The shape in
+ * words, never a sentence to fill in: on 10/22 eleven delivered lines were
+ * this note's old example copied, and the next prompt's placeholders were
+ * written out as they stood. gemini.mjs refuses a run of 8+ words from here.
+ */
+const TAKEAWAY_SLOT =
+  'TWO sentences. First: the chart feature in parentheses, one time phrase, one small moment, then "you might" and one action, ending with a period. ' +
+  'Second: opens "Notice", says what to notice, then ", so" and why starting small helps. Words of your own, never these.';
+
 const SECTION = {
   type: "OBJECT",
   properties: {
@@ -113,8 +123,10 @@ export const READING_SCHEMA = {
     experimentIntro: S("ONE paragraph: these are invitations to test, not instructions; they are the authority."),
     takeaways: {
       type: "ARRAY",
-      // Shape A (Jeremy 10/21): when, one thing to try, what to notice, why it starts small.
-      items: S("ONE sentence beginning with the chart feature in parentheses, then when, \"you might ...\", what to notice, and \", so ... is familiar when ...\", e.g. \"(Undefined Root center) The next time you feel hurried to finish something small, you might leave it until tomorrow and notice whether the hurry was yours, so the pause is familiar when the pressure is heavier.\""),
+      // Shape A (Jeremy 10/21) in two sentences (10/22: "This sentence division adds
+      // clarity and avoids a needlessly lengthy sentence"). Rules only, no example:
+      // 11 delivered lines on 10/22 were the old example sentence copied.
+      items: S(TAKEAWAY_SLOT),
       minItems: 4,
       maxItems: 4,
     },
@@ -128,6 +140,26 @@ export const READING_SCHEMA = {
     ...SECTION_SLOTS, "experimentIntro", "takeaways",
   ],
 };
+
+/**
+ * EVERY NOTE THE MODEL READS IN THE FORM, one string per slot description, in
+ * schema order. With the prompt, these are what copyProblem (interpretation.mjs)
+ * holds a draft against: a run of 8+ words from either is a copy, not writing.
+ */
+export function schemaNotes(schema = READING_SCHEMA) {
+  const out = [];
+  const walk = (o) => {
+    if (Array.isArray(o)) o.forEach(walk);
+    else if (o && typeof o === "object") {
+      for (const [k, v] of Object.entries(o)) {
+        if (k === "description" && typeof v === "string") out.push(v);
+        else walk(v);
+      }
+    }
+  };
+  walk(schema);
+  return out;
+}
 
 /**
  * WORDS THAT BELONG TO OTHER TYPES. Handed to the model by name, per chart.

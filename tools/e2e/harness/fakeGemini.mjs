@@ -145,10 +145,10 @@ export function placeholderForm(f) {
     // PDF's last page is filled the way a real reading fills it: one-line
     // stand-ins left the last page under 15% and failed pdf-page-fill (10/21).
     takeaways: [
-      `(Authority) [RIG PLACEHOLDER] The next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer, and notice what changes, so the wait is familiar when a heavier choice comes along.`,
-      `(Strategy) [RIG PLACEHOLDER] This week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish and notice how the plan feels an hour later, so the strategy is familiar when more depends on it.`,
-      `(Profile ${f.profile}) [RIG PLACEHOLDER] Over the next few days, in an easy catch-up with a friend, you might let one line of your profile lead the conversation and notice how it is received, so that line is familiar when an opening matters more.`,
-      `(Type) [RIG PLACEHOLDER] Once or twice this week, on something light like a short errand, you might work the way a ${f.type} is built to and notice how your energy holds up afterward, so that pace is familiar when the week is fuller.`,
+      `(Authority) [RIG PLACEHOLDER] The next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer. Notice what changes, so the wait is familiar when a heavier choice comes along.`,
+      `(Strategy) [RIG PLACEHOLDER] This week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish. Notice how the plan feels an hour later, so the strategy is familiar when more depends on it.`,
+      `(Profile ${f.profile}) [RIG PLACEHOLDER] Over the next few days, in an easy catch-up with a friend, you might let one line of your profile lead the conversation. Notice how it is received, so that line is familiar when an opening matters more.`,
+      `(Type) [RIG PLACEHOLDER] Once or twice this week, on something light like a short errand, you might work the way a ${f.type} is built to. Notice how your energy holds up afterward, so that pace is familiar when the week is fuller.`,
     ],
   };
 }

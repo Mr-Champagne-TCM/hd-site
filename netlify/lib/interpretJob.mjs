@@ -32,6 +32,26 @@ import { geminiKind, noteFailure } from "./failures.mjs";
 /** Total asks for one reading when drafts are refused. */
 export const ASKS = 5;
 
+/**
+ * ONE MORE ASK AFTER A TIMEOUT (10/22 AI test round). A Projector / Mental 1/3
+ * chart ran past the 90 s limit on all nine asks; given six minutes, one
+ * answered normally in 136 s. Until now a timeout ended the job and the buyer
+ * waited for the sweep. So a timeout gets ONE re-ask with a longer limit, and
+ * it counts as one of the five asks.
+ */
+export const TIMEOUT_REASK_MS = 150_000;
+/** The ask's own limit in gemini.mjs (generateReading's default). */
+const ASK_MS = 90_000;
+/**
+ * TIME, NOT ONLY ASKS. interpret.mjs is a background function: fifteen minutes,
+ * hard. One ask can take its limit twice (a busy 503, five seconds, one more
+ * try: gemini.mjs), so an ask starts only when that worst case still ends
+ * inside this reading's budget and the caller's deadline. A reading stopped
+ * here is still owed; the sweep asks again later (the job is safe to run twice).
+ */
+export const READING_BUDGET_MS = 8 * 60_000;
+const worstAsk = (limit) => 2 * limit + 5_000;
+
 export async function interpretOne({
   id,
   store,
@@ -43,6 +63,8 @@ export async function interpretOne({
   deliver,
   now = Date.now(),
   generate = generateReading,
+  clock = Date.now,
+  deadline = Infinity,
 }) {
   const reading = await loadReading(store, id, now);
   if (!reading) return { ok: false, reason: "not_found" };
@@ -52,7 +74,12 @@ export async function interpretOne({
 
   // The stored prompt decides the shape: form mode or letter mode.
   const shape = promptShape(prompt);
+  const stop = Math.min(clock() + READING_BUDGET_MS, deadline);
+  const fits = (limit) => clock() + worstAsk(limit) <= stop;
+  // Too little of the caller's time left to finish even one ask: leave it for the next run.
+  if (!fits(ASK_MS)) return { ok: false, reason: "out_of_time" };
   let made = await generate(reading.output, { apiKey, prompt, shape });
+  let reaskedTimeout = false;
   /**
    * UP TO FIVE ASKS ON A REFUSED DRAFT (Jeremy 9/9 + 10/4: refuse and re-ask,
    * five times, instead of rewriting). The first live buyer under the
@@ -60,15 +87,21 @@ export async function interpretOne({
    * never came; another ask costs seconds, leaving it to the net costs the
    * buyer the afternoon. Every refusal is reported with its excerpt.
    */
-  for (let ask = 1; ask < ASKS && !made.ok && made.reason === "malformed"; ask++) {
-    // One refused draft is noise on its own (internal-only); the sweep counts
-    // them, and six in an hour raises reading-failure-rate.
-    await noteFailure(health, "gemini-refused", {
-      detail: made.detail ?? null,
-      excerpt: made.text ?? null,
-      now,
-    });
-    made = await generate(reading.output, { apiKey, prompt, shape });
+  for (let ask = 1; ask < ASKS && !made.ok; ask++) {
+    if (made.reason === "malformed" && fits(ASK_MS)) {
+      // One refused draft is noise on its own (internal-only); the sweep counts
+      // them, and six in an hour raises reading-failure-rate.
+      await noteFailure(health, "gemini-refused", {
+        detail: made.detail ?? null,
+        excerpt: made.text ?? null,
+        now,
+      });
+      made = await generate(reading.output, { apiKey, prompt, shape });
+    } else if (made.reason === "timeout" && !reaskedTimeout && fits(TIMEOUT_REASK_MS)) {
+      // Once only: a second timeout is reported as one, below.
+      reaskedTimeout = true;
+      made = await generate(reading.output, { apiKey, prompt, shape, timeoutMs: TIMEOUT_REASK_MS });
+    } else break;
   }
   if (!made.ok) {
     /**

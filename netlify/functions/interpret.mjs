@@ -33,6 +33,12 @@ import { TRIGGER_HEADER, triggerOk } from "../lib/trigger.mjs";
  * a second pass over the same purchase stops.
  */
 export default async (request) => {
+  /**
+   * Fifteen minutes is the background function's hard limit. Every reading is
+   * handed this deadline (interpretJob starts an ask only when its worst case
+   * still ends before it), so a slow Google can no longer run the job past it.
+   */
+  const deadline = Date.now() + 14 * 60 * 1000;
   const grantSecret = process.env.GRANT_SECRET;
   /**
    * TWO KEYS OPEN THIS DOOR. The sweep inside Netlify derives its token from
@@ -78,6 +84,7 @@ export default async (request) => {
       grantSecret,
       origin,
       deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
+      deadline,
     });
 
   /**

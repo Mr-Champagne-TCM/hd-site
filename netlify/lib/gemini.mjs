@@ -1,5 +1,5 @@
-import { chartFactsOnly, firstProblem, sanitize } from "./interpretation.mjs";
-import { READING_SCHEMA, renderReading, structuredFacts } from "./structured.mjs";
+import { chartFactsOnly, copyProblem, firstProblem, sanitize, tagProblem } from "./interpretation.mjs";
+import { READING_SCHEMA, renderReading, schemaNotes, structuredFacts } from "./structured.mjs";
 
 /**
  * Asking Gemini for the written interpretation.
@@ -136,6 +136,7 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   // "json": the model fills READING_SCHEMA and structured.mjs writes the
   // document. "text": the original letter-shaped prompt. See structured.mjs.
   const json = shape === "json";
+  const facts = chartFactsOnly(output, { form: json }) + (json ? structuredFacts(output) : "");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
@@ -146,9 +147,7 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
       body: JSON.stringify({
         system_instruction: { parts: [{ text: instruction }] },
         // THE ONLY THING THAT LEAVES. See interpretation.mjs.
-        contents: [
-          { role: "user", parts: [{ text: chartFactsOnly(output, { form: json }) + (json ? structuredFacts(output) : "") }] },
-        ],
+        contents: [{ role: "user", parts: [{ text: facts }] }],
         generationConfig: json
           ? {
               temperature: 1,
@@ -209,14 +208,22 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   // of openCentreProblem had never run in production because this call passed
   // four arguments to a function that takes five, and centreStateProblem needs
   // the defined list to catch a reading calling an undefined centre defined.
-  const problem = firstProblem(
-    clean,
-    output?.type,
-    output?.profile,
-    output?.openCenters,
-    output?.undefinedCenters,
-    output?.definedCenters,
-  );
+  const problem =
+    firstProblem(
+      clean,
+      output?.type,
+      output?.profile,
+      output?.openCenters,
+      output?.undefinedCenters,
+      output?.definedCenters,
+    ) ??
+    // 10/22: a try-this tag names a feature this chart really has (channels and
+    // authority are only here, on the chart itself).
+    tagProblem(clean, output) ??
+    // 10/22: words lifted from the instructions are a copy, not a reading. Only
+    // this file knows the prompt, so the check runs here; the facts just sent
+    // (cross name, centers, channel lines) are the reading's own vocabulary.
+    copyProblem(clean, [instruction, ...(json ? schemaNotes() : [])], [facts]);
   // The rejected text travels with the reason, so an incident can show WHAT
   // was refused -- without it a prompt regression is indistinguishable from
   // Google having a bad week.

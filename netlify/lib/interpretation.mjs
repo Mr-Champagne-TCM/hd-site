@@ -222,21 +222,90 @@ export function firstProblem(
  * word and never reaches a main verb is refused. "Waiting for the invitation
  * ensures..." (an -ing subject with its verb) passes, as does "Waiting, you
  * notice..." The same test the local rig judges with (tools/e2e/checks).
+ *
+ * 10/22 (AI test round: 5 of 57 drafts refused for nothing else). The first
+ * version stopped at the first until / who / that and took only an -s verb
+ * right before an article or pronoun, so whole sentences were refused:
+ * "Pausing until something physically meets your energy gives your power
+ * somewhere true to land.", "Telling those who will be affected before you
+ * move clears the path ahead.", "...brings clarity to...". Now a linking word
+ * opens a clause that uses up ITS OWN verb, and the row is whole once a verb is
+ * left over for the -ing subject. "before" / "after" open a clause only with a
+ * pronoun after them ("before you move"); "before action" is a preposition.
+ * All 21 -ing rows that round refused were read by hand: 15 whole sentences
+ * (pass now), 6 fragments (one draft's six rows, still refused).
  */
+const G_CLAUSE = /^(?:that|which|who|whom|whose|when|whenever|where|because|while|if|until|unless|once|though|although|whereas|so)$/;
+const G_CLAUSE_IF_SUBJECT = /^(?:before|after|since|as|till)$/;
+const G_RELATIVE = /^(?:that|which|who)$/;
+const G_SUBJECT = /^(?:you|they|we|i|he|she|it|someone|something|anyone|anything|everyone|everything|nothing|nobody|people)$/;
+const G_DET = /^(?:a|an|the|your|my|his|her|its|their|our|these|those|this|that|many|few|some|all|any|each|every|other|another|no|what|who|which)$/;
+const G_PREP = /^(?:of|in|on|at|for|with|from|into|onto|through|by|about|between|among|toward|towards|without|within|over|under|around|across|after|before|during|like|to)$/;
+const G_ADVERB = /^(?:[a-z]+ly|never|always|often|still|just|even|not|only|already|also|soon)$/;
+const G_AUX = /^(?:is|are|was|were|am|has|had|will|would|can|could|may|might|must|should|shall|does|did|becomes)$/;
+const G_NOT_S = /^(?:always|perhaps|sometimes|towards|afterwards|besides|unless|thus|less|across|whereas|its|this|his|hers|ours|yours|theirs|others|yes|news|series|species|plus|various|numerous|previous|serious|was|has|does|is)$/;
+const G_AFTER_NOUN = /^(?:of|and|or|nor|but|that|who|which)$/;
+const G_OBJECT = /^(?:a|an|the|your|you|yourself|it|its|them|their|his|her|our|us|me|my|this|these|those|what|how|more|less|most)$/;
+const G_LETS = /^(?:allowing|letting|helping|making|having|getting|asking|inviting|encouraging|leaving|watching|seeing|hearing)$/;
+const G_NOT_ING = /^(?:thing|things|something|anything|nothing|everything|morning|evening|spring|string|during|ceiling|king|ring|wing|sing|bring)$/;
+const gIng = (x) => /^[a-z]{2,}ing$/.test(x ?? "") && !G_NOT_ING.test(x);
+const gS = (x) => /^[a-z]{3,}s$/.test(x ?? "") && !/(?:ss|us|is)$/.test(x) && !G_NOT_S.test(x);
+
 export function glanceFragment(v) {
   const s = String(v ?? "").trim();
   if (!/^[A-Z][a-z]+ing\b/.test(s)) return false;
   if (/^[^.;]*?,\s+(?:you|it|they|we|he|she)\s+(?!and\b|or\b)[a-z]+/.test(s)) return false;
-  const w = s.replace(/[“”"(),.;:!?—–]/g, " ").split(/\s+/).filter(Boolean);
-  const CLAUSE = /^(?:that|which|who|whom|whose|when|whenever|where|so|because|while|if|until|unless|once|though|although|than|what)$/i;
-  const NOT_VERB_AFTER = /^(?:a|an|the|your|my|his|her|its|their|our|these|those|this|that|many|few|some|all|any|each|every|other|what|who|which)$/i;
-  const OBJECT = /^(?:a|an|the|your|you|yourself|it|its|them|their|his|her|our|us|me|my|this|these|those|what|how|more|less|most)$/i;
-  const MAIN = /^(?:is|was|becomes|will|can|may|must|might|should|could|would)$/i;
+  const w = s.replace(/[“”"(),.;:!?—–]/g, " ").split(/\s+/).filter(Boolean).map((x) => x.toLowerCase());
+  let used = -1; // the last verb a clause took for itself, when it can take an object ("guides", "will")
+  let lets = G_LETS.test(w[0]);
   for (let i = 1; i < w.length; i++) {
-    if (CLAUSE.test(w[i])) return true;
-    if (NOT_VERB_AFTER.test(w[i - 1])) continue;
-    if (MAIN.test(w[i])) return false;
-    if (/^[a-z]{2,}s$/.test(w[i]) && !/(?:ss|us|is)$/.test(w[i]) && OBJECT.test(w[i + 1] ?? "")) return false;
+    const x = w[i];
+    // "Holding that line ...": "that" after the opener or a preposition points, it opens nothing.
+    const pointing = x === "that" && (i === 1 || G_PREP.test(w[i - 1]));
+    if (!pointing && (G_CLAUSE.test(x) || (G_CLAUSE_IF_SUBJECT.test(x) && G_SUBJECT.test(w[i + 1] ?? "")))) {
+      let j = i + 1;
+      while (j < w.length && G_ADVERB.test(w[j])) j++;
+      if (j >= w.length) break;
+      // "before acting", "until invited": no clause, so no verb of its own.
+      if (gIng(w[j]) || (!G_RELATIVE.test(x) && /ed$/.test(w[j]))) {
+        i = j;
+        continue;
+      }
+      let k;
+      if (G_SUBJECT.test(w[j])) {
+        // "until something arrives", "before you move": the word after the pronoun.
+        k = j + 1;
+        while (k < w.length && G_ADVERB.test(w[k])) k++;
+      } else if (G_RELATIVE.test(x) && !G_DET.test(w[j])) {
+        // "that guides", "who will": the relative word is the subject.
+        k = j;
+      } else {
+        // "when your energy spends", "that your guidance landed": the first verb after its subject.
+        k = j + 1;
+        while (k < w.length && !(G_AUX.test(w[k]) || gS(w[k]) || /^[a-z]{3,}ed$/.test(w[k]))) k++;
+      }
+      used = G_AUX.test(w[k] ?? "") || gS(w[k]) ? k : -1;
+      i = k;
+      continue;
+    }
+    if (G_DET.test(w[i - 1])) continue;
+    if (G_AUX.test(x)) return false;
+    if (gS(x) && !G_PREP.test(w[i - 1])) {
+      let j = i + 1;
+      while (j < w.length && G_ADVERB.test(w[j])) j++;
+      // Right after a clause's own "guides" / "will", an -s word is its object
+      // ("that guides travelers through") unless an object follows it in turn.
+      if (i - 1 === used && !G_OBJECT.test(w[j] ?? "")) continue;
+      // "Allowing opportunities to approach...", "Letting the right questions find
+      // you...": after these openers the first -s word is what is let or allowed.
+      if (lets && !G_OBJECT.test(w[j] ?? "")) {
+        lets = false;
+        continue;
+      }
+      // The -s word is a verb when something follows it that a verb takes: not a
+      // plural noun at the end, before "of" / "and" / "that", or before an -ing word.
+      if (j < w.length && !gIng(w[j]) && !G_AFTER_NOUN.test(w[j])) return false;
+    }
   }
   return true;
 }
@@ -346,11 +415,22 @@ export function spellingProblem(raw) {
  * ordinary moment), ONE thing to try ("you might ..."), what to NOTICE, and the
  * calm-practice tail (", so ... is familiar when ..."). The model writes it and
  * this checks it, as for every other rule. No two may begin the same way.
+ *
+ * TWO SENTENCES (Jeremy 10/22, editing the home-page line: "This sentence
+ * division adds clarity and avoids a needlessly lengthy sentence. Should
+ * express everywhere in try this sentencing."): "... you might <one action>.
+ * Notice whether <what>, so <calm tail>." The first sentence ends after the
+ * thing to try; the second opens "Notice" and carries the tail. A line in the
+ * one-sentence form is refused. Like every rule here, only a NEW draft is
+ * judged (gemini.mjs); readings already stored are never re-checked.
  */
 const SOFT_OPENER = /^(notice|watch|observe|pay attention)\b/i;
 // ", so the pause is familiar when ...", or as one approved line has it, ", which is practice for when ...".
 const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
+// A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
+const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
+const NOTICE_OPENS = /[.!]["'”’)]*\s+Notice\b/;
 
 export function takeawayProblem(raw) {
   const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
@@ -362,15 +442,136 @@ export function takeawayProblem(raw) {
     const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
     if (body === line) return say(`does not begin with the chart feature it comes from, in parentheses`);
     if (SOFT_OPENER.test(body)) return say(`opens with "${SOFT_OPENER.exec(body)[1]}"; it begins with when, not with what to watch`);
+    // "(Sacral), This week, ..." (10/22 round): the time phrase follows the tag directly.
+    if (!/^["“]?[A-Z]/.test(body)) return say(`does not begin with its time phrase right after the (chart feature)`);
     const might = body.search(/\byou might\b/i);
     if (might < 0) return say(`has no "you might ..." (the one thing to try)`);
     if (!WHEN.test(body.slice(0, might))) return say(`does not say when, before the thing to try`);
     const notice = body.slice(might).search(/\bnotice\b/i);
     if (notice < 0) return say(`names nothing to notice`);
-    if (!CALM_TAIL.test(body.slice(might + notice))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
+    const second = body.slice(might).search(NOTICE_OPENS);
+    const ends = body.match(SENTENCE_END)?.length ?? 0;
+    if (second < 0) {
+      return say(
+        ends < 2
+          ? `is one sentence; the thing to try ends with a period and "Notice ..." opens a second sentence`
+          : `does not open its second sentence with "Notice", after the thing to try`,
+      );
+    }
+    if (ends < 2) return say(`does not end its second sentence with a period`);
+    if (ends > 2) return say(`has ${ends} sentences, not two (the thing to try, then "Notice ...")`);
+    if (!CALM_TAIL.test(body.slice(might + second))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);
+  }
+  return null;
+}
+
+/**
+ * A TRY-THIS TAG IS TRUE FOR THIS CHART (10/22 AI test round). Given sample
+ * tags in its instructions, the model wrote them on charts that do not have
+ * them: "(Defined Sacral center)" on a Manifestor, a Projector and a Reflector,
+ * "(Profile 4/1)" on a 1/3, "(Channel 20-34)" on a chart with no channels,
+ * "(Emotional authority)" on a Mental Projector -- 19 of 40 delivered lines in
+ * one batch, every other check passing them. A tag that names a center's
+ * state, the profile or a line, a channel, the authority or the type must
+ * match the chart; a tag naming none of those ("Strategy") is not judged.
+ */
+const TAG_CENTER = { head: "Head", ajna: "Ajna", throat: "Throat", g: "G", heart: "Heart", ego: "Heart", sacral: "Sacral", spleen: "Spleen", splenic: "Spleen", "solar plexus": "Solar Plexus", emotional: "Solar Plexus", root: "Root" };
+const TAG_STATE = /\b(defined|undefined|open)\s+(solar plexus|head|ajna|throat|g|heart|ego|sacral|spleen|splenic|emotional|root)\b/i;
+const TAG_AUTHORITY = [
+  ["Emotional", /\b(?:emotional|solar plexus)\b/i],
+  ["Sacral", /\bsacral\b/i],
+  ["Splenic", /\b(?:splenic|spleen)\b/i],
+  ["Ego", /\b(?:ego|heart)\b/i],
+  ["Self-Projected", /\bself[-\s]projected\b/i],
+  ["Mental", /\b(?:mental|environmental|outer|sounding[-\s]board)\b/i],
+  ["Lunar", /\b(?:lunar|moon)\b/i],
+];
+const TAG_TYPE = /\b(manifesting generator|generator|manifestor|projector|reflector)\b/i;
+
+export function tagProblem(raw, output) {
+  const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
+  for (const line of (section?.paragraphs ?? []).slice(1)) {
+    const tag = /^\(([^)]+)\)/.exec(line)?.[1];
+    if (!tag) continue;
+    const wrong = (why) => `A takeaway's (chart feature) is not this chart's: "(${tag})", ${why}`;
+    const authority = /\bauthority\b/i.test(tag);
+    const s = TAG_STATE.exec(tag);
+    if (s && !authority) {
+      const name = TAG_CENTER[s[2].toLowerCase()];
+      const has = (list) => Array.isArray(list) && list.includes(name);
+      const actual = has(output?.definedCenters) ? "defined" : has(output?.undefinedCenters) ? "undefined" : has(output?.openCenters) ? "open" : null;
+      if (actual && actual !== s[1].toLowerCase()) return wrong(`but the ${name} center is ${actual} here`);
+    }
+    const profile = /^(\d)\/(\d)/.exec(String(output?.profile ?? ""));
+    const p = /\b([1-6])\/([1-6])\b/.exec(tag);
+    if (p && profile && `${p[1]}/${p[2]}` !== `${profile[1]}/${profile[2]}`) return wrong(`but the profile is ${profile[1]}/${profile[2]}`);
+    const ln = /\bline\s+([1-6])\b/i.exec(tag);
+    if (ln && !p && profile && ln[1] !== profile[1] && ln[1] !== profile[2]) return wrong(`but the profile is ${profile[1]}/${profile[2]}`);
+    const ch = /\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/.exec(tag);
+    if (ch && Array.isArray(output?.channels)) {
+      const numbers = output.channels.map((c) => /^(\d+)-(\d+)/.exec(String(c))).filter(Boolean);
+      if (!numbers.some((m) => (m[1] === ch[1] && m[2] === ch[2]) || (m[1] === ch[2] && m[2] === ch[1]))) {
+        return wrong(numbers.length ? `but its channels are ${numbers.map((m) => m[0]).join(", ")}` : "but it has no channels");
+      }
+    }
+    if (authority && output?.authority) {
+      const named = TAG_AUTHORITY.find(([, re]) => re.test(tag));
+      const own = TAG_AUTHORITY.find(([key]) => String(output.authority).startsWith(key));
+      if (named && own && named[0] !== own[0]) return wrong(`but the authority is ${output.authority}`);
+    }
+    const t = TAG_TYPE.exec(tag);
+    if (t && output?.type && !String(output.type).toLowerCase().includes(t[1].toLowerCase())) return wrong(`but the type is ${output.type}`);
+  }
+  return null;
+}
+
+/**
+ * NOTHING COPIED FROM THE INSTRUCTIONS (10/22 AI test round). 12 of 34
+ * delivered readings carried words lifted whole from what the model was
+ * handed: the form note's old example try-this line (11 lines), the prompt's
+ * try-this placeholders written out as they stood, its Type-row example (7 of
+ * 14 Generator readings) and its 6-line example. A run of COPY_RUN words or
+ * more found word for word in the prompt or in a form note is refused.
+ *
+ * Fixed vocabulary is not a copy: a run also found in `allowed` (gemini.mjs
+ * passes the chart facts it sent: the cross's name, the centers, the channel
+ * lines) or in what the page prints itself (headings, labels, the disclaimer)
+ * passes. Words are compared in lower case; punctuation and line breaks do not
+ * count. Only what the model wrote is judged, and only on a new draft.
+ */
+export const COPY_RUN = 8;
+const copyWords = (s) =>
+  String(s ?? "").toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z0-9']+/g, " ").split(" ").filter(Boolean);
+function copyRuns(texts) {
+  const runs = new Set();
+  for (const t of texts) {
+    const w = copyWords(t);
+    for (let i = 0; i + COPY_RUN <= w.length; i++) runs.add(w.slice(i, i + COPY_RUN).join(" "));
+  }
+  return runs;
+}
+
+export function copyProblem(raw, sources = [], allowed = []) {
+  const from = copyRuns(sources);
+  if (!from.size) return null;
+  const ours = copyRuns([...allowed, ...HEADINGS, ...Object.values(SUMMARY_LABELS), SUMMARY_MARKER, DISCLAIMER]);
+  for (const [where, text] of writtenText(raw)) {
+    if (where === "a takeaway's tag") continue;
+    // A try-this line is judged without its "(chart feature)": the tag is the
+    // chart's own vocabulary, and with the opener the prompt asks for it made
+    // "(Undefined Root center) The next time you feel" look copied (10/22).
+    const w = copyWords(where === `"${TAKEAWAYS}"` ? text.replace(/^\([^)]*\)\s*/, "") : text);
+    for (let i = 0; i + COPY_RUN <= w.length; i++) {
+      const run = w.slice(i, i + COPY_RUN).join(" ");
+      if (!from.has(run) || ours.has(run)) continue;
+      let j = i + COPY_RUN;
+      while (j < w.length && from.has(w.slice(j - COPY_RUN + 1, j + 1).join(" "))) j++;
+      const words = w.slice(i, j).join(" ");
+      return `The reading copies ${j - i} words in a row from its instructions, in ${where}: "${words.length > 120 ? words.slice(0, 117) + "..." : words}"`;
+    }
   }
   return null;
 }
