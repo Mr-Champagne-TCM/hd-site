@@ -217,9 +217,20 @@ const US = [
 const usSpelling = (v) =>
   typeof v === "string" ? US.reduce((t, [re, to]) => t.replace(re, to), v) : Array.isArray(v) ? v.map(usSpelling) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, usSpelling(x)])) : v;
 const ON_TRACK = INTERPRETATION[5];
-/** A glance row written again whole: its own words per row, so no two rows read the same (and never "signature"). */
-const ROW_NAME = { type: "type", strategy: "strategy", authority: "authority", profile: "profile", signature: "on-track", notSelf: "off-track" };
-const standInRow = (k) => `The ${ROW_NAME[k] ?? "glance"} row is written again here by the model, as one whole sentence of its own.`;
+/**
+ * A glance row written again whole: each row its own sentence, sharing no run of
+ * words with another (10/22 full rig: a common tail read as a repeat on the
+ * page and the PDF), and never "signature".
+ */
+export const STAND_IN_ROWS = {
+  type: "The rig stood this type row in for the model.",
+  strategy: "A stand-in strategy row sits here for this run.",
+  authority: "This authority line was replaced while the rig ran.",
+  profile: "Here the profile row carries placeholder words instead.",
+  signature: "An on-track row filled in by the test bench.",
+  notSelf: "Off-track wording swapped out during the local check.",
+};
+const standInRow = (k) => STAND_IN_ROWS[k] ?? "A glance row the rig put in place of a refused one.";
 export function nextDraft(form, f) {
   const type = f.type;
   // A sentence the shop refuses: a near miss, or a known word slip (10/21).

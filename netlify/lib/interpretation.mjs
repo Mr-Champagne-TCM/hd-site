@@ -287,6 +287,13 @@ export function glanceFragment(v) {
     if (G_DET.test(w[i - 1])) continue;
     if (G_AUX.test(x)) return false;
     if (gS(x) && !G_PREP.test(w[i - 1])) {
+      // 10/22 full rig: "Carrying a design that guides and directs energy rather than
+      // generating it...": a clause's verb joined by "and" / "or" to another is the
+      // clause's too ("that guides and directs"), not the row's main verb.
+      if (used >= 0 && i - 2 === used && (w[i - 1] === "and" || w[i - 1] === "or")) {
+        used = i;
+        continue;
+      }
       let j = i + 1;
       while (j < w.length && G_ADVERB.test(w[j])) j++;
       // Right after a clause's own "guides" / "will", an -s word is its object

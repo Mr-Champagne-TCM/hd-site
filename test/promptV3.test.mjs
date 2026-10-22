@@ -189,6 +189,9 @@ const WHOLE = [
   "Waiting until something arrives keeps your energy clean.",
   "Letting decisions ripen gives you clarity.",
   "Waiting leads to the clarity you need.",
+  // 10/22 full rig: a clause with two verbs, then the row's own main verb.
+  "Holding a motor that hums and builds keeps you steady.",
+  "Carrying a design that guides and directs energy, you work best when invited.",
 ];
 // ...and fragments (one draft's six rows, then stored and planted ones), still refused.
 const FRAGMENTS = [
@@ -203,6 +206,8 @@ const FRAGMENTS = [
   "Carrying a lantern that guides travelers through the dusk.",
   "Carrying a design that guides others toward clarity, warmth and a quiet sense of their own direction in life.",
   "Letting the right questions find you before you act.",
+  // 10/22 full rig, Rowan's stored Type row: both verbs belong to the "that" clause, none to the row.
+  "Carrying a design that guides and directs energy rather than generating it directly from within.",
 ];
 
 test("GLANCE: whole sentences with -ing subjects pass (the round's false refusals)", () => {

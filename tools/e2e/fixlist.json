@@ -307,6 +307,35 @@
       "plus": ["^Your name and email address The payment page ", "and the name and email from your purchase", "They receive your name and email\\.$"]
     },
     {
+      "id": "13",
+      "about": "the website's sample chart PDFs, rebuilt from today's shop (the-chart.pdf and the eight charts/example-chart-*.pdf): the CHART title and the chart's name for its own title, no \"Timezone:\" on the birth line, HEART over (EGO) in the drawing, the QR caption, the gates row on page 2, and page 3's two library addresses and the coaching card",
+      "docs": "^sample /samples/(the-chart|charts/example-chart-[a-z]+)\\.pdf\\.p[123]$",
+      "minus": [
+        "^HUMAN DESIGN INTERPRETATION by THE CHAMPAGNE METHOD$",
+        "^Jeremy Champagne$",
+        "^[A-Z][a-z]+ \\d{1,2}, \\d{4} · \\d{1,2}:\\d{2} [AP]M · [^·]+ · Timezone: UTC[+-]\\d{2}:\\d{2}$",
+        "^EGOEGO$",
+        "^thechampagnemethod\\.co/library/bodygraphHow to read your bodygraph →$",
+        "^bodygraph\\.” Both are free, at thechampagnemethod\\.co/library/human-design\\.$"
+      ],
+      "plus": [
+        "^HUMAN DESIGN CHART by THE CHAMPAGNE METHOD$",
+        "^Jeremy Champagne’s Human Design$",
+        "^[A-Z][a-z]+ \\d{1,2}, \\d{4} · \\d{1,2}:\\d{2} [AP]M · [^·]+$",
+        "^HEARTHEART$",
+        "^\\(EGO\\)\\(EGO\\)$",
+        "^thechampagnemethod\\.co/library/bodygraphHow to read your bodygraph → Scan: how to read$",
+        "^your bodygraph$",
+        "^ACTIVATED GATES \\d{1,2}(, \\d{1,2})*$",
+        "^bodygraph\\.” Both are free: thechampagnemethod\\.co/library/human-design$",
+        "^and thechampagnemethod\\.co/library/bodygraph\\.$",
+        "^Talk it through with Jeremy$",
+        "^If something in here stirred a question, Jeremy offers thirty minutes, free, with no pitch at$",
+        "^the end\\.$",
+        "^A free 30-minute conversation → thechampagnemethod\\.co/#connect$"
+      ]
+    },
+    {
       "id": "us-dates",
       "about": "privacy: the three change dates in US order (found by the 10/21 check audit)",
       "docs": "^page web-readings-privacy$",
@@ -531,8 +560,11 @@
     },
     {
       "id": "v3-rig",
-      "about": "the rig's stand-in writer after prompt v3 rev l (10/22): the checker refuses square brackets in a try-this line, so a placeholder reading's four try-this lines lose the [RIG PLACEHOLDER] mark (the rest of the reading keeps it) and are two sentences each -- rig words, never a buyer's",
+      "about": "the rig's stand-in writer after prompt v3 rev l (10/22): the checker refuses square brackets in a try-this line, so a placeholder reading's four try-this lines lose the [RIG PLACEHOLDER] mark (the rest of the reading keeps it) and are two sentences each; a refused glance row is stood in for by a sentence of its own per row (no shared run of words, so no row reads as a repeat) -- rig words, never a buyer's",
       "docs": "^(page [a-zA-Z0-9]+-\\d-[a-z-]+-t2(-old\\d)?|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+)$",
+      "plus": [
+        "^(Projector|Generator|Manifestor|Manifesting Generator|Reflector|Wait for the invitation|Wait to respond|Wait to respond, then inform|Inform|Wait a lunar cycle|Self-Projected|Emotional|Sacral|Splenic|Mental|Lunar|Ego Manifested|Ego Projected|\\d/\\d — [A-Za-z /]+|The feeling is \\w+)\\. (The rig stood this type row in for the model|A stand-in strategy row sits here for this run|This authority line was replaced while the rig ran|Here the profile row carries placeholder words instead|An on-track row filled in by the test bench|Off-track wording swapped out during the local check)\\.$"
+      ],
       "sections": [
         { "from": "^(Things to experiment with|THINGS TO EXPERIMENT WITH)$", "to": "^Talk it through with Jeremy$" },
         { "from": "^(Something to try this week|SOMETHING TO TRY THIS WEEK)$", "to": "^Below: " }

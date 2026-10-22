@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateReading } from "../netlify/lib/gemini.mjs";
-import { fakeGemini, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
+import { STAND_IN_ROWS, fakeGemini, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
 import { chartFactsOnly } from "../netlify/lib/interpretation.mjs";
 import { structuredFacts } from "../netlify/lib/structured.mjs";
 import { parseReading } from "../netlify/lib/interpretation.mjs";
@@ -114,11 +114,25 @@ for (const [slug, output] of CHARTS) {
     assert.equal(new Set(take).size, 4, "no try-this line repeated");
     for (const t of take) assert.equal(t.replace(/^\([^)]*\)\s*/, "").split(/(?<=[.!?])\s+(?=[A-Z])/).length, 2, t);
     // Two glance rows written again: each its own words, so the page never says one twice.
-    const rows = r.text.split("\n").filter((l) => /row is written again here by the model/.test(l));
+    const rows = r.text.split("\n").filter((l) => Object.values(STAND_IN_ROWS).some((x) => l.includes(x)));
     assert.ok(rows.length >= 2, `${rows.length} rows written again`);
     assert.equal(new Set(rows).size, rows.length);
   });
 }
+
+test("the stand-in glance rows share no run of five words (the page and PDF never read one twice)", () => {
+  const runs = (s) => {
+    const w = s.toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter(Boolean);
+    return new Set(w.slice(0, -4).map((_, i) => w.slice(i, i + 5).join(" ")));
+  };
+  const rows = Object.values(STAND_IN_ROWS);
+  for (let i = 0; i < rows.length; i++)
+    for (let j = i + 1; j < rows.length; j++) {
+      const shared = [...runs(rows[i])].filter((r) => runs(rows[j]).has(r));
+      assert.deepEqual(shared, [], `${rows[i]} / ${rows[j]}`);
+    }
+  for (const r of rows) assert.doesNotMatch(r, /signature|not-self/i);
+});
 
 test("the placeholder names every value the checker looks for, and marks itself", () => {
   const f = { type: "Projector", strategy: "Wait for the invitation", authority: "Splenic", profile: "2/4", definition: "Single", signature: "Success", notSelf: "Bitterness", cross: "Right Angle Cross of Eden (36/6 | 11/12)", defined: ["Spleen"], undefined: ["Head"], open: ["Heart"], channels: ["18-58 (Judgment)"] };
