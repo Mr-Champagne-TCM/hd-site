@@ -15,7 +15,7 @@
  * Override with HD_WORKSPACE (the folder holding hd-site, hd-engine,
  * the-champagne-method, hd-reading-app) and HD_E2E_HOME (the data home).
  */
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,10 +32,14 @@ function workspace() {
 }
 
 export const WORKSPACE = workspace();
+// Each repo by its real path: a workspace of junctions (a fix branch's worktree
+// standing in for a repo) otherwise reaches Vite through the junction, and Vite
+// on Windows cannot load the website's own files that way, then exits.
+const real = (p) => (existsSync(p) ? realpathSync.native(p) : p);
 export const SIBLINGS = {
-  engine: join(WORKSPACE, "hd-engine"),
-  website: join(WORKSPACE, "the-champagne-method"),
-  phone: join(WORKSPACE, "hd-reading-app"),
+  engine: real(join(WORKSPACE, "hd-engine")),
+  website: real(join(WORKSPACE, "the-champagne-method")),
+  phone: real(join(WORKSPACE, "hd-reading-app")),
 };
 export const HOME = process.env.HD_E2E_HOME ? resolve(process.env.HD_E2E_HOME) : join(WORKSPACE, "hd-e2e");
 export const FIXTURES = join(HOME, "fixtures");

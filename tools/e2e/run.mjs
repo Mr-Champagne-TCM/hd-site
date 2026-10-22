@@ -67,6 +67,8 @@ async function startWebsite() {
   let out = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (out += d));
+  // Its own words, kept: a website that stops mid-run otherwise leaves only "connection refused".
+  child.on("exit", (code, signal) => writeFileSync(join(runDir, "website.log"), `${out}\n[exit ${code ?? signal}]\n`));
   const origin = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 120; i++) {
     try {
