@@ -93,6 +93,7 @@ const lines = (s) =>
  * `chart` is the engine's output as the shop stores it.
  */
 export function buildReadingView(chart, reading) {
+  const MOCK_AI2 = String(globalThis.process?.env?.HD_MOCK_AI2 ?? "").toUpperCase();
   if (typeof reading !== "string" || !reading.trim()) return null;
   const s = sections(reading);
   if ([SUMMARY_MARKER, ...HEADINGS].some((h) => !s.has(h))) return null;
@@ -116,7 +117,9 @@ export function buildReadingView(chart, reading) {
     ...undefinedC.map((c) => ({ title: c, name: c, tag: "", line: CENTER_UNDEFINED[c] ?? "" })),
     ...open.map((c) => ({ title: c, name: c, tag: "", line: CENTER_OPEN[c] ?? "" })),
   ];
-  const centersTakeaway = [lede(INTERPRETATION[3]), lede(INTERPRETATION[4])].filter(Boolean);
+  // MOCK AI2 (throwaway, 10/22): HD_MOCK_AI2=B drops the centers Takeaway box.
+  const centersTakeaway =
+    MOCK_AI2 === "B" ? [] : [lede(INTERPRETATION[3]), lede(INTERPRETATION[4])].filter(Boolean);
 
   // 2. Channels: numbers and name from the chart, direction from channelLines.
   const chans = chart?.channels ?? [];
@@ -165,6 +168,10 @@ export function buildReadingView(chart, reading) {
     /** The reading in the approved order -- see READING_ORDER. */
     reading: READING_ORDER.map(([heading, hasLede]) => {
       const p = lines(s.get(heading));
+      // MOCK AI2 (throwaway, 10/22): HD_MOCK_AI2=A drops the two center
+      // sections' bold opening line (it stays only in Start here's box).
+      const dropLede = MOCK_AI2 === "A" && (heading === INTERPRETATION[3] || heading === INTERPRETATION[4]);
+      if (dropLede) return { heading, lede: null, paragraphs: p.slice(1) };
       return { heading, lede: hasLede ? (p[0] ?? null) : null, paragraphs: hasLede ? p.slice(1) : p };
     }).filter((x) => x.lede || x.paragraphs.length),
     takeaways: lines(s.get(TAKEAWAYS)),
