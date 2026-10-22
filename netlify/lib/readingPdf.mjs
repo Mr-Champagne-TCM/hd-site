@@ -23,9 +23,7 @@ import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import { fix } from "../../shared/fixMock.mjs";
 import { NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
-import { crossName } from "../../shared/crossName.mjs";
 import { gateList } from "../../shared/gateList.mjs";
-import { heartLabel, heartMode } from "../../shared/heartLabel.mjs";
 import { holdsLine, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
   AUTHORITY,
@@ -678,8 +676,8 @@ function bodygraphPage(d, { name, output, birth, qr, tier, addTimeUrl = null }) 
   const raw = typeof c.bodygraphSvg === "string" ? c.bodygraphSvg : null;
   if (raw) {
     try {
-      // W13 (10/22 mock): "HEART (EGO)", as the tables name the center (HD_FIX=W13B two lines, W13C nudged).
-      SVGtoPDF(pdf, printSwap(heartLabel(raw, heartMode(fix))).svg, left, d.y, {
+      // The engine's drawing as drawn: "HEART" over "(EGO)" is the engine's own label since 0.6.0 (W13).
+      SVGtoPDF(pdf, printSwap(raw).svg, left, d.y, {
         width: chartW,
         height: chartH,
         preserveAspectRatio: "xMidYMid meet",
@@ -890,8 +888,8 @@ function glancePage(d, { output, tier, reading }) {
 
   const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
   valueRow("Definition", c.definition ?? "", DEFINITION, "definition");
-  // W14: "Cross of the Vessel of Love", "the" in lowercase like the other names.
-  valueRow("Incarnation cross", crossName(c.incarnationCross), crossLink(c.incarnationCross), "incarnationCross");
+  // The engine's name as it gives it ("Cross of the Vessel of Love" since engine 0.6.0, W14).
+  valueRow("Incarnation cross", c.incarnationCross ?? "", crossLink(c.incarnationCross), "incarnationCross");
   valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS, "definedCenters");
   /**
    * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`

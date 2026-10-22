@@ -7,19 +7,15 @@
  * fix is written in plainly:
  *
  *   17A / 17B  an unknown birth time, told two ways (W4's dash rides with it)
- *   W13B       "HEART (EGO)" on two lines ("HEART" over a smaller "(EGO)");
- *   W13C       "HEART (EGO)" on one line, 10 units left of the engine's spot
- *              (one line at the engine's spot is the default on this branch,
- *              shared/heartLabel.mjs)
  *   TIME       an unknown birth time, measured (mock 10/22): the one line, the
  *              day drawn with its rows, PROVISIONAL only on what changes
  *              (netlify/lib/birthSpread.mjs, shared/timeSpread.mjs)
  *   TIMEBAR    with TIME: the day drawn without rows
  *   TIMEOFFERB with TIME: the second wording of "Found your birth time?"
  *
- * Written in plainly on mock-tiers-1022 (Jeremy's calls, 10/22): 2A / 2B (the
- * summary keeps channels and activated gates, the new tier split), W13 ("HEART
- * (EGO)" on the drawing) and W14 ("Cross of the ...", shared/crossName.mjs).
+ * Written in plainly (Jeremy's calls, 10/22): 2A / 2B (the summary keeps
+ * channels and activated gates, the new tier split), T1B (the chart card); W13
+ * and W14 are the engine's own words from 0.6.0.
  *
  * Same pattern as the earlier `?ux=` / `?mock=` mocks:
  *

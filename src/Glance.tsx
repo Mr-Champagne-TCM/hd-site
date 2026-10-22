@@ -13,7 +13,6 @@ import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs"
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 import { fix } from "../shared/fixMock.mjs";
-import { crossName } from "../shared/crossName.mjs";
 import { gateList } from "../shared/gateList.mjs";
 import { NOON_NOTE_A, NOON_NOTE_B } from "../shared/fixCopy.mjs";
 import { markedFields } from "../shared/timeSpread.mjs";
@@ -69,7 +68,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
   };
   const values: Array<[string, string, string]> = [
     ["Definition", data.definition, DEFINITION],
-    ["Incarnation cross", crossName(data.incarnationCross), crossLink(data.incarnationCross)],
+    ["Incarnation cross", data.incarnationCross, crossLink(data.incarnationCross)],
     ["Defined centers", list(data.definedCenters, "None — Reflector"), CENTERS],
     // Absent on readings stored before the third state existed -- see readingPdf.
     ...(Array.isArray(data.undefinedCenters)

@@ -1,7 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { checkBodygraph } from "./bodygraphGate";
-import { heartLabel, heartMode } from "../shared/heartLabel.mjs";
-import { fix } from "../shared/fixMock.mjs";
 import {
   ASPECT,
   MAX_SCALE,
@@ -60,8 +58,7 @@ export default function Bodygraph({
     );
   }
 
-  // "HEART (EGO)" in place of the engine's "EGO" (W13, 10/22 mock; ?fix=W13B two lines, W13C nudged).
-  return <Viewer svg={heartLabel(verdict.svg, heartMode(fix))} alt={alt ?? "Your bodygraph"} />;
+  return <Viewer svg={verdict.svg} alt={alt ?? "Your bodygraph"} />;
 }
 
 /**
