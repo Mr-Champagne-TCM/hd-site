@@ -25,7 +25,7 @@ const freePort = () =>
       srv.close(() => res(port));
     });
   });
-import { WINDOW_FIELDS, birthDay, birthSpread, valuesOf } from "../../netlify/lib/birthSpread.mjs";
+import { WINDOW_FIELDS, birthDay, birthSpread, valuesOf } from "./oracle.mjs";
 import { holdsLine } from "../../shared/timeSpread.mjs";
 
 const arg = (k, d) => (process.argv.find((a) => a.startsWith(`--${k}=`)) ?? `--${k}=${d}`).split("=").slice(1).join("=");

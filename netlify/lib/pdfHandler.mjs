@@ -86,7 +86,7 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
       reading: reading.reading ?? null,
       // THE BIRTH LINE under the name (Jeremy 10/16).
       birth: reading.birth ?? null,
-      // MOCK TIME: where "add it here" opens -- this link's own page, the time box.
+      // Where "add it here" opens: this link's own page, its time box (#add-time; the time-only form is still to be built).
       addTimeUrl: `${SHOP}r/${encodeURIComponent(token)}#add-time`,
     });
   } catch (e) {

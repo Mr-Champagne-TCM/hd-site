@@ -12,11 +12,9 @@ import {
 import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs";
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
-import { fix } from "../shared/fixMock.mjs";
 import { gateList } from "../shared/gateList.mjs";
-import { NOON_NOTE_A, NOON_NOTE_B } from "../shared/fixCopy.mjs";
 import { markedFields } from "../shared/timeSpread.mjs";
-import { Tag, measuredSpread } from "./TimeSpread";
+import { GatesNote, Tag, measuredSpread } from "./TimeSpread";
 
 /**
  * "YOUR CHART AT A GLANCE", in the PDFs' order (Jeremy 10/16): the gold box of
@@ -40,9 +38,12 @@ const link = "transition-colors hover:text-brand-teal";
 export default function Glance({ data, says = null, showActivations = false }: Props) {
   const provisional = new Set(data.provisional ?? []);
   /**
-   * MOCK TIME: with a measured spread, only the lines that really change that
-   * day are marked, and the mark sits beside the LABEL (Jeremy 10/22: "next to
-   * section header"). The one line about the time is above, under the three lines.
+   * AN UNKNOWN BIRTH TIME (Jeremy 10/22): with a measured spread, only the
+   * lines that really change that day are marked, and the mark sits beside the
+   * LABEL ("next to section header"); the gates always, with their note. The
+   * one line about the time is above, under the three lines. A record with no
+   * spread (older, or the spread could not be had) keeps the engine's marks,
+   * after the value, and its note under the box.
    */
   const spread = measuredSpread(data);
   const marked = spread ? markedFields(data) : null;
@@ -56,7 +57,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
   ];
 
   const list = (v: string[] | undefined, none: string) => (v && v.length ? v.join(", ") : none);
-  /** The field behind each values row (mock TIME's tags). */
+  /** The field behind each values row (for the PROVISIONAL tags). */
   const valueField: Record<string, string> = {
     Definition: "definition",
     "Incarnation cross": "incarnationCross",
@@ -90,11 +91,8 @@ export default function Glance({ data, says = null, showActivations = false }: P
       ? ([["Activated gates", gateList(data.activatedGates), CHANNELS]] as Array<[string, string, string]>)
       : []),
   ];
-  // MOCK FIX 17A: with no birth time the centers and channels are marked provisional too.
-  const valueProvisional = (label: string) =>
-    fix("17A") && data.timeKnown === false && /centers$|^Channels$/.test(label);
-  // MOCK FIX 17: one sentence for an unknown time, the same on the page, the PDF and the phone.
-  const noonNote = fix("17A") ? NOON_NOTE_A : fix("17B") ? NOON_NOTE_B : data.note;
+  // The engine's note for an unknown time, on a record with no spread; its dash written as a dash (W4).
+  const noonNote = data.note ? String(data.note).replace(/ - /g, " — ") : null;
 
   const sides = SIDES.map((s: { key: string; label: string; sub: string }) => ({
     ...s,
@@ -159,11 +157,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
             </dt>
             <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">
               {value}
-              {!marked && valueProvisional(label) && (
-                <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
-                  provisional
-                </span>
-              )}
+              {valueField[label] === "gates" && marked?.has("gates") && <GatesNote />}
             </dd>
           </div>
         ))}

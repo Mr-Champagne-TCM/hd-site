@@ -1,8 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { WINDOW_FIELDS, birthDay, birthSpread, localInstant, valueAt, wallAt, wallMinute } from "../netlify/lib/birthSpread.mjs";
+import { readFileSync } from "node:fs";
 import {
-  graphRows,
+  WINDOW_FIELDS as ORACLE_FIELDS,
+  birthDay,
+  birthSpread,
+  birthSpread as oracleSpread,
+  localInstant,
+  valueAt,
+  wallAt,
+  wallMinute,
+} from "../tools/time-spread/oracle.mjs";
+import { WINDOW_FIELDS, shapeProblem } from "../netlify/lib/birthSpread.mjs";
+import {
+  ADD_TIME_HASH,
+  GATES_NOTE,
   holdsLine,
   markedFields,
   offerLine,
@@ -15,11 +27,15 @@ import {
 import { handleChart } from "../netlify/lib/handler.mjs";
 
 /**
- * MOCK TIME (Jeremy 10/22): the unknown-time spread. These tests run against a
- * MADE-UP sky -- 26 activations whose gates move at chosen instants -- so every
- * claim (which values change, the window, each stretch, to the minute) has a
- * known answer. The real engine is proved separately and at scale by
- * tools/time-spread/property.mjs.
+ * AN UNKNOWN BIRTH TIME (Jeremy's calls, 10/22). Three parts:
+ *   - the ORACLE (tools/time-spread/oracle.mjs, the mock's scan, now a test
+ *     tool only) on a MADE-UP sky -- 26 activations whose gates move at chosen
+ *     instants -- so every claim (which values change, the window, each
+ *     stretch, to the minute) has a known answer;
+ *   - the words and the bar (shared/timeSpread.mjs);
+ *   - the shop's ONE engine call (netlify/lib/birthSpread.mjs), against a fake
+ *     engine whose /v1/spread answers with the oracle.
+ * The real engine's endpoint is proved at scale by tools/time-spread/property.mjs.
  */
 
 const MIN = 60_000;
@@ -259,211 +275,197 @@ test("marked: what changes, plus the gates and the 26 activations; nothing with 
   assert.deepEqual([...markedFields({ ...out, timeKnown: true })], []);
 });
 
-test("the offer: a request in Jeremy's voice, once and free, never 'the shop', in two wordings", () => {
+test("the offer, option A: a request in Jeremy's voice, once and free, never 'the shop'", () => {
   for (const tier of [0, 1, 2]) {
-    for (const v of ["A", "B"]) {
-      const t = offerText(tier, v);
-      assert.ok(!/\bshop\b/i.test(t), t);
-      assert.match(t, /once/);
-      assert.match(t, /free|no cost/);
-      assert.equal(offerLine(tier, v).link, "add it here");
-    }
+    const t = offerText(tier);
+    assert.ok(!/\bshop\b/i.test(t), t);
+    assert.match(t, /^Found your birth time\? You’re welcome to add it here, once and free — /);
+    assert.equal(offerLine(tier).link, "add it here");
   }
-  assert.match(offerText(2, "A"), /your chart and your reading are redone from it\.$/);
-  assert.match(offerText(1, "A"), /your chart is redone from it\.$/);
-  assert.match(offerText(2, "B"), /^If you find your birth time later, I’d be glad to redo your chart and your reading/);
+  assert.match(offerText(2), /your chart and your reading are redone from it\.$/);
+  assert.match(offerText(1), /your chart is redone from it\.$/);
+  assert.match(offerText(0), /your summary is redone from it\.$/);
+  assert.equal(ADD_TIME_HASH, "#add-time");
+});
+
+test("the gates' short note says why they are marked even inside the hours the line names", () => {
+  assert.equal(GATES_NOTE, "The Moon moves to a new gate about every ten hours, so this list can change even where the rest of the chart holds.");
 });
 
 /* -------------------------------------------------------- the drawing */
 
-test("rows: at most three, the big three first, the centers only when they move together", () => {
-  const s = {
-    ...spread([535, 720]),
-    changes: ["type", "authority", "profile", "definition", "definedCenters", "undefinedCenters"],
-    segments: {
-      type: [[0, "Generator"], [737, "Projector"]],
-      authority: [[0, "Sacral"], [500, "Emotional"]],
-      profile: [[0, "1/3"], [535, "1/4"], [721, "2/4"]],
-      definition: [[0, "Single"], [737, "Split"]],
-      definedCenters: [[0, "Sacral"], [737, "Ajna, Head, Sacral"]],
-      undefinedCenters: [[0, "Ajna, Head"], [737, ""]],
-    },
-  };
-  const rows = graphRows(s);
-  assert.deepEqual(rows.map((r) => r.label), ["Type", "Authority", "Profile"]);
-  assert.deepEqual(rows[2].segments.map((x) => [x.value, x.noon]), [["1/3", false], ["1/4", true], ["2/4", false]]);
-  const centersOnly = { ...s, changes: ["definedCenters", "undefinedCenters"], segments: { definedCenters: s.segments.definedCenters, undefinedCenters: s.segments.undefinedCenters } };
-  const c = graphRows(centersOnly);
-  assert.deepEqual(c.map((r) => r.label), ["Head, Ajna"], "named top to bottom, as the bodygraph has them");
-  assert.deepEqual(c[0].segments.map((x) => x.value), ["undefined", "defined"]);
-});
-
-test("every edge of the gold stretch is where a drawn row changes (Boise: a Heart center ends it)", () => {
-  const s = {
-    ...spread([479, 1060]),
-    changes: ["authority", "profile", "definedCenters", "undefinedCenters", "channels"],
-    segments: {
-      authority: [[0, "Emotional"], [479, "Sacral"]],
-      profile: [[0, "3/5"], [145, "3/6"], [327, "4/6"]],
-      definedCenters: [[0, "Ajna, Head, Sacral, Solar Plexus, Throat"], [479, "Ajna, Head, Heart, Sacral, Throat"], [1061, "Ajna, Head, Sacral, Throat"]],
-      undefinedCenters: [[0, "G, Heart, Root, Spleen"], [479, "G, Root, Solar Plexus, Spleen"], [1061, "G, Heart, Root, Solar Plexus, Spleen"]],
-      channels: [[0, "12-22, 20-34, 35-36, 47-64"], [319, "20-34, 35-36, 47-64"], [479, "20-34, 21-45, 47-64"], [1061, "20-34, 47-64"]],
-    },
-  };
-  const rows = graphRows(s);
-  assert.deepEqual(rows.map((r) => r.label), ["Authority", "Profile", "Heart"]);
-  assert.deepEqual(rows[2].segments.map((x) => [x.start, x.value]), [[0, "undefined"], [479, "defined"], [1061, "undefined"]]);
-});
-
-test("the drawing: the noon marker, a bar, the rows when asked, escaped words, no NaN", () => {
+test("the drawing is the bar only: the noon marker, the gold stretch, the clock, escaped words, no NaN", () => {
   const s = { ...spread([31, 870]), segments: { profile: [[0, "2/5 <&>"], [31, "3/5"], [871, "3/6"]] } };
   for (const width of [340, 640]) {
-    const withRows = spreadSvg(s, { width, rows: true }).svg;
-    const bare = spreadSvg(s, { width, rows: false }).svg;
-    for (const svg of [withRows, bare]) {
-      assert.ok(svg.startsWith("<svg"));
-      assert.ok(!/NaN|undefined/.test(svg), svg.slice(0, 200));
-      assert.match(svg, />cast at noon</);
-      assert.match(svg, />12 AM</);
-      assert.match(svg, />12 PM</);
-    }
-    assert.match(withRows, /2\/5 &lt;&amp;&gt;/);
-    assert.ok(!/Profile|PROFILE/.test(bare), "no rows without rows");
-    assert.ok(/Profile|PROFILE/.test(withRows));
-    assert.ok(!/%/.test(withRows.replace(/aria-label="[^"]*"/, "")), "no percentages");
+    const { svg } = spreadSvg(s, { width });
+    assert.ok(svg.startsWith("<svg"));
+    assert.ok(!/NaN|undefined/.test(svg), svg.slice(0, 200));
+    assert.match(svg, />cast at noon</);
+    for (const t of ["12 AM", "6 AM", "12 PM", "6 PM"]) assert.match(svg, new RegExp(`>${t}<`));
+    assert.ok(!/Profile|PROFILE|2\/5/.test(svg.replace(/aria-label="[^"]*"/, "")), "no rows: the values are not drawn");
+    assert.ok(!/%/.test(svg.replace(/aria-label="[^"]*"/, "")), "no percentages");
   }
   const calm = spreadSvg({ ...s, changes: [], segments: {}, window: [0, 1439] }, { width: 640 }).svg;
   assert.match(calm, />the same all day</);
   const paper = spreadSvg(s, { width: 504, palette: "paper", size: 7.5 });
-  assert.ok(paper.height > 30 && paper.height < 140, `${paper.height}`);
+  assert.ok(paper.height > 20 && paper.height < 60, `${paper.height}`);
 });
 
 /* ------------------------------------------------------- the handler */
 
+/**
+ * A FAKE ENGINE with both doors: /v1/chart (the noon chart, or an exact
+ * instant) and /v1/spread, which answers what the real one does -- the
+ * oracle's scan of the made-up sky, in the wire shape, scoped to the tier
+ * (no channel stretches below the chart tier, as the engine's SpreadScope).
+ */
 function engineFrom(cast) {
   const calls = [];
-  const fn = async ({ birth, tier }) => {
-    calls.push({ birth, tier });
+  const chart = async ({ birth, tier }) => {
+    calls.push({ door: "chart", birth, tier });
     if (birth.utc) return { ok: true, status: 200, payload: await cast(birth.utc) };
-    // The noon chart, as the engine casts it (local noon in the zone).
     const noon = localInstant(Date.parse(birth.date + "T12:00:00Z"), birth.zone);
     return { ok: true, status: 200, payload: { ...(await cast(new Date(noon).toISOString())), timeKnown: false } };
   };
-  fn.calls = calls;
-  return fn;
+  const spread = async ({ birth, tier }) => {
+    calls.push({ door: "spread", birth, tier });
+    const s = await oracleSpread({ date: birth.date, zone: birth.zone, cast });
+    const { casts, ms, ...wire } = s;
+    if (tier < 1) {
+      wire.changes = wire.changes.filter((f) => f !== "channels");
+      delete wire.segments.channels;
+    }
+    return { ok: true, status: 200, payload: wire };
+  };
+  chart.calls = calls;
+  spread.calls = calls;
+  return { chart, spread, calls };
 }
+
 const counter = () => {
   const m = new Map();
   return { keyFor: async (ip) => ip, load: async (k) => m.get(k) ?? [], save: async (k, v) => m.set(k, v) };
 };
 
-test("the chart request works the spread out once, with the noon chart, when the switch is on", async () => {
-  const prev = process.env.HD_FIX;
-  process.env.HD_FIX = "TIME";
-  try {
-    const engine = engineFrom(sky([[at(DATE, ZONE, 6), "pSUN.line", 4]]));
-    const res = await handleChart({
-      body: JSON.stringify({ birth: { date: DATE, zone: ZONE, timeKnown: false } }),
-      ip: "203.0.113.9",
-      now: Date.now(),
-      store: counter(),
-      engine,
-    });
+const ask = (e, birth, extra = {}) =>
+  handleChart({
+    body: JSON.stringify({ birth }),
+    ip: `203.0.113.${Math.floor(Math.random() * 200) + 20}`,
+    now: Date.now(),
+    store: counter(),
+    engine: e.chart,
+    spread: e.spread,
+    ...extra,
+  });
+
+test("ONE ENGINE CALL FOR THE SPREAD: an unknown time asks /v1/spread once, with the date and zone only", async () => {
+  const e = engineFrom(sky([[at(DATE, ZONE, 6), "pSUN.line", 4]]));
+  const res = await ask(e, { date: DATE, zone: ZONE, timeKnown: false });
+  assert.equal(res.status, 200);
+  const out = JSON.parse(res.body);
+  assert.equal(out.timeSpread.ok, true);
+  assert.deepEqual(out.timeSpread.window, [6, 1439]);
+  assert.deepEqual(e.calls.map((c) => c.door), ["chart", "spread"], "one chart, one spread, nothing else");
+  const sp = e.calls[1];
+  assert.deepEqual(sp.birth, { date: DATE, zone: ZONE, timeKnown: false }, "the birth without the time");
+  assert.equal(sp.tier, e.calls[0].tier, "the spread is asked at the chart's own tier");
+  // What the record keeps is the wire shape, nothing more.
+  assert.deepEqual(Object.keys(out.timeSpread).sort(), ["changes", "clock", "gates", "minutes", "noon", "ok", "segments", "v", "window"]);
+});
+
+test("a known time asks for no spread: one engine call", async () => {
+  const e = engineFrom(sky());
+  const res = await ask(e, { date: DATE, zone: ZONE, time: "08:00", timeKnown: true });
+  assert.equal(JSON.parse(res.body).timeSpread, undefined);
+  assert.deepEqual(e.calls.map((c) => c.door), ["chart"]);
+});
+
+test("the summary asks at the chart tier too (it shows channels now), so channel stretches ride with it", async () => {
+  const e = engineFrom(sky([[at(DATE, ZONE, 861), "dMOON", 64]]));
+  const res = await ask(e, { date: DATE, zone: ZONE, timeKnown: false });
+  const out = JSON.parse(res.body);
+  assert.equal(e.calls[1].tier, 1);
+  assert.ok(Array.isArray(out.channels), "the summary carries its channels");
+  assert.ok(out.timeSpread.changes.includes("channels"));
+  assert.equal(out.bodygraphSvg, undefined, "and still no drawing");
+});
+
+test("A SPREAD THAT IS NOT ABOUT THIS CHART IS NOT KEPT: its noon must be the stored chart", async () => {
+  const e = engineFrom(sky([[at(DATE, ZONE, 30), "pSUN.line", 4]]));
+  // The engine answering the spread from another version: its noon Profile differs.
+  const other = async (req) => {
+    const r = await e.spread(req);
+    r.payload.segments.profile = [[0, "3/5"], [30, "4/6"]];
+    return r;
+  };
+  const notes = [];
+  const res = await ask(e, { date: DATE, zone: ZONE, timeKnown: false }, { spread: other, report: async (r) => notes.push(r) });
+  assert.equal(res.status, 200);
+  assert.equal(JSON.parse(res.body).timeSpread, undefined);
+  assert.deepEqual(notes.map((n) => n.kind), ["chart-time-spread"]);
+  assert.match(notes[0].detail, /noon profile differs/);
+  // And the engine's own "ok: false" is refused the same way.
+  const notOk = async (req) => {
+    const r = await e.spread(req);
+    r.payload.ok = false;
+    return r;
+  };
+  const res2 = await ask(e, { date: DATE, zone: ZONE, timeKnown: false }, { spread: notOk });
+  assert.equal(JSON.parse(res2.body).timeSpread, undefined);
+});
+
+test("a spread that cannot be had never stops the chart, and is reported (refused, malformed, thrown)", async () => {
+  const e = engineFrom(sky());
+  const cases = [
+    async () => ({ ok: false, status: 503, payload: null }),
+    async () => ({ ok: true, status: 200, payload: { v: 1, ok: true, minutes: 1440 } }),
+    async () => {
+      throw Object.assign(new Error("slow"), { name: "TimeoutError" });
+    },
+  ];
+  for (const spread of cases) {
+    const notes = [];
+    const res = await ask(e, { date: DATE, zone: ZONE, timeKnown: false }, { spread, report: async (r) => notes.push(r) });
     assert.equal(res.status, 200);
     const out = JSON.parse(res.body);
-    assert.equal(out.timeSpread.ok, true);
-    assert.deepEqual(out.timeSpread.window, [6, 1439]);
-    assert.ok(engine.calls.slice(1).every((c) => c.tier === 2 && c.birth.utc && !c.birth.date), "spread casts are exact instants");
-    // A known time: no spread, one engine call.
-    const known = engineFrom(sky());
-    const r2 = await handleChart({
-      body: JSON.stringify({ birth: { date: DATE, zone: ZONE, time: "08:00", timeKnown: true } }),
-      ip: "203.0.113.10",
-      now: Date.now(),
-      store: counter(),
-      engine: known,
-    });
-    assert.equal(JSON.parse(r2.body).timeSpread, undefined);
-    assert.equal(known.calls.length, 1);
-  } finally {
-    if (prev === undefined) delete process.env.HD_FIX;
-    else process.env.HD_FIX = prev;
+    assert.equal(out.timeSpread, undefined);
+    assert.equal(out.type, "Generator", "the chart itself is untouched");
+    assert.deepEqual(notes.map((n) => n.kind), ["chart-time-spread"]);
+    assert.ok(!/1985|Chicago/.test(notes[0].detail), "no birth in the note");
   }
 });
 
-test("a summary (no channels bought) keeps no channel stretches in its spread", async () => {
-  const prev = process.env.HD_FIX;
-  process.env.HD_FIX = "TIME";
-  try {
-    const inner = engineFrom(sky([[at(DATE, ZONE, 861), "dMOON", 64]]));
-    const engine = async (req) => {
-      const r = await inner(req);
-      if (req.birth.utc) return r;
-      const { channels, channelLines, activatedGates, personality, design, ...summary } = r.payload;
-      return { ...r, payload: summary };
-    };
-    const res = await handleChart({
-      body: JSON.stringify({ birth: { date: DATE, zone: ZONE, timeKnown: false } }),
-      ip: "203.0.113.13",
-      now: Date.now(),
-      store: counter(),
-      engine,
-    });
-    const s = JSON.parse(res.body).timeSpread;
-    assert.ok(s.changes.includes("definedCenters"));
-    assert.ok(!s.changes.includes("channels"));
-    assert.equal(s.segments.channels, undefined);
-    assert.ok(!/\d+-\d+/.test(JSON.stringify(s)), "no channel numbers anywhere in it");
-  } finally {
-    if (prev === undefined) delete process.env.HD_FIX;
-    else process.env.HD_FIX = prev;
-  }
+test("no spread door passed (an older caller): the chart is made as before", async () => {
+  const e = engineFrom(sky());
+  const res = await handleChart({
+    body: JSON.stringify({ birth: { date: DATE, zone: ZONE, timeKnown: false } }),
+    ip: "203.0.113.12",
+    now: Date.now(),
+    store: counter(),
+    engine: e.chart,
+  });
+  assert.equal(JSON.parse(res.body).timeSpread, undefined);
+  assert.deepEqual(e.calls.map((c) => c.door), ["chart"]);
 });
 
-test("a spread that cannot be made never stops the chart, and is reported", async () => {
-  const prev = process.env.HD_FIX;
-  process.env.HD_FIX = "TIME";
-  try {
-    let n = 0;
-    const engine = async ({ birth }) =>
-      birth.utc && ++n > 20 ? { ok: false, status: 503, payload: null } : { ok: true, status: 200, payload: await sky()(birth.utc ?? "1985-06-25T17:00:00Z") };
-    const notes = [];
-    const res = await handleChart({
-      body: JSON.stringify({ birth: { date: DATE, zone: ZONE, timeKnown: false } }),
-      ip: "203.0.113.11",
-      now: Date.now(),
-      store: counter(),
-      engine,
-      report: async (r) => notes.push(r),
-    });
-    assert.equal(res.status, 200);
-    assert.equal(JSON.parse(res.body).timeSpread, undefined);
-    assert.deepEqual(notes.map((x) => x.kind), ["chart-time-spread"]);
-  } finally {
-    if (prev === undefined) delete process.env.HD_FIX;
-    else process.env.HD_FIX = prev;
-  }
+test("the shape check refuses what a page could not draw", () => {
+  const good = spread([31, 870]);
+  assert.equal(shapeProblem(good), null);
+  assert.match(shapeProblem({ ...good, v: 2 }), /version/);
+  assert.match(shapeProblem({ ...good, window: [800, 900] }), /window/);
+  assert.match(shapeProblem({ ...good, changes: ["gates"] }), /unknown change/);
+  assert.match(shapeProblem({ ...good, segments: { profile: [[5, "2/5"], [31, "3/5"]] } }), /out of order/);
+  assert.match(shapeProblem({ ...good, gates: "maybe" }), /gates/);
+  assert.match(shapeProblem({ ...good, minutes: 99 }), /minutes/);
 });
 
-test("with the switch off, an unknown time is charted exactly as today: one engine call, no spread", async () => {
-  const prev = process.env.HD_FIX;
-  delete process.env.HD_FIX;
-  try {
-    const engine = engineFrom(sky());
-    const res = await handleChart({
-      body: JSON.stringify({ birth: { date: DATE, zone: ZONE, timeKnown: false } }),
-      ip: "203.0.113.12",
-      now: Date.now(),
-      store: counter(),
-      engine,
-    });
-    assert.equal(engine.calls.length, 1);
-    assert.equal(JSON.parse(res.body).timeSpread, undefined);
-  } finally {
-    if (prev !== undefined) process.env.HD_FIX = prev;
-  }
+test("NOTHING IN THE SHOP CASTS A DAY: netlify/ has no scan, and the oracle lives in tools/", () => {
+  const src = readFileSync("netlify/lib/birthSpread.mjs", "utf8");
+  assert.doesNotMatch(src, /\bcast\(|step = 10|limiter\(/);
+  assert.match(readFileSync("netlify/functions/chart.mjs", "utf8"), /\/v1\/spread/);
 });
 
-test("every window field is one the shop shows", () => {
-  assert.deepEqual(WINDOW_FIELDS.length, 12);
+test("every window field is one the shop shows, and the client and the oracle agree on them", () => {
+  assert.equal(WINDOW_FIELDS.length, 12);
+  assert.deepEqual([...WINDOW_FIELDS], [...ORACLE_FIELDS]);
 });

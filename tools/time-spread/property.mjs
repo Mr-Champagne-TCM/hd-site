@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * THE UNKNOWN-TIME SPREAD, PROVED AGAINST THE ENGINE (mock, Jeremy 10/22:
- * "We demonstrate confidence with these offers, so lets certainly be competent").
+ * THE UNKNOWN-TIME SPREAD, PROVED AGAINST THE ENGINE (Jeremy 10/22: "We
+ * demonstrate confidence with these offers, so lets certainly be competent").
  *
  * For hundreds of MADE-UP births (dates 1940-2010, zones all over the world:
  * southern hemisphere, half- and three-quarter-hour zones, DST-change days),
- * runs netlify/lib/birthSpread.mjs exactly as the shop would, then casts the
+ * gets the spread the way the shop does -- ONE POST /v1/spread through
+ * netlify/lib/birthSpread.mjs (engine 0.6.0) -- or, with --source=oracle, from
+ * the test oracle's own scan (tools/time-spread/oracle.mjs), then casts the
  * birth day densely, independently, and checks every claim it made:
  *
  *   A. REAL TIME: every 5 minutes of the real day (23/25 hours on DST days),
@@ -17,8 +19,8 @@
  *        3. every value at every cast equals what the spread says it is then;
  *        4. the values marked PROVISIONAL are exactly the ones seen changing;
  *        5. "the same all day" only when nothing was seen changing;
- *        6. the drawing: at most three rows, and each edge of the gold stretch
- *           is where one of its rows changes (nothing ends unexplained).
+ *        6. (engine source) the engine's spread equals the oracle's, field for
+ *           field: two independent scans of the same day agree.
  *   B. THE CUSTOMER'S WAY: every 5 minutes of the wall clock, cast as a typed
  *      time (date + HH:MM + zone, as the shop sends it, the engine's own zone
  *      rules), compared with what the spread claims for that typed time.
@@ -26,7 +28,7 @@
  * Needs Java (the local engine, tools/e2e/harness/engine.mjs). Nothing leaves
  * this machine. Births are random but seeded, so a run can be repeated.
  *
- *   node tools/time-spread/property.mjs [--n=320] [--seed=1022] [--timing=30] [--out=<dir>]
+ *   node tools/time-spread/property.mjs [--n=320] [--seed=1022] [--timing=30] [--out=<dir>] [--source=engine|oracle]
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -42,8 +44,9 @@ const freePort = () =>
       srv.close(() => res(port));
     });
   });
-import { WINDOW_FIELDS, birthDay, birthSpread, localInstant, valueAt, valuesOf } from "../../netlify/lib/birthSpread.mjs";
-import { graphRows, holdsLine } from "../../shared/timeSpread.mjs";
+import { WINDOW_FIELDS, birthDay, birthSpread, localInstant, valueAt, valuesOf } from "./oracle.mjs";
+import { measureSpread } from "../../netlify/lib/birthSpread.mjs";
+import { holdsLine } from "../../shared/timeSpread.mjs";
 
 const arg = (k, d) => (process.argv.find((a) => a.startsWith(`--${k}=`)) ?? `--${k}=${d}`).split("=").slice(1).join("=");
 const N = Number(arg("n", 320));
@@ -57,6 +60,9 @@ const TIMING = Number(arg("timing", 30));
  * (a steady value marked).
  */
 const MUTATE = arg("mutate", "");
+/** Where the spread under test comes from: the engine's endpoint (what the shop uses) or the oracle. */
+const SOURCE = arg("source", "engine");
+if (!["engine", "oracle"].includes(SOURCE)) throw new Error("--source=engine|oracle");
 const OUT = resolve(arg("out", "time-spread-out"));
 mkdirSync(OUT, { recursive: true });
 
@@ -155,6 +161,31 @@ async function ask(birth, tier = 2) {
     }
   }
 }
+/** The engine's POST /v1/spread, in the shape the shop's client takes ({ ok, status, payload }). */
+let spreadCalls = 0;
+async function spreadDoor(payload) {
+  spreadCalls++;
+  const r = await fetch(`${engine.url}/v1/spread`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Engine-Key": engine.key },
+    body: JSON.stringify(payload),
+  });
+  return { ok: r.ok, status: r.status, payload: await r.json().catch(() => null) };
+}
+/** The spread under test, and the oracle's (engine source: both, to compare). */
+async function spreadFor(b, noonChart, concurrency) {
+  if (SOURCE === "oracle") {
+    const s = await birthSpread({ date: b.date, zone: b.zone, cast: (utc) => ask({ utc }), noonChart, concurrency });
+    return { s, oracle: null };
+  }
+  const t0 = Date.now();
+  const got = await measureSpread({ ask: spreadDoor, birth: { date: b.date, zone: b.zone }, tier: 2, chart: noonChart });
+  const ms = Date.now() - t0;
+  if (!got.spread) throw new Error(`the engine's spread was refused: ${got.why}`);
+  const oracle = await birthSpread({ date: b.date, zone: b.zone, cast: (utc) => ask({ utc }), noonChart, concurrency });
+  return { s: { ...got.spread, casts: 1, ms }, oracle };
+}
+
 function pool(n) {
   let active = 0;
   const q = [];
@@ -180,8 +211,13 @@ async function prove(b, { concurrency = 8 } = {}) {
   const noonChart = await ask({ date: b.date, zone: b.zone, timeKnown: false });
   const noon = valuesOf(noonChart);
   const t0 = Date.now();
-  const s = await birthSpread({ date: b.date, zone: b.zone, cast: (utc) => ask({ utc }), noonChart, concurrency });
-  out.ms = Date.now() - t0;
+  const { s, oracle } = await spreadFor(b, noonChart, concurrency);
+  out.ms = s.ms ?? Date.now() - t0;
+  if (oracle) {
+    for (const k of ["minutes", "noon", "window", "changes", "segments", "clock", "gates"]) {
+      if (JSON.stringify(s[k]) !== JSON.stringify(oracle[k])) fail("engine-equals-oracle", { field: k, engine: s[k], oracle: oracle[k] });
+    }
+  }
   if (MUTATE) plant(s, MUTATE);
   out.casts = s.casts;
   out.minutes = s.minutes;
@@ -192,12 +228,6 @@ async function prove(b, { concurrency = 8 } = {}) {
   if (!s.ok) fail("noon-matches-stored", { detail: "the scan's noon differs from the engine's own noon cast" });
   const day = birthDay(b.date, b.zone);
   const [a, z] = s.window;
-  const rows = graphRows(s);
-  out.rows = rows.map((r) => r.label);
-  if (rows.length > 3) fail("rows-at-most-three", { rows: out.rows });
-  for (const e of [a > 0 ? a : null, z < s.minutes - 1 ? z + 1 : null].filter((x) => x !== null)) {
-    if (!rows.some((r) => r.segments.some((x) => x.start === e))) fail("rows-explain-edges", { edge: e, rows: out.rows });
-  }
 
   // A. Real time.
   const ks = new Set();
@@ -301,7 +331,7 @@ try {
   for (const b of births.slice(0, TIMING)) {
     const noonChart = await ask({ date: b.date, zone: b.zone, timeKnown: false });
     const t0 = Date.now();
-    const s = await birthSpread({ date: b.date, zone: b.zone, cast: (utc) => ask({ utc }), noonChart });
+    const { s } = SOURCE === "oracle" ? await spreadFor(b, noonChart, 8) : { s: { ...(await measureSpread({ ask: spreadDoor, birth: b, tier: 2, chart: noonChart })).spread, casts: 1 } };
     timing.push({ ms: Date.now() - t0, casts: s.casts });
   }
   const results = [];
@@ -356,6 +386,8 @@ try {
       ? { births: timing.length, msMedian: q(timing.map((t) => t.ms), 0.5), msP95: q(timing.map((t) => t.ms), 0.95), msMax: Math.max(...timing.map((t) => t.ms)), castsMedian: q(timing.map((t) => t.casts), 0.5) }
       : null,
     engineCasts,
+    source: SOURCE,
+    spreadCalls,
     wallSeconds: Math.round((Date.now() - started) / 1000),
     engineVersion: engine.version,
   };

@@ -3,8 +3,7 @@ import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
 import { buildCorrection, historyEntry } from "./correction.mjs";
 import { customerError, engineKind } from "./failures.mjs";
-import { fix } from "../../shared/fixMock.mjs";
-import { SCAN_TIER, birthSpread } from "./birthSpread.mjs";
+import { measureSpread } from "./birthSpread.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -51,6 +50,13 @@ export async function handleChart({
    * Injected so the whole path stays testable without a network.
    */
   report = null,
+  /**
+   * The engine's other door, POST /v1/spread (engine 0.6.0): the noon chart's
+   * spread through the birth day, for an unknown birth time. Same answer shape
+   * as `engine` ({ ok, status, payload }). OPTIONAL: without it, an unknown
+   * time is charted with the engine's note, as before.
+   */
+  spread = null,
 }) {
   const note = async (kind, detail, paid = false, ref = null) => {
     if (typeof report !== "function") return;
@@ -223,38 +229,24 @@ export async function handleChart({
   }
 
   /**
-   * MOCK TIME (Jeremy 10/22): an unknown birth time, measured. Worked out ONCE,
-   * here, when the noon chart is made, and kept with it (`timeSpread` rides in
-   * the output, so the record, the page and the PDF all have it). It holds no
-   * birth field -- minutes of the day and the values, nothing else.
+   * AN UNKNOWN BIRTH TIME, MEASURED (Jeremy 10/22). Asked ONCE, here, when the
+   * noon chart is made, and kept with it (`timeSpread` rides in the output, so
+   * the record, the page and the PDF all have it). One engine call: the engine
+   * casts the birth day itself (netlify/lib/birthSpread.mjs). It is asked at
+   * the chart's own tier, so it carries no stretch of a value this chart does
+   * not show, and it holds no birth field -- minutes of the day and values.
    *
-   * A spread that cannot be made never stops the chart: the page then says what
-   * it says today (provisional Type, Authority, Profile) and Jeremy hears of it.
+   * A spread that cannot be had never stops the chart: the page then says what
+   * it said before (the engine's note; Type, Authority and Profile provisional)
+   * and Jeremy hears of it.
    */
-  if (fix("TIME") && scrubbed.timeKnown === false && scrubbed.date && scrubbed.zone && upstream.payload) {
+  if (typeof spread === "function" && scrubbed.timeKnown === false && scrubbed.date && scrubbed.zone && upstream.payload) {
     try {
-      upstream.payload.timeSpread = await birthSpread({
-        date: scrubbed.date,
-        zone: scrubbed.zone,
-        noonChart: upstream.payload,
-        cast: async (utc) => {
-          const r = await engine({ birth: { utc }, tier: SCAN_TIER });
-          if (!r?.ok) throw new Error(`engine ${r?.status}`);
-          return r.payload;
-        },
-      });
-      /**
-       * Nothing above what was bought rides along: a chart without channels
-       * (the summary) keeps no channel stretches. The window still counts them,
-       * which only ever makes it the safer, narrower one.
-       */
-      const sp = upstream.payload.timeSpread;
-      if (sp && !Array.isArray(upstream.payload.channels)) {
-        delete sp.segments.channels;
-        sp.changes = sp.changes.filter((f) => f !== "channels");
-      }
+      const got = await measureSpread({ ask: spread, birth: scrubbed, tier: Math.max(entitled.tier, 1), chart: upstream.payload });
+      if (got.spread) upstream.payload.timeSpread = got.spread;
+      else await note("chart-time-spread", `${tierNote}: ${got.why}`, paid, ref);
     } catch (e) {
-      await note("chart-time-spread", `${tierNote}: ${e?.message ?? "Error"}`, paid, ref);
+      await note("chart-time-spread", `${tierNote}: ${e?.name ?? "Error"}`, paid, ref);
     }
   }
 

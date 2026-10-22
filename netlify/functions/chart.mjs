@@ -38,7 +38,18 @@ const note = (kind, { detail, paid = false, ref } = {}) =>
  */
 const ENGINE_TIMEOUT_MS = 8000;
 
+/**
+ * THE SPREAD'S DEADLINE (an unknown birth time, Jeremy 10/22). One more engine
+ * call after the chart, so it must fit in what is left of the ten seconds: at
+ * most four, and never past seven from the start, so the record can still be
+ * written and the buyer answered. A spread that runs out of time is a chart
+ * without one (the engine's note, as before), never a failed chart.
+ */
+const SPREAD_TIMEOUT_MS = 4000;
+const SPREAD_BY_MS = 7000;
+
 export default guard("chart", async (request, context) => {
+  const started = Date.now();
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ error: { code: "method", message: "Use POST." } }), {
       status: 405,
@@ -101,6 +112,33 @@ export default guard("chart", async (request, context) => {
     }
   };
 
+  /**
+   * POST /v1/spread (engine 0.6.0): the birth without its time, the tier, the
+   * same key. The engine casts the day itself; this is one request.
+   */
+  const spread = async (payload) => {
+    const left = Math.min(SPREAD_TIMEOUT_MS, SPREAD_BY_MS - (Date.now() - started));
+    if (left < 500) throw Object.assign(new Error("no time left for the spread"), { name: "TimeoutError" });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), left);
+    try {
+      const res = await fetch(`${process.env.ENGINE_URL}/v1/spread`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Engine-Key": process.env.ENGINE_KEY,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      const body = await res.json().catch(() => null);
+      if (res.ok && body === null) return { ok: false, status: 502, payload: null };
+      return { ok: res.ok, status: res.status, payload: body };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   const ip = context?.ip || request.headers.get("x-nf-client-connection-ip") || "unknown";
 
   const result = await handleChart({
@@ -109,6 +147,7 @@ export default guard("chart", async (request, context) => {
     now: Date.now(),
     store,
     engine,
+    spread,
     grantSecret: process.env.GRANT_SECRET,
     /**
      * Where a computed chart is put away, when the request arrived on a paid

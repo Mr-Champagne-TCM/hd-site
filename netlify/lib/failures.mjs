@@ -75,7 +75,7 @@ export const KINDS = {
   "chart-bad-request": { severity: I, customer: "chart-form-unreadable", status: 400, code: "bad_request" },
   "chart-rate-limited": { severity: I, customer: "chart-too-many", status: 429, code: "rate_limited" },
   "chart-rate-store": { severity: F, customer: null, status: 200, code: null },
-  // MOCK TIME: the unknown-time spread could not be made; the chart went out with today's note.
+  // An unknown birth time: the spread (POST /v1/spread) could not be had or was refused; the chart went out with the engine's note.
   "chart-time-spread": { severity: F, customer: null, status: 200, code: null },
   "chart-payment-required": { severity: I, customer: "chart-payment-required", status: 402, code: "payment_required" },
   "engine-400-bad-date": { severity: I, customer: "chart-check-date", status: 400, code: "check_date" },

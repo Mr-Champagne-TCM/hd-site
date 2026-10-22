@@ -51,7 +51,7 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
    * and Profile plainly while the table called them provisional).
    */
   const unsure = new Set(chart.provisional ?? []);
-  // MOCK TIME: only what really changes that day, and the tag beside the label.
+  // With a measured spread: only what really changes that day, and the tag beside the label (10/22).
   const measured = measuredSpread(chart) ? markedFields(chart) : null;
   const rowField: Record<string, string> = {
     "Your energy": "type",

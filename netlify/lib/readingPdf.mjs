@@ -21,10 +21,8 @@ import { chartTitle } from "../../shared/chartName.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
-import { fix } from "../../shared/fixMock.mjs";
-import { NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
 import { gateList } from "../../shared/gateList.mjs";
-import { holdsLine, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
+import { GATES_NOTE, holdsLine, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -184,13 +182,14 @@ export const GUIDE_PROMPT = "How to read your bodygraph →";
 /** Under the QR, two short lines (fix 17A, 10/19). */
 export const QR_CAPTION = Object.freeze(["Scan: how to read", "your bodygraph"]);
 
+/** An unknown birth time on a record with no spread (older, or the spread could not be had). */
 const NOON_NOTE =
   "Birth time was not known, so this chart is cast at noon. Type, " +
   "Authority and Profile should be treated as provisional.";
 
 const wordmarkPaint = () => paint(7, MARK, true, WORDMARK_TRACKING);
 
-/* ------------------------------------------------- MOCK TIME (Jeremy 10/22) */
+/* --------------------------------- an unknown birth time (Jeremy 10/22) */
 
 /**
  * The tag: gold capitals, as the page draws it -- beside a label, and inside
@@ -198,12 +197,14 @@ const wordmarkPaint = () => paint(7, MARK, true, WORDMARK_TRACKING);
  */
 const TAG_PAINT = paint(6.5, GOLD, true, 0.14);
 
-/** The measured spread, when the switch is on and the record has one. */
-const measured = (c) => (fix("TIME") ? usableSpread(c) : null);
+/** The record's measured spread (time unknown, spread kept and sound), else null. */
+const measured = (c) => usableSpread(c);
 
 /**
  * The tag beside a label: on the label's line when it fits the label column,
- * else just under it. Returns how many lines the label now takes.
+ * else just under it. Returns how many lines the label now takes. `colW`
+ * stops 10 pt short of the value column, so a tag on the label's line never
+ * runs into the value ("STRATEGY PROVISIONAL Wait to respond" read as one).
  */
 function labelTag(pdf, label, lp, x, baseline, colW) {
   const lw = measure(pdf, label, lp);
@@ -269,7 +270,7 @@ function timeNote(d, { spread, tier, addTimeUrl }) {
     9.5,
   );
   d.gap(7);
-  const { svg, height } = spreadSvg(spread, { width: CONTENT_W, rows: !fix("TIMEBAR"), palette: "paper", size: 7.5 });
+  const { svg, height } = spreadSvg(spread, { width: CONTENT_W, palette: "paper", size: 7.5 });
   try {
     SVGtoPDF(d.pdf, svg, MARGIN, d.y, {
       width: CONTENT_W,
@@ -282,7 +283,7 @@ function timeNote(d, { spread, tier, addTimeUrl }) {
     /* a drawing that will not draw is a page without it */
   }
   d.gap(height + 5);
-  const o = offerLine(tier, fix("TIMEOFFERB") ? "B" : "A");
+  const o = offerLine(tier);
   const dim = paint(8.5, DIM);
   drawRich(
     d,
@@ -322,6 +323,8 @@ class Doc {
     /** White space given by `space`, page by page, and where the page-2 note ended. */
     this.spaced = {};
     this.noteEnd = null;
+    /** The page the chart values began on, when they ran onto the next one (else null). */
+    this.spilled = null;
   }
 
   /**
@@ -492,7 +495,26 @@ class Doc {
  */
 export async function readingPdf(args) {
   const out = (r) => (args.inspect ? r : r.bytes);
-  const first = await buildPdf(args);
+  let first = await buildPdf(args);
+  /**
+   * PAGE 2'S VALUES STAY ON PAGE 2 (10/22: the new Activated gates row -- and,
+   * with no birth time, its tag and note -- ran the last row onto page 3 under
+   * page 2's running head). When the table spills, that page's white space
+   * gives way: the most it can give first (0.55), then, if that kept it whole,
+   * the gentler 0.8 when that does too. Neither: it spills, as before. At most
+   * two more builds.
+   */
+  let base = {};
+  if (first.spilled !== null) {
+    const at = (f) => buildPdf(args, { squeeze: { page: first.spilled, f } });
+    const most = await at(0.55);
+    if (most.spilled === null) {
+      const gentle = await at(0.8);
+      const pick = gentle.spilled === null ? gentle : most;
+      base = { squeeze: { page: first.spilled, f: pick === gentle ? 0.8 : 0.55 } };
+      first = pick;
+    }
+  }
   if (first.alone === null) return out(first);
   /**
    * Each try is a whole build, and the download (and the reading page's page
@@ -505,7 +527,8 @@ export async function readingPdf(args) {
    * gentlest that does is built.
    */
   const page = first.alone - 1;
-  const squeezed = (f) => buildPdf(args, { squeeze: { page, f } });
+  // A page already squeezed for its values keeps at least that squeeze.
+  const squeezed = (f) => buildPdf(args, { squeeze: { page, f: base.squeeze?.page === page ? Math.min(f, base.squeeze.f) : f } });
   if (first.aloneKind === "note") {
     const most = await squeezed(0.6);
     if (most.alone === null) {
@@ -519,7 +542,7 @@ export async function readingPdf(args) {
       return out(most);
     }
   }
-  return out(await buildPdf(args, { keepClosing: true }));
+  return out(await buildPdf(args, { ...base, keepClosing: true }));
 }
 
 async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null }, opts = {}) {
@@ -583,7 +606,7 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind, spaced: d.spaced, noteEnd: d.noteEnd, bottom: d.bottom });
+      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind, spaced: d.spaced, noteEnd: d.noteEnd, bottom: d.bottom, spilled: d.spilled });
     });
     pdf.end();
   });
@@ -643,7 +666,7 @@ function bodygraphPage(d, { name, output, birth, qr, tier, addTimeUrl = null }) 
     ["authority", `${c.authority ?? ""} authority`],
   ].filter(([, v]) => v);
   if (marked) {
-    // MOCK TIME: each fact that changes that day carries its tag.
+    // An unknown birth time: each fact that changes that day carries its tag.
     let x = MARGIN;
     facts.forEach(([field, v], i) => {
       if (i) x += drawText(pdf, "  ·  ", x, d.y + 9, paint(10, DIM));
@@ -658,8 +681,7 @@ function bodygraphPage(d, { name, output, birth, qr, tier, addTimeUrl = null }) 
   if (spread) {
     timeNote(d, { spread, tier, addTimeUrl });
   } else if (c.timeKnown === false) {
-    // MOCK FIX 17: the page's own sentence, word for word.
-    d.block(d.L(fix("17A") ? NOON_NOTE_A : fix("17B") ? NOON_NOTE_B : NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
+    d.block(d.L(NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
   }
 
   // The chart is aspect-locked, the key is aspect-locked and as wide as the
@@ -853,7 +875,7 @@ function glancePage(d, { output, tier, reading }) {
     d.space(6);
     drawText(pdf, label, MARGIN + 16, d.y + 8, labelPaint);
     d.linkText(label, MARGIN + 16, d.y + 8, labelPaint, glanceHref[i]);
-    const tagRows = marked?.has(glanceField[i]) ? labelTag(pdf, label, labelPaint, MARGIN + 16, d.y + 8, 102) : 0;
+    const tagRows = marked?.has(glanceField[i]) ? labelTag(pdf, label, labelPaint, MARGIN + 16, d.y + 8, 96) : 0;
     // 122, not 90: "WHEN IT'S OFF TRACK" needs the room.
     drawLayout(pdf, l, MARGIN + 122, d.y - 2);
     d.gap(Math.max(l.height, 14, tagRows > 1 ? 21 : 0));
@@ -871,22 +893,26 @@ function glancePage(d, { output, tier, reading }) {
   d.rule(RULE, 0.8);
   d.space(2);
 
-  const valueRow = (label, value, href, field = null) => {
+  const valueRow = (label, value, href, field = null, note = null) => {
     const l = d.L(value, paint(10, INK), CONTENT_W - 110);
-    d.need(l.height + 10);
+    // A short note under the value (the gate list's, with no birth time), smaller and dim.
+    const n = note ? d.L(note, paint(8.5, DIM), CONTENT_W - 110) : null;
+    d.need(l.height + (n ? n.height + 3 : 0) + 10);
     d.space(5);
     const lp = paint(8, DIM, false, 0.06);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, lp);
     d.linkText(label.toUpperCase(), MARGIN, d.y + 8, lp, href);
-    // MOCK TIME: the tag beside the row's label (Jeremy 10/22: "next to section header").
-    const tagRows = field && marked?.has(field) ? labelTag(pdf, label.toUpperCase(), lp, MARGIN, d.y + 8, 104) : 0;
+    // The tag beside the row's label (Jeremy 10/22: "next to section header").
+    const tagRows = field && marked?.has(field) ? labelTag(pdf, label.toUpperCase(), lp, MARGIN, d.y + 8, 100) : 0;
     drawLayout(pdf, l, MARGIN + 110, d.y - 1);
-    d.gap(Math.max(l.height, 12, tagRows > 1 ? 20 : 0));
+    if (n) drawLayout(pdf, n, MARGIN + 110, d.y - 1 + l.height + 3);
+    d.gap(Math.max(l.height + (n ? n.height + 3 : 0), 12, tagRows > 1 ? 20 : 0));
     d.space(4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
 
   const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
+  const valuesFrom = d.pageNo;
   valueRow("Definition", c.definition ?? "", DEFINITION, "definition");
   // The engine's name as it gives it ("Cross of the Vessel of Love" since engine 0.6.0, W14).
   valueRow("Incarnation cross", c.incarnationCross ?? "", crossLink(c.incarnationCross), "incarnationCross");
@@ -902,8 +928,9 @@ function glancePage(d, { output, tier, reading }) {
   valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS, "channels");
   // The gate numbers, as the page lists them (10/22: values only, every tier).
   if (Array.isArray(c.activatedGates)) {
-    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS, "gates");
+    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS, "gates", marked?.has("gates") ? GATES_NOTE : null);
   }
+  if (d.pageNo !== valuesFrom) d.spilled = valuesFrom;
 
   // The activations, in a four-up grid -- the READING tier's, never sold with
   // the chart tier.
