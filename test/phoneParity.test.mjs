@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { readingPdf } from "../netlify/lib/readingPdf.mjs";
 import { buildReadingView } from "../netlify/lib/readingView.mjs";
-import { summaryRows } from "../netlify/lib/interpretation.mjs";
+import { INTERPRETATION, summaryRows } from "../netlify/lib/interpretation.mjs";
+import { gateList } from "../shared/gateList.mjs";
 import { hasLonelyLastWord, hooks } from "../netlify/lib/pdfText.mjs";
 
 /**
@@ -104,6 +105,46 @@ const heads = (runs, pages) =>
 
 const pagesOf = (runs) => Math.max(...runs.map((r) => r.page));
 
+/**
+ * WHAT THE SHOP SAYS AND THE PHONE DOES NOT YET (Jeremy's 10/22 calls; the
+ * phone gets both in its own release-1022 port):
+ *   - page 2's ACTIVATED GATES row ("gates/channels go to summary"): its
+ *     label, its numbers and its library link box;
+ *   - the two center sections' bold opening line, printed once now, in Start
+ *     here's box (the repeat, option A): the phone still prints it twice.
+ * Each is taken out of the comparison BY NAME and ONLY while the phone's
+ * output still lacks it (or still has it), so the allowance retires itself the
+ * first time the fixtures are synced from a phone that has the change.
+ */
+const gatesRun = (runs) => runs.find((r) => r.page === 2 && r.text === "ACTIVATED GATES");
+function withoutOnce(list, drop) {
+  const out = [...list];
+  for (const w of drop) {
+    const i = out.indexOf(w);
+    if (i >= 0) out.splice(i, 1);
+  }
+  return out;
+}
+/** Shop page-2 words, less the gates row while the phone has none. */
+function shopPageWords(s, p, page) {
+  const all = pageWords(s.runs, page);
+  if (page !== 2 || gatesRun(p) || !gatesRun(s.runs)) return all;
+  return withoutOnce(all, words(`ACTIVATED GATES ${gateList(s.output.activatedGates)}`)).sort();
+}
+/** The center sections' opening lines the shop prints once (in Start here), that the phone's reading pages still repeat. */
+function repeatedLedes(s) {
+  const v = buildReadingView(s.output, s.reading);
+  if (!v) return [];
+  return v.reading
+    .filter((x) => [INTERPRETATION[3], INTERPRETATION[4]].includes(x.heading) && x.lede === null)
+    .map((x) => {
+      const sec = s.reading.split(/\n/).map((l) => l.trim());
+      const at = sec.indexOf(x.heading);
+      return sec.slice(at + 1).find(Boolean) ?? "";
+    })
+    .filter((l) => v.centersTakeaway.includes(l));
+}
+
 for (const [slug, name, b] of FIXTURES) {
   test(`${slug}: the same pages, in the same order, as the phone`, { skip: SKIP }, async () => {
     const s = await shop(slug, name, b);
@@ -115,7 +156,7 @@ for (const [slug, name, b] of FIXTURES) {
     const s = await shop(slug, name, b);
     const p = phoneRuns(slug);
     for (let page = 1; page <= 4; page++) {
-      assert.deepEqual(pageWords(s.runs, page), pageWords(p, page), `${slug} page ${page}`);
+      assert.deepEqual(shopPageWords(s, p, page), pageWords(p, page), `${slug} page ${page}`);
     }
   });
 
@@ -129,7 +170,11 @@ for (const [slug, name, b] of FIXTURES) {
     const reading = (runs) => runs.filter((r) => r.page >= 5 && !(r.y > 740));
     // A word broken after its hyphen ("self-" / "worth") is still one word.
     const all = (runs) => words(reading(runs).map((r) => r.text).join(" ").replace(/(\p{L})- +(?=\p{L})/gu, "$1-")).sort();
-    assert.deepEqual(all(s.runs), all(p));
+    // The repeat (option A): the phone's reading pages still carry the lines the shop prints once, in Start here.
+    const flat = (t) => words(t).join(" ");
+    const phoneText = flat(reading(p).map((r) => r.text).join(" "));
+    const pending = repeatedLedes(s).filter((l) => phoneText.includes(flat(l)));
+    assert.deepEqual(all(s.runs), withoutOnce(all(p), pending.flatMap(words)).sort());
     const perPage = (runs) =>
       Array.from({ length: pagesOf(runs) - 4 }, (_, i) => reading(runs).filter((r) => r.page === i + 5).length);
     const same = Array.from({ length: pagesOf(p) - 4 }, (_, i) => i + 5).filter(
@@ -193,9 +238,23 @@ for (const [slug, name, b] of FIXTURES) {
     const s = await shop(slug, name, b);
     const phone = phoneLinks(slug).filter((l) => l.page <= 4);
     // Term links in the reading text (fix 7) move with each side's own line wraps; left out here.
-    for (const a of s.links.filter((l) => l.page <= 4 && l.kind !== "term")) {
+    // The gates row's label link, while the phone has no gates row (see above).
+    const g = gatesRun(phoneRuns(slug)) ? null : gatesRun(s.runs);
+    const gatesBox = (a) => g && a.page === 2 && a.top <= g.y + 2 && g.y <= a.bottom + 2;
+    // ...and what sits under that row on page 2 (above the footer) sits LOWER, never sideways: by the
+    // row's height and the white space page 2 gives or keeps around it (fix 6's squeeze), so up to 60 pt.
+    const rowH = 60;
+    const under = (a) => g && a.page === 2 && a.top > g.y + 4 && a.top < 730;
+    for (const a of s.links.filter((l) => l.page <= 4 && l.kind !== "term" && !gatesBox(l))) {
       const hit = phone.some(
-        (bx) => bx.page === a.page && bx.uri === a.uri && a.left < bx.right && bx.left < a.right && a.top < bx.bottom + 6 && bx.top < a.bottom + 6,
+        (bx) =>
+          bx.page === a.page &&
+          bx.uri === a.uri &&
+          a.left < bx.right &&
+          bx.left < a.right &&
+          (under(a)
+            ? a.top - bx.top >= -6 && a.top - bx.top <= rowH + 6
+            : a.top < bx.bottom + 6 && bx.top < a.bottom + 6),
       );
       assert.ok(hit, `${slug} p${a.page} ${a.uri}: [${a.left.toFixed(1)} ${a.top.toFixed(1)} ${a.right.toFixed(1)} ${a.bottom.toFixed(1)}] matches no phone box`);
     }
