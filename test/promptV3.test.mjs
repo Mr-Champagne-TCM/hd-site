@@ -9,6 +9,7 @@ import {
   glanceProblem,
   tagProblem,
   takeawayProblem,
+  timeClaimProblem,
 } from "../netlify/lib/interpretation.mjs";
 import { READING_SCHEMA, schemaNotes } from "../netlify/lib/structured.mjs";
 import { generateReading } from "../netlify/lib/gemini.mjs";
@@ -71,6 +72,10 @@ test("a time like '6 p.m.' or a quoted reply does not break the count", () => {
 test("the old checks still hold in the new shape: tag, soft opener, 'you might', when, notice, twin starts", () => {
   const cases = [
     [/does not begin with the chart feature/, HOME.replace("(Defined Spleen center) ", "")],
+    // "([Strategy]) This week, ..." (the round, 64 of 144 lines under one prompt draft): a slot left in.
+    [/has square brackets in it, a slot left from the instructions \("\(\[Defined Spleen center\]\)"\)/, HOME.replace("(Defined Spleen center)", "([Defined Spleen center])")],
+    [/has square brackets in it/, HOME.replace("you might follow", "you might [action] follow")],
+    [/has a blank \(_\) in it, a slot left from the instructions \("\(Profile _\/_\)"\)/, HOME.replace("(Defined Spleen center)", "(Profile _/_)")],
     // "(Sacral), This week, ..." (the round): the time phrase follows the tag directly.
     [/does not begin with its time phrase right after the \(chart feature\)/, HOME.replace("(Defined Spleen center) ", "(Defined Spleen center), ")],
     [/opens with "Notice"/, "(Sacral) Notice what the body does. Notice it again, so it is familiar later."],
@@ -138,6 +143,28 @@ test("TAGS: gemini.mjs refuses a wrong tag after the whole chain", async () => {
   assert.match(wrong.detail, /^A takeaway's \(chart feature\) is not this chart's: "\(Channel 10-34\)", but its channels are 20-34$/);
 });
 
+/* ---------------------------------------------------------------- the birth time and astrology words */
+
+test("TIME: an unknown birth time claimed on a time-known chart is refused; on a chart cast at noon it passes", () => {
+  const read = (s) => `Your energy, and how it starts\n\n${s}\n`;
+  const said = "Your birth time was not known, so your daily energy patterns are explored through your chart features.";
+  assert.match(timeClaimProblem(read(said), { timeKnown: true }), /^The reading says the birth time was not known, in "Your energy, and how it starts", but this chart's birth time is known: /);
+  assert.match(timeClaimProblem(read(said), {}), /birth time is known/, "no timeKnown on the chart reads as known");
+  assert.equal(timeClaimProblem(read(said), { timeKnown: false }), null);
+  for (const s of ["Your chart contains no birth time recorded.", "Without a birth time, the profile is a guess.", "The birth time is unknown here."]) {
+    assert.match(timeClaimProblem(read(s), { timeKnown: true }) ?? "", /birth time is known/, s);
+  }
+  assert.equal(timeClaimProblem(read("You were born into a steady rhythm; your bodygraph shows it."), { timeKnown: true }), null);
+});
+
+test("TIME: astrology words are refused on every chart, plain English 'house' passes", () => {
+  const read = (s) => `Your energy, and how it starts\n\n${s}\n`;
+  for (const [w, s] of [["rising sign", "Your rising sign is omitted."], ["ascendant", "Your chart ascendant is left out."], ["house placements", "Specific house placements are absent."], ["seventh house", "Your seventh house is quiet."]]) {
+    assert.match(timeClaimProblem(read(s), { timeKnown: false }) ?? "", new RegExp(`uses an astrology term, "${w}"`, "i"), s);
+  }
+  assert.equal(timeClaimProblem(read("You rest at home in a quiet house after a long errand."), { timeKnown: true }), null);
+});
+
 /* ---------------------------------------------------------------- the glance rule */
 
 // The 10/22 round's refused -ing rows, read by hand. Whole sentences (were refused, now pass):
@@ -186,6 +213,17 @@ test("GLANCE: real fragments are still refused, by name", () => {
   for (const row of FRAGMENTS) assert.equal(glanceFragment(row), true, row);
   const reading = `IN SHORT\n\nStrategy: ${FRAGMENTS[1]}\n\nYour energy, and how it starts\n\nYou carry a motor.\n`;
   assert.match(glanceProblem(reading), /^The "Strategy" line is a fragment, not a sentence: "Pausing until something arrives/);
+});
+
+test("GLANCE: a row that starts in lower case is refused (the label taken for its subject, a 10/22 draft)", () => {
+  const row = (r) => `IN SHORT\n\nType: ${r}\n\nYour energy, and how it starts\n\nYou carry a motor.\n`;
+  assert.equal(
+    glanceProblem(row("classifies you as a Manifestor who brings forward independent impulses.")),
+    'The "Type" line does not begin a sentence (no capital letter): "classifies you as a Manifestor who brings forward independent impulses."',
+  );
+  assert.match(glanceProblem(row("carrying a design that guides others.")), /no capital letter/);
+  assert.equal(glanceProblem(row("You carry a motor that answers what life brings.")), null);
+  assert.equal(glanceProblem(row("“Steady” is the word for how you work.")), null);
 });
 
 /* ---------------------------------------------------------------- copied words */

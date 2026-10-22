@@ -1,4 +1,4 @@
-import { chartFactsOnly, copyProblem, firstProblem, sanitize, tagProblem } from "./interpretation.mjs";
+import { chartFactsOnly, copyProblem, firstProblem, sanitize, tagProblem, timeClaimProblem } from "./interpretation.mjs";
 import { READING_SCHEMA, renderReading, schemaNotes, structuredFacts } from "./structured.mjs";
 
 /**
@@ -220,6 +220,9 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
     // 10/22: a try-this tag names a feature this chart really has (channels and
     // authority are only here, on the chart itself).
     tagProblem(clean, output) ??
+    // 10/22: no "birth time was not known" on a chart whose time is known, and
+    // no astrology words ("rising sign", "ascendant") in a Human Design reading.
+    timeClaimProblem(clean, output) ??
     // 10/22: words lifted from the instructions are a copy, not a reading. Only
     // this file knows the prompt, so the check runs here; the facts just sent
     // (cross name, centers, channel lines) are the reading's own vocabulary.

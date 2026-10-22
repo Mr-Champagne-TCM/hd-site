@@ -315,6 +315,9 @@ export function glanceProblem(raw) {
   const body = text.includes(DISCLAIMER) ? text.slice(0, text.indexOf(DISCLAIMER)) : text;
   for (const [k, v] of Object.entries(summaryRows(body))) {
     if (glanceFragment(v)) return `The "${SUMMARY_LABELS[k] ?? k}" line is a fragment, not a sentence: "${String(v).slice(0, 90)}"`;
+    // 10/22 round: "Type: classifies you as a Manifestor who..." -- the label taken
+    // for the subject. The page prints the value, a period, then the row.
+    if (/^[a-z]/.test(String(v).trim())) return `The "${SUMMARY_LABELS[k] ?? k}" line does not begin a sentence (no capital letter): "${String(v).trim().slice(0, 90)}"`;
   }
   return null;
 }
@@ -441,6 +444,9 @@ export function takeawayProblem(raw) {
     const body = line.replace(/^\([^)]+\)\s*/, "");
     const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
     if (body === line) return say(`does not begin with the chart feature it comes from, in parentheses`);
+    // "([Strategy]) This week, ..." (10/22 round, 64 of 144 lines): a slot of the instructions, left in.
+    if (/[[\]]/.test(line)) return say(`has square brackets in it, a slot left from the instructions ("${/^\([^)]*\)/.exec(line)?.[0] ?? line.slice(0, 30)}")`);
+    if (/_/.test(line)) return say(`has a blank (_) in it, a slot left from the instructions ("${/^\([^)]*\)/.exec(line)?.[0] ?? line.slice(0, 30)}")`);
     if (SOFT_OPENER.test(body)) return say(`opens with "${SOFT_OPENER.exec(body)[1]}"; it begins with when, not with what to watch`);
     // "(Sacral), This week, ..." (10/22 round): the time phrase follows the tag directly.
     if (!/^["“]?[A-Z]/.test(body)) return say(`does not begin with its time phrase right after the (chart feature)`);
@@ -524,6 +530,29 @@ export function tagProblem(raw, output) {
     }
     const t = TAG_TYPE.exec(tag);
     if (t && output?.type && !String(output.type).toLowerCase().includes(t[1].toLowerCase())) return wrong(`but the type is ${output.type}`);
+  }
+  return null;
+}
+
+/**
+ * NO UNKNOWN BIRTH TIME ON A CHART WHOSE TIME IS KNOWN (10/22 AI test round).
+ * Asked to mention an unknown birth time only when the facts say so, the model
+ * wrote "Your birth time was not known, so your rising sign is omitted..." on 7
+ * of 27 charts whose time WAS known -- often with an astrology word beside it
+ * ("rising sign", "ascendant", "house placements"), none of which a Human
+ * Design reading uses. Both are refused: the claim when `timeKnown` is not
+ * false, the astrology words always.
+ */
+const TIME_CLAIM = /\b(?:birth time (?:was |is )?(?:not known|unknown|not recorded|missing|not given)|no birth time|without (?:a|an exact|the) birth time|lack of a (?:specific )?birth time)\b/i;
+const ASTROLOGY = /\b(?:rising signs?|ascendants?|house placements?|astrological houses?|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth) house)\b/i;
+
+export function timeClaimProblem(raw, output) {
+  for (const [where, text] of writtenText(raw)) {
+    const a = ASTROLOGY.exec(text);
+    if (a) return `The reading uses an astrology term, "${a[0]}", in ${where}: "${quoteAt(text, a.index, a[0].length)}"`;
+    if (output?.timeKnown === false) continue;
+    const m = TIME_CLAIM.exec(text);
+    if (m) return `The reading says the birth time was not known, in ${where}, but this chart's birth time is known: "${quoteAt(text, m.index, m[0].length)}"`;
   }
   return null;
 }
