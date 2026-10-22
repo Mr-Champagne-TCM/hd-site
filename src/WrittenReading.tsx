@@ -3,6 +3,8 @@ import type { ReadingView } from "./StartHere";
 import { AUTHORITY, CENTERS, DEFINITION, LIBRARY, crossLink, profileLink, typeLink } from "../shared/libraryLinks.mjs";
 import Linked from "./Linked";
 import CoachCard from "./CoachCard";
+import { marginFields, markedFields } from "../shared/timeSpread.mjs";
+import { Tag, measuredSpread } from "./TimeSpread";
 
 /**
  * The written interpretation, on the page.
@@ -220,6 +222,13 @@ function noteHref(label: string, chart: { type?: string; profile?: string; incar
   return null;
 }
 
+/** With an unknown birth time: does this margin note's value change during the birth day (10/22)? */
+function noteTagged(label: string, chart: unknown) {
+  if (!measuredSpread(chart)) return false;
+  const marked = markedFields(chart);
+  return marginFields(label, chart).some((f: string) => marked.has(f));
+}
+
 export function ReadingInOrder({
   v,
   notes,
@@ -269,6 +278,7 @@ export function ReadingInOrder({
                           ) : (
                             label
                           )}
+                          {noteTagged(k, chart) && <Tag className="block font-semibold" />}
                         </dt>
                         <dd className="text-[14px] leading-snug text-brand-muted">{val}</dd>
                       </div>

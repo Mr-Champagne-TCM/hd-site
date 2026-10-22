@@ -18,6 +18,7 @@ import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 import { ConfirmKept, ReadingNotes } from "./Returning";
 import { TimeNote } from "./TimeSpread";
+import { AddTimeForm, AddTimeNotice, useAddTimeHash } from "./AddTime";
 
 /**
  * What a delivery link opens.
@@ -71,6 +72,8 @@ type Reading = {
   grown?: { fromTier: number; fromLabel: string | null } | null;
   /** The calm note after a correction (shared/correctionNote.mjs words it). */
   correction?: unknown;
+  /** "Add it here" (10/22): "open" while a birth time can still be added, else "used", "known", "none". */
+  addTime?: string;
 };
 
 type State =
@@ -96,6 +99,8 @@ export default function ReadingPage({ token }: { token: string }) {
   const [state, setState] = useState<State>({ at: "loading" });
   /** "Change a detail" on the confirm screen (release 2): the kept details, as a form. */
   const [correcting, setCorrecting] = useState(false);
+  /** "Add it here" (10/22): #add-time opens the time-only form, while the chart can still take one. */
+  const addTime = useAddTimeHash();
 
   useEffect(() => {
     let alive = true;
@@ -321,6 +326,30 @@ export default function ReadingPage({ token }: { token: string }) {
   const { reading } = state;
 
   /**
+   * "FOUND YOUR BIRTH TIME? YOU'RE WELCOME TO ADD IT HERE" (10/22): the
+   * time-only form, on this page, while the chart can still take one. The
+   * kept date and place are shown with it, never the time (that is what is
+   * being added).
+   */
+  if (addTime && !reading.pending && reading.addTime === "open") {
+    const kept = (reading.birthLine ?? "")
+      .split(" · ")
+      .filter((p) => !/^Time unknown/.test(p))
+      .join(" · ");
+    return (
+      <AddTimeForm
+        token={token}
+        tier={reading.tier}
+        kept={kept || null}
+        onCancel={() => {
+          window.history.replaceState(null, "", window.location.pathname);
+          window.dispatchEvent(new HashChangeEvent("hashchange"));
+        }}
+      />
+    );
+  }
+
+  /**
    * PAID, AND NOT YET TOLD US WHEN THEY WERE BORN.
    *
    * The ordinary state of every purchase for the minute or two between the
@@ -398,6 +427,9 @@ export default function ReadingPage({ token }: { token: string }) {
         (or "What changed from your summary" for an older summary typed once).
       */}
       <ReadingNotes grown={reading.grown} label={reading.label} correction={reading.correction} />
+
+      {/* "Add it here" opened again once the time is in (or on a chart that never needed one): said kindly. */}
+      {addTime && reading.addTime && reading.addTime !== "open" && <AddTimeNotice state={reading.addTime} />}
 
       {/*
         FIX 9A (Jeremy 10/19): the PDF, solid and named, right under the title

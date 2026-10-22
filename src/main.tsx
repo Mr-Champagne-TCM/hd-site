@@ -2,7 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import ReadingPage from "./ReadingPage";
-import { isChartsPath, tokenFromPath, upgradeTokenFromPath } from "./readingRoute";
+import { addTimeKeyFromPath, isChartsPath, tokenFromPath, upgradeTokenFromPath } from "./readingRoute";
+import { AddTimePage } from "./AddTime";
 import MyChartsPage from "./MyCharts";
 import "./index.css";
 
@@ -21,11 +22,14 @@ import "./index.css";
 const path = window.location.pathname;
 const token = tokenFromPath(path);
 const upgrading = upgradeTokenFromPath(path);
+const addTimeKey = addTimeKeyFromPath(path);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {token ? (
       <ReadingPage token={token} />
+    ) : addTimeKey ? (
+      <AddTimePage keyToken={addTimeKey} />
     ) : isChartsPath(path) ? (
       <MyChartsPage />
     ) : (

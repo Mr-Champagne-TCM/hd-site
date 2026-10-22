@@ -63,6 +63,12 @@
   status = 200
 
 [[redirects]]
+  # "Add it here" from a PDF (10/22): the never-expiring add-a-birth-time key, the same shell.
+  from = "/t/*"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
   # "Email me my charts" (release 2): a one-field page, served by the same shell.
   from = "/charts"
   to = "/app.html"

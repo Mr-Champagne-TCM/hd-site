@@ -179,6 +179,35 @@ export const PLAYBOOK = {
   },
 
   // --- the reading page ------------------------------------------------------------
+  // --- adding a birth time found later (10/22) ---------------------------------
+  // Adding a time is free, so no retry code is offered: their link is all they need.
+  "addtime-misconfigured": {
+    who: "visitor",
+    brief: "A buyer could not add the birth time they found: the site is missing a setting.",
+    fix: MISCONFIG,
+    options: ["resend", "note:time-again"],
+  },
+  "addtime-store-unavailable": {
+    who: "buyer",
+    brief: "A buyer opened 'add it here' and the store did not answer. Their chart is safe and unchanged.",
+    options: ["resend", "note:reading-page"],
+  },
+  "addtime-engine": {
+    who: "buyer",
+    brief: "A buyer tried to add the birth time they found and the engine did not answer (its kind is under DETAILS). Nothing changed: their chart is as it was, and the time they typed is still in the form for another try.",
+    options: ["resend", "note:time-again"],
+  },
+  "addtime-not-saved": {
+    who: "buyer",
+    brief: "A buyer added their birth time and the chart was cast again, but it could not be saved, so nothing changed and they were asked to try once more.",
+    options: ["resend", "note:time-again"],
+  },
+  "addtime-crash": {
+    who: "visitor",
+    brief: "Adding a birth time hit an unexpected fault. The chart is unchanged.",
+    fix: "The function log for /api/add-time at this time has the fault.",
+    options: ["resend", "note:time-again"],
+  },
   "reading-misconfigured": {
     who: "visitor",
     brief: "Reading links cannot be opened: the site is missing a setting.",

@@ -1,5 +1,7 @@
 import { CENTERS, channelLink, lineLink } from "../shared/libraryLinks.mjs";
 import Linked, { type ChartFacts } from "./Linked";
+import { markedFields } from "../shared/timeSpread.mjs";
+import { Tag, measuredSpread } from "./TimeSpread";
 
 /**
  * "START HERE" -- centers, channels, profile, each a short list with the
@@ -28,7 +30,7 @@ export type ReadingView = {
 
 export const NO_CHANNELS = "No defined channels.";
 
-function Head({ n, title, count }: { n: number; title: string; count?: string }) {
+function Head({ n, title, count, tag = false }: { n: number; title: string; count?: string; tag?: boolean }) {
   return (
     <h3 className="mt-10 flex items-center gap-3 first:mt-0">
       <span
@@ -39,13 +41,17 @@ function Head({ n, title, count }: { n: number; title: string; count?: string })
       </span>
       <span className="font-display text-[22px] font-medium text-brand-gold">{title}</span>
       {count && <span className="text-[15px] text-brand-muted">{count}</span>}
+      {tag && <Tag />}
     </h3>
   );
 }
 
-function SubLabel({ children }: { children: React.ReactNode }) {
+function SubLabel({ children, tag = false }: { children: React.ReactNode; tag?: boolean }) {
   return (
-    <p className="mt-4 font-sans text-[12px] uppercase tracking-[0.14em] text-brand-muted">{children}</p>
+    <p className="mt-4 font-sans text-[12px] uppercase tracking-[0.14em] text-brand-muted">
+      {children}
+      {tag && <Tag className="ml-2" />}
+    </p>
   );
 }
 
@@ -93,6 +99,12 @@ function Takeaway({ lines, chart }: { lines: string[]; chart: ChartFacts }) {
 }
 
 export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFacts }) {
+  /**
+   * WITH NO BIRTH TIME, the lists whose values change during the birth day
+   * carry PROVISIONAL beside their label (Jeremy 10/22: "wherever it prints").
+   */
+  const marked = measuredSpread(chart) ? markedFields(chart) : new Set<string>();
+  const others = marked.has("undefinedCenters") || marked.has("openCenters");
   return (
     <section aria-labelledby="start-here">
       <h2 id="start-here" className="font-display text-[clamp(1.3rem,3vw,1.6rem)] font-medium tracking-tight text-brand-paper">
@@ -100,7 +112,7 @@ export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFa
       </h2>
       <div className="mt-6">
         <Head n={1} title="Your centers" />
-        <SubLabel>Colored in ({v.definedCenters.length}) · steady, yours</SubLabel>
+        <SubLabel tag={marked.has("definedCenters")}>Colored in ({v.definedCenters.length}) · steady, yours</SubLabel>
         {v.definedCenters.length ? (
           <List items={v.definedCenters} dim={false} href={() => CENTERS} />
         ) : (
@@ -108,13 +120,13 @@ export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFa
         )}
         {v.otherCenters.length > 0 && (
           <>
-            <SubLabel>Not colored in ({v.otherCenters.length}) · taken in from others</SubLabel>
+            <SubLabel tag={others}>Not colored in ({v.otherCenters.length}) · taken in from others</SubLabel>
             <List items={v.otherCenters} dim href={() => CENTERS} />
           </>
         )}
         <Takeaway lines={v.centersTakeaway} chart={chart} />
 
-        <Head n={2} title="Your channels" count={`(${v.channels.length})`} />
+        <Head n={2} title="Your channels" count={`(${v.channels.length})`} tag={marked.has("channels")} />
         {v.channels.length ? (
           <List items={v.channels} dim={false} href={(it) => channelLink(it.title)} />
         ) : (
@@ -122,7 +134,7 @@ export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFa
         )}
         <Takeaway lines={v.channelsTakeaway} chart={chart} />
 
-        <Head n={3} title="Your profile" count={v.profile} />
+        <Head n={3} title="Your profile" count={v.profile} tag={marked.has("profile")} />
         <List items={v.profileLines} dim={false} href={(it) => lineLink(it.title)} />
         <Takeaway lines={v.profileLinesTakeaway} chart={chart} />
       </div>

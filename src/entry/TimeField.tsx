@@ -27,7 +27,10 @@ export default function TimeField({
   unknown,
   onUnknownChange,
   their = false,
+  askUnknown = true,
 }: {
+  /** The “add your birth time” form (10/22) has no “I don’t know”: they have just found it. */
+  askUnknown?: boolean;
   /** Someone new's form: "I don’t know their birth time" (bug 19, 10/21). */
   their?: boolean;
   /** "HH:MM" in 24-hour form, or "" while incomplete. */
@@ -111,24 +114,26 @@ export default function TimeField({
         offered first, to somebody assumed to have an answer, and the fallback
         waits underneath for the ones who do not.
       */}
-      <label className="mt-4 flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
-          checked={unknown}
-          onChange={(e) => onUnknownChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 accent-[#3FE0C5]"
-        />
-        <span>
-          <span className="text-[15px] text-brand-muted">
-            {their ? ENTRY.timeUnknownLabel.replace("my birth time", "their birth time") : ENTRY.timeUnknownLabel}
-          </span>
-          {unknown && (
-            <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
-              {ENTRY.timeUnknownHelp}
+      {askUnknown && (
+        <label className="mt-4 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={unknown}
+            onChange={(e) => onUnknownChange(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[#3FE0C5]"
+          />
+          <span>
+            <span className="text-[15px] text-brand-muted">
+              {their ? ENTRY.timeUnknownLabel.replace("my birth time", "their birth time") : ENTRY.timeUnknownLabel}
             </span>
-          )}
-        </span>
-      </label>
+            {unknown && (
+              <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
+                {ENTRY.timeUnknownHelp}
+              </span>
+            )}
+          </span>
+        </label>
+      )}
 
       {/*
         FIX 15B (Jeremy 10/19): why the time matters, folded under the field,

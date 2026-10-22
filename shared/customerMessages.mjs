@@ -213,6 +213,44 @@ export const MESSAGES = {
     text: "That has been asked a few times just now. In a little while it will go through again — nothing is wrong.",
   },
 
+  // --- adding a birth time found later (10/22) -------------------------------
+  "addtime-check-time": {
+    act: true,
+    text: "That birth time doesn't look quite right. Could you check it?",
+  },
+  "addtime-slow": {
+    act: false,
+    text:
+      "Something on our side is slow right now, so your chart wasn't redone — nothing has changed, and the time " +
+      `you typed is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+  },
+  "addtime-not-saved": {
+    act: false,
+    text:
+      "Your chart was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
+      `typed is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+  },
+  "addtime-used": {
+    act: false,
+    heading: "Your birth time is already added",
+    text: `A birth time can be added once to each chart, and this chart has its time. For anything else about it, ${CONTACT} reaches Jeremy.`,
+  },
+  "addtime-known": {
+    act: false,
+    heading: "Your chart already has its birth time",
+    text: `This chart was cast from a known birth time, so there is nothing to add. For anything else about it, ${CONTACT} reaches Jeremy.`,
+  },
+  "addtime-gone": {
+    act: false,
+    heading: "This chart is no longer kept",
+    text: `Charts are kept for a year from the day they were bought, and this one has passed its year. ${CONTACT} reaches Jeremy, whenever you'd like to ask about it.`,
+  },
+  "addtime-none": {
+    act: false,
+    heading: "A birth time can't be added here",
+    text: `This chart was made before birth details were kept with it, so a time can't be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
+  },
+
   // --- the net under everything ---------------------------------------------
   "our-side-generic": {
     act: false,

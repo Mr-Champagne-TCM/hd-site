@@ -42,6 +42,9 @@ export const NOTES = {
     "Your chart is in and your reading is being written. It's taking longer than it should today, which is on our side. It will arrive in your inbox the moment it's ready, with nothing more needed from you.",
   "reading-page":
     "Your reading is safe and your link is fine. The page couldn't be opened for a little while, which was on our side, and it's back now: {link}",
+  // NEW (10/22, add a found birth time): for an add that did not go through.
+  "time-again":
+    "Your chart is safe and unchanged. Adding your birth time didn't go through just now, which was on our side, and it's working again. Whenever you're ready, your link opens the same page, and the time can still be added there: {link}",
   "pdf":
     "Your reading is safe. The PDF couldn't be made just now, which was on our side. Your reading is at your link, and the download is there whenever you'd like it: {link}",
   "link-again":

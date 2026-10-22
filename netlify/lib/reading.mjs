@@ -39,6 +39,10 @@ import { cleanChartName } from "../../shared/chartName.mjs";
  *   correction the calm note the reading page shows after a correction (or
  *              after an older summary's details were typed once): what was
  *              changed and which chart values moved. Absent -> null.
+ *   timeAdded  ONCE PER CHART (Jeremy 10/22): the buyer added a birth time
+ *              found later ("Found your birth time? You're welcome to add it
+ *              here, once and free"). { at, via }. Carried to every upgrade,
+ *              so the offer is spent for the whole chain. Absent -> null.
  *
  * THE CREDIT BELONGS TO ITS OWN CHART. Only a purchase that upgrades this very
  * record is credited with what it cost (checkout.mjs `upgradeCredit`), and once
@@ -163,6 +167,8 @@ export async function saveReading(
     fresh = false,
     birth = null,
     history = null,
+    // An upgrade of a chart whose birth time was already added: the offer stays spent.
+    timeAdded = null,
   },
 ) {
   if (!Number.isInteger(tier) || tier < 0 || tier > 2) throw new Error(`saveReading: bad tier ${tier}`);
@@ -215,6 +221,7 @@ export async function saveReading(
     // An upgrade carries the kept details over, so there is nothing to retype.
     ...(birthRecord(birth) ? { birth: birthRecord(birth) } : {}),
     ...(cleanHistory(history).length ? { history: cleanHistory(history) } : {}),
+    ...(cleanTimeAdded(timeAdded) ? { timeAdded: cleanTimeAdded(timeAdded) } : {}),
   });
   return readingId;
 }
@@ -251,10 +258,29 @@ function serialize(existing, patch = {}) {
     ...(r.fresh ? { fresh: true } : {}),
     ...(hist.length ? { history: hist } : {}),
     ...(r.correction ? { correction: r.correction } : {}),
+    ...(cleanTimeAdded(r.timeAdded) ? { timeAdded: cleanTimeAdded(r.timeAdded) } : {}),
   };
 }
 
-/** History entries as kept: when, the details as they were, what changed. Nothing else. */
+/** The once-only flag as kept: when, and which link was used. Nothing else. */
+function cleanTimeAdded(t) {
+  if (!t || typeof t !== "object" || !Number.isFinite(t.at)) return null;
+  return { at: Math.floor(t.at), via: t.via === "pdf" ? "pdf" : "page" };
+}
+
+/** The chart a history entry keeps, for support only: the engine's values, without the drawing or the day's spread. */
+function historyChart(o) {
+  if (!o || typeof o !== "object") return null;
+  const { bodygraphSvg, timeSpread, ...rest } = o;
+  return rest;
+}
+
+/**
+ * History entries as kept: when, the details as they were, what changed --
+ * and, when a birth time was added (10/22), the chart and the written reading
+ * it replaced (`chart`, `reading`), so support can see what the buyer had
+ * before. Nothing else.
+ */
 function cleanHistory(h) {
   if (!Array.isArray(h)) return [];
   return h
@@ -263,6 +289,9 @@ function cleanHistory(h) {
       at: Math.floor(e.at),
       was: birthRecord(e.was),
       changed: Array.isArray(e.changed) ? e.changed.filter((c) => typeof c === "string").slice(0, 8) : [],
+      ...(e.kind === "time-added" ? { kind: "time-added" } : {}),
+      ...(historyChart(e.chart) ? { chart: historyChart(e.chart) } : {}),
+      ...(typeof e.reading === "string" && e.reading ? { reading: e.reading.slice(0, 60_000) } : {}),
     }))
     .slice(-20);
 }
@@ -378,6 +407,8 @@ export async function loadReading(store, id, now = Date.now(), { strict = false 
     /** Earlier details, for support only. Never returned to a page. */
     history: cleanHistory(raw.history),
     correction: raw.correction && typeof raw.correction === "object" ? raw.correction : null,
+    /** A birth time added once (10/22): { at, via }, or null. */
+    timeAdded: cleanTimeAdded(raw.timeAdded),
   };
 }
 
@@ -538,6 +569,72 @@ export async function fillReading(store, id, output, now = Date.now(), birth = n
     }),
   );
   return { ok: true, tier: existing.tier };
+}
+
+/**
+ * A BIRTH TIME ADDED, ONCE (Jeremy 10/22: "update birth time at no cost and
+ * get an updated reading"). The one deliberate exception to write-once, and
+ * narrow on purpose:
+ *
+ *   - only a FILLED chart cast with an UNKNOWN time, never used before
+ *     (`timeAdded` absent) -- the flag is set in the same write, so a second
+ *     submit finds it and changes nothing;
+ *   - only the time changes: the new birth must keep the record's date, zone
+ *     and place (the caller builds it from the record; this refuses anything
+ *     else);
+ *   - what it replaces goes into `history` (the details, the chart and the
+ *     written reading, for support only), and `correction` gets the calm note;
+ *   - on the reading tier the words are cleared, so the writer writes them
+ *     again for the new chart (the ordinary "being written" path).
+ *
+ * Returns `{ ok: true, tier }` or a reason.
+ */
+export async function retimeReading(store, id, { output, birth, correction = null, via = "page" }, now = Date.now()) {
+  if (!output || typeof output !== "object") throw new Error("retimeReading: no output");
+  refuseBirthData(output);
+  const existing = await loadReading(store, id, now, { strict: true });
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (existing.pending) return { ok: false, reason: "pending" };
+  if (existing.timeAdded) return { ok: false, reason: "already_added" };
+  const was = existing.birth;
+  const kept = birthRecord(birth);
+  if (!was || was.timeKnown !== false || existing.output?.timeKnown !== false) return { ok: false, reason: "time_known" };
+  if (!kept || kept.timeKnown !== true || kept.date !== was.date || kept.zone !== was.zone || (kept.place ?? null) !== (was.place ?? null)) {
+    return { ok: false, reason: "not_a_time" };
+  }
+  const at = Math.floor(now / 1000);
+  await store.setJSON(
+    id,
+    serialize(existing, {
+      output,
+      filledAt: at,
+      // The name for the chart stays as it was; only the time is new.
+      birth: { ...kept, ...(was.name ? { name: was.name } : {}) },
+      history: [
+        ...existing.history,
+        ...cleanHistory([{ at, was, changed: ["time"], kind: "time-added", chart: existing.output, reading: existing.reading }]),
+      ],
+      correction: correction && typeof correction === "object" ? correction : existing.correction,
+      timeAdded: { at, via },
+      // The reading tier's words are written again, for the chart they describe.
+      reading: null,
+      writtenAt: 0,
+    }),
+  );
+  return { ok: true, tier: existing.tier };
+}
+
+/**
+ * A PAID UPGRADE NOT YET CAST, when the chart it grew from has its birth time
+ * added: it carries the new time (the buyer confirms it) and the spent offer.
+ * Nothing happens to a record that already has a chart.
+ */
+export async function carryAddedTime(store, id, { birth, timeAdded }, now = Date.now()) {
+  const existing = await loadReading(store, id, now, { strict: true });
+  if (!existing || !existing.pending) return { ok: false, reason: existing ? "filled" : "not_found" };
+  const kept = birthRecord(birth);
+  await store.setJSON(id, serialize(existing, { ...(kept ? { birth: { ...kept, ...(existing.birth?.name ? { name: existing.birth.name } : {}) } } : {}), timeAdded }));
+  return { ok: true };
 }
 
 /**

@@ -44,6 +44,12 @@ export function upgradeTokenFromPath(pathname: string): string | null {
  * `/charts/` is "Email me my charts" (release 2): one exact path, with or
  * without its trailing slash, and nothing under it.
  */
+/** `/t/<key>`: "add it here" from a PDF (10/22), the never-expiring add-a-birth-time key. */
+export function addTimeKeyFromPath(pathname: string): string | null {
+  const m = /^\/t\/([A-Za-z0-9_.-]+)\/?$/.exec(pathname);
+  return m ? m[1] : null;
+}
+
 export function isChartsPath(pathname: string): boolean {
   return /^\/charts\/?$/.test(pathname);
 }

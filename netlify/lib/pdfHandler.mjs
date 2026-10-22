@@ -3,6 +3,7 @@ import { customerError } from "./failures.mjs";
 import { buyerNameFor } from "../../shared/chartName.mjs";
 import { messagePage } from "./messagePage.mjs";
 import { SHOP } from "../../shared/libraryLinks.mjs";
+import { mintAddTimeKey } from "./addTime.mjs";
 
 /**
  * GET /api/pdf, with the store, the builder and the clock passed in, so every
@@ -86,8 +87,9 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
       reading: reading.reading ?? null,
       // THE BIRTH LINE under the name (Jeremy 10/16).
       birth: reading.birth ?? null,
-      // Where "add it here" opens: this link's own page, its time box (#add-time; the time-only form is still to be built).
-      addTimeUrl: `${SHOP}r/${encodeURIComponent(token)}#add-time`,
+      // Where "add it here" opens: the PDF's own never-expiring key for this chart (netlify/lib/addTime.mjs),
+      // not the six-day reading link -- a PDF is kept far longer than six days.
+      addTimeUrl: `${SHOP}t/${mintAddTimeKey(current.id, secret)}`,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e?.message})`);

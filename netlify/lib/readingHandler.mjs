@@ -6,6 +6,7 @@ import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
 import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
+import { addTimeState } from "./addTime.mjs";
 
 /** Page counts by reading and version, so a reload does not build the PDF again. */
 const PAGES = new Map();
@@ -283,6 +284,12 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
         : null,
     /** The PDF's birth line, when the record keeps birth details (16 Oct 2026 on). */
     birthLine: birthLine(reading.birth),
+    /**
+     * "ADD IT HERE" (10/22): whether this chart's birth time can still be added
+     * -- "open" (cast at noon, not used yet), "used", "known", "none". The page
+     * opens the time-only form on #add-time only when it is open.
+     */
+    addTime: addTimeState(reading),
     writing: reading.tier >= 2 && !reading.pending && !reading.reading,
     /**
      * D-11: no upgrade offered at the top tier, because there is nothing above

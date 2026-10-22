@@ -94,6 +94,26 @@ export const KINDS = {
   "ready-email": { severity: F, customer: null, status: 200, code: null },
   "ready-email-no-address": { severity: F, customer: null, status: 200, code: null },
 
+  // --- adding a birth time found later (10/22: once per chart, free) --------
+  // Jeremy hears of every use (record ref + tier, never the time): the digest lists it.
+  "time-added": { severity: F, customer: null, status: 200, code: null },
+  "addtime-bad-request": { severity: I, customer: "our-side-generic", status: 400, code: "bad_request" },
+  "addtime-misconfigured": { severity: P, customer: "our-side-generic", status: 503, code: "misconfigured" },
+  "addtime-link-bad": { severity: I, customer: "reading-link-bad", status: 404, code: "not_found" },
+  "addtime-store-unavailable": { severity: P, customer: "reading-unavailable", status: 503, code: "reading_unavailable" },
+  "addtime-gone": { severity: I, customer: "addtime-gone", status: 410, code: "gone" },
+  "addtime-used": { severity: I, customer: "addtime-used", status: 409, code: "used" },
+  "addtime-known": { severity: I, customer: "addtime-known", status: 409, code: "time_known" },
+  "addtime-pending": { severity: I, customer: "pdf-not-ready", status: 409, code: "not_ready" },
+  "addtime-none": { severity: I, customer: "addtime-none", status: 409, code: "no_details" },
+  "addtime-check-time": { severity: I, customer: "addtime-check-time", status: 400, code: "check_time" },
+  // The engine did not answer an add: Jeremy is paged with the add-time brief (the engine's own
+  // kind is in the detail), so "Customer saw" is what the buyer read, not the chart form's words.
+  "addtime-engine": { severity: P, customer: "addtime-slow", status: 503, code: "chart_unavailable" },
+  "addtime-busy": { severity: F, customer: "our-side-generic", status: 503, code: "busy" },
+  "addtime-not-saved": { severity: P, customer: "addtime-not-saved", status: 503, code: "not_saved" },
+  "addtime-crash": { severity: P, customer: "our-side-generic", status: 500, code: "unexpected" },
+
   // --- town search ----------------------------------------------------------
   "places-misconfigured": { severity: P, customer: "places-unavailable", status: 200, code: "misconfigured" },
   "places-engine-down": { severity: F, customer: "places-unavailable", status: 200, code: "places_unavailable" },

@@ -182,6 +182,8 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
     // with them) and its earlier corrections come along.
     birth: source?.birth ?? null,
     history: source?.history ?? null,
+    // A birth time added once to the chart it grows from: the offer stays spent (10/22).
+    timeAdded: source?.timeAdded ?? null,
   });
 
   if (source) {

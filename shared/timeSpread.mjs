@@ -51,6 +51,24 @@ export function markedFields(output) {
  */
 export const GATES_NOTE = "The Moon moves to a new gate about every ten hours, so this list can change even where the rest of the chart holds.";
 
+/**
+ * WHICH CHART VALUES A READING MARGIN NOTE STATES, by its label
+ * (interpretation.mjs marginNotes) -- for the tag under the label when one of
+ * them changes during an unknown birth day (10/22). The type's note says its
+ * strategy too. The phone's PdfExport.marginFields, rule for rule.
+ */
+export function marginFields(label, chart) {
+  const l = String(label ?? "");
+  if (l && l === String(chart?.type ?? "").toUpperCase()) return ["type", "strategy"];
+  if (l === "DEFINITION") return ["definition"];
+  if (l.endsWith(" AUTHORITY") || l === "CENTER") return ["authority"];
+  if (l.startsWith("PROFILE ")) return ["profile"];
+  if (l === "INCARNATION CROSS") return ["incarnationCross"];
+  if (l.startsWith("ON TRACK")) return ["signature"];
+  if (l.startsWith("OFF TRACK")) return ["notSelfTheme"];
+  return [];
+}
+
 /* ------------------------------------------------------------------ clock */
 
 /** Wall-clock minute of day for minute index k of the spread's day. */
@@ -160,6 +178,23 @@ export const offerText = (tier) => {
 
 /** Where "add it here" goes on the page itself: the reading link's own time box. */
 export const ADD_TIME_HASH = "#add-time";
+
+/**
+ * "ADD YOUR BIRTH TIME" (10/22): the time-only form behind the offer, on the
+ * page (#add-time) and from the PDF (/t/<key>). The sentences that are new
+ * are marked NEW for Jeremy's verbatim read; the rest are words the site
+ * already uses (the kept-details label, "Keep them as they are", the privacy
+ * line of "Change a detail"). Here, not in src/copy.ts, so the rig's checks
+ * read the same words the page draws.
+ */
+export const ADD_TIME = {
+  /** NEW. */
+  title: "Add your birth time",
+  /** NEW: "Once and free — your chart and your reading are redone from it. The date and place stay as they are." (the offer's own words, then one more sentence). */
+  intro: (tier) => `Once and free — ${noun(tier)} ${verb(tier)} redone from it. The date and place stay as they are.`,
+  /** NEW: "Redo my chart and reading", "Redo my chart", "Redo my summary". */
+  button: (tier) => (tier >= 2 ? "Redo my chart and reading" : tier === 1 ? "Redo my chart" : "Redo my summary"),
+};
 
 /* -------------------------------------------------------------- the drawing */
 

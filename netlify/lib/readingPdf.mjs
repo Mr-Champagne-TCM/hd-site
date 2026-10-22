@@ -22,7 +22,7 @@ import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import { gateList } from "../../shared/gateList.mjs";
-import { GATES_NOTE, holdsLine, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
+import { GATES_NOTE, holdsLine, marginFields, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -1094,35 +1094,42 @@ const LIST_W = 470;
 function startHere(d, v, c) {
   d.start(START_HERE);
   const firstPage = d.pageNo;
+  /**
+   * WITH NO BIRTH TIME, the lists whose values change during the birth day
+   * carry the tag beside their label, as every other place they print does
+   * (Jeremy 10/22: "wherever it prints").
+   */
+  const marked = measured(c) ? markedFields(c) : new Set();
+  const others = marked.has("undefinedCenters") || marked.has("openCenters");
 
   const defined = v.definedCenters.map((it) => itemBlock(d, it, false));
   const other = v.otherCenters.map((it) => itemBlock(d, it, true));
   sectionHead(d, 1, "Your centers", "", 15 + (defined[0]?.h ?? 20));
-  subLabel(d, `Colored in (${v.definedCenters.length}) · steady, yours`, defined[0]?.h ?? 20);
+  subLabel(d, `Colored in (${v.definedCenters.length}) · steady, yours`, defined[0]?.h ?? 20, marked.has("definedCenters"));
   if (!defined.length) plainLine(d, "None colored in.");
   else itemList(d, defined, () => CENTERS);
   if (other.length) {
     d.gap(4);
-    subLabel(d, `Not colored in (${other.length}) · taken in from others`, other[0].h);
+    subLabel(d, `Not colored in (${other.length}) · taken in from others`, other[0].h, others);
     itemList(d, other, () => CENTERS);
   }
   takeaway(d, v.centersTakeaway, c);
 
   if (d.pageNo === firstPage) d.start(START_HERE);
   const chans = v.channels.map((it) => itemBlock(d, it, false));
-  sectionHead(d, 2, "Your channels", `(${v.channels.length})`, chans[0]?.h ?? 20);
+  sectionHead(d, 2, "Your channels", `(${v.channels.length})`, chans[0]?.h ?? 20, marked.has("channels"));
   if (!chans.length) plainLine(d, NO_CHANNELS);
   else itemList(d, chans, (it) => channelLink(it.title));
   takeaway(d, v.channelsTakeaway, c);
 
   const lines = v.profileLines.map((it) => itemBlock(d, it, false));
-  sectionHead(d, 3, "Your profile", v.profile, lines[0]?.h ?? 20);
+  sectionHead(d, 3, "Your profile", v.profile, lines[0]?.h ?? 20, marked.has("profile"));
   itemList(d, lines, (it) => lineLink(it.title));
   takeaway(d, v.profileLinesTakeaway, c);
 }
 
-/** A gold-ringed number, the section title, and a dim count beside it. */
-function sectionHead(d, n, title, count, keep) {
+/** A gold-ringed number, the section title, a dim count beside it, and the tag when it can change. */
+function sectionHead(d, n, title, count, keep, tag = false) {
   const pdf = d.pdf;
   const h = 24;
   d.need(22 + h + keep);
@@ -1135,14 +1142,17 @@ function sectionHead(d, n, title, count, keep) {
   drawText(pdf, String(n), MARGIN + 8 - measure(pdf, String(n), np) / 2, cy + 3.2, np);
   const tp = paint(13, GOLD, true);
   drawText(pdf, title, MARGIN + 24, cy + 4.6, tp);
-  if (count) drawText(pdf, count, MARGIN + 24 + measure(pdf, title, tp) + 8, cy + 4.6, paint(9.5, DIM));
+  let x = MARGIN + 24 + measure(pdf, title, tp);
+  if (count) x += 8 + drawText(pdf, count, x + 8, cy + 4.6, paint(9.5, DIM));
+  if (tag) drawText(pdf, "PROVISIONAL", x + 8, cy + 4.6, TAG_PAINT);
   d.gap(h);
 }
 
-function subLabel(d, text, keep) {
+function subLabel(d, text, keep, tag = false) {
   d.need(15 + keep);
   d.gap(2);
-  drawText(d.pdf, text.toUpperCase(), MARGIN, d.y + 8, paint(7.5, DIM, false, 0.12));
+  const w = drawText(d.pdf, text.toUpperCase(), MARGIN, d.y + 8, paint(7.5, DIM, false, 0.12));
+  if (tag) drawText(d.pdf, "PROVISIONAL", MARGIN + w + 6, d.y + 8, TAG_PAINT);
   d.gap(13);
 }
 
@@ -1234,6 +1244,9 @@ function noteHref(label, c) {
   return null;
 }
 
+/** The height the PROVISIONAL tag adds under a margin note's label (the phone's NOTE_TAG_H). */
+const NOTE_TAG_H = 9;
+
 /** How much of a page "Your reading" needs under its big title before it may start there. */
 const READING_START_ROOM = 260;
 
@@ -1256,6 +1269,9 @@ function readingPages(d, c, v) {
     d.start("Your reading");
   }
   const notes = marginNotes(c);
+  // An unknown birth time: a margin value that changes that day carries the tag under its label (10/22, as the phone).
+  const marked = measured(c) ? markedFields(c) : null;
+  const tagged = (label) => Boolean(marked) && marginFields(label, c).some((f) => marked.has(f));
 
   for (const section of v.reading) {
     const h = section.heading;
@@ -1270,7 +1286,7 @@ function readingPages(d, c, v) {
       d.L(String(val ?? ""), paint(8.5, DIM), NOTE_W),
       k,
     ]);
-    const notesH = noteLs.reduce((n, [kl, vl]) => n + (kl?.height ?? 0) + vl.height + 9, 0);
+    const notesH = noteLs.reduce((n, [kl, vl, k]) => n + (kl?.height ?? 0) + (tagged(k) ? NOTE_TAG_H : 0) + vl.height + 9, 0);
 
     // What must stay together: the label, the bold lead, and the first piece
     // of the first paragraph that may end a page (whole sentences, two lines).
@@ -1286,6 +1302,10 @@ function readingPages(d, c, v) {
         const href = noteHref(k, c);
         if (href) d.linkLayout(kl, NOTE_X, ny, href);
         ny += kl.height;
+      }
+      if (tagged(k)) {
+        drawText(pdf, "PROVISIONAL", NOTE_X, ny + 7, TAG_PAINT);
+        ny += NOTE_TAG_H;
       }
       drawLayout(pdf, vl, NOTE_X, ny);
       ny += vl.height + 9;

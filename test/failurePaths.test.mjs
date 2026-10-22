@@ -122,7 +122,8 @@ test("our-side failures carry a next step; the customer acts only on their own t
   }
   const acting = Object.entries(MESSAGES).filter(([, m]) => m.act).map(([k]) => k).sort();
   // Release 2: a mistyped address on "Email me my charts" is theirs to fix too.
-  assert.deepEqual(acting, ["chart-check-date", "chart-check-place", "chart-check-time", "mycharts-bad-email"]);
+  // 10/22: a mistyped time on "Add your birth time" is theirs to fix too.
+  assert.deepEqual(acting, ["addtime-check-time", "chart-check-date", "chart-check-place", "chart-check-time", "mycharts-bad-email"]);
 });
 
 test("engine answers map onto kinds the customer can act on, or ours", () => {
