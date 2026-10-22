@@ -26,6 +26,7 @@ import { NOON_NOTE_A, NOON_NOTE_B } from "../../shared/fixCopy.mjs";
 import { crossName } from "../../shared/crossName.mjs";
 import { gateList } from "../../shared/gateList.mjs";
 import { heartLabel, heartMode } from "../../shared/heartLabel.mjs";
+import { holdsLine, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
   AUTHORITY,
   BODYGRAPH_GUIDE,
@@ -190,6 +191,110 @@ const NOON_NOTE =
   "Authority and Profile should be treated as provisional.";
 
 const wordmarkPaint = () => paint(7, MARK, true, WORDMARK_TRACKING);
+
+/* ------------------------------------------------- MOCK TIME (Jeremy 10/22) */
+
+/**
+ * The tag: gold capitals, as the page draws it -- beside a label, and inside
+ * the one line about the time, so "PROVISIONAL" reads as one thing everywhere.
+ */
+const TAG_PAINT = paint(6.5, GOLD, true, 0.14);
+
+/** The measured spread, when the switch is on and the record has one. */
+const measured = (c) => (fix("TIME") ? usableSpread(c) : null);
+
+/**
+ * The tag beside a label: on the label's line when it fits the label column,
+ * else just under it. Returns how many lines the label now takes.
+ */
+function labelTag(pdf, label, lp, x, baseline, colW) {
+  const lw = measure(pdf, label, lp);
+  const tw = measure(pdf, "PROVISIONAL", TAG_PAINT);
+  if (lw + 5 + tw <= colW) {
+    drawText(pdf, "PROVISIONAL", x + lw + 5, baseline, TAG_PAINT);
+    return 1;
+  }
+  drawText(pdf, "PROVISIONAL", x, baseline + 9, TAG_PAINT);
+  return 2;
+}
+
+/**
+ * Words in more than one paint, wrapped greedily at `width` -- the one line
+ * with its gold PROVISIONAL, the offer with its link. `parts`: { text, p, href? }.
+ */
+function drawRich(d, parts, x, width, size) {
+  const pdf = d.pdf;
+  const tokens = [];
+  for (const part of parts) {
+    // Plain spaces only: a no-break space ("2:15 PM") keeps its words together.
+    const bits = part.p === TAG_PAINT ? [part.text] : part.text.split(/( +)/).filter(Boolean);
+    for (const t of bits) tokens.push({ text: t, p: part.p, href: part.href ?? null, w: measure(pdf, t, part.p), space: /^ +$/.test(t) });
+  }
+  const lines = [[]];
+  let lw = 0;
+  for (const t of tokens) {
+    if (t.space && !lines.at(-1).length) continue;
+    if (!t.space && lw + t.w > width && lines.at(-1).length) {
+      while (lines.at(-1).length && lines.at(-1).at(-1).space) lines.at(-1).pop();
+      lines.push([]);
+      lw = 0;
+    }
+    lines.at(-1).push(t);
+    lw += t.w;
+  }
+  const m = lineMetrics(size);
+  const lh = m.h + m.extra;
+  d.need(lines.length * lh);
+  lines.forEach((line, i) => {
+    let cx = x;
+    const base = d.y + m.asc + i * lh;
+    for (const t of line) {
+      drawText(pdf, t.text, cx, base, t.p);
+      // The link's words AND the spaces between them are underlined, as one link.
+      if (t.href) d.rect(cx, base + 0.16 * t.p.size, t.w, 0.6, LIB_TEAL);
+      if (t.href && !t.space) d.link(textBox(pdf, t.text, cx, base, t.p), t.href, 0.5);
+      cx += t.w;
+    }
+  });
+  d.y += lines.length * lh - m.extra;
+}
+
+/** Page 1, under the chart's three facts: the one line, the day drawn, the offer. */
+function timeNote(d, { spread, tier, addTimeUrl }) {
+  const base = paint(9.5, INK);
+  d.gap(5);
+  drawRich(
+    d,
+    holdsLine(spread).parts.map((p) => (p.tag ? { text: p.tag, p: TAG_PAINT } : { text: p.t, p: base })),
+    MARGIN,
+    CONTENT_W,
+    9.5,
+  );
+  d.gap(7);
+  const { svg, height } = spreadSvg(spread, { width: CONTENT_W, rows: !fix("TIMEBAR"), palette: "paper", size: 7.5 });
+  try {
+    SVGtoPDF(d.pdf, svg, MARGIN, d.y, {
+      width: CONTENT_W,
+      height,
+      // The drawing is laid out in points: one unit is one point, as the page is.
+      assumePt: true,
+      fontCallback: (family, bold, italic, opts) => (bold || Number(opts?.["font-weight"]) >= 500 ? "svgBold" : "svgBody"),
+    });
+  } catch {
+    /* a drawing that will not draw is a page without it */
+  }
+  d.gap(height + 5);
+  const o = offerLine(tier, fix("TIMEOFFERB") ? "B" : "A");
+  const dim = paint(8.5, DIM);
+  drawRich(
+    d,
+    [{ text: o.before, p: dim }, { text: o.link, p: paint(8.5, INK), href: addTimeUrl }, { text: o.after, p: dim }],
+    MARGIN,
+    CONTENT_W,
+    8.5,
+  );
+  d.gap(10);
+}
 
 /**
  * A cursor down the page that starts a new one when a block will not fit --
@@ -419,7 +524,7 @@ export async function readingPdf(args) {
   return out(await buildPdf(args, { keepClosing: true }));
 }
 
-async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false }, opts = {}) {
+async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null }, opts = {}) {
   const qr = (() => {
     try {
       return QRCode.create(BODYGRAPH_GUIDE, { errorCorrectionLevel: "M" });
@@ -463,7 +568,7 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
      */
     const text = tier >= 2 && typeof reading === "string" && reading.trim() ? reading.replace(/\r\n?/g, "\n") : null;
 
-    bodygraphPage(d, { name, output, birth, qr, tier });
+    bodygraphPage(d, { name, output, birth, qr, tier, addTimeUrl });
     glancePage(d, { output, tier, reading: text });
     // Same gate as the phone: a reading that can be laid out in the new order
     // gets the new order; anything else keeps its words as plain paragraphs.
@@ -511,8 +616,10 @@ function profileWords(profile) {
   return [...digits].map((x) => PROFILE_LINE_NAMES[x]).filter(Boolean).join(" / ");
 }
 
-function bodygraphPage(d, { name, output, birth, qr, tier }) {
+function bodygraphPage(d, { name, output, birth, qr, tier, addTimeUrl = null }) {
   const c = output ?? {};
+  const spread = measured(c);
+  const marked = spread ? markedFields(c) : null;
   const pdf = d.pdf;
   d.start();
   const eyebrow = paint(8, MARK, true, 0.19);
@@ -532,18 +639,27 @@ function bodygraphPage(d, { name, output, birth, qr, tier }) {
   d.rule(RULE, 1.5);
   d.gap(9);
   const words = profileWords(c.profile);
-  drawText(
-    pdf,
-    [c.type, `Profile ${c.profile ?? ""}${words ? ` — ${words}` : ""}`, `${c.authority ?? ""} authority`]
-      .filter(Boolean)
-      .join("  ·  "),
-    MARGIN,
-    d.y + 9,
-    paint(10, DIM),
-  );
+  const facts = [
+    ["type", c.type],
+    ["profile", `Profile ${c.profile ?? ""}${words ? ` — ${words}` : ""}`],
+    ["authority", `${c.authority ?? ""} authority`],
+  ].filter(([, v]) => v);
+  if (marked) {
+    // MOCK TIME: each fact that changes that day carries its tag.
+    let x = MARGIN;
+    facts.forEach(([field, v], i) => {
+      if (i) x += drawText(pdf, "  ·  ", x, d.y + 9, paint(10, DIM));
+      x += drawText(pdf, v, x, d.y + 9, paint(10, DIM));
+      if (marked.has(field)) x += 4 + drawText(pdf, "PROVISIONAL", x + 4, d.y + 9, TAG_PAINT);
+    });
+  } else {
+    drawText(pdf, facts.map(([, v]) => v).join("  ·  "), MARGIN, d.y + 9, paint(10, DIM));
+  }
   d.gap(13);
 
-  if (c.timeKnown === false) {
+  if (spread) {
+    timeNote(d, { spread, tier, addTimeUrl });
+  } else if (c.timeKnown === false) {
     // MOCK FIX 17: the page's own sentence, word for word.
     d.block(d.L(fix("17A") ? NOON_NOTE_A : fix("17B") ? NOON_NOTE_B : NOON_NOTE, paint(9.5, GOLD)), MARGIN, 10);
   }
@@ -707,6 +823,8 @@ function chartTierSentences(c) {
 
 function glancePage(d, { output, tier, reading }) {
   const c = output ?? {};
+  const marked = measured(c) ? markedFields(c) : null;
+  const glanceField = ["type", "strategy", "authority", "profile", "signature", "notSelfTheme"];
   const pdf = d.pdf;
   d.start("Your chart at a glance");
   // Value from the chart, sentence from the model. Never the reverse.
@@ -737,9 +855,10 @@ function glancePage(d, { output, tier, reading }) {
     d.space(6);
     drawText(pdf, label, MARGIN + 16, d.y + 8, labelPaint);
     d.linkText(label, MARGIN + 16, d.y + 8, labelPaint, glanceHref[i]);
+    const tagRows = marked?.has(glanceField[i]) ? labelTag(pdf, label, labelPaint, MARGIN + 16, d.y + 8, 102) : 0;
     // 122, not 90: "WHEN IT'S OFF TRACK" needs the room.
     drawLayout(pdf, l, MARGIN + 122, d.y - 2);
-    d.gap(Math.max(l.height, 14));
+    d.gap(Math.max(l.height, 14, tagRows > 1 ? 21 : 0));
     d.space(4);
   });
   d.space(6);
@@ -754,36 +873,38 @@ function glancePage(d, { output, tier, reading }) {
   d.rule(RULE, 0.8);
   d.space(2);
 
-  const valueRow = (label, value, href) => {
+  const valueRow = (label, value, href, field = null) => {
     const l = d.L(value, paint(10, INK), CONTENT_W - 110);
     d.need(l.height + 10);
     d.space(5);
     const lp = paint(8, DIM, false, 0.06);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, lp);
     d.linkText(label.toUpperCase(), MARGIN, d.y + 8, lp, href);
+    // MOCK TIME: the tag beside the row's label (Jeremy 10/22: "next to section header").
+    const tagRows = field && marked?.has(field) ? labelTag(pdf, label.toUpperCase(), lp, MARGIN, d.y + 8, 104) : 0;
     drawLayout(pdf, l, MARGIN + 110, d.y - 1);
-    d.gap(Math.max(l.height, 12));
+    d.gap(Math.max(l.height, 12, tagRows > 1 ? 20 : 0));
     d.space(4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
 
   const list = (v, none) => (Array.isArray(v) && v.length ? v.join(", ") : none);
-  valueRow("Definition", c.definition ?? "", DEFINITION);
+  valueRow("Definition", c.definition ?? "", DEFINITION, "definition");
   // W14: "Cross of the Vessel of Love", "the" in lowercase like the other names.
-  valueRow("Incarnation cross", crossName(c.incarnationCross), crossLink(c.incarnationCross));
-  valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS);
+  valueRow("Incarnation cross", crossName(c.incarnationCross), crossLink(c.incarnationCross), "incarnationCross");
+  valueRow("Defined centers", list(c.definedCenters, "None — Reflector"), CENTERS, "definedCenters");
   /**
    * A READING STORED BEFORE THE THIRD STATE EXISTED has no `undefinedCenters`
    * key at all, and its `openCenters` still means "everything not defined".
    * Absent is not empty, so those readings keep the two rows they were sold
    * with (a shop-only case: every phone chart has all three).
    */
-  if (Array.isArray(c.undefinedCenters)) valueRow("Undefined centers", list(c.undefinedCenters, "None"), CENTERS);
-  valueRow("Open centers", list(c.openCenters, "None"), CENTERS);
-  valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS);
+  if (Array.isArray(c.undefinedCenters)) valueRow("Undefined centers", list(c.undefinedCenters, "None"), CENTERS, "undefinedCenters");
+  valueRow("Open centers", list(c.openCenters, "None"), CENTERS, "openCenters");
+  valueRow("Channels", Array.isArray(c.channels) && c.channels.length ? c.channels.join("\n") : "None", CHANNELS, "channels");
   // The gate numbers, as the page lists them (10/22: values only, every tier).
   if (Array.isArray(c.activatedGates)) {
-    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS);
+    valueRow("Activated gates", gateList(c.activatedGates), CHANNELS, "gates");
   }
 
   // The activations, in a four-up grid -- the READING tier's, never sold with
@@ -833,7 +954,8 @@ function glancePage(d, { output, tier, reading }) {
     }
     d.need(8 + 12 + how.height + 4 + 40);
     d.space(8);
-    drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
+    const headW = drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
+    if (marked?.has("planetNumbers")) drawText(pdf, "PROVISIONAL", MARGIN + headW + 6, d.y + 8, TAG_PAINT);
     techPage = d.pageNo;
     d.gap(12);
     d.draw(how);

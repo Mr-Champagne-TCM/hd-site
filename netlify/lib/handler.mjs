@@ -3,6 +3,8 @@ import { tierFor } from "./grant.mjs";
 import { fillReading, loadReading, readReadingLink } from "./reading.mjs";
 import { buildCorrection, historyEntry } from "./correction.mjs";
 import { customerError, engineKind } from "./failures.mjs";
+import { fix } from "../../shared/fixMock.mjs";
+import { SCAN_TIER, birthSpread } from "./birthSpread.mjs";
 
 /**
  * The free chart request, with the storage and the engine passed in.
@@ -218,6 +220,42 @@ export async function handleChart({
     const kind = engineKind(upstream.status, upstream.payload?.error?.code);
     await note(kind, `${tierNote}: engine ${upstream.status} ${upstream.payload?.error?.code ?? "unknown"}`, paid, ref);
     return fail(kind, { paid });
+  }
+
+  /**
+   * MOCK TIME (Jeremy 10/22): an unknown birth time, measured. Worked out ONCE,
+   * here, when the noon chart is made, and kept with it (`timeSpread` rides in
+   * the output, so the record, the page and the PDF all have it). It holds no
+   * birth field -- minutes of the day and the values, nothing else.
+   *
+   * A spread that cannot be made never stops the chart: the page then says what
+   * it says today (provisional Type, Authority, Profile) and Jeremy hears of it.
+   */
+  if (fix("TIME") && scrubbed.timeKnown === false && scrubbed.date && scrubbed.zone && upstream.payload) {
+    try {
+      upstream.payload.timeSpread = await birthSpread({
+        date: scrubbed.date,
+        zone: scrubbed.zone,
+        noonChart: upstream.payload,
+        cast: async (utc) => {
+          const r = await engine({ birth: { utc }, tier: SCAN_TIER });
+          if (!r?.ok) throw new Error(`engine ${r?.status}`);
+          return r.payload;
+        },
+      });
+      /**
+       * Nothing above what was bought rides along: a chart without channels
+       * (the summary) keeps no channel stretches. The window still counts them,
+       * which only ever makes it the safer, narrower one.
+       */
+      const sp = upstream.payload.timeSpread;
+      if (sp && !Array.isArray(upstream.payload.channels)) {
+        delete sp.segments.channels;
+        sp.changes = sp.changes.filter((f) => f !== "channels");
+      }
+    } catch (e) {
+      await note("chart-time-spread", `${tierNote}: ${e?.message ?? "Error"}`, paid, ref);
+    }
   }
 
   /**

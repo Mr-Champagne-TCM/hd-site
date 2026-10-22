@@ -11,6 +11,11 @@
  *   W13C       "HEART (EGO)" on one line, 10 units left of the engine's spot
  *              (one line at the engine's spot is the default on this branch,
  *              shared/heartLabel.mjs)
+ *   TIME       an unknown birth time, measured (mock 10/22): the one line, the
+ *              day drawn with its rows, PROVISIONAL only on what changes
+ *              (netlify/lib/birthSpread.mjs, shared/timeSpread.mjs)
+ *   TIMEBAR    with TIME: the day drawn without rows
+ *   TIMEOFFERB with TIME: the second wording of "Found your birth time?"
  *
  * Written in plainly on mock-tiers-1022 (Jeremy's calls, 10/22): 2A / 2B (the
  * summary keeps channels and activated gates, the new tier split), W13 ("HEART

@@ -17,6 +17,7 @@ import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 import { ConfirmKept, ReadingNotes } from "./Returning";
+import { AddTimeMock, TimeNote, measuredSpread, useAddTime } from "./TimeSpread";
 
 /**
  * What a delivery link opens.
@@ -95,6 +96,8 @@ export default function ReadingPage({ token }: { token: string }) {
   const [state, setState] = useState<State>({ at: "loading" });
   /** "Change a detail" on the confirm screen (release 2): the kept details, as a form. */
   const [correcting, setCorrecting] = useState(false);
+  /** MOCK TIME: "add it here" opens the time-only form (a mock of it). */
+  const addTime = useAddTime();
 
   useEffect(() => {
     let alive = true;
@@ -319,6 +322,10 @@ export default function ReadingPage({ token }: { token: string }) {
 
   const { reading } = state;
 
+  if (addTime && !reading.pending && measuredSpread(reading.output)) {
+    return <AddTimeMock tier={reading.tier} birthLine={reading.birthLine ?? null} />;
+  }
+
   /**
    * PAID, AND NOT YET TOLD US WHEN THEY WERE BORN.
    *
@@ -421,6 +428,8 @@ export default function ReadingPage({ token }: { token: string }) {
         before the chart. Below the chart, today's order stays (his 1B half).
       */}
       {reading.output && <ThreeLines chart={reading.output} takeaways={reading.view?.takeaways ?? null} />}
+      {/* MOCK TIME: the one line about an unknown birth time, the day drawn, and the offer. */}
+      {reading.output && <TimeNote output={reading.output} tier={reading.tier} />}
 
       {/*
         THE NEW ORDER, the PDFs' order (Jeremy 10/16: "All PDFs should look
