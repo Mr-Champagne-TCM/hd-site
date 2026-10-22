@@ -95,26 +95,31 @@ def mock_hires(page, cid, which, w, h):
     """MOCK AI2 (throwaway): the reading page again at device scale 2, for sharp close-ups."""
     if cid != "maya-3-upgrade-t2":
         return
+    ctx = None
     try:
-        cdp = page.context.new_cdp_session(page)
-        cdp.send("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2, "mobile": False})
-        page.wait_for_timeout(600)
-        doc_h = page.evaluate("document.documentElement.scrollHeight")
+        # The same page, same signed-in state, in a second context at device scale 2.
+        state = page.context.storage_state()
+        ctx = page.context.browser.new_context(viewport={"width": w, "height": h}, device_scale_factor=2, storage_state=state,
+                                               extra_http_headers={"x-rig-visitor": "maya"})
+        p2 = ctx.new_page()
+        p2.goto(page.url)
+        settle(p2, 1500)
+        open(os.path.join(CAP, f"{cid}.{which}.2x.txt"), "w", encoding="utf-8").write(p2.inner_text("body"))
+        doc_h = p2.evaluate("document.documentElement.scrollHeight")
         # In 3000 px slices: one 2x shot of a whole tall page passes Chrome's texture limit.
         y, n = 0, 0
         while y < doc_h:
             hh = min(3000, doc_h - y)
-            page.screenshot(path=os.path.join(CAP, f"{cid}.{which}.2x.part{n:02d}-y{y}.png"),
-                            clip={"x": 0, "y": y, "width": w, "height": hh}, full_page=True)
+            p2.screenshot(path=os.path.join(CAP, f"{cid}.{which}.2x.part{n:02d}-y{y}.png"),
+                          clip={"x": 0, "y": y, "width": w, "height": hh}, full_page=True)
             y += hh
             n += 1
-        mock_boxes(page, cid, which + ".2x")
-        cdp.send("Emulation.clearDeviceMetricsOverride")
-        cdp.detach()
+        mock_boxes(p2, cid, which + ".2x")
     except Exception as e:  # noqa: BLE001
         open(os.path.join(CAP, f"{cid}.{which}.2x.err.txt"), "w", encoding="utf-8").write(repr(e))
-    page.set_viewport_size({"width": w, "height": h})
-    page.wait_for_timeout(300)
+    finally:
+        if ctx:
+            ctx.close()
 
 
 def capture(page, cid, meta):
