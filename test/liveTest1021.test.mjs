@@ -223,7 +223,7 @@ test("W8 THE SOMEONE-NEW CARDS DESCRIBE THEIR CHART, on all three", () => {
   const page = text(app.render("Tiers", { fresh: true }));
   // The 10/22 split: their channels and gates on the summary, the drawing as the chart's reason.
   assert.match(page, /Definition, their centers, their channels and activated gates, their incarnation cross\./);
-  assert.match(page, /Everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep\./);
+  assert.match(page, /Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\./);
   assert.match(page, /Their chart, plus about 1,200 words written to it: ✓ How they decide ✓ How they meet the world/);
   assert.doesNotMatch(page, /your centers|your incarnation cross|How you decide/);
 });
@@ -531,8 +531,8 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
 
 test("#16 WHAT ELSE THERE IS, for someone new: their bodygraph, their channels", () => {
   const m = mail({ tier: 0, chartName: "Quinn", someoneNew: true });
-  assert.match(m.text, /The chart contains everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep\./);
-  assert.match(mail({ tier: 0 }).text, /The chart contains everything in the summary, plus your bodygraph drawn/);
+  assert.match(m.text, /The chart contains their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\./);
+  assert.match(mail({ tier: 0 }).text, /The chart contains your bodygraph, drawn — the summary’s values as a picture/);
   assert.equal(TIERS[0].theirBlurb, "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.");
 });
 

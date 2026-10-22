@@ -18,18 +18,15 @@
  *   the 26 activations                  -        -      yes
  *   the written reading                 -        -      yes
  */
-import { fix } from "./fixMock.mjs";
 
 /**
- * The chart card's words, two ways (MOCK 10/22, Jeremy picks; ?fix=T1B /
- * HD_FIX=T1B shows B). Both name only the drawing and its PDF as what the
- * chart adds; each also reads after "The chart contains ..." (the emails, the
- * PDF), so it starts in lower case there.
+ * The chart card's words (Jeremy 10/22, his pick of the two mocked: option B).
+ * They name only the drawing and its PDF as what the chart adds, and also read
+ * after "The chart contains ..." (the emails, the PDF), so they start in lower
+ * case there.
  */
-const CHART_A = "Everything in the summary, plus your bodygraph drawn: a page you can share and a PDF you keep.";
-const CHART_A_THEIR = "Everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep.";
-const CHART_B = "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
-const CHART_B_THEIR = "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
+const CHART_CARD = "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
+const CHART_CARD_THEIR = "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
 
 export const SUMMARY = {
   sku: "hd_summary",
@@ -51,8 +48,8 @@ export const CHART = {
   label: "The chart",
   checkoutName: "Human Design chart",
   checkoutDescription: "Your bodygraph drawn, your chart's values, and a PDF to keep.",
-  blurb: fix("T1B") ? CHART_B : CHART_A,
-  theirBlurb: fix("T1B") ? CHART_B_THEIR : CHART_A_THEIR,
+  blurb: CHART_CARD,
+  theirBlurb: CHART_CARD_THEIR,
   /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
   adds: "Your bodygraph, drawn, and its PDF to keep.",
 };
