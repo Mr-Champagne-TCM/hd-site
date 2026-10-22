@@ -57,14 +57,15 @@ export function baselineDiff({ baselineDir, docs }) {
   for (const [k, lines] of Object.entries(now)) {
     const old = base.docs[k];
     if (!old) {
-      added.push({ doc: k, lines: lines.length });
+      added.push({ doc: k, lines: lines.length, text: lines });
       continue;
     }
     const was = new Set(old);
     const is = new Set(lines);
     const plus = lines.filter((l) => !was.has(l));
     const minus = old.filter((l) => !is.has(l));
-    if (plus.length || minus.length) changed.push({ doc: k, plus: [...new Set(plus)], minus: [...new Set(minus)] });
+    // The document as it is now rides along, so a fix can claim lines by where they sit (regress.mjs sections).
+    if (plus.length || minus.length) changed.push({ doc: k, plus: [...new Set(plus)], minus: [...new Set(minus)], lines });
   }
   const gone = Object.keys(base.docs).filter((k) => !now[k]);
   return { baseline: { commit: base.commit, at: base.at }, changed, added, gone };

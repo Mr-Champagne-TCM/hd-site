@@ -14,7 +14,8 @@
  *     "minus": ["regex a removed line must match", ...],
  *     "plus":  ["regex an added line must match", ...],
  *     "addsDocs": "regex: documents this fix brings in", "dropsDocs": "regex: documents it takes away",
- *     "moves": "regex: PDF pages this fix moves words between" }
+ *     "moves": "regex: PDF pages this fix moves words between",
+ *     "sections": [{ "from": "regex: the line a section starts after", "to": "regex: the line it ends before" }] }
  * Lines are compared as the baseline masks them (links, ports, dates).
  *
  * MOVED, NOT CHANGED (`moves`, 10/21 fix 6). A fix that changes where a page
@@ -24,6 +25,14 @@
  * gone) is claimed as moved by the fix whose `moves` names those pages: the
  * words are exactly the same, only where they fall changed. Nothing else is:
  * a changed word on a moved page still needs its own claim.
+ *
+ * A SECTION REWRITTEN WHOLE (`sections`, 10/21 try-this). The try-this lines
+ * are a new shape everywhere, and on a PDF they wrap into pieces no tight
+ * pattern names. A fix may claim any changed line that sits strictly between
+ * a `from` line and the next `to` line, in the same document (the pages of
+ * one PDF read as one text): in the baseline for a gone line, in the run for a
+ * new one. The `from` and `to` lines themselves are never claimed this way,
+ * and nothing outside the section is.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -41,6 +50,7 @@ export function loadFixList(file = join(E2E, "fixlist.json")) {
     addsRe: rx(f.addsDocs),
     dropsRe: rx(f.dropsDocs),
     movesRe: rx(f.moves),
+    sectionsRe: (f.sections ?? []).map((x) => ({ from: rx(x.from), to: rx(x.to) })),
   }));
 }
 
@@ -78,6 +88,38 @@ function movedLines(diff, fixes, base) {
   return out;
 }
 
+/** Page order inside one PDF ("pdf X p10" after "pdf X p9"). */
+const pageNo = (doc) => Number(/ p(\d+)$/.exec(doc)?.[1] ?? 0);
+
+/** For each fix with `sections`: "doc\u0000line" for every line inside one, before (base) and now. */
+function sectionLines(diff, fixes, base) {
+  const now = { ...base };
+  for (const g of diff.gone) delete now[g];
+  for (const ch of diff.changed) if (ch.lines) now[ch.doc] = ch.lines;
+  for (const a of diff.added) if (a.text) now[a.doc] = a.text;
+  const inside = (docs, f) => {
+    const out = new Set();
+    const groups = new Map();
+    for (const d of Object.keys(docs).filter((d) => f.docsRe.test(d))) groups.set(pdfOf(d), [...(groups.get(pdfOf(d)) ?? []), d]);
+    for (const pages of groups.values()) {
+      for (const sec of f.sectionsRe) {
+        let open = false;
+        for (const d of pages.sort((a, b) => pageNo(a) - pageNo(b))) {
+          for (const line of docs[d] ?? []) {
+            if (open && sec.to.test(line)) open = false;
+            else if (open) out.add(`${d}\u0000${line}`);
+            else if (sec.from.test(line)) open = true;
+          }
+        }
+      }
+    }
+    return out;
+  };
+  const out = new Map();
+  for (const f of fixes.filter((f) => f.sectionsRe.length)) out.set(f, { minus: inside(base, f), plus: inside(now, f) });
+  return out;
+}
+
 /** The check, shaped like the ones in checks/index.mjs so the report and exit code take it as is. */
 export function regressCheck(diff, fixes = loadFixList(), base = baselineDocs()) {
   const c = {
@@ -106,6 +148,8 @@ export function regressCheck(diff, fixes = loadFixList(), base = baselineDocs())
   // Gone from this page and new on another page of the same PDF, or the other way round.
   const movedBy = (doc, side, line) =>
     fixes.find((f) => f.movesRe?.test(doc) && moved.get(f)[side === "minus" ? "added" : "gone"].get(pdfOf(doc))?.has(line));
+  const sections = sectionLines(diff, fixes, base);
+  const inSection = (doc, side, line) => fixes.find((f) => sections.get(f)?.[side].has(`${doc}\u0000${line}`));
   for (const ch of diff.changed) {
     const mine = fixes.filter((f) => f.docsRe.test(ch.doc));
     for (const [side, lines] of [
@@ -114,7 +158,7 @@ export function regressCheck(diff, fixes = loadFixList(), base = baselineDocs())
     ]) {
       for (const line of lines) {
         c.looked += 1;
-        const f = mine.find((f) => (side === "minus" ? f.minusRe : f.plusRe).some((r) => r.test(line))) ?? movedBy(ch.doc, side, line);
+        const f = mine.find((f) => (side === "minus" ? f.minusRe : f.plusRe).some((r) => r.test(line))) ?? movedBy(ch.doc, side, line) ?? inSection(ch.doc, side, line);
         if (f) claim(f);
         else fail(ch.doc, side === "minus" ? "a line is gone that no fix removes" : "a line is new that no fix adds", line);
       }

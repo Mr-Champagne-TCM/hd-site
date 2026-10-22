@@ -270,6 +270,65 @@
       "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Your Human Design (summary|chart|reading) is ready$",
       "minus": ["^Your Human Design (summary|chart|reading) is ready$"],
       "plus": ["^Their Human Design (summary|chart|reading) is ready$"]
+    },
+    {
+      "id": "18",
+      "about": "the readings site: a link that never held a reading says so; an expired one still says expired (hd-reading-app hosting)",
+      "docs": "^page readings-site-unknown$",
+      "minus": ["^This link has expired$", "^Reading links stay live for a short window, for your privacy\\. "],
+      "plus": ["^There's no reading at this link$", "^Please check it was copied in full — each character matters\\. If it came from Jeremy, "]
+    },
+    {
+      "id": "W9",
+      "about": "website footer version marker v2.3 · Oct 2026; privacy 'Last updated' in US order (the go-live day: update this entry with the date on push day)",
+      "docs": "^page web-",
+      "minus": ["^v2\\.2 · Aug 2026$", "^Last updated 20 October 2026\\.$"],
+      "plus": ["^v2\\.3 · Oct 2026$", "^Last updated October 22, 2026\\.$"]
+    },
+    {
+      "id": "10",
+      "about": "/readings/: the birth details are kept with the summary too",
+      "docs": "^page web-readings$",
+      "minus": ["the birth details are kept with your chart and your reading, so your PDF can show when and where you were born — and the summary keeps none of them\\.$"],
+      "plus": ["the birth details are kept with your summary, your chart and your reading, so moving up never means typing them again, and your PDF can show when and where you were born\\.$"]
+    },
+    {
+      "id": "11",
+      "about": "/readings/: on track / off track, as the shop says, not Signature / Not-Self Theme",
+      "docs": "^page web-readings$",
+      "minus": ["^Profile, Definition, Signature and Not-Self Theme\\.$", "^NOT-SELF THEME$", "^Frustration$", "^SIGNATURE$", "^Satisfaction$"],
+      "plus": ["^Profile and Definition, and how it feels when it is on track and when it is off track\\.$", "^WHEN IT’S ON TRACK$", "^The feeling is satisfaction$", "^WHEN IT’S OFF TRACK$", "^The feeling is frustration$"]
+    },
+    {
+      "id": "12",
+      "about": "privacy: no phone number at payment (the payment page stopped asking in release 1); the in-person part is unchanged",
+      "docs": "^page web-readings-privacy$",
+      "minus": ["^Your name, email address and phone number The payment page ", "and the name, email and phone from your purchase", "They receive your name, email and phone\\.$"],
+      "plus": ["^Your name and email address The payment page ", "and the name and email from your purchase", "They receive your name and email\\.$"]
+    },
+    {
+      "id": "us-dates",
+      "about": "privacy: the three change dates in US order (found by the 10/21 check audit)",
+      "docs": "^page web-readings-privacy$",
+      "minus": ["^The birth details changed on 16 October 2026, the name for the chart on 19 October 2026, and the summary keeping them too on 20 October 2026, "],
+      "plus": ["^The birth details changed on October 16, 2026, the name for the chart on October 19, 2026, and the summary keeping them too on October 20, 2026, "]
+    },
+    {
+      "id": "AI1",
+      "about": "try-this shape A: the checker refuses the soft stored lines, so they are written again (in the rig, stand-ins marked [RIG STAND-IN]); only inside the try-this section and the 'Something to try this week' box, and the PDF reflows",
+      "docs": "^(page|pdf) (rowan-3-upgrade-t2|maya-3-upgrade-t2|theo-2-upgrade-t2|jordan-1-buy-t2)(-old\\d)?( p\\d+)?$",
+      "sections": [
+        { "from": "^(Things to experiment with|THINGS TO EXPERIMENT WITH)$", "to": "^Talk it through with Jeremy$" },
+        { "from": "^(Something to try this week|SOMETHING TO TRY THIS WEEK)$", "to": "^Below: " }
+      ],
+      "moves": "^pdf (rowan-3-upgrade-t2|maya-3-upgrade-t2|theo-2-upgrade-t2|jordan-1-buy-t2) p\\d+$"
+    },
+    {
+      "id": "us-spelling-library",
+      "about": "'Reading your bodygraph': recognize / recognized (found by the 10/21 rig)",
+      "docs": "^page web-library-bodygraph$",
+      "minus": ["You recognise these when you read them", "the sentence you either recognised instantly"],
+      "plus": ["You recognize these when you read them", "the sentence you either recognized instantly"]
     }
   ]
 }
