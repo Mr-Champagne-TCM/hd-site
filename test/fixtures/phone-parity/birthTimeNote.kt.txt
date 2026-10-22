@@ -1,0 +1,24 @@
+    private fun provisionalNames(fields: List<String>): String {
+        val centers = "the centers' states (defined, undefined or open)"
+        val names = mapOf(
+            "type" to "Type", "strategy" to "Strategy", "authority" to "Inner Authority", "profile" to "Profile",
+            "definition" to "Definition", "signature" to "the on-track feeling", "notSelfTheme" to "the off-track feeling",
+            "incarnationCross" to "Incarnation Cross", "definedCenters" to centers, "undefinedCenters" to centers,
+            "openCenters" to centers, "channels" to "Channels",
+        )
+        val said = fields.mapNotNull { names[it] }.distinct()
+        return if (said.size < 2) said.joinToString("") else "${said.dropLast(1).joinToString(", ")} and ${said.last()}"
+    }
+
+    fun birthTimeNote(timeKnown: Boolean, spreadChanges: List<String>?): String? {
+        val p = provisionalValues(timeKnown, spreadChanges) ?: return null
+        val head = "NOTE: birth time was not known and the chart was cast at noon."
+        if (p.fields.isEmpty()) {
+            return "$head Measured across the whole birth day, every value above holds at any birth time; the page already says so. " +
+                "Do not mention the birth time, and never call any value uncertain."
+        }
+        return "$head ${if (p.measured) "Measured across the whole birth day, these" else "These"} values can change with the birth time: " +
+            "${provisionalNames(p.fields)}. Every other value above holds at any birth time. The page already says so; " +
+            "mention it at most once, in plain words, as those values being provisional. Never call any other value uncertain, " +
+            "and add no other caveat about the birth time."
+    }

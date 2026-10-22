@@ -141,6 +141,8 @@ const SPREAD_KEY = "2001-12-05_America-Los_Angeles_t1";
 const LINE = holdsLine(SPREAD).text;
 /** A made-up add-time key link, in the shape the PDF carries (/t/<body>.<mac>). */
 const ADD_TIME_KEY_HREF = "https://humandesign.thechampagnemethod.co/t/eyJhIjoiMDAwMCIsImsiOiJ0In0.Wren-made-up-mac_0123456789";
+/** A made-up first try-this line, as the three-lines box copies it (fix 1A). */
+const BOX_LINE = "Once this week, when Wren walks home, you might take the long way by the river. Notice how the evening settles, so that pace is familiar later.";
 const BAR = ["cast at noon", "12 AM", "6 AM", "12 PM", "6 PM", "12 AM"].join("\n");
 
 /**
@@ -241,7 +243,7 @@ function addTimeScene(m) {
     time: hhmm,
     clockDays: 7,
     birth: "wren",
-    emails: [m.addMail("960-ready", "Wren’s Human Design chart is ready", "Wren’s chart is ready.\nOpen it: https://humandesign.thechampagnemethod.co/r/eyJyIjoiMDAwIn0.Wren-made-up-mac\n")],
+    emails: [m.addMail("960-ready", "Wren’s Human Design chart is ready, redone with your birth time", "Your chart is ready, redone with your birth time.\nOpen it: https://humandesign.thechampagnemethod.co/r/eyJyIjoiMDAwIn0.Wren-made-up-mac\n")],
   };
   const upStep = { id: "wren-3-upgrade-t2", do: "upgrade", tier: 2, birth: "wren", emails: [] };
   m.manifest.journeys.push({ id: "wren", about: "made up", steps: [{ id: "wren-1-buy-t1", do: "buy", tier: 1, birth: "wren", emails: [] }, step, upStep] });
@@ -250,7 +252,7 @@ function addTimeScene(m) {
   // The chart redone: its correction note under the birth line, and the page told the offer is spent.
   Object.assign(after, { journey: "wren", step: step.id, via: "pdf", addedTime: true });
   const esc = line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  m.edit(after, (s) => addAfter(s, new RegExp(`^${esc}$`), ["YOUR CORRECTION", `Birth time added: ${clock} — your chart is cast from the corrected details.`, "Your Type, Profile and Authority are the same."].join("\n")));
+  m.edit(after, (s) => addAfter(s, new RegExp(`^${esc}$`), ["YOUR BIRTH TIME", `Birth time added: ${clock} — your chart is now cast from it.`, "Your Type, Profile and Authority are the same."].join("\n")));
   m.editApi(after, (a) => void (a.addTime = "used"));
   Object.assign(up, { journey: "wren", step: upStep.id });
   // Seven days on, the page's own link has run out; the PDF's opens the form.
@@ -473,7 +475,7 @@ export const CASES = [
       { name: "the chart still cast at noon", plant: (m) => m.editApi(m.pages[0], (a) => void (a.output.timeKnown = false)), expect: /still cast with an unknown time/ },
       { name: "a spread still kept", plant: (m) => m.editApi(m.pages[0], (a) => void (a.output.timeSpread = SPREAD)), expect: /still keeps an unknown-time spread/ },
       { name: "the page not told the offer is spent", plant: (m) => m.editApi(m.pages[0], (a) => void (a.addTime = "open")), expect: /where the offer is spent/ },
-      { name: "no calm note", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Birth time added: .*$/m, "")), expect: /the calm note \("Birth time added: \d{1,2}:\d{2} [AP]M"\) is missing/ },
+      { name: "no calm note", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Birth time added: .*$/m, "")), expect: /the calm note \("Your birth time", "Birth time added: \d{1,2}:\d{2} [AP]M"\) is missing/ },
       { name: "the birth line without the time", plant: (m) => m.edit(m.pages[0], (t) => t.replaceAll(m.clock, "")), expect: /birth line lacks the added time \(\d{1,2}:\d{2} [AP]M\)/ },
       { name: "the form offers I don't know", plant: (m) => m.edit(m.page("addtime-form"), (t) => append(t, "I don’t know my birth time")), expect: /offers "I don't know"/ },
       { name: "the kept line shows a time", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace(m.kept, m.kept.replace(" · ", ` · ${m.clock} · `))), expect: /the kept line shows a time/ },
@@ -491,6 +493,11 @@ export const CASES = [
       { name: "the used note without hd-readings@", plant: (m) => m.edit(m.manifest.pages.find((p) => p.kind === "addtime-used" && p.via === "pdf"), (t) => t.replace("hd-readings@thechampagnemethod.co reaches Jeremy", "Jeremy can help")), expect: /does not point to hd-readings@/ },
       { name: "the ready email with no link", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => t.replace(/https:\S+/g, "")), expect: /ready email for the redone chart has no link/ },
       { name: "the ready email still speaks of noon", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => append(t, "Your chart is cast at noon.")), expect: /still speaks of an unknown time/ },
+      { name: "the note for an added time worded as a correction", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/now cast from it\./, "cast from the corrected details.")), expect: /the note for an added time speaks of a correction/ },
+      { name: "the note's eyebrow missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^YOUR BIRTH TIME$/m, "YOUR CORRECTION")), expect: /the calm note \("Your birth time"/ },
+      { name: "the form speaks of a correction", plant: (m) => m.edit(m.page("addtime-form"), (t) => append(t, "Your chart is then cast from the corrected details.")), expect: /the form speaks of a correction/ },
+      { name: "the kept line labeled for another tier", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace("KEPT FROM YOUR CHART", "KEPT FROM YOUR SUMMARY")), expect: /the kept line is labeled "KEPT FROM YOUR SUMMARY", not "Kept from your chart"/ },
+      { name: "the second ready email as if it were the first", plant: (m) => { const e = m.mails((x) => /is ready/.test(x.subject))[0]; e.subject = "Wren’s Human Design chart is ready"; m.editMail(e, (t) => t.replace(", redone with your birth time", "")); }, expect: /does not say it was redone with the birth time/ },
       { name: "the upgrade after use offers the time again", plant: (m) => m.edit(m.pages[1], (t) => append(t, offerText(2))), expect: /the upgrade offers to add a birth time again/ },
       { name: "the upgrade after use cast at noon", plant: (m) => m.editApi(m.pages[1], (a) => void (a.output.timeKnown = false)), expect: /upgrade after the birth time was added is cast with an unknown time again/ },
     ],
@@ -695,12 +702,15 @@ export const CASES = [
       }
       // Right as they are: a heading said twice is layout; so is a cross name in two tables.
       m.edit(m.pages[2], (t) => append(t, "Things you might try this week\nThings you might try this week\nRight Angle Cross of the Wren (1/2 | 3/4)\nRight Angle Cross of the Wren (1/2 | 3/4)"));
+      // Right as it is (fix 1A): the three-lines box's copy of the first try-this line, and the line itself in the list.
+      m.edit(m.pages[2], (t) => append(t, `Something to try this week\n${BOX_LINE}\nThings to experiment with\n${BOX_LINE}`));
     },
     bad: [
       { name: "W6: the expired page says the same clause twice", plant: (m) => m.edit(m.pages[0], (t) => append(t, "A fresh one can be sent now — to the address on your purchase, and only there.\nYour link can be sent again — to the address on your purchase, and only there.")), expect: /said \d times: "to the address on your purchase, and only there"/ },
       { name: "W6: the cut-short page repeats its heading as its first line", plant: (m) => m.edit(m.pages[1], (t) => (/^That link could not be opened$/m.test(t) ? addAfter(t, /^That link could not be opened$/, "That link could not be opened. Try the email it came in.") : append(t, "That link could not be opened\nThat link could not be opened. Try the email it came in."))), expect: /said 2 times: "That link could not be opened"/ },
       { name: "AI2: a takeaway in Start here and again as the section's first line", plant: (m) => m.edit(m.pages[2], (t) => append(append(t, "Wren keeps a lantern lit for the slow walk home."), "Wren keeps a lantern lit for the slow walk home.")), expect: /said 2 times: "Wren keeps a lantern lit for the slow walk home"/ },
       // 10/21: stand-in try-this lines once made the whole reading count as a placeholder, and its real words went unjudged.
+      { name: "a try-this line twice in the list (besides the box's copy)", plant: (m) => m.edit(m.pages[2], (t) => append(t, BOX_LINE)), expect: /said 2 times: "Once this week, when Wren walks home, you might take the long way/ },
       { name: "AI2 on a reading whose try-this lines are rig stand-ins", plant: (m) => m.edit(m.pages[2], (t) => append(append(append(t, "(Type) [RIG STAND-IN] The next time a small job comes, you might start at once. Notice the pace, so it is familiar later."), "Wren keeps a lantern lit for the slow walk home."), "Wren keeps a lantern lit for the slow walk home.")), expect: /said 2 times: "Wren keeps a lantern lit for the slow walk home"/ },
     ],
   },

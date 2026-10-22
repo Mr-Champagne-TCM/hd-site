@@ -30,6 +30,19 @@ const SLUGS = ["claude-test-four", "claude-test-three", "claude-test-two", "clau
 const app = join(phone, "app");
 
 copyFileSync(join(app, "src/main/kotlin/co/thechampagnemethod/hdreadings/LibraryGlance.kt"), join(pub, "LibraryGlance.kt.txt"));
+
+// The reading facts' NOTE for an unknown birth time (10/22), as the phone builds
+// it: provisionalNames and birthTimeNote from Reading.kt. Only the code that
+// words the NOTE (it is in this public repo's interpretation.mjs already), so
+// test/birthTimeNoteParity.test.mjs can hold the shop's NOTE to it byte for byte.
+{
+  const src = readFileSync(join(app, "src/main/kotlin/co/thechampagnemethod/hdreadings/Reading.kt"), "utf8").replace(/\r\n/g, "\n");
+  const from = src.indexOf("    private fun provisionalNames(");
+  const fn = src.indexOf("    fun birthTimeNote(", from);
+  const to = src.indexOf("\n    }\n", fn);
+  if (from < 0 || fn < 0 || to < 0) throw new Error("Reading.kt: provisionalNames / birthTimeNote not found");
+  writeFileSync(join(pub, "birthTimeNote.kt.txt"), src.slice(from, to + 7));
+}
 copyFileSync(join(app, "build/pdf-links/library-targets.txt"), join(pub, "phone-library-targets.txt"));
 
 const xml = readFileSync(
@@ -53,3 +66,4 @@ console.log(`synced ${SLUGS.length} clients from ${phone}`);
 // here: they came from hd-engine itself (ChartScope.scope at the reading tier,
 // engine 0.4.0, for the same four Chicago births), with the drawing and the
 // computedAt instant removed. Remake them that way if the engine changes.
+// (10/22: claude-test-three's cross named the way engine 0.6.0 names it, "Cross of the", W14.)

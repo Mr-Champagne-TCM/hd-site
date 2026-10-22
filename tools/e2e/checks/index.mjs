@@ -506,7 +506,12 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
           if (/i don.t know|know (my|their) birth time/i.test(form.text)) c.fail(j.id, docName(form), "the form offers \"I don't know\" (the time has just been found)", "");
           if (!(form.buttons ?? []).includes(ADD_TIME.button(s.tier))) c.fail(j.id, docName(form), `the button is not "${ADD_TIME.button(s.tier)}"`, (form.buttons ?? []).join(" | "));
           const kept = birth ? birthLine({ date: birth.date, time: null, timeKnown: false, place: birth.pick, zone: birth.zone }).split(" · ").filter((x) => !/^Time unknown/.test(x)).join(" · ") : null;
-          const keptAt = form.text.split("\n").findIndex((l) => /^Kept from your chart$/i.test(l.trim()));
+          // "Kept from your chart", or "Kept from your summary" on the summary tier (10/22).
+          const keptAt = form.text.split("\n").findIndex((l) => /^Kept from your (chart|summary)$/i.test(l.trim()));
+          const label = keptAt >= 0 ? form.text.split("\n")[keptAt].trim() : null;
+          if (label && norm(label) !== norm(ADD_TIME.kept(s.tier))) c.fail(j.id, docName(form), `the kept line is labeled "${label}", not "${ADD_TIME.kept(s.tier)}"`, "");
+          if (/\b(?:corrected|correction)\b/i.test(form.text)) c.fail(j.id, docName(form), "the form speaks of a correction (a time found later is not one)", "");
+          if (s.tier === 0 && /\bthis chart\b|\byour PDF\b/.test(form.text)) c.fail(j.id, docName(form), "the summary's form says \"this chart\" or \"your PDF\" (a summary has neither)", "");
           const keptLine = keptAt >= 0 ? form.text.split("\n").slice(keptAt + 1).find((l) => l.trim())?.trim() : null;
           if (!keptLine) c.fail(j.id, docName(form), "the kept birth date and place are not shown with the form", "");
           else {
@@ -532,7 +537,9 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
           if (t.includes(norm("Found your birth time?"))) c.fail(j.id, docName(after), "the offer to add a birth time is still on the page after it was used", "");
           if ((after.linksList ?? []).some((l) => /#add-time$/.test(l.href))) c.fail(j.id, docName(after), "an \"add it here\" link is still on the page after the offer was used", "");
           if (clock && !after.text.includes(clock)) c.fail(j.id, docName(after), `the birth line lacks the added time (${clock})`, "");
-          if (!/Your correction/i.test(after.text) || (clock && !t.includes(norm(`Birth time added: ${clock}`)))) c.fail(j.id, docName(after), `the calm note ("Birth time added: ${clock}") is missing`, "");
+          if (!/^Your birth time$/im.test(after.text) || (clock && !t.includes(norm(`Birth time added: ${clock}`)))) c.fail(j.id, docName(after), `the calm note ("Your birth time", "Birth time added: ${clock}") is missing`, "");
+          // Nothing was wrong: never "correction" or "corrected" for a time found later (10/22).
+          for (const h of hits(after.text, /\b(?:correction|corrected)\b/i)) c.fail(j.id, docName(after), "the note for an added time speaks of a correction", h.ctx);
           if (s.tier >= 2) {
             if (/being written/i.test(after.text)) c.fail(j.id, docName(after), "the reading was not written again for the redone chart (still \"being written\")", "");
             if (!after.apiBody?.written) c.fail(j.id, docName(after), "the redone chart has no reading", "");
@@ -566,6 +573,8 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         for (const e of ready) {
           const body = T_(e);
           if (!/\/r\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(body)) c.fail(j.id, `email "${e.subject}"`, "the ready email for the redone chart has no link to it", "");
+          // The second "ready" says what happened (10/22): "..., redone with your birth time".
+          if (!/redone with (your|their) birth time$/.test(e.subject) || !/ready, redone with (your|their) birth time\./.test(body)) c.fail(j.id, `email "${e.subject}"`, "the ready email for the redone chart does not say it was redone with the birth time", "");
           for (const h of hits(body, /PROVISIONAL|cast at noon|Found your birth time/i)) c.fail(j.id, `email "${e.subject}"`, "the ready email for the redone chart still speaks of an unknown time", h.ctx);
         }
       }
@@ -826,10 +835,19 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
       else if (d.kind === "website" && !/^\/readings\//.test(d.page?.path ?? "")) continue;
       else groups.set(d.id, d);
     }
+    /**
+     * THE ONE COPY BY DESIGN (fix 1A, Jeremy 10/19): "Your chart in three lines"
+     * on the reading tier shows the reading's first try-this line, moved up
+     * whole, under "Something to try this week"; the list below still holds it.
+     * That one copy is left out of the count; a second copy anywhere else, or
+     * the same line twice in the list, is still a repeat.
+     */
+    const withoutBoxCopy = (text) => text.replace(/^(Something to try this week\s*\n)[^\n]*\n?/gm, "$1");
     for (const d of groups.values()) {
       c.saw(d.combo);
       const count = new Map();
-      for (const { u, whole } of unitsOf(d.text, d.text.includes("[RIG PLACEHOLDER]"))) {
+      const text = d.kind === "pdf" || d.kind === "email" ? d.text : withoutBoxCopy(d.text);
+      for (const { u, whole } of unitsOf(text, text.includes("[RIG PLACEHOLDER]"))) {
         const k = norm(u);
         const was = count.get(k);
         count.set(k, { n: (was?.n ?? 0) + 1, u, whole: (was?.whole ?? false) || whole });
