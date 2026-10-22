@@ -38,7 +38,7 @@ import {
   profileLink,
   typeLink,
 } from "../../shared/libraryLinks.mjs";
-import { drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
+import { Layout, drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
 
 /**
  * THE CLIENT PDF -- the SAME DOCUMENT the phone app makes (Jeremy 10/16: "All
@@ -1208,7 +1208,20 @@ function takeaway(d, lines, c) {
 /** No widows or orphans: a paragraph splits only with at least this many lines each side. */
 const MIN_SPLIT_LINES = 2;
 
-const firstLinesHeight = (l) => (l.lineCount >= MIN_SPLIT_LINES * 2 ? l.lineTop(MIN_SPLIT_LINES) : l.height);
+/**
+ * The least of a paragraph that may stand at the foot of a page: its first
+ * whole sentences, two lines of them at least (flowParagraph breaks only
+ * between sentences), else the whole paragraph. A section's label and bold
+ * lead are kept with this much, so they never end a page alone.
+ */
+function firstPieceHeight(d, l, width) {
+  const text = l.text.replace(/\n/g, " ");
+  for (const m of text.matchAll(SENTENCE_END)) {
+    const probe = new Layout(d.pdf, text.slice(0, m.index + m[0].length).trim(), l.paint, width);
+    if (probe.lineCount >= MIN_SPLIT_LINES) return Math.min(probe.height, l.height);
+  }
+  return l.height;
+}
 
 /** The library entry behind a margin label, by what the label names. */
 function noteHref(label, c) {
@@ -1259,10 +1272,10 @@ function readingPages(d, c, v) {
     ]);
     const notesH = noteLs.reduce((n, [kl, vl]) => n + (kl?.height ?? 0) + vl.height + 9, 0);
 
-    // What must stay together: the label, the bold lead, and the first two
-    // body lines -- the whole first paragraph if it is too short to split.
+    // What must stay together: the label, the bold lead, and the first piece
+    // of the first paragraph that may end a page (whole sentences, two lines).
     const lead = head.height + 6 + (ledeL ? ledeL.height + 8 : 0);
-    const firstMin = bodyLs[0] ? firstLinesHeight(bodyLs[0]) : 0;
+    const firstMin = bodyLs[0] ? firstPieceHeight(d, bodyLs[0], BODY_W) : 0;
     d.need(16 + Math.max(lead + firstMin, notesH));
     d.gap(d.atTop ? 0 : 16);
 
@@ -1296,7 +1309,8 @@ function readingPages(d, c, v) {
         () => {
           partTop = d.y;
         },
-        termSpans(l.text, c),
+        (text) => termSpans(text, c),
+        BODY_W,
       );
       d.gap(9);
     }
@@ -1364,11 +1378,68 @@ function coachPanel(d, { head, body, link }) {
 }
 
 /**
- * One paragraph, carried onto the next page between lines when it does not
- * fit -- never leaving fewer than two lines at the foot of a page or at the
- * head of the next. A paragraph that cannot split that way moves whole.
+ * One paragraph, carried onto the next page when it does not fit -- BETWEEN
+ * SENTENCES, never inside one (10/22: "What you take in from others" broke
+ * mid-sentence across pages 7 and 8). The page keeps as many whole sentences
+ * as fit, at least two lines of them; the rest starts the next page. A
+ * paragraph with no sentence end that fits there moves whole. Only a sentence
+ * taller than a whole page is split between lines (two at least each side).
+ *
+ * `spansFor(text)` gives the term links of a piece of text; `width` is the
+ * paragraph's column (the lonely-word rule may have laid `l` out narrower).
  */
-function flowParagraph(d, l, onBreak, onNewPage, spans = null) {
+function flowParagraph(d, l, onBreak, onNewPage, spansFor = null, width = l.width) {
+  const spans = (x) => (spansFor ? spansFor(x.text) : null);
+  const turn = () => {
+    onBreak();
+    d.breakPage();
+    onNewPage();
+  };
+  let cur = l;
+  for (;;) {
+    if (cur.height <= d.bottom - d.y) {
+      d.draw(cur, MARGIN, spans(cur));
+      return;
+    }
+    const cut = sentenceCut(d, cur, d.bottom - d.y, width);
+    if (cut) {
+      d.draw(cut.first, MARGIN, spans(cut.first));
+      turn();
+      cur = cut.rest;
+    } else if (!d.atTop) {
+      turn();
+    } else {
+      splitLines(d, cur, turn, spans(cur));
+      return;
+    }
+  }
+}
+
+/** Where a sentence ends and another begins: after . ! ? (and a closing quote), before a capital. */
+const SENTENCE_END = /[.!?]["”’)]*(?=\s+["“‘(]?[A-Z0-9])/g;
+
+/**
+ * The most whole sentences of `l` that fit in `room` (at least two lines), as
+ * { first, rest } layouts; null when none do. Measured with plain layouts, so
+ * only the two pieces actually drawn are laid out the full way.
+ */
+function sentenceCut(d, l, room, width) {
+  const text = l.text.replace(/\n/g, " ");
+  const cuts = [...text.matchAll(SENTENCE_END)].map((m) => m.index + m[0].length);
+  for (let i = cuts.length - 1; i >= 0; i--) {
+    const head = text.slice(0, cuts[i]).trim();
+    const probe = new Layout(d.pdf, head, l.paint, width);
+    if (probe.height > room) continue;
+    if (probe.lineCount < MIN_SPLIT_LINES) return null;
+    const first = d.L(head, l.paint, width);
+    if (first.height > room) continue;
+    return { first, rest: d.L(text.slice(cuts[i]).trim(), l.paint, width) };
+  }
+  return null;
+}
+
+/** A sentence taller than a page: between lines, at least two each side. */
+function splitLines(d, l, turn, spans) {
   const n = l.lineCount;
   let from = 0;
   while (from < n) {
@@ -1376,20 +1447,14 @@ function flowParagraph(d, l, onBreak, onNewPage, spans = null) {
     let fit = 0;
     while (from + fit < n && l.lineTop(from + fit + 1) - l.lineTop(from) <= avail) fit++;
     if (from + fit === n) {
-      if (from === 0) d.draw(l, MARGIN, spans);
-      else d.drawLines(l, from, n, MARGIN, spans);
+      d.drawLines(l, from, n, MARGIN, spans);
       return;
     }
     let take = Math.min(fit, n - from - MIN_SPLIT_LINES);
-    if (take < MIN_SPLIT_LINES) take = 0;
-    if (take === 0 && d.atTop) take = Math.max(fit, 1); // taller than a page
-    if (take > 0) {
-      d.drawLines(l, from, from + take, MARGIN, spans);
-      from += take;
-    }
-    onBreak();
-    d.breakPage();
-    onNewPage();
+    if (take < MIN_SPLIT_LINES) take = Math.max(fit, 1);
+    d.drawLines(l, from, from + take, MARGIN, spans);
+    from += take;
+    turn();
   }
 }
 

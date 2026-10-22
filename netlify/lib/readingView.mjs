@@ -82,6 +82,11 @@ const channelKey = (numbers) =>
     .sort((a, b) => a - b)
     .join("-");
 
+/** The two center sections, whose opening sentences are also Start here's centers Takeaway. */
+const CENTER_SECTIONS = [INTERPRETATION[3], INTERPRETATION[4]];
+/** The same sentence, whatever the spacing. */
+const same = (a, b) => String(a ?? "").replace(/\s+/g, " ").trim() === String(b ?? "").replace(/\s+/g, " ").trim();
+
 const lines = (s) =>
   String(s ?? "")
     .split("\n")
@@ -165,6 +170,16 @@ export function buildReadingView(chart, reading) {
     /** The reading in the approved order -- see READING_ORDER. */
     reading: READING_ORDER.map(([heading, hasLede]) => {
       const p = lines(s.get(heading));
+      /**
+       * THE REPEAT, OPTION A (Jeremy 10/22: "need to keep takeaway box, i
+       * worked hard on that recently"): Start here keeps its centers Takeaway
+       * box, so the two center sections drop their bold opening line WHEN it
+       * is that same sentence -- it is printed once, in the box, higher up.
+       * Any other opening line stays.
+       */
+      if (hasLede && CENTER_SECTIONS.includes(heading) && p[0] && centersTakeaway.some((t) => same(t, p[0]))) {
+        return { heading, lede: null, paragraphs: p.slice(1) };
+      }
       return { heading, lede: hasLede ? (p[0] ?? null) : null, paragraphs: hasLede ? p.slice(1) : p };
     }).filter((x) => x.lede || x.paragraphs.length),
     takeaways: lines(s.get(TAKEAWAYS)),
@@ -176,9 +191,11 @@ export function buildReadingView(chart, reading) {
  * The reading, in the Reading tab's order (phone PdfExport.READING_ORDER):
  * decision first, then energy, how you meet the world, on/off track, then the
  * cross and the definition (the old mechanics page, now ordinary sections),
- * then the two center sections. Every section keeps its bold lead line --
- * including the two center sections whose first sentence is ALSO the centers
- * Takeaway (call 6) -- except the cross and definition, which never had one.
+ * then the two center sections. Every section keeps its bold lead line,
+ * except the cross and definition, which never had one, and the two center
+ * sections when their first sentence is ALSO the centers Takeaway (Jeremy
+ * 10/22, the repeat: option A -- Start here keeps the box, the sections drop
+ * the repeated line).
  *
  * Paragraphs are the reading's LINES, as the phone's PDF cuts them.
  */
