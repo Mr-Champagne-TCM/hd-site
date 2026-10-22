@@ -134,6 +134,17 @@ const READY = Object.freeze({
 });
 
 /**
+ * A BIRTH TIME FOUND LATER, ADDED (10/22): the second "ready" email says what
+ * happened, not "is ready" as if for the first time. The rest of the email is
+ * the same.
+ */
+const REDONE = Object.freeze({
+  0: "Your summary is ready, redone with your birth time.",
+  1: "Your chart is ready, redone with your birth time.",
+  2: "Your chart and reading are ready, redone with your birth time.",
+});
+
+/**
  * The same, for a chart bought for SOMEONE NEW: their centers, their cross
  * (10/21 live test, bug 16: it said "your" to the buyer).
  */
@@ -193,6 +204,8 @@ export function deliveryEmail({
   footerColor,
   someoneNew = false,
   freshLink = false,
+  /** The chart redone with a birth time found later (10/22): said in the subject and the opening line. */
+  redone = false,
 }) {
   const their = someoneNew === true;
   const word = tierWord(tier);
@@ -234,7 +247,7 @@ export function deliveryEmail({
     : freshLink
       ? `A fresh link to ${whoseInline} Human Design ${word}`
       : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
-        `${WhoseLead} Human Design ${word} is ready`;
+        `${WhoseLead} Human Design ${word} is ready${redone ? `, redone with ${their ? "their" : "your"} birth time` : ""}`;
 
   /**
    * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs
@@ -279,12 +292,16 @@ export function deliveryEmail({
     "sends you a fresh one, as often as you need.";
 
   const own = READY[tier] ?? READY[2];
+  const opening = redone && !freshLink ? (REDONE[tier] ?? REDONE[2]) : own.lead;
   const ready = {
     lead: freshLink
       ? `Here is the fresh link you asked for — ${whoseInline} ${word}.`
       : their
-        ? own.lead.replace(/^Your chart and your/, `${WhoseLead} chart and`).replace(/^Your/, WhoseLead)
-        : own.lead,
+        ? opening
+            .replace(/^Your chart and your/, `${WhoseLead} chart and`)
+            .replace(/^Your/, WhoseLead)
+            .replace("with your birth time", "with their birth time")
+        : opening,
     ticks: their ? (READY_THEIR[tier] ?? READY_THEIR[2]) : own.ticks,
   };
   const receiptRows = [

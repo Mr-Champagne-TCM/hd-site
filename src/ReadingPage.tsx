@@ -426,10 +426,10 @@ export default function ReadingPage({ token }: { token: string }) {
         signed for an earlier tier; "Your correction" after Change a detail
         (or "What changed from your summary" for an older summary typed once).
       */}
-      <ReadingNotes grown={reading.grown} label={reading.label} correction={reading.correction} />
+      <ReadingNotes grown={reading.grown} label={reading.label} correction={reading.correction} tier={reading.tier} />
 
       {/* "Add it here" opened again once the time is in (or on a chart that never needed one): said kindly. */}
-      {addTime && reading.addTime && reading.addTime !== "open" && <AddTimeNotice state={reading.addTime} />}
+      {addTime && reading.addTime && reading.addTime !== "open" && <AddTimeNotice state={reading.addTime} tier={reading.tier} />}
 
       {/*
         FIX 9A (Jeremy 10/19): the PDF, solid and named, right under the title

@@ -10,6 +10,7 @@ import {
   loadReading,
   mintReadingLink,
   readReadingLink,
+  redoneWithTime,
   saveReading,
   updateRecord,
 } from "../netlify/lib/reading.mjs";
@@ -21,6 +22,9 @@ import { correctionNote } from "../shared/correctionNote.mjs";
 import { describe as describeKind } from "../netlify/lib/failures.mjs";
 import { TIERS } from "../shared/pricing.mjs";
 import { TEXT } from "./support/tier2Fixture.mjs";
+import { deliveryEmail } from "../netlify/lib/deliveryEmail.mjs";
+import { SITE } from "../netlify/lib/siteLinks.mjs";
+import { ADD_TIME } from "../shared/timeSpread.mjs";
 
 /**
  * "FOUND YOUR BIRTH TIME? YOU'RE WELCOME TO ADD IT HERE, ONCE AND FREE"
@@ -182,11 +186,21 @@ test("ADDED FROM THE PAGE: cast once with the time known, at the tier bought; hi
   assert.equal(h.chart.profile, "3/5");
   assert.equal(h.chart.bodygraphSvg, undefined, "the old drawing is not kept twice");
   assert.equal(h.chart.timeSpread, undefined);
-  // The calm note, in the existing words.
-  const n = correctionNote(r.correction);
-  assert.equal(n.eyebrow, "Your correction");
-  assert.match(n.lead, /^Birth time added: 3:10 PM — your chart is cast from the corrected details\.$/);
-  assert.match(n.body, /your Profile is now 3\/6 \(it was 3\/5\)/);
+  // The calm note: a time found later, never a "correction" (10/22), in the page's tier's words.
+  assert.equal(r.correction.type, "time-added");
+  const n = correctionNote(r.correction, { tier: 1 });
+  assert.equal(n.eyebrow, "Your birth time");
+  assert.equal(n.lead, "Birth time added: 3:10 PM — your chart is now cast from it.");
+  assert.equal(
+    n.body,
+    "One part came out differently: your Profile is now 3/6 (it was 3/5). That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now. Your Type and Authority are the same.",
+  );
+  assert.doesNotMatch(JSON.stringify(n), /correct/i);
+  assert.equal(correctionNote(r.correction, { tier: 0 }).lead, "Birth time added: 3:10 PM — your summary is now cast from it.");
+  assert.match(correctionNote(r.correction, { tier: 0 }).body, /written for your summary as it is now/);
+  assert.equal(correctionNote(r.correction, { tier: 2 }).lead, "Birth time added: 3:10 PM — your chart and your reading are now cast from it.");
+  // Nothing moved: the note says only that, and what stayed.
+  assert.equal(correctionNote({ ...r.correction, chart: [] }, { tier: 1 }).body, "Your Type, Profile and Authority are the same.");
   // Jeremy hears of it; the buyer gets the ready email (the writer is rung on the reading tier).
   assert.deepEqual(notes.map((x) => x.kind), ["time-added"]);
   assert.deepEqual(notes[0].ref, { reading: s.id, tier: 1 });
@@ -303,7 +317,10 @@ test("PAST THE YEAR: the key says the chart is no longer kept; a forged or cut k
   for (const key of [s.key.slice(0, -6), "not.a-key", mintAddTimeKey(s.id, "someone-elses-secret-0123456789")]) {
     const bad = await run(s, { key, look: true });
     assert.equal(bad.res.status, 404);
-    assert.equal(bad.body.error.key, "reading-link-bad");
+    // Said as the PDF's link it is: open it again from the PDF, not "from the email it came in" (10/22).
+    assert.equal(bad.body.error.key, "addtime-key-bad");
+    assert.match(bad.body.error.message, /opening it again from your PDF usually works\.$/);
+    assert.doesNotMatch(bad.body.error.message, /email/);
   }
   // A reading link handed in as a key, and a key handed in as a reading link: neither works.
   assert.equal((await run(s, { key: s.token, look: true })).res.status, 404);
@@ -512,4 +529,74 @@ test("UNKNOWN TIME, IN THE READING PDF: Start here's lists and the margin notes 
   // A known time: no tag anywhere.
   const k = await readingPdf({ tier: 2, name: "Ari", output: LATE, reading: TEXT, birth: { ...UNKNOWN, time: "15:10", timeKnown: true }, inspect: true });
   assert.ok(!k.runs.some((x) => x.text === "PROVISIONAL"));
+});
+
+/* ------------------------------------------ the words, per tier (10/22 review) */
+
+test("THE SUMMARY IS SAID AS A SUMMARY: used, known, the slow answer; the form's kept label and privacy line", async () => {
+  const s = await seeded(0, { output: (({ bodygraphSvg, ...o }) => o)(NOON) });
+  const down = await run(s, { token: s.token, time: "15:10" }, { engine: fakeEngine({ fail: "throw" }) });
+  assert.equal(down.body.error.key, "addtime-slow-summary");
+  assert.match(down.body.error.message, /so your summary wasn't redone/);
+  await run(s, { token: s.token, time: "15:10" });
+  const again = await run(s, { token: s.token, time: "15:10" });
+  assert.equal(again.body.error.key, "addtime-used-summary");
+  assert.match(again.body.error.message, /^A birth time can be added once to each summary, and this summary has its time\./);
+  const known = await seeded(0, { birth: { ...UNKNOWN, time: "08:00", timeKnown: true }, output: (({ bodygraphSvg, ...o }) => ({ ...o, timeKnown: true }))(LATE) });
+  const k = await run(known, { token: known.token, time: "09:00" });
+  assert.equal(k.body.error.key, "addtime-known-summary");
+  assert.equal(k.body.error.heading, "Your summary already has its birth time");
+  // A chart keeps the chart's words.
+  const c = await seeded(1);
+  await run(c, { token: c.token, time: "15:10" });
+  assert.equal((await run(c, { token: c.token, time: "15:10" })).body.error.key, "addtime-used");
+  // The form.
+  assert.equal(ADD_TIME.kept(0), "Kept from your summary");
+  assert.equal(ADD_TIME.kept(1), "Kept from your chart");
+  assert.doesNotMatch(ADD_TIME.privacy(0), /PDF|chart/);
+  assert.match(ADD_TIME.privacy(1), /with this chart/);
+  assert.equal(ADD_TIME.notNow, "Not now");
+});
+
+test("THE SECOND READY EMAIL SAYS IT WAS REDONE: subject and opening line per tier, the rest as it is", () => {
+  const base = { name: "Ari Testwell", chartName: "Ari Testwell", url: "https://example.test/r/x.y", links: SITE, pending: false };
+  const want = {
+    0: "Your summary is ready, redone with your birth time.",
+    1: "Your chart is ready, redone with your birth time.",
+    2: "Your chart and reading are ready, redone with your birth time.",
+  };
+  for (const tier of [0, 1, 2]) {
+    const first = deliveryEmail({ ...base, tier });
+    const again = deliveryEmail({ ...base, tier, redone: true });
+    assert.match(again.subject, /^Ari Testwell’s Human Design (summary|chart|reading) is ready, redone with your birth time$/);
+    assert.ok(again.text.includes(want[tier]), `tier ${tier}: ${again.text.slice(0, 200)}`);
+    assert.ok(again.html.includes(want[tier]));
+    // Only the subject and the opening line change.
+    const strip = (t) => t.split("\n").filter((l) => !/(is|are) ready/.test(l)).join("\n");
+    assert.equal(strip(again.text), strip(first.text));
+  }
+  // Someone else's chart: theirs.
+  const theirs = deliveryEmail({ ...base, chartName: "Quinn", tier: 2, someoneNew: true, redone: true });
+  assert.equal(theirs.subject, "Quinn’s Human Design reading is ready, redone with their birth time");
+  assert.ok(theirs.text.includes("Quinn’s chart and reading are ready, redone with their birth time."));
+});
+
+test("REDONE IS THIS RECORD'S OWN ADD: the writer says so for the rewrite, not for an upgrade bought after it", async () => {
+  const s = await seeded(1);
+  assert.equal(redoneWithTime(await loadReading(s.store, s.id, NOW)), false);
+  await run(s, { token: s.token, time: "15:10" });
+  const r = await loadReading(s.store, s.id, NOW);
+  assert.equal(redoneWithTime(r), true);
+  const up = "d".repeat(32);
+  await recordPurchase({
+    readings: s.store,
+    id: up,
+    level: 2,
+    session: { payment_status: "paid", created: Math.floor((NOW + 60_000) / 1000), amount_total: 0, customer_details: { name: "Ari Testwell", email: "ari@example.com" }, metadata: { level: "2", sku: TIERS[2].sku, upgrades: s.id } },
+    secret: SECRET,
+    now: NOW + 60_000,
+  });
+  const upRec = await loadReading(s.store, up, NOW + 61_000);
+  assert.ok(upRec.history.some((h) => h.kind === "time-added"), "the history comes along");
+  assert.equal(redoneWithTime(upRec), false, "its first ready email is an ordinary one");
 });

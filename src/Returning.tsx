@@ -180,13 +180,16 @@ export function ReadingNotes({
   grown,
   label,
   correction,
+  tier,
 }: {
   grown: { fromLabel: string | null } | null | undefined;
   label: string | null;
   correction: unknown;
+  /** The page's tier: a birth time added says "your summary" / "your chart" / "your chart and your reading" (10/22). */
+  tier?: number;
 }) {
   const g = grown ? grownNote(grown.fromLabel, label) : null;
-  const c = correctionNote(correction);
+  const c = correctionNote(correction, { tier });
   return (
     <>
       {g && <CalmNote eyebrow={g.eyebrow} lead={g.lead} body={g.body} />}

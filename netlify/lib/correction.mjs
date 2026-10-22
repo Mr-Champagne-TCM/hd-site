@@ -56,18 +56,21 @@ function shown(b) {
 
 /**
  * The correction to keep with the record, or null when nothing changed and
- * nothing moved. `type` is "correction" (Change a detail) or "first-details"
- * (an older summary's details typed once, compared only by the chart).
+ * nothing moved. `type` is "correction" (Change a detail), "time-added" (a
+ * birth time found later, added once: 10/22, its own words, never
+ * "correction") or "first-details" (an older summary's details typed once,
+ * compared only by the chart).
  */
 export function buildCorrection({ type = "correction", was = null, now = null, before = null, after = null, at = Date.now() }) {
-  const changed = type === "correction" ? birthChanges(was, now) : [];
+  const details = type === "correction" || type === "time-added";
+  const changed = details ? birthChanges(was, now) : [];
   const chart = chartMoves(before, after);
   if (!changed.length && !chart.length) return null;
   return {
     type,
     at: Math.floor(at / 1000),
     changed,
-    ...(type === "correction" ? { was: shown(was), now: shown(now) } : {}),
+    ...(details ? { was: shown(was), now: shown(now) } : {}),
     chart,
   };
 }

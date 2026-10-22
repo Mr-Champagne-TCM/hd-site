@@ -121,6 +121,8 @@ export default guard("addtime", async (request, context) => {
       links: SITE,
       pending: false,
       someoneNew: reading.fresh === true,
+      // The second "ready" email says what happened (10/22).
+      redone: true,
     });
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`add-time: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);

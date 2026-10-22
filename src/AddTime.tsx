@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import TimeField from "./entry/TimeField";
-import { RETURNING } from "./copy";
 // The form's words live with the offer's (the rig's checks read the same ones).
 import { ADD_TIME } from "../shared/timeSpread.mjs";
 import { KeptLine, btn, btnQuiet, h1 } from "./Returning";
@@ -38,10 +37,16 @@ export function useAddTimeHash() {
   return on;
 }
 
+type Said = { heading?: string; text: string | null };
+const SAID = MESSAGES as Record<string, Said>;
+/** The catalogue's words, the summary tier's own where it has them ("this summary", 10/22). */
+const say = (key: string, tier: number): Said => (tier === 0 && SAID[`${key}-summary`]) || SAID[key];
+const sayText = (key: string, tier: number) => say(key, tier)?.text ?? customerText(key);
+
 /** The kind words for a chart whose time cannot be added (used, known, none), as the server words them. */
-export function AddTimeNotice({ state }: { state: string }) {
+export function AddTimeNotice({ state, tier }: { state: string; tier?: number }) {
   const key = state === "used" ? "addtime-used" : state === "known" ? "addtime-known" : "addtime-none";
-  const m = (MESSAGES as Record<string, { heading?: string; text: string | null }>)[key];
+  const m = say(key, tier ?? -1);
   // Opened from "add it here": brought into view, as the form would be (the page draws after the browser looked for the anchor).
   useEffect(() => {
     document.getElementById("add-time")?.scrollIntoView({ block: "center" });
@@ -88,14 +93,14 @@ export function AddTimeForm({
       });
       const body = await res.json().catch(() => null);
       if (!res.ok || !body?.ok) {
-        setState({ at: "failed", message: body?.error?.message ?? customerText("addtime-slow") });
+        setState({ at: "failed", message: body?.error?.message ?? sayText("addtime-slow", tier) });
         return;
       }
       // The chart, redone: the page's own link again, or (from the PDF) the fresh one that came back.
       const t = body.token ?? token;
       window.location.replace(`/r/${encodeURIComponent(t)}`);
     } catch {
-      setState({ at: "failed", message: customerText("addtime-slow") });
+      setState({ at: "failed", message: sayText("addtime-slow", tier) });
     }
   }
 
@@ -106,7 +111,7 @@ export function AddTimeForm({
         <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">{ADD_TIME.intro(tier)}</p>
         {kept && (
           <div className="max-w-[34rem]">
-            <KeptLine line={kept} />
+            <KeptLine label={ADD_TIME.kept(tier)} line={kept} />
           </div>
         )}
         <form onSubmit={submit} className="mt-7 max-w-[34rem]">
@@ -117,7 +122,7 @@ export function AddTimeForm({
             </button>
             {onCancel && (
               <button type="button" onClick={onCancel} className={btnQuiet}>
-                {RETURNING.keepAsIs}
+                {ADD_TIME.notNow}
               </button>
             )}
           </div>
@@ -127,7 +132,7 @@ export function AddTimeForm({
             <MailtoText text={state.message} />
           </p>
         )}
-        <p className="mt-6 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{RETURNING.correctPrivacy}</p>
+        <p className="mt-6 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{ADD_TIME.privacy(tier)}</p>
       </section>
       {/* The footer theme (Jeremy 10/17): every state of the page ends the same way, inside its margins. */}
       <PageEnd />
@@ -138,7 +143,7 @@ export function AddTimeForm({
 type Look =
   | { at: "loading" }
   | { at: "open"; tier: number; kept: string | null }
-  | { at: "closed"; state: string }
+  | { at: "closed"; state: string; tier: number }
   | { at: "failed"; heading: string | null; message: string };
 
 /**
@@ -163,11 +168,11 @@ export function AddTimePage({ keyToken }: { keyToken: string }) {
           setLook({
             at: "failed",
             heading: body?.error?.heading ?? null,
-            message: body?.error?.message ?? customerText(res.status >= 500 ? "reading-unavailable" : "reading-link-bad"),
+            message: body?.error?.message ?? customerText(res.status >= 500 ? "reading-unavailable" : "addtime-key-bad"),
           });
           return;
         }
-        setLook(body.state === "open" ? { at: "open", tier: body.tier, kept: body.kept ?? null } : { at: "closed", state: body.state });
+        setLook(body.state === "open" ? { at: "open", tier: body.tier, kept: body.kept ?? null } : { at: "closed", state: body.state, tier: body.tier ?? 1 });
       } catch {
         if (alive) setLook({ at: "failed", heading: MESSAGES["reading-connection-dropped"].heading ?? null, message: customerText("reading-connection-dropped") });
       }
@@ -187,7 +192,7 @@ export function AddTimePage({ keyToken }: { keyToken: string }) {
   if (look.at === "open") return <AddTimeForm keyToken={keyToken} tier={look.tier} kept={look.kept} />;
   if (look.at === "closed") {
     const key = look.state === "used" ? "addtime-used" : look.state === "known" ? "addtime-known" : look.state === "pending" ? "pdf-not-ready" : "addtime-none";
-    const m = (MESSAGES as Record<string, { heading?: string; text: string | null }>)[key];
+    const m = say(key, look.tier);
     return (
       <div className={shell}>
         <section id="add-time" data-add-time={look.state}>

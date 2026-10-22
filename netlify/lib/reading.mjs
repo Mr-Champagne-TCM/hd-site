@@ -625,6 +625,17 @@ export async function retimeReading(store, id, { output, birth, correction = nul
 }
 
 /**
+ * WAS THIS RECORD REDONE WITH A BIRTH TIME FOUND LATER (10/22)? Its own
+ * "time-added" history entry, written after it was made. An upgrade bought
+ * after the time was added carries the entry it was copied with, from before
+ * it existed, so its first "ready" email is an ordinary one.
+ */
+export function redoneWithTime(r) {
+  const made = Number(r?.createdAt ?? 0);
+  return (Array.isArray(r?.history) ? r.history : []).some((h) => h?.kind === "time-added" && Number(h.at) >= made);
+}
+
+/**
  * A PAID UPGRADE NOT YET CAST, when the chart it grew from has its birth time
  * added: it carries the new time (the buyer confirms it) and the spent offer.
  * Nothing happens to a record that already has a chart.

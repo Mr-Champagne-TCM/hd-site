@@ -1,4 +1,4 @@
-import { fillInterpretation, loadReading, mintReadingLink } from "./reading.mjs";
+import { fillInterpretation, loadReading, mintReadingLink, redoneWithTime } from "./reading.mjs";
 import { generateReading } from "./gemini.mjs";
 import { promptShape } from "./interpretation.mjs";
 import { geminiKind, noteFailure } from "./failures.mjs";
@@ -147,6 +147,8 @@ export async function interpretOne({
         tier: reading.tier,
         // A reading bought for someone new says "their" (bug 16, 10/21).
         someoneNew: reading.fresh === true,
+        // Written again for a birth time found later (10/22): the email says it was redone.
+        redone: redoneWithTime(reading),
       });
     } catch (e) {
       // The reading is on the page; the email is the copy. Ours to follow up.

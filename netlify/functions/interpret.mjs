@@ -201,9 +201,9 @@ async function pending(store) {
  */
 function readyEmail(apiKey) {
   if (!apiKey) return undefined;
-  return async ({ to, name, chartName = null, url, tier, someoneNew = false }) => {
+  return async ({ to, name, chartName = null, url, tier, someoneNew = false, redone = false }) => {
     if (!to) return;
-    const { subject, html, text } = deliveryEmail({ tier, name, chartName, url, links: SITE, pending: false, someoneNew });
+    const { subject, html, text } = deliveryEmail({ tier, name, chartName, url, links: SITE, pending: false, someoneNew, redone });
     const sent = await sendMail({ to, subject, html, text }, { apiKey });
     console.log(`interpret: ready-email ${sent.ok ? "sent" : `failed (${sent.reason})`}`);
     // Thrown so interpretJob files it as reading-ready-email (10/16: this

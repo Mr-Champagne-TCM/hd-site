@@ -250,6 +250,40 @@ export const MESSAGES = {
     heading: "A birth time can't be added here",
     text: `This chart was made before birth details were kept with it, so a time can't be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
   },
+  // The PDF's link cut short (it came from the PDF, not from an email).
+  "addtime-key-bad": {
+    act: false,
+    heading: "That link could not be opened",
+    text: "That link could not be opened. Links are long, and some apps cut them short — opening it again from your PDF usually works.",
+  },
+  // The same on the summary tier: "summary" wherever the words mean the thing redone or kept (10/22).
+  "addtime-slow-summary": {
+    act: false,
+    text:
+      "Something on our side is slow right now, so your summary wasn't redone — nothing has changed, and the time " +
+      `you typed is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+  },
+  "addtime-not-saved-summary": {
+    act: false,
+    text:
+      "Your summary was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
+      `typed is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+  },
+  "addtime-used-summary": {
+    act: false,
+    heading: "Your birth time is already added",
+    text: `A birth time can be added once to each summary, and this summary has its time. For anything else about it, ${CONTACT} reaches Jeremy.`,
+  },
+  "addtime-known-summary": {
+    act: false,
+    heading: "Your summary already has its birth time",
+    text: `This summary was cast from a known birth time, so there is nothing to add. For anything else about it, ${CONTACT} reaches Jeremy.`,
+  },
+  "addtime-none-summary": {
+    act: false,
+    heading: "A birth time can't be added here",
+    text: `This summary was made before birth details were kept with it, so a time can't be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
+  },
 
   // --- the net under everything ---------------------------------------------
   "our-side-generic": {

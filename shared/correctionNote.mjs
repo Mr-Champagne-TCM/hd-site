@@ -40,6 +40,8 @@ export function sayTime(hhmm) {
 }
 
 const FIELD_WORDS = { type: "Type", profile: "Profile", authority: "Authority" };
+/** The chart tier's number, for wording only (a note is never a request for a tier). */
+const TIER_CHART = 1;
 
 function list(words) {
   if (words.length <= 1) return words[0] ?? "";
@@ -80,8 +82,10 @@ export function detailSentences(c) {
  * nothing to say (a summary typed once that came out exactly the same).
  * `learn` is a library link for the first value that moved.
  */
-export function correctionNote(c) {
+export function correctionNote(c, { tier: pageTier } = {}) {
   if (!c || typeof c !== "object") return null;
+  // The page's tier names the thing redone (a time added); unsaid, a chart.
+  const tier = Number.isInteger(pageTier) ? pageTier : TIER_CHART;
   const moved = Array.isArray(c.chart) ? c.chart.filter((x) => x && FIELD_WORDS[x.field]) : [];
   const same = ["type", "profile", "authority"].filter((f) => !moved.some((m) => m.field === f));
 
@@ -115,6 +119,26 @@ export function correctionNote(c) {
       body:
         `${movedSentence} A birth time that was guessed before and is known now would do exactly this — ` +
         `nothing went wrong, and everything below is written for this chart. ${sameSentence}`.trim(),
+      learn,
+    };
+  }
+
+  /**
+   * A BIRTH TIME FOUND LATER, ADDED (10/22): nothing was wrong, so the note
+   * never says "correction" or "corrected". The words are the page's tier's
+   * (a summary that grew into a chart says "chart").
+   */
+  if (c.type === "time-added") {
+    const at = sayTime(c.now?.time);
+    if (!at) return null;
+    const what = tier >= 2 ? "your chart and your reading are" : tier === 1 ? "your chart is" : "your summary is";
+    const thing = tier >= 1 ? "chart" : "summary";
+    return {
+      eyebrow: "Your birth time",
+      lead: `Birth time added: ${at} — ${what} now cast from it.`,
+      body: moved.length
+        ? `${movedSentence} That follows from your birth time — nothing went wrong, and everything below is written for your ${thing} as it is now. ${sameSentence}`.trim()
+        : sameSentence,
       learn,
     };
   }

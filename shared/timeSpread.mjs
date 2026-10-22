@@ -194,6 +194,15 @@ export const ADD_TIME = {
   intro: (tier) => `Once and free — ${noun(tier)} ${verb(tier)} redone from it. The date and place stay as they are.`,
   /** NEW: "Redo my chart and reading", "Redo my chart", "Redo my summary". */
   button: (tier) => (tier >= 2 ? "Redo my chart and reading" : tier === 1 ? "Redo my chart" : "Redo my summary"),
+  /** NEW (10/22): the form's other button, the same on every tier ("Keep them as they are" read wrong with one thing to redo). */
+  notNow: "Not now",
+  /** "Kept from your chart" (the site's label), "Kept from your summary" on the summary tier. */
+  kept: (tier) => (tier === 0 ? "Kept from your summary" : "Kept from your chart"),
+  /** "Change a detail"'s privacy line, said of a summary on the summary tier (a summary has no PDF). */
+  privacy: (tier) =>
+    tier === 0
+      ? "Your earlier details stay on file with this summary, seen only by Jeremy, in case you ever write in about them. They are never shown on your page or in an email."
+      : "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in about them. They are never shown on your page, your PDF or in an email.",
 };
 
 /* -------------------------------------------------------------- the drawing */

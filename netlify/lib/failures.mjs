@@ -100,6 +100,8 @@ export const KINDS = {
   "addtime-bad-request": { severity: I, customer: "our-side-generic", status: 400, code: "bad_request" },
   "addtime-misconfigured": { severity: P, customer: "our-side-generic", status: 503, code: "misconfigured" },
   "addtime-link-bad": { severity: I, customer: "reading-link-bad", status: 404, code: "not_found" },
+  // The PDF's key cut short or not ours: said as a PDF link, not an email's.
+  "addtime-key-bad": { severity: I, customer: "addtime-key-bad", status: 404, code: "not_found" },
   "addtime-store-unavailable": { severity: P, customer: "reading-unavailable", status: 503, code: "reading_unavailable" },
   "addtime-gone": { severity: I, customer: "addtime-gone", status: 410, code: "gone" },
   "addtime-used": { severity: I, customer: "addtime-used", status: 409, code: "used" },
@@ -227,9 +229,10 @@ export function describe(kind, { paid = false } = {}) {
  * `message` overrides the catalogue only for the one entry whose words are
  * computed (the rate limiter names the wait). Nothing raw ever goes here.
  */
-export function customerError(kind, { paid = false, message, extra, status, code } = {}) {
+export function customerError(kind, { paid = false, message, extra, status, code, customer } = {}) {
   const d = describe(kind, { paid });
-  const key = d.customer ?? "our-side-generic";
+  // `customer`: the same failure in other words (the summary tier's "summary", 10/22).
+  const key = customer ?? d.customer ?? "our-side-generic";
   return {
     status: status ?? d.status,
     payload: {

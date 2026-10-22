@@ -25,6 +25,7 @@
  */
 
 import { profileWithNames } from "./mechanics.mjs";
+import { usableSpread } from "../../shared/timeSpread.mjs";
 
 export const DISCLAIMER =
   "This reading describes a Human Design chart and is offered for self-reflection. " +
@@ -569,9 +570,10 @@ export function timeClaimProblem(raw, output) {
 const PROVISIONAL_FIELDS = ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "openCenters", "channels"];
 export function provisionalValues(output) {
   if (output?.timeKnown !== false) return null;
-  const s = output.timeSpread;
+  // The same spread the page and the PDF tag from (shared/timeSpread.mjs), so the NOTE and the tags never disagree.
+  const s = usableSpread(output);
   const known = (list) => list.filter((f) => PROVISIONAL_FIELDS.includes(f));
-  if (s && s.ok === true && Array.isArray(s.window) && Array.isArray(s.changes)) return { measured: true, fields: known(s.changes) };
+  if (s && Array.isArray(s.changes)) return { measured: true, fields: known(s.changes) };
   if (Array.isArray(output.provisional)) return { measured: false, fields: known(output.provisional) };
   return { measured: false, fields: ["type", "authority", "profile"] };
 }

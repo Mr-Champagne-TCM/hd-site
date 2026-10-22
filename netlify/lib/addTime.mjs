@@ -2,7 +2,8 @@ import { carryAddedTime, loadCurrent, loadReading, mintReadingLink, readReadingL
 import { open as openSealed, seal } from "./sig.mjs";
 import { buildCorrection } from "./correction.mjs";
 import { check, record } from "./ratelimit.mjs";
-import { customerError, engineKind } from "./failures.mjs";
+import { customerError, describe as describeKind, engineKind } from "./failures.mjs";
+import { MESSAGES } from "../../shared/customerMessages.mjs";
 import { summaryOnly } from "./handler.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
@@ -115,8 +116,12 @@ export async function handleAddTime({ body, ip, now = Date.now(), readings, coun
       /* a reporter that fails never fails the person waiting */
     }
   };
+  // A summary is said as a summary ("your summary wasn't redone", "this summary has its time"), 10/22.
+  let summary = false;
   const fail = (kind, opts = {}, extra = {}) => {
-    const { status, payload } = customerError(kind, { paid: true, ...opts });
+    const base = describeKind(kind).customer;
+    const customer = summary && base && MESSAGES[`${base}-summary`] ? `${base}-summary` : undefined;
+    const { status, payload } = customerError(kind, { paid: true, ...(customer ? { customer } : {}), ...opts });
     return json(status, { ...payload, ...extra });
   };
 
@@ -132,7 +137,8 @@ export async function handleAddTime({ body, ip, now = Date.now(), readings, coun
   let firstId;
   if (via === "pdf") {
     const k = readAddTimeKey(request.key, secret);
-    if (!k.ok) return fail(k.reason === "misconfigured" ? "addtime-misconfigured" : "addtime-link-bad");
+    // Cut short in the copying, or not ours: said as the PDF's link it is.
+    if (!k.ok) return fail(k.reason === "misconfigured" ? "addtime-misconfigured" : "addtime-key-bad");
     firstId = k.id;
   } else {
     const link = readReadingLink(request?.token, secret, now);
@@ -158,6 +164,7 @@ export async function handleAddTime({ body, ip, now = Date.now(), readings, coun
   const rec = current.reading;
   const ref = { reading: current.id, tier: rec.tier };
   const state = addTimeState(rec);
+  summary = rec.tier === 0;
 
   if (request?.look === true) {
     return json(200, {
@@ -261,7 +268,7 @@ export async function handleAddTime({ body, ip, now = Date.now(), readings, coun
   const output = rec.tier === 0 ? summaryOnly(upstream.payload) : upstream.payload;
 
   /* --- keep it: the old details and chart to history, the note, the flag --- */
-  const correction = buildCorrection({ type: "correction", was, now: birth, before: rec.output, after: output, at: now });
+  const correction = buildCorrection({ type: "time-added", was, now: birth, before: rec.output, after: output, at: now });
   let saved;
   for (let attempt = 0; attempt < 2 && !saved; attempt++) {
     try {
