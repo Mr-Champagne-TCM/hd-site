@@ -16,7 +16,7 @@ import { handleResend } from "../netlify/lib/resendHandler.mjs";
 import { interpretOne } from "../netlify/lib/interpretJob.mjs";
 import { fillReading, loadReading, mintReadingLink, readReadingLink, saveReading } from "../netlify/lib/reading.mjs";
 import { buyerNameFor, chartTitle } from "../shared/chartName.mjs";
-import { CHECKOUT_NEXT_STEP, TIERS } from "../shared/pricing.mjs";
+import { CHECKOUT_NEXT_STEP, TIERS, money } from "../shared/pricing.mjs";
 import { BODYGRAPH_GUIDE } from "../shared/libraryLinks.mjs";
 import { COACH } from "../shared/readingCopy.mjs";
 import { syntheticReading } from "./support/syntheticReading.mjs";
@@ -26,8 +26,9 @@ import { TEXT } from "./support/tier2Fixture.mjs";
 /**
  * THE 10/21 LIVE TEST, AS FIXED. One test (or more) per item Jeremy marked
  * "will do" (HD-Fixes-Mock-v1, page 1), by its error-set id, plus the
- * nameless gift chart the local rig found. The items still waiting on his call
- * (2, 17, W13, W14) are not here: they stay behind shared/fixMock.mjs.
+ * nameless gift chart the local rig found. The items he called on 10/22 have
+ * their own tests: 2 (test/tiers1022.test.mjs), 17 (test/timeSpread.test.mjs),
+ * W13 and W14 (the engine's words since 0.6.0, test/tiers1022.test.mjs).
  *
  * Made-up people only.
  */
@@ -512,6 +513,17 @@ test("#16 THE RECEIPT FOR SOMEONE NEW: their birth details, not yours", () => {
   assert.match(m.text, /Their birth date, time and place\. Their chart is made from them, and the time can be left out if it isn’t known\./);
   assert.match(m.text, /Enter their birth details:/);
   assert.doesNotMatch(m.text, /Your birth date|Enter your birth details/);
+});
+
+test("THE GIFT RECEIPT'S SUBJECT (Jeremy 10/22, call 5): the buyer's name, then a chart for someone else", () => {
+  const price = (tier) => money(TIERS[tier].cents);
+  const m = mail({ tier: 1, name: "Emery Testwell", pending: true, someoneNew: true, amountCents: TIERS[1].cents });
+  assert.equal(m.subject, `Receipt: Emery Testwell, a Human Design chart for someone else, ${price(1)}`);
+  // The tier word and the price vary; a buyer with no name on file gets no name.
+  assert.equal(mail({ tier: 2, name: "Emery Testwell", pending: true, someoneNew: true, amountCents: TIERS[2].cents }).subject, `Receipt: Emery Testwell, a Human Design reading for someone else, ${price(2)}`);
+  assert.equal(mail({ tier: 0, name: null, pending: true, someoneNew: true, amountCents: TIERS[0].cents }).subject, `Receipt: A Human Design summary for someone else, ${price(0)}`);
+  // The buyer's own chart keeps its receipt as it was.
+  assert.equal(mail({ tier: 1, name: "Emery Testwell", pending: true, amountCents: TIERS[1].cents }).subject, `Receipt: Emery Testwell’s Human Design chart, ${price(1)}`);
 });
 
 test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their centers, their cross", () => {

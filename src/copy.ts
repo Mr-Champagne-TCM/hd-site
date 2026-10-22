@@ -427,9 +427,12 @@ export const CARDS = {
   summaryNote: ["With the free ", "Human Design library", " beside it, this comes close to a full reading."],
   chartNote: ["Read alongside the free ", "Human Design library", ", it comes close to a full reading."],
   stripHead: "From a real reading",
+  // Jeremy 10/22: his pick of the test readings' lines (favorite #2), with his edits, word for word.
   stripQuote:
-    "Watch what happens when you balance your public involvement with periods of quiet, uninterrupted solitude.",
-  stripCaption: "One of the four things to try, written for a 5/2 profile.",
+    "Once or twice this week, when a sudden intuitive hunch tells you to take a different route home from the grocery store, " +
+    "you might follow that silent prompt immediately. Notice whether the alternative path feels naturally light, so that " +
+    "instant bodily trust is familiar when a heavier choice appears.",
+  stripCaption: "One of the four things to try, written for a defined Spleen.",
   stripMore: "More real excerpts",
 };
 

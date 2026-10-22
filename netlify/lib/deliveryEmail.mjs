@@ -220,8 +220,17 @@ export function deliveryEmail({
   const amount = Number.isInteger(amountCents) && amountCents >= 0 ? money(amountCents) : null;
   const on = receiptDate(paidAt);
 
+  /**
+   * A CHART FOR SOMEONE ELSE (Jeremy 10/22, call 5): the receipt still names
+   * the BUYER -- it is their purchase, and the name keeps each purchase its own
+   * conversation in Gmail (above) -- but no longer reads as the buyer's chart:
+   * "Receipt: Emery Testwell, a Human Design chart for someone else, <price>".
+   */
+  const receiptWhat = their
+    ? `${name ? `${name}, a` : "A"} Human Design ${word} for someone else`
+    : `${buyerWhose} Human Design ${word}`;
   const subject = pending
-    ? `Receipt: ${buyerWhose} Human Design ${word}${amount ? `, ${amount}` : ""}`
+    ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink
       ? `A fresh link to ${whoseInline} Human Design ${word}`
       : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
