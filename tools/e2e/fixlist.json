@@ -530,6 +530,15 @@
       "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: [A-Z][^’]*’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$"
     },
     {
+      "id": "v3-rig",
+      "about": "the rig's stand-in writer after prompt v3 rev l (10/22): the checker refuses square brackets in a try-this line, so a placeholder reading's four try-this lines lose the [RIG PLACEHOLDER] mark (the rest of the reading keeps it) and are two sentences each -- rig words, never a buyer's",
+      "docs": "^(page [a-zA-Z0-9]+-\\d-[a-z-]+-t2(-old\\d)?|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+)$",
+      "sections": [
+        { "from": "^(Things to experiment with|THINGS TO EXPERIMENT WITH)$", "to": "^Talk it through with Jeremy$" },
+        { "from": "^(Something to try this week|SOMETHING TO TRY THIS WEEK)$", "to": "^Below: " }
+      ]
+    },
+    {
       "id": "Q4",
       "about": "Jeremy's rule (10/22): every line whose value changes during the birth day carries PROVISIONAL beside its label, wherever it prints -- so Start here's 'Colored in' / 'Not colored in' lists, its channels and its profile, and the reading's margin notes (Type, Definition, Authority, Center, Profile, Incarnation cross, On / Off track) are tagged when their value is in the spread's changes, on the page and in the PDF, as the phone does (hd-reading-app bc41072)",
       "docs": "^(page (theo|egoP)-\\d-[a-z-]+-t2(-old\\d)?|pdf (theo|egoP)-\\d-[a-z-]+-t2 p\\d+)$",
