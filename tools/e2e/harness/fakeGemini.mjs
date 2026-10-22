@@ -226,8 +226,10 @@ export function nextDraft(form, f) {
   const written = usSpelling(out);
   const tryThis = [TAKEAWAYS, written.experimentIntro ?? "", ...(written.takeaways ?? [])].join("\n\n") + "\n";
   if (takeawayProblem(tryThis)) {
-    written.experimentIntro = placeholderForm(f).experimentIntro;
-    written.takeaways = placeholderForm(f).takeaways;
+    // Only the refused lines are stood in for, each marked [RIG STAND-IN], not
+    // [RIG PLACEHOLDER]: that marker makes the checks skip a whole reading, and
+    // the rest of this one is still the model's own words, to be judged as such.
+    written.takeaways = placeholderForm(f).takeaways.map((t) => t.replace("[RIG PLACEHOLDER]", "[RIG STAND-IN]"));
   }
   return written;
 }
