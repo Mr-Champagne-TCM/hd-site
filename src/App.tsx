@@ -792,6 +792,10 @@ function ReturningView({ token }: { token: string }) {
                   {money(t.cents)}
                 </span>
                 <span className="text-[15px] text-brand-muted">the {tierWord(level)}</span>
+                {/* What this step adds, and only that (10/22: the drawing is the chart's reason). */}
+                <span className="basis-full text-[15px] leading-snug text-brand-paper/85">
+                  {level === 2 && owned === 0 ? READING.addsToSummary : t.adds}
+                </span>
               </p>
             ))}
             <p className="mt-2 text-[15px] leading-snug text-brand-teal">

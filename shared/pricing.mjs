@@ -41,6 +41,8 @@ export const SUMMARY = {
   blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your channels and activated gates, your incarnation cross.",
   /** The same, to a buyer starting a chart for someone else (W8, 10/21): THEIR centers. */
   theirBlurb: "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.",
+  /** The first step: nothing is added to anything. */
+  adds: null,
 };
 
 export const CHART = {
@@ -51,6 +53,8 @@ export const CHART = {
   checkoutDescription: "Your bodygraph drawn, your chart's values, and a PDF to keep.",
   blurb: fix("T1B") ? CHART_B : CHART_A,
   theirBlurb: fix("T1B") ? CHART_B_THEIR : CHART_A_THEIR,
+  /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
+  adds: "Your bodygraph, drawn, and its PDF to keep.",
 };
 
 export const READING = {
@@ -61,6 +65,9 @@ export const READING = {
   checkoutDescription: "Your chart, a written reading of about 1,200 words, and a PDF to keep.",
   blurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
   theirBlurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
+  /** Under its price on "The same chart, a step further": what it adds to a chart, and to a summary. */
+  adds: "All twenty-six activations and the written reading.",
+  addsToSummary: "Your bodygraph drawn, all twenty-six activations and the written reading.",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */
