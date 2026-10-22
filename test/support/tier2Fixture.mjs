@@ -145,13 +145,13 @@ const TAKEAWAY_BLOCK = [
   "These are invitations to test against your own experience rather than instructions, and you remain " +
     "the authority on what fits and what does not.",
   "",
-  "(Sacral authority) The next time a small question comes up, like what to eat, you might wait for the body's first sound before you answer and notice which way it goes, so that sound is familiar when the question is heavier.",
+  "(Sacral authority) The next time a small question comes up, like what to eat, you might wait for the body's first sound before you answer. Notice which way it goes, so that sound is familiar when the question is heavier.",
   "",
-  "(Channel 20-34) This week, on an easy job like clearing a shelf, you might start the moment it feels right and notice whether the energy holds, so that feeling is familiar when more rides on it.",
+  "(Channel 20-34) This week, on an easy job like clearing a shelf, you might start the moment it feels right. Notice whether the energy holds, so that feeling is familiar when more rides on it.",
   "",
-  "(Undefined Solar Plexus) Once or twice this week, as you leave a lively but easy room, you might name your mood in one word and notice how much of it stayed behind, so the check is within reach after a tense day.",
+  "(Undefined Solar Plexus) Once or twice this week, as you leave a lively but easy room, you might name your mood in one word. Notice how much of it stayed behind, so the check is within reach after a tense day.",
   "",
-  "(Profile line 4) Over the next few days, in an easy catch-up with a friend, you might mention one thing you are working on and notice whether they draw you out, so that pull is familiar when an opening matters more.",
+  "(Profile line 4) Over the next few days, in an easy catch-up with a friend, you might mention one thing you are working on. Notice whether they draw you out, so that pull is familiar when an opening matters more.",
   "",
   "This reading describes a Human Design chart and is offered for self-reflection. It is not medical, " +
     "psychological, legal or financial advice, and it does not predict the future.",

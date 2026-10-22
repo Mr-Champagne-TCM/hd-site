@@ -123,14 +123,9 @@ export function chartFactsOnly(output, { form = false } = {}) {
     `Personality activations: ${acts(output?.personality)}`,
     `Design activations: ${acts(output?.design)}`,
   ];
-  if (output?.timeKnown === false) {
-    lines.push(
-      "",
-      "NOTE: birth time was not known and the chart was cast at noon. " +
-        "Say plainly, near the start, that Profile, Type and Authority " +
-        "cannot be confirmed without a birth time.",
-    );
-  }
+  // An unknown birth time: what the birth day measured, nothing more (birthTimeNote, 10/22).
+  const note = birthTimeNote(output, { form });
+  if (note) lines.push("", note);
   return lines.join("\n") + "\n";
 }
 
@@ -222,21 +217,90 @@ export function firstProblem(
  * word and never reaches a main verb is refused. "Waiting for the invitation
  * ensures..." (an -ing subject with its verb) passes, as does "Waiting, you
  * notice..." The same test the local rig judges with (tools/e2e/checks).
+ *
+ * 10/22 (AI test round: 5 of 57 drafts refused for nothing else). The first
+ * version stopped at the first until / who / that and took only an -s verb
+ * right before an article or pronoun, so whole sentences were refused:
+ * "Pausing until something physically meets your energy gives your power
+ * somewhere true to land.", "Telling those who will be affected before you
+ * move clears the path ahead.", "...brings clarity to...". Now a linking word
+ * opens a clause that uses up ITS OWN verb, and the row is whole once a verb is
+ * left over for the -ing subject. "before" / "after" open a clause only with a
+ * pronoun after them ("before you move"); "before action" is a preposition.
+ * All 21 -ing rows that round refused were read by hand: 15 whole sentences
+ * (pass now), 6 fragments (one draft's six rows, still refused).
  */
+const G_CLAUSE = /^(?:that|which|who|whom|whose|when|whenever|where|because|while|if|until|unless|once|though|although|whereas|so)$/;
+const G_CLAUSE_IF_SUBJECT = /^(?:before|after|since|as|till)$/;
+const G_RELATIVE = /^(?:that|which|who)$/;
+const G_SUBJECT = /^(?:you|they|we|i|he|she|it|someone|something|anyone|anything|everyone|everything|nothing|nobody|people)$/;
+const G_DET = /^(?:a|an|the|your|my|his|her|its|their|our|these|those|this|that|many|few|some|all|any|each|every|other|another|no|what|who|which)$/;
+const G_PREP = /^(?:of|in|on|at|for|with|from|into|onto|through|by|about|between|among|toward|towards|without|within|over|under|around|across|after|before|during|like|to)$/;
+const G_ADVERB = /^(?:[a-z]+ly|never|always|often|still|just|even|not|only|already|also|soon)$/;
+const G_AUX = /^(?:is|are|was|were|am|has|had|will|would|can|could|may|might|must|should|shall|does|did|becomes)$/;
+const G_NOT_S = /^(?:always|perhaps|sometimes|towards|afterwards|besides|unless|thus|less|across|whereas|its|this|his|hers|ours|yours|theirs|others|yes|news|series|species|plus|various|numerous|previous|serious|was|has|does|is)$/;
+const G_AFTER_NOUN = /^(?:of|and|or|nor|but|that|who|which)$/;
+const G_OBJECT = /^(?:a|an|the|your|you|yourself|it|its|them|their|his|her|our|us|me|my|this|these|those|what|how|more|less|most)$/;
+const G_LETS = /^(?:allowing|letting|helping|making|having|getting|asking|inviting|encouraging|leaving|watching|seeing|hearing)$/;
+const G_NOT_ING = /^(?:thing|things|something|anything|nothing|everything|morning|evening|spring|string|during|ceiling|king|ring|wing|sing|bring)$/;
+const gIng = (x) => /^[a-z]{2,}ing$/.test(x ?? "") && !G_NOT_ING.test(x);
+const gS = (x) => /^[a-z]{3,}s$/.test(x ?? "") && !/(?:ss|us|is)$/.test(x) && !G_NOT_S.test(x);
+
 export function glanceFragment(v) {
   const s = String(v ?? "").trim();
   if (!/^[A-Z][a-z]+ing\b/.test(s)) return false;
   if (/^[^.;]*?,\s+(?:you|it|they|we|he|she)\s+(?!and\b|or\b)[a-z]+/.test(s)) return false;
-  const w = s.replace(/[“”"(),.;:!?—–]/g, " ").split(/\s+/).filter(Boolean);
-  const CLAUSE = /^(?:that|which|who|whom|whose|when|whenever|where|so|because|while|if|until|unless|once|though|although|than|what)$/i;
-  const NOT_VERB_AFTER = /^(?:a|an|the|your|my|his|her|its|their|our|these|those|this|that|many|few|some|all|any|each|every|other|what|who|which)$/i;
-  const OBJECT = /^(?:a|an|the|your|you|yourself|it|its|them|their|his|her|our|us|me|my|this|these|those|what|how|more|less|most)$/i;
-  const MAIN = /^(?:is|was|becomes|will|can|may|must|might|should|could|would)$/i;
+  const w = s.replace(/[“”"(),.;:!?—–]/g, " ").split(/\s+/).filter(Boolean).map((x) => x.toLowerCase());
+  let used = -1; // the last verb a clause took for itself, when it can take an object ("guides", "will")
+  let lets = G_LETS.test(w[0]);
   for (let i = 1; i < w.length; i++) {
-    if (CLAUSE.test(w[i])) return true;
-    if (NOT_VERB_AFTER.test(w[i - 1])) continue;
-    if (MAIN.test(w[i])) return false;
-    if (/^[a-z]{2,}s$/.test(w[i]) && !/(?:ss|us|is)$/.test(w[i]) && OBJECT.test(w[i + 1] ?? "")) return false;
+    const x = w[i];
+    // "Holding that line ...": "that" after the opener or a preposition points, it opens nothing.
+    const pointing = x === "that" && (i === 1 || G_PREP.test(w[i - 1]));
+    if (!pointing && (G_CLAUSE.test(x) || (G_CLAUSE_IF_SUBJECT.test(x) && G_SUBJECT.test(w[i + 1] ?? "")))) {
+      let j = i + 1;
+      while (j < w.length && G_ADVERB.test(w[j])) j++;
+      if (j >= w.length) break;
+      // "before acting", "until invited": no clause, so no verb of its own.
+      if (gIng(w[j]) || (!G_RELATIVE.test(x) && /ed$/.test(w[j]))) {
+        i = j;
+        continue;
+      }
+      let k;
+      if (G_SUBJECT.test(w[j])) {
+        // "until something arrives", "before you move": the word after the pronoun.
+        k = j + 1;
+        while (k < w.length && G_ADVERB.test(w[k])) k++;
+      } else if (G_RELATIVE.test(x) && !G_DET.test(w[j])) {
+        // "that guides", "who will": the relative word is the subject.
+        k = j;
+      } else {
+        // "when your energy spends", "that your guidance landed": the first verb after its subject.
+        k = j + 1;
+        while (k < w.length && !(G_AUX.test(w[k]) || gS(w[k]) || /^[a-z]{3,}ed$/.test(w[k]))) k++;
+      }
+      used = G_AUX.test(w[k] ?? "") || gS(w[k]) ? k : -1;
+      i = k;
+      continue;
+    }
+    if (G_DET.test(w[i - 1])) continue;
+    if (G_AUX.test(x)) return false;
+    if (gS(x) && !G_PREP.test(w[i - 1])) {
+      let j = i + 1;
+      while (j < w.length && G_ADVERB.test(w[j])) j++;
+      // Right after a clause's own "guides" / "will", an -s word is its object
+      // ("that guides travelers through") unless an object follows it in turn.
+      if (i - 1 === used && !G_OBJECT.test(w[j] ?? "")) continue;
+      // "Allowing opportunities to approach...", "Letting the right questions find
+      // you...": after these openers the first -s word is what is let or allowed.
+      if (lets && !G_OBJECT.test(w[j] ?? "")) {
+        lets = false;
+        continue;
+      }
+      // The -s word is a verb when something follows it that a verb takes: not a
+      // plural noun at the end, before "of" / "and" / "that", or before an -ing word.
+      if (j < w.length && !gIng(w[j]) && !G_AFTER_NOUN.test(w[j])) return false;
+    }
   }
   return true;
 }
@@ -246,6 +310,9 @@ export function glanceProblem(raw) {
   const body = text.includes(DISCLAIMER) ? text.slice(0, text.indexOf(DISCLAIMER)) : text;
   for (const [k, v] of Object.entries(summaryRows(body))) {
     if (glanceFragment(v)) return `The "${SUMMARY_LABELS[k] ?? k}" line is a fragment, not a sentence: "${String(v).slice(0, 90)}"`;
+    // 10/22 round: "Type: classifies you as a Manifestor who..." -- the label taken
+    // for the subject. The page prints the value, a period, then the row.
+    if (/^[a-z]/.test(String(v).trim())) return `The "${SUMMARY_LABELS[k] ?? k}" line does not begin a sentence (no capital letter): "${String(v).trim().slice(0, 90)}"`;
   }
   return null;
 }
@@ -264,6 +331,8 @@ const SLIPS = [
   /\bmaterial manipulation\b/i,
   /\bdeeply vulnerable\b/i,
   /\bmust ride out\b/i,
+  // An authority is not "defined" (centers are); 10/22 round, 2 drafts, both slips.
+  /\bauthority\s+(?:is|are)\s+defined\b/i,
   /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i,
 ];
 
@@ -346,11 +415,22 @@ export function spellingProblem(raw) {
  * ordinary moment), ONE thing to try ("you might ..."), what to NOTICE, and the
  * calm-practice tail (", so ... is familiar when ..."). The model writes it and
  * this checks it, as for every other rule. No two may begin the same way.
+ *
+ * TWO SENTENCES (Jeremy 10/22, editing the home-page line: "This sentence
+ * division adds clarity and avoids a needlessly lengthy sentence. Should
+ * express everywhere in try this sentencing."): "... you might <one action>.
+ * Notice whether <what>, so <calm tail>." The first sentence ends after the
+ * thing to try; the second opens "Notice" and carries the tail. A line in the
+ * one-sentence form is refused. Like every rule here, only a NEW draft is
+ * judged (gemini.mjs); readings already stored are never re-checked.
  */
 const SOFT_OPENER = /^(notice|watch|observe|pay attention)\b/i;
 // ", so the pause is familiar when ...", or as one approved line has it, ", which is practice for when ...".
 const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
+// A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
+const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
+const NOTICE_OPENS = /[.!]["'”’)]*\s+Notice\b/;
 
 export function takeawayProblem(raw) {
   const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
@@ -361,16 +441,490 @@ export function takeawayProblem(raw) {
     const body = line.replace(/^\([^)]+\)\s*/, "");
     const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
     if (body === line) return say(`does not begin with the chart feature it comes from, in parentheses`);
+    // "([Strategy]) This week, ..." (10/22 round, 64 of 144 lines): a slot of the instructions, left in.
+    if (/[[\]]/.test(line)) return say(`has square brackets in it, a slot left from the instructions ("${/^\([^)]*\)/.exec(line)?.[0] ?? line.slice(0, 30)}")`);
+    if (/_/.test(line)) return say(`has a blank (_) in it, a slot left from the instructions ("${/^\([^)]*\)/.exec(line)?.[0] ?? line.slice(0, 30)}")`);
     if (SOFT_OPENER.test(body)) return say(`opens with "${SOFT_OPENER.exec(body)[1]}"; it begins with when, not with what to watch`);
+    // "(Sacral), This week, ..." (10/22 round): the time phrase follows the tag directly.
+    if (!/^["“]?[A-Z]/.test(body)) return say(`does not begin with its time phrase right after the (chart feature)`);
     const might = body.search(/\byou might\b/i);
     if (might < 0) return say(`has no "you might ..." (the one thing to try)`);
     if (!WHEN.test(body.slice(0, might))) return say(`does not say when, before the thing to try`);
     const notice = body.slice(might).search(/\bnotice\b/i);
     if (notice < 0) return say(`names nothing to notice`);
-    if (!CALM_TAIL.test(body.slice(might + notice))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
+    const second = body.slice(might).search(NOTICE_OPENS);
+    const ends = body.match(SENTENCE_END)?.length ?? 0;
+    if (second < 0) {
+      return say(
+        ends < 2
+          ? `is one sentence; the thing to try ends with a period and "Notice ..." opens a second sentence`
+          : `does not open its second sentence with "Notice", after the thing to try`,
+      );
+    }
+    if (ends < 2) return say(`does not end its second sentence with a period`);
+    if (ends > 2) return say(`has ${ends} sentences, not two (the thing to try, then "Notice ...")`);
+    if (!CALM_TAIL.test(body.slice(might + second))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);
+  }
+  return null;
+}
+
+/**
+ * A TRY-THIS TAG IS TRUE FOR THIS CHART (10/22 AI test round). Given sample
+ * tags in its instructions, the model wrote them on charts that do not have
+ * them: "(Defined Sacral center)" on a Manifestor, a Projector and a Reflector,
+ * "(Profile 4/1)" on a 1/3, "(Channel 20-34)" on a chart with no channels,
+ * "(Emotional authority)" on a Mental Projector -- 19 of 40 delivered lines in
+ * one batch, every other check passing them. A tag that names a center's
+ * state, the profile or a line, a channel, the authority or the type must
+ * match the chart; a tag naming none of those ("Strategy") is not judged.
+ */
+const TAG_CENTER = { head: "Head", ajna: "Ajna", throat: "Throat", g: "G", heart: "Heart", ego: "Heart", sacral: "Sacral", spleen: "Spleen", splenic: "Spleen", "solar plexus": "Solar Plexus", emotional: "Solar Plexus", root: "Root" };
+const TAG_STATE = /\b(defined|undefined|open)\s+(solar plexus|head|ajna|throat|g|heart|ego|sacral|spleen|splenic|emotional|root)\b/i;
+const TAG_AUTHORITY = [
+  ["Emotional", /\b(?:emotional|solar plexus)\b/i],
+  ["Sacral", /\bsacral\b/i],
+  ["Splenic", /\b(?:splenic|spleen)\b/i],
+  ["Ego", /\b(?:ego|heart)\b/i],
+  ["Self-Projected", /\bself[-\s]projected\b/i],
+  ["Mental", /\b(?:mental|environmental|outer|sounding[-\s]board)\b/i],
+  ["Lunar", /\b(?:lunar|moon)\b/i],
+];
+const TAG_TYPE = /\b(manifesting generator|generator|manifestor|projector|reflector)\b/i;
+
+export function tagProblem(raw, output) {
+  const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
+  for (const line of (section?.paragraphs ?? []).slice(1)) {
+    const tag = /^\(([^)]+)\)/.exec(line)?.[1];
+    if (!tag) continue;
+    const wrong = (why) => `A takeaway's (chart feature) is not this chart's: "(${tag})", ${why}`;
+    const authority = /\bauthority\b/i.test(tag);
+    const s = TAG_STATE.exec(tag);
+    if (s && !authority) {
+      const name = TAG_CENTER[s[2].toLowerCase()];
+      const has = (list) => Array.isArray(list) && list.includes(name);
+      const actual = has(output?.definedCenters) ? "defined" : has(output?.undefinedCenters) ? "undefined" : has(output?.openCenters) ? "open" : null;
+      if (actual && actual !== s[1].toLowerCase()) return wrong(`but the ${name} center is ${actual} here`);
+    }
+    const profile = /^(\d)\/(\d)/.exec(String(output?.profile ?? ""));
+    const p = /\b([1-6])\/([1-6])\b/.exec(tag);
+    if (p && profile && `${p[1]}/${p[2]}` !== `${profile[1]}/${profile[2]}`) return wrong(`but the profile is ${profile[1]}/${profile[2]}`);
+    const ln = /\bline\s+([1-6])\b/i.exec(tag);
+    if (ln && !p && profile && ln[1] !== profile[1] && ln[1] !== profile[2]) return wrong(`but the profile is ${profile[1]}/${profile[2]}`);
+    const ch = /\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/.exec(tag);
+    if (ch && Array.isArray(output?.channels)) {
+      const numbers = output.channels.map((c) => /^(\d+)-(\d+)/.exec(String(c))).filter(Boolean);
+      if (!numbers.some((m) => (m[1] === ch[1] && m[2] === ch[2]) || (m[1] === ch[2] && m[2] === ch[1]))) {
+        return wrong(numbers.length ? `but its channels are ${numbers.map((m) => m[0]).join(", ")}` : "but it has no channels");
+      }
+    }
+    if (authority && output?.authority) {
+      const named = TAG_AUTHORITY.find(([, re]) => re.test(tag));
+      const own = TAG_AUTHORITY.find(([key]) => String(output.authority).startsWith(key));
+      if (named && own && named[0] !== own[0]) return wrong(`but the authority is ${output.authority}`);
+    }
+    const t = TAG_TYPE.exec(tag);
+    if (t && output?.type && !String(output.type).toLowerCase().includes(t[1].toLowerCase())) return wrong(`but the type is ${output.type}`);
+  }
+  return null;
+}
+
+/**
+ * NO UNKNOWN BIRTH TIME ON A CHART WHOSE TIME IS KNOWN (10/22 AI test round).
+ * Asked to mention an unknown birth time only when the facts say so, the model
+ * wrote "Your birth time was not known, so your rising sign is omitted..." on 7
+ * of 27 charts whose time WAS known -- often with an astrology word beside it
+ * ("rising sign", "ascendant", "house placements"), none of which a Human
+ * Design reading uses. Both are refused: the claim when `timeKnown` is not
+ * false, the astrology words always.
+ */
+const TIME_CLAIM = /\b(?:birth time (?:was |is )?(?:not known|unknown|not recorded|missing|not given)|no birth time|without (?:a|an exact|the) birth time|lack of a (?:specific )?birth time)\b/i;
+const ASTROLOGY = /\b(?:rising signs?|ascendants?|house placements?|astrological houses?|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth) house)\b/i;
+
+export function timeClaimProblem(raw, output) {
+  for (const [where, text] of writtenText(raw)) {
+    const a = ASTROLOGY.exec(text);
+    if (a) return `The reading uses an astrology term, "${a[0]}", in ${where}: "${quoteAt(text, a.index, a[0].length)}"`;
+    if (output?.timeKnown === false) continue;
+    const m = TIME_CLAIM.exec(text);
+    if (m) return `The reading says the birth time was not known, in ${where}, but this chart's birth time is known: "${quoteAt(text, m.index, m[0].length)}"`;
+  }
+  return null;
+}
+
+/**
+ * WHAT AN UNKNOWN BIRTH TIME REALLY CHANGES (Jeremy 10/22: "I want to guard
+ * against having so much info tied to the uncertainty that their
+ * understanding gets muddied"). Since 10/22 the chart MEASURES its birth day
+ * (engine /v1/spread, kept as the record's `timeSpread`): the page and the PDF
+ * carry one line and tag only the values that change that day. The reading
+ * says no more than that: the facts' NOTE lists those values, and
+ * birthTimeProblem refuses a reading that calls any other value uncertain.
+ * With no usable spread (an older record) the list is the engine's own
+ * `provisional`, as the page shows it; with neither, Type, Authority and
+ * Profile, the old note's three. The keys are the spread's own field names.
+ */
+const PROVISIONAL_FIELDS = ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "openCenters", "channels"];
+export function provisionalValues(output) {
+  if (output?.timeKnown !== false) return null;
+  const s = output.timeSpread;
+  const known = (list) => list.filter((f) => PROVISIONAL_FIELDS.includes(f));
+  if (s && s.ok === true && Array.isArray(s.window) && Array.isArray(s.changes)) return { measured: true, fields: known(s.changes) };
+  if (Array.isArray(output.provisional)) return { measured: false, fields: known(output.provisional) };
+  return { measured: false, fields: ["type", "authority", "profile"] };
+}
+
+/** The NOTE's names for those values, as the facts above it label them. */
+function provisionalNames(fields, form) {
+  const names = {
+    type: "Type",
+    strategy: "Strategy",
+    authority: "Inner Authority",
+    profile: "Profile",
+    definition: "Definition",
+    signature: form ? "the on-track feeling" : "Signature",
+    notSelfTheme: form ? "the off-track feeling" : "Not-Self Theme",
+    incarnationCross: "Incarnation Cross",
+    definedCenters: "the centers' states (defined, undefined or open)",
+    undefinedCenters: "the centers' states (defined, undefined or open)",
+    openCenters: "the centers' states (defined, undefined or open)",
+    channels: "Channels",
+  };
+  const said = [...new Set(fields.map((f) => names[f]))];
+  return said.length < 2 ? said.join("") : `${said.slice(0, -1).join(", ")} and ${said.at(-1)}`;
+}
+
+export function birthTimeNote(output, { form = false } = {}) {
+  const p = provisionalValues(output);
+  if (!p) return null;
+  const head = "NOTE: birth time was not known and the chart was cast at noon.";
+  if (!p.fields.length) {
+    return `${head} Measured across the whole birth day, every value above holds at any birth time; the page already says so. Do not mention the birth time, and never call any value uncertain.`;
+  }
+  return (
+    `${head} ${p.measured ? "Measured across the whole birth day, these" : "These"} values can change with the birth time: ` +
+    `${provisionalNames(p.fields, form)}. Every other value above holds at any birth time. The page already says so; ` +
+    "mention it at most once, in plain words, as those values being provisional. Never call any other value uncertain, and add no other caveat about the birth time."
+  );
+}
+
+/**
+ * The reading calling a value uncertain that the birth day does not change
+ * ("Your Type and Authority cannot be confirmed without a birth time" on a
+ * Projector whose Type and Authority hold all day). A claim is a strong word
+ * (provisional, unconfirmed, tentative, cannot be confirmed) anywhere, or a
+ * weaker one (uncertain, may change, might differ) in a sentence about the
+ * birth time; the values it is about are the ones named in its clause and the
+ * list leading into it ("Profile, Type and Authority cannot be confirmed").
+ * A claim about the whole chart ("your exact chart configuration cannot be
+ * confirmed") is the caveat the NOTE asks the reading not to add, and so is
+ * any claim when nothing changes. Denied ("your Type is not provisional") is
+ * not a claim. And the birth time is said once at most, never in the summary
+ * lines (the page says it beside the chart): stored drafts said it up to four
+ * times, once in each of three summary lines.
+ */
+const UNSURE_STRONG = /\b(?:provisional(?:ly)?|unconfirmed|tentative(?:ly)?|(?:cannot|can['\u2019]t|could not|couldn['\u2019]t|can ?not)\s+(?:yet\s+)?be\s+(?:(?:fully|strictly|definitively|absolutely|completely|entirely|truly|reliably|precisely|exactly|accurately|firmly)\s+)?(?:confirmed|verified|certain|known|fixed|pinned down)|not\s+(?:yet\s+)?(?:be\s+)?(?:confirmed|verified))\b/gi;
+const UNSURE_WEAK = /\b(?:uncertain(?:ty)?|not\s+(?:fully\s+|entirely\s+|completely\s+)?certain|(?:may|might|could|can|would)\s+(?:all\s+)?(?:change|shift|differ|vary|be different)|subject to change)\b/gi;
+const BIRTH_TIME = /\bbirth[\s-]?(?:time|hour)\b|\btime of (?:your |their )?birth\b|\bnoon\b|\b(?:exact|precise) (?:time|hour|minute)\b/i;
+const BIRTH_SAID = /\bbirth[\s-]?(?:time|hour)s?\b|\btime of (?:your |their )?birth\b|\b(?:cast|calculated|drawn|set|charted)\s+(?:at|for)\s+noon\b|\bnoon[- ](?:cast|calculated|based|chart)\b/i;
+const VALUE_NAMED = [
+  ["Type", ["type"], /\btypes?\b|\b(?:Manifesting Generator|Generator|Projector|Manifestor|Reflector)\b/i],
+  ["Strategy", ["strategy"], /\bstrateg(?:y|ies)\b/i],
+  ["Authority", ["authority"], /\bauthorit(?:y|ies)\b/i],
+  ["Profile", ["profile"], /\bprofiles?\b/i],
+  ["Definition", ["definition"], /\bdefinition\b/i],
+  ["Incarnation Cross", ["incarnationCross"], /\b(?:incarnation\s+)?cross\b/i],
+  ["center states", ["definedCenters", "undefinedCenters", "openCenters"], /\bcent(?:er|re)s?\b/i],
+  ["Channels", ["channels"], /\bchannels?\b/i],
+];
+const WHOLE_CHART = /\b(?:chart|bodygraph|design|configuration|blueprint|map)\b/i;
+const CLAUSE_CUT = /[,;:\u2014\u2013()]|\b(?:while|but|whereas|although|though)\b/gi;
+
+export function birthTimeProblem(raw, output) {
+  const p = provisionalValues(output);
+  if (!p) return null;
+  const why = p.measured ? "measured across the birth day it holds at any birth time" : "it is not one of the values that can change with the birth time";
+  const prose = writtenText(raw).filter(([w]) => w !== "a takeaway's tag");
+  for (const [where, text] of prose) {
+    const weak = [...text.matchAll(UNSURE_WEAK)].filter((m) => BIRTH_TIME.test(sentenceAt(text, m.index)));
+    for (const m of [...text.matchAll(UNSURE_STRONG), ...weak].sort((a, b) => a.index - b.index)) {
+      if (negatedAt(text, m.index, m.index + m[0].length)) continue;
+      const [from, to] = sentenceSpan(text, m.index);
+      const sentence = text.slice(from, to);
+      const at = m.index - from;
+      // The claim's clause, and the list leading into it.
+      const cuts = [0, ...[...sentence.matchAll(CLAUSE_CUT)].map((c) => c.index + c[0].length), sentence.length];
+      let k = cuts.findIndex((c, i) => c <= at && at < (cuts[i + 1] ?? Infinity));
+      let start = cuts[k];
+      while (k > 0) {
+        const prev = sentence.slice(cuts[k - 1], cuts[k]);
+        if (prev.trim().split(/\s+/).length > 4 || !VALUE_NAMED.some(([, , re]) => re.test(prev))) break;
+        start = cuts[--k];
+      }
+      const end = cuts.find((c) => c > at + m[0].length - 1) ?? sentence.length;
+      const clause = sentence.slice(start, end);
+      const named = VALUE_NAMED.filter(([, , re]) => re.test(clause));
+      for (const [name, fields] of named) {
+        if (fields.some((f) => p.fields.includes(f))) continue;
+        return `The reading calls the ${name} uncertain in ${where}, but ${why}: "${quoteAt(text, m.index, m[0].length)}"`;
+      }
+      if (named.length || !BIRTH_TIME.test(sentence)) continue;
+      if (!p.fields.length) {
+        return `The reading calls the chart uncertain in ${where}, but measured across the birth day every value holds at any birth time: "${quoteAt(text, m.index, m[0].length)}"`;
+      }
+      if (WHOLE_CHART.test(clause)) {
+        return `The reading calls the whole chart uncertain in ${where}; only the values the facts list can change with the birth time: "${quoteAt(text, m.index, m[0].length)}"`;
+      }
+    }
+  }
+  const said = [];
+  for (const [where, text] of prose) {
+    for (const s of text.split(/(?<=[.!?])\s+/)) if (BIRTH_SAID.test(s)) said.push([where, s]);
+  }
+  const row = said.find(([where]) => where.endsWith(" line"));
+  if (row) return `The reading mentions the birth time in ${row[0]}; the page says it beside the chart, and the reading at most once, in its energy section: "${row[1].slice(0, 120)}"`;
+  if (said.length > 1) return `The reading mentions the birth time ${said.length} times (${[...new Set(said.map(([w]) => w))].join(", ")}); once at most: "${said[1][1].slice(0, 120)}"`;
+  return null;
+}
+
+/**
+ * The model's written text as writtenText gives it, minus the takeaways' tags
+ * and the paragraph that introduces the try-this lines ("these are invitations
+ * to test...", which the prompt asks every reading to say).
+ */
+function proseOf(raw) {
+  let introSeen = false;
+  return writtenText(raw).filter(([where]) => {
+    if (where === "a takeaway's tag") return false;
+    if (where === `"${TAKEAWAYS}"` && !introSeen) return !(introSeen = true);
+    return true;
+  });
+}
+
+/**
+ * ANOTHER TYPE'S WORD, WHEREVER IT IS ABOUT THE READER (10/22 round; Jeremy's
+ * strict invitation rule, decision K). The type checks look at the Strategy
+ * line, How you decide and the on / off track content; the round delivered
+ * the same words everywhere else: "your whole system relaxes into deep
+ * satisfaction" (a Projector), "waiting for an external invitation to spark
+ * into motion" (a Manifesting Generator), "meets the right outer invitations"
+ * (a Generator), "an external cue invites your voice". Each type's own words
+ * pass. Measured on every stored draft (345): kept only the forms with no
+ * false hit --
+ *   - an invitation waited for or received, for anyone but a Projector. Not a
+ *     literal one (a casual invitation, one that arrives from a friend, the
+ *     feelings about it), not the 2 line being called out (10/7), not a denial
+ *     ("without needing to wait for an invitation", negatedAt);
+ *   - waiting to respond (not a Generator's or Manifesting Generator's); informing
+ *     before acting (not a Manifestor's or MG's); a lunar cycle (not a Reflector's);
+ *   - satisfaction / frustration and their forms, about the reader, for anyone
+ *     but a Generator or MG. Success, peace, surprise, anger and the rest stay
+ *     with the on / off track checks: elsewhere they were plain English in every
+ *     stored draft ("the element of surprise", "an instinct for success").
+ */
+const GEN_MG = ["Generator", "Manifesting Generator"];
+const BORROWED = [
+  {
+    owners: ["Projector"],
+    invitation: true,
+    re: /\binvitations?\b|\b(?:an?|the|any|for)\s+invites?\b(?!\s+(?:you|your|yourself|them|people|others|us|him|her|it|a|an|the)\b)|\b(?:be|being|been|is|are|am|was|were|get|gets|getting|got|until|till|unless|once|when|you're|you’re)\s+invited\b|\binvit(?:es|ed|ing)\s+(?:your|you)\s+(?:voice|input|participation|physical participation|view|views|opinion|perspective|guidance|wisdom|energy|life force)\b/gi,
+  },
+  { owners: GEN_MG, re: /\bwait(?:s|ed|ing)?\s+(?:for\s+(?:something|life|the world)\s+)?to\s+respond\b/gi },
+  { owners: ["Manifestor", "Manifesting Generator"], re: /\binform(?:s|ed|ing)?\s+(?:others|people|those\s+(?:around|affected|nearby|involved)|everyone|anyone|the people)\b[^.;]{0,40}?\b(?:before|first|ahead)\b/gi },
+  { owners: ["Reflector"], re: /\b(?:lunar cycle|moon cycle|twenty-eight days|28 days)\b/gi },
+  { owners: GEN_MG, feeling: true, re: /\bsatisf(?:action|ied|ying)\b/gi },
+  { owners: GEN_MG, feeling: true, re: /\bfrustrat(?:ion|ions|ed|ing)\b/gi },
+];
+const INVITE_LITERAL_BEFORE = /\b(?:social|casual|dinner|party|weekend|coffee|lunch|minor|friendly|group|event|wedding|birthday|holiday|spontaneous|last-minute|new|friend's|neighbor's|accept(?:s|ing|ed)?|declin(?:e|es|ing|ed)|answer(?:s|ing)?|reply(?:ing)? to|respond(?:ing)? to|turn(?:ing)? down)\b[^.;,]{0,25}$/i;
+const INVITE_LITERAL_AFTER = /^\s*(?:to\s+(?:a|an|the|join|dinner|lunch|coffee|go|meet|hang|gather|test|experiment|explore|try|notice|consider|reflect|observe|play|practice|check)\b|for\s+(?:you\s+to|coffee|lunch|dinner|drinks|a\s+walk|a\s+meal|testing|exploration|reflection)\b|(?:arrives?|lands?|comes?)\s+(?:for|from|via|in|by|through)\b)/i;
+const INVITE_WAITED = /\b(?:wait(?:s|ed|ing)?\s+(?:for|until)|until|without|before)\b[^.;,]{0,40}$/i;
+const INVITE_OFFERED = /\b(?:are|as|serve as|offered as|simply|merely|purely|gentle|open)\s+(?:\w+\s+)?$/i;
+/** The 2 line's own idiom, on a chart with a 2 in its profile: "until an invitation calls you forth". */
+const CALLED_OUT = /\b(?:calls?|called|calling|draws?|drew|drawing)\s+you\s+(?:out|forth)\b/i;
+const ABOUT_OTHERS = /\b(?:people|others|other people's|they|their|them|someone|everyone|anyone|colleagues|friends|those|crowd|room)\b[^.;,]{0,30}$/i;
+
+function sentenceSpan(text, at) {
+  const from = Math.max(text.lastIndexOf(".", at - 1), text.lastIndexOf("!", at - 1), text.lastIndexOf("?", at - 1)) + 1;
+  const ends = [".", "!", "?"].map((c) => text.indexOf(c, at)).filter((i) => i >= 0);
+  return [from, ends.length ? Math.min(...ends) + 1 : text.length];
+}
+const sentenceAt = (text, at) => text.slice(...sentenceSpan(text, at)).trim();
+
+export function borrowedWordProblem(raw, output) {
+  const type = output?.type;
+  if (!type) return null;
+  const lineTwo = /^(?:2\/\d|\d\/2)\b/.test(String(output?.profile ?? ""));
+  for (const [where, text] of proseOf(raw)) {
+    for (const rule of BORROWED) {
+      if (rule.owners.includes(type)) continue;
+      for (const m of text.matchAll(rule.re)) {
+        const before = text.slice(0, m.index);
+        const after = text.slice(m.index + m[0].length);
+        if (negatedAt(text, m.index, m.index + m[0].length, type)) continue;
+        if (rule.invitation) {
+          const sentence = sentenceAt(text, m.index);
+          // The 2 line called out by the right invitation is the line, not the strategy (10/7).
+          if (aboutLineTwo(text, m.index) || (lineTwo && CALLED_OUT.test(sentence))) continue;
+          if (LINE_TWO.test(text) && !/\b(?:wait|until|without)\b/i.test(sentence)) continue;
+          if (INVITE_OFFERED.test(before)) continue;
+          const literal = INVITE_LITERAL_BEFORE.test(before) || INVITE_LITERAL_AFTER.test(after) || /\babout the\s+$/i.test(before);
+          if (literal && !INVITE_WAITED.test(before)) continue;
+        }
+        if (rule.feeling && ABOUT_OTHERS.test(before)) continue;
+        return `The reading gives a ${type} another type's word, "${m[0]}", in ${where}: "${quoteAt(text, m.index, m[0].length)}"`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * IT ASKS, IT NEVER TELLS (10/22 round; Jeremy's voice rule): "you must" said
+ * to the reader is refused anywhere in the prose ("offering quiet wisdom that
+ * you must catch"), and "you have to / need to / should / ought to" at the head
+ * of a clause ("You need to talk things over..."). Not when it is denied ("you
+ * never need to rush"), not when it describes a pull ("making you feel as
+ * though you must rush"), not "how / what you must", not a situation ("when you
+ * need to reset"). On every stored draft: 26 hits, all telling the reader.
+ */
+const VOICE = /(?:^|[.!?:;,—–]\s*|\b(?:and|so|then|because|but|meaning|means)\s+)you\s+(must|have to|need to|should|ought to)\b|\byou\s+(must)\b/gi;
+const VOICE_DENIED = /\b(?:not|never|no|nor|don't|do not|doesn't|does not|without|rather than|instead of|nothing)\b[^,.;:]*$/i;
+const VOICE_DESCRIBED = /\b(?:feel|feels|felt|feeling|think|thinks|believe|believes)\s+(?:like|as if|as though|that)?\s*$|\b(?:how|what)\s+$/i;
+
+export function voiceProblem(raw) {
+  for (const [where, text] of proseOf(raw)) {
+    for (const m of text.matchAll(VOICE)) {
+      const at = m.index + m[0].toLowerCase().lastIndexOf("you");
+      const before = text.slice(0, at);
+      if (VOICE_DENIED.test(before) || VOICE_DESCRIBED.test(before)) continue;
+      return `The reading tells the reader "you ${(m[1] ?? m[2]).toLowerCase()}" in ${where}; it asks, it never tells: "${quoteAt(text, at, 4 + (m[1] ?? m[2]).length)}"`;
+    }
+  }
+  return null;
+}
+
+/**
+ * A WORD SAID TWICE (10/22 round): "a resilient resilience", "your survival
+ * and behavioral survival", "a competitive spirit and resilient spirit". Two
+ * shapes, both measured on every stored draft with no false hit (14 hits,
+ * every one a slip): two forms of one stem side by side or one word apart with
+ * no punctuation between; a noun, "and" / "or", one word, the same noun.
+ * Parallel lists ("mental questions, mental pressure") and the chart's own
+ * words (center, defined, channel...) are not judged.
+ */
+const DOUBLE_STOP = /^(?:the|a|an|and|or|of|to|in|on|at|for|with|your|you|yours|this|that|these|those|is|are|was|were|be|been|being|as|it|its|by|from|into|onto|over|under|than|then|so|not|no|nor|but|if|when|while|which|who|whom|whose|what|where|how|all|any|each|every|both|more|most|less|least|very|just|only|also|even|still)$/;
+const DOUBLE_HD = /^(?:center|centers|defined|undefined|open|gate|gates|channel|channels|line|lines|profile|authority|strategy|sacral|spleen|splenic|throat|heart|ajna|head|root|solar|plexus|emotional|energy|design|type|cross|angle|right|left|wave|waves|body|bodygraph|inner|outer)$/;
+const DOUBLE_NUMBER = /^(?:twenty|thirty|forty|fifty|sixty)/;
+const DOUBLED_PAIR = /\b([a-z]{5,})\s+(?:and|or)\s+([a-z]{3,})\s+\1\b/gi;
+
+export function doubledWordProblem(raw) {
+  const say = (where, text, at, len) => `The reading says a word twice in ${where}, a slip: "${quoteAt(text, at, len)}"`;
+  for (const [where, text] of proseOf(raw)) {
+    for (const m of text.matchAll(DOUBLED_PAIR)) {
+      const w = m[1].toLowerCase();
+      if (m[2].toLowerCase() === w || DOUBLE_STOP.test(w) || DOUBLE_HD.test(w)) continue;
+      return say(where, text, m.index, m[0].length);
+    }
+    const words = [...text.matchAll(/[A-Za-z][A-Za-z'-]*/g)];
+    for (let i = 0; i < words.length; i++) {
+      const a = words[i][0].toLowerCase();
+      if (a.length < 7 || DOUBLE_STOP.test(a) || DOUBLE_HD.test(a) || DOUBLE_NUMBER.test(a)) continue;
+      for (let j = i + 1; j <= i + 2 && j < words.length; j++) {
+        const b = words[j][0].toLowerCase();
+        if (b.length < 7 || a === b || DOUBLE_HD.test(b) || a.slice(0, 7) !== b.slice(0, 7)) continue;
+        const span = text.slice(words[i].index, words[j].index + b.length);
+        if (/[^A-Za-z'\s-]/.test(span)) continue;
+        return say(where, text, words[i].index, span.length);
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * A NEAR MISS OF A FEELING WORD (10/22 round: "Biterness"), through the
+ * near-miss machinery (lettersApart): a word within two letters of
+ * satisfaction, frustration, bitterness or disappointment (and their forms)
+ * that is not one of them. Measured on every stored draft: 1 hit, that one.
+ */
+const THEME_WORDS = ["satisfaction", "frustration", "bitterness", "disappointment", "frustrated", "disappointed", "satisfying", "frustrating", "disappointing"];
+const THEME_KNOWN = new Set([...THEME_WORDS, "satisfactions", "frustrations", "disappointments", "satisfied", "bitterly", "frustrates", "frustrate", "satisfies", "satisfy", "disappoints", "disappoint", "embittered"]);
+
+export function themeSpellingProblem(raw) {
+  for (const [where, text] of proseOf(raw)) {
+    for (const m of text.matchAll(/[A-Za-z]{8,}/g)) {
+      const w = m[0].toLowerCase();
+      if (THEME_KNOWN.has(w)) continue;
+      const near = THEME_WORDS.find((t) => w[0] === t[0] && Math.abs(t.length - w.length) <= 2 && lettersApart(w, t) <= 2);
+      if (near) return `The reading spells "${m[0]}" in ${where}, a near miss of "${near}": "${quoteAt(text, m.index, m[0].length)}"`;
+    }
+  }
+  return null;
+}
+
+/**
+ * EVERY CHECK THAT RUNS AFTER firstProblem ON A NEW DRAFT (gemini.mjs; the
+ * phone's Reading.draftProblem is the same chain), in order. The copy check
+ * follows it there, because only gemini.mjs knows the prompt.
+ */
+export function draftProblem(raw, output) {
+  return (
+    tagProblem(raw, output) ??
+    timeClaimProblem(raw, output) ??
+    birthTimeProblem(raw, output) ??
+    borrowedWordProblem(raw, output) ??
+    voiceProblem(raw) ??
+    doubledWordProblem(raw) ??
+    themeSpellingProblem(raw)
+  );
+}
+
+/**
+ * NOTHING COPIED FROM THE INSTRUCTIONS (10/22 AI test round). 12 of 34
+ * delivered readings carried words lifted whole from what the model was
+ * handed: the form note's old example try-this line (11 lines), the prompt's
+ * try-this placeholders written out as they stood, its Type-row example (7 of
+ * 14 Generator readings) and its 6-line example. A run of COPY_RUN words or
+ * more found word for word in the prompt or in a form note is refused.
+ *
+ * Fixed vocabulary is not a copy: a run also found in `allowed` (gemini.mjs
+ * passes the chart facts it sent: the cross's name, the centers, the channel
+ * lines) or in what the page prints itself (headings, labels, the disclaimer)
+ * passes. Words are compared in lower case; punctuation and line breaks do not
+ * count. Only what the model wrote is judged, and only on a new draft.
+ */
+export const COPY_RUN = 8;
+const copyWords = (s) =>
+  String(s ?? "").toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z0-9']+/g, " ").split(" ").filter(Boolean);
+function copyRuns(texts) {
+  const runs = new Set();
+  for (const t of texts) {
+    const w = copyWords(t);
+    for (let i = 0; i + COPY_RUN <= w.length; i++) runs.add(w.slice(i, i + COPY_RUN).join(" "));
+  }
+  return runs;
+}
+
+export function copyProblem(raw, sources = [], allowed = []) {
+  const from = copyRuns(sources);
+  if (!from.size) return null;
+  const ours = copyRuns([...allowed, ...HEADINGS, ...Object.values(SUMMARY_LABELS), SUMMARY_MARKER, DISCLAIMER]);
+  for (const [where, text] of writtenText(raw)) {
+    if (where === "a takeaway's tag") continue;
+    // A try-this line is judged without its "(chart feature)": the tag is the
+    // chart's own vocabulary, and with the opener the prompt asks for it made
+    // "(Undefined Root center) The next time you feel" look copied (10/22).
+    const w = copyWords(where === `"${TAKEAWAYS}"` ? text.replace(/^\([^)]*\)\s*/, "") : text);
+    for (let i = 0; i + COPY_RUN <= w.length; i++) {
+      const run = w.slice(i, i + COPY_RUN).join(" ");
+      if (!from.has(run) || ours.has(run)) continue;
+      let j = i + COPY_RUN;
+      while (j < w.length && from.has(w.slice(j - COPY_RUN + 1, j + 1).join(" "))) j++;
+      const words = w.slice(i, j).join(" ");
+      return `The reading copies ${j - i} words in a row from its instructions, in ${where}: "${words.length > 120 ? words.slice(0, 117) + "..." : words}"`;
+    }
   }
   return null;
 }

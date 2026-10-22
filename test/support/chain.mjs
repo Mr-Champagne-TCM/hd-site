@@ -38,10 +38,10 @@ export const row = (k) => `Row ${SUMMARY_KEYS.indexOf(k) + 1} value, a whole sen
 
 /** Four try-this lines in shape A, each tagged and each beginning its own way. Made up. */
 export const TRY_THIS = [
-  "(Strategy) The next time a small choice comes, you might pause first and notice the answer, so the pause is familiar later.",
-  "(Profile) This week, on an easy job, you might start at once and notice your energy, so that pace is familiar later.",
-  "(Definition) Once or twice this week, you might try a small thing twice and notice what changes, so trying is familiar later.",
-  "(Channel) Over the next few days, when a plan feels stuck, you might wait a day and notice what joins up, so the wait is familiar later.",
+  "(Strategy) The next time a small choice comes, you might pause first. Notice the answer, so the pause is familiar later.",
+  "(Profile) This week, on an easy job, you might start at once. Notice your energy, so that pace is familiar later.",
+  "(Definition) Once or twice this week, you might try a small thing twice. Notice what changes, so trying is familiar later.",
+  "(Channel) Over the next few days, when a plan feels stuck, you might wait a day. Notice what joins up, so the wait is familiar later.",
 ];
 
 /** A reading that passes the whole chain for `chart`, with named sections replaced. */

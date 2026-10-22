@@ -11,10 +11,10 @@ import { TAKEAWAYS, spellingProblem, takeawayProblem } from "../netlify/lib/inte
 
 const block = (...lines) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${lines.join("\n\n")}\n`;
 const A = [
-  "(Sacral authority) This week, on small asks like a quick call, you might wait for your gut's sound before you answer, and notice which one comes, so the sound is familiar by the time a bigger ask arrives.",
-  "(Channel 20-34) The next time an easy job gets a clear gut yes, you might go straight into it and notice whether the energy feels absorbed or just busy, so you know the difference before more rides on it.",
-  "(Profile 4/1) Over the next few days, in an easy conversation with a friend, you might share one thing you have been reading about and notice whether it opens a door, which is practice for when a bigger opening comes.",
-  "(Undefined Solar Plexus) Once or twice this week, as you leave somewhere lively but easy, you might name your mood in one word and notice how much of it stayed behind, so the same check is within reach after a tense conversation.",
+  "(Sacral authority) This week, on small asks like a quick call, you might wait for your gut's sound before you answer. Notice which one comes, so the sound is familiar by the time a bigger ask arrives.",
+  "(Channel 20-34) The next time an easy job gets a clear gut yes, you might go straight into it. Notice whether the energy feels absorbed or just busy, so you know the difference before more rides on it.",
+  "(Profile 4/1) Over the next few days, in an easy conversation with a friend, you might share one thing you have been reading about. Notice whether it opens a door, which is practice for when a bigger opening comes.",
+  "(Undefined Solar Plexus) Once or twice this week, as you leave somewhere lively but easy, you might name your mood in one word. Notice how much of it stayed behind, so the same check is within reach after a tense conversation.",
 ];
 
 test("TRY-THIS SHAPE A PASSES: when, 'you might', notice, and the calm tail (both tails Jeremy approved)", () => {
@@ -33,7 +33,7 @@ test("each part of the shape is required: no 'you might', no when, nothing to no
     [/has no "you might/, "(Sacral) This week, on small asks, wait for your gut's sound and notice it, so it is familiar later."],
     [/does not say when/, "(Sacral) You might wait for your gut's sound and notice which one comes, so it is familiar later."],
     [/names nothing to notice/, "(Sacral) This week, on small asks, you might wait for your gut's sound, so it is familiar later."],
-    [/has no ", so/, "(Sacral) This week, on small asks, you might wait for your gut's sound and notice which one comes."],
+    [/has no ", so/, "(Sacral) This week, on small asks, you might wait for your gut's sound. Notice which one comes."],
   ];
   for (const [why, line] of cases) assert.match(takeawayProblem(block(line, ...A.slice(1))), why, line);
 });
@@ -105,7 +105,7 @@ test("AI4 THE KNOWN WORD SLIPS ARE REFUSED; their right forms pass", () => {
 });
 
 test("A TRY-THIS LINE WITHOUT ITS (chart feature) IS REFUSED; the paragraph that introduces them needs none", () => {
-  const untagged = "This week, on small asks, you might wait for your gut's sound and notice which one comes, so it is familiar later.";
+  const untagged = "This week, on small asks, you might wait for your gut's sound. Notice which one comes, so it is familiar later.";
   assert.match(takeawayProblem(block(untagged, ...A.slice(1))), /does not begin with the chart feature/);
   assert.equal(takeawayProblem(block(...A)), null);
 });
