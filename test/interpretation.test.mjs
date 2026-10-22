@@ -76,10 +76,13 @@ test("NOTHING THAT IDENTIFIES ANYBODY LEAVES THIS MACHINE", () => {
   assert.match(wire, /sun 6\.2/);
 });
 
-test("an unknown birth time is declared, because the reading must say so", () => {
+test("an unknown birth time is declared, with only the values it can change (10/22)", () => {
   const wire = chartFactsOnly({ ...OUTPUT, timeKnown: false });
   assert.match(wire, /birth time was not known/);
-  assert.match(wire, /cannot be confirmed without a birth time/);
+  // No measured spread and no engine list: the old note's three, and nothing else called uncertain.
+  assert.match(wire, /These values can change with the birth time: Type, Inner Authority and Profile./);
+  assert.match(wire, /Never call any other value uncertain/);
+  assert.doesNotMatch(wire, /cannot be confirmed/);
   // And is silent when the time IS known -- a note about a missing time on a
   // chart that has one is worse than no note.
   assert.doesNotMatch(chartFactsOnly(OUTPUT), /was not known/);

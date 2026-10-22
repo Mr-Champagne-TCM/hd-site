@@ -108,6 +108,10 @@ export const KINDS = {
   // --- writing the reading (Gemini). The buyer sees "being written" and, after
   //     ten minutes, "taking longer than it should" -- never an error. --------
   "gemini-refused": { severity: I, customer: "reading-writing", status: 200, code: null },
+  // 10/22: a form filled with "string" in its slots (structured.mjs placeholders), re-asked like a refusal, counted on its own.
+  "gemini-placeholder": { severity: I, customer: "reading-writing", status: 200, code: null },
+  // 10/22: the first timeout of a reading, re-asked once with a longer limit (interpretJob.mjs), so health shows it.
+  "gemini-timeout-reasked": { severity: I, customer: "reading-writing", status: 200, code: null },
   "gemini-refused-5x": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "gemini-503": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "gemini-429": { severity: P, customer: "reading-writing-long", status: 200, code: null },

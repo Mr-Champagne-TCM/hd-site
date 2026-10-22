@@ -61,14 +61,27 @@ const TRACK_SLOT =
  */
 const TAKEAWAY_SLOT =
   'TWO sentences. First: the chart feature in parentheses, one time phrase, one small moment, then "you might" and one action, ending with a period. ' +
-  'Second: opens "Notice", says what to notice, then ", so" and why starting small helps. Words of your own, never these.';
+  'Second: opens "Notice", says what to notice, then ", so" and why starting small helps.';
 
+/**
+ * A NOTE ON EVERY NODE (10/22 round). On v3 drafts the model began filling
+ * whole forms with the type name -- "string" in every text slot, 0 in the
+ * line numbers, 421 tokens -- (1 in 16 drafts at rev a, 10 in 41 at rev j;
+ * none in 143 v2 drafts). The v2 and v3 forms differed only in the try-this
+ * note, which, like a rule added to the v3 prompt, told the model the notes
+ * were "never wording to reuse": both are gone, and every object, list and
+ * number now says in plain rules what goes in it, as every text slot always
+ * did. A form that still comes back as placeholders is refused (renderReading)
+ * and re-asked, counted as "gemini-placeholder".
+ */
 const SECTION = {
   type: "OBJECT",
+  description: "One section: a lede sentence, then two paragraphs, all about this chart.",
   properties: {
     lede: S("ONE sentence, at most 25 words, stating the whole point of the section. Contains \"you\"."),
     paragraphs: {
       type: "ARRAY",
+      description: "Exactly two paragraphs of plain prose.",
       items: S("60-75 words. Names the chart value it rests on."),
       minItems: 2,
       maxItems: 2,
@@ -81,9 +94,11 @@ const SECTION = {
 /** Gemini's responseSchema (OpenAPI subset). Every slot required. */
 export const READING_SCHEMA = {
   type: "OBJECT",
+  description: "The whole reading for this chart, one slot per part, every slot written in full sentences.",
   properties: {
     summary: {
       type: "OBJECT",
+      description: "Six summary sentences, one per chart value, each opening with a capital letter.",
       properties: Object.fromEntries(
         SUMMARY_SLOTS.map((k) => [k, S(TRACK_SLOTS.includes(k) ? TRACK_SLOT : "ONE sentence, at most 22 words.")]),
       ),
@@ -94,8 +109,10 @@ export const READING_SCHEMA = {
     definition: S("ONE paragraph, 45-60 words, on what their definition means mechanically."),
     channels: {
       type: "ARRAY",
+      description: "One entry for each channel in the facts, in the order given; none when it has none.",
       items: {
         type: "OBJECT",
+        description: "One channel: its numbers, then one sentence about it.",
         properties: {
           channel: S("The channel's numbers exactly as supplied, e.g. \"10-34\"."),
           sentence: S("ONE sentence, at most 26 words."),
@@ -106,10 +123,12 @@ export const READING_SCHEMA = {
     },
     profileLines: {
       type: "ARRAY",
+      description: "The profile's two lines, in the order of its two numbers.",
       items: {
         type: "OBJECT",
+        description: "One profile line: its number, then one sentence about it.",
         properties: {
-          line: { type: "INTEGER" },
+          line: { type: "INTEGER", description: "The line's number from the profile, 1 to 6." },
           // 10/7: "Your first profile line" under Line 6 -- every 6/2 draft that night.
           sentence: S(PROFILE_LINE_SENTENCE),
         },
@@ -123,6 +142,7 @@ export const READING_SCHEMA = {
     experimentIntro: S("ONE paragraph: these are invitations to test, not instructions; they are the authority."),
     takeaways: {
       type: "ARRAY",
+      description: "Four try-this lines, each on a different feature of this chart.",
       // Shape A (Jeremy 10/21) in two sentences (10/22: "This sentence division adds
       // clarity and avoids a needlessly lengthy sentence"). Rules only, no example:
       // 11 delivered lines on 10/22 were the old example sentence copied.
@@ -245,8 +265,37 @@ const clean = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
  * Returns { text } or { problem } -- a problem is a slot the model left empty
  * or a channel it invented, and it travels as a refusal like any other.
  */
+/**
+ * PLACEHOLDERS, NOT WRITING (10/22 round). A form whose text slots hold the
+ * name of their type ("string" in all of them, or "yaml"), or only one of them:
+ * "Type: string" printed in the summary box of a draft otherwise written in
+ * full. Refused before anything is built, and re-asked like any refusal;
+ * interpretJob files it as "gemini-placeholder" so health counts it on its
+ * own. On all 386 stored forms: the 29 made of placeholders (28 "string", 1
+ * "yaml") and the 2 with one "string" slot, and nothing else; none of the 142
+ * v2-era forms.
+ */
+export const PLACEHOLDERS = "The reading form came back with placeholders";
+const PLACEHOLDER = /^(?:string|str|text|yaml|json|integer|number|boolean|null|undefined|placeholder|todo|tbd|lorem ipsum|\.\.\.|…)$/i;
+export function placeholderProblem(json) {
+  const leaves = [];
+  const walk = (v) => {
+    if (typeof v === "string") leaves.push(v.trim());
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(json);
+  const hits = leaves.filter((s) => PLACEHOLDER.test(s)).map((s) => s.toLowerCase());
+  if (!hits.length) return null;
+  const count = (w) => hits.filter((h) => h === w).length;
+  const word = [...new Set(hits)].sort((a, b) => count(b) - count(a) || (a < b ? -1 : 1))[0];
+  return `${PLACEHOLDERS}: "${word}" in ${hits.length} of ${leaves.length} slots.`;
+}
+
 export function renderReading(json, output) {
   if (!json || typeof json !== "object") return { problem: "The reading came back unreadable." };
+  const placeholders = placeholderProblem(json);
+  if (placeholders) return { problem: placeholders };
   const wrongStrategy = strategyProblem(json, output?.type);
   if (wrongStrategy) return { problem: wrongStrategy };
   const sum = json.summary ?? {};

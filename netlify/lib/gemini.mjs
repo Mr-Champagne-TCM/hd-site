@@ -1,4 +1,4 @@
-import { chartFactsOnly, copyProblem, firstProblem, sanitize, tagProblem, timeClaimProblem } from "./interpretation.mjs";
+import { chartFactsOnly, copyProblem, draftProblem, firstProblem, sanitize } from "./interpretation.mjs";
 import { READING_SCHEMA, renderReading, schemaNotes, structuredFacts } from "./structured.mjs";
 
 /**
@@ -217,12 +217,13 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
       output?.undefinedCenters,
       output?.definedCenters,
     ) ??
-    // 10/22: a try-this tag names a feature this chart really has (channels and
-    // authority are only here, on the chart itself).
-    tagProblem(clean, output) ??
-    // 10/22: no "birth time was not known" on a chart whose time is known, and
-    // no astrology words ("rising sign", "ascendant") in a Human Design reading.
-    timeClaimProblem(clean, output) ??
+    // 10/22, every check that needs the chart itself (interpretation.mjs
+    // draftProblem, the phone's the same): a try-this tag names a feature this
+    // chart has; no "birth time was not known" on a time-known chart and no
+    // astrology words; an unknown birth time said once, only about the values
+    // the birth day changes; another type's word about the reader; "you must";
+    // a word said twice; a misspelled feeling word.
+    draftProblem(clean, output) ??
     // 10/22: words lifted from the instructions are a copy, not a reading. Only
     // this file knows the prompt, so the check runs here; the facts just sent
     // (cross name, centers, channel lines) are the reading's own vocabulary.

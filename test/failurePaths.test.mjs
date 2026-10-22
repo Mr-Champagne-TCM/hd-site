@@ -664,9 +664,10 @@ for (const [made, kind] of [
     });
     assert.equal(r.ok, false);
     const filed = [...health.data.values()].filter((e) => e.kind);
-    assert.deepEqual(filed.map((e) => e.kind), [kind]);
-    assert.equal(filed[0].severity, "page-jeremy");
-    assert.equal(filed[0].customer, "reading-writing-long");
+    // A first timeout is re-asked once, and noted (internal) before the page (10/22).
+    assert.deepEqual(filed.map((e) => e.kind), kind === "gemini-timeout" ? ["gemini-timeout-reasked", kind] : [kind]);
+    assert.equal(filed.at(-1).severity, "page-jeremy");
+    assert.equal(filed.at(-1).customer, "reading-writing-long");
     assert.equal(alerts.length, 1);
     assert.match(alerts[0].subject, new RegExp(kind));
   });

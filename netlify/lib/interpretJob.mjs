@@ -2,6 +2,7 @@ import { fillInterpretation, loadReading, mintReadingLink } from "./reading.mjs"
 import { generateReading } from "./gemini.mjs";
 import { promptShape } from "./interpretation.mjs";
 import { geminiKind, noteFailure } from "./failures.mjs";
+import { PLACEHOLDERS } from "./structured.mjs";
 
 /**
  * WRITE ONE READING. The job itself, with everything it touches passed in.
@@ -91,7 +92,9 @@ export async function interpretOne({
     if (made.reason === "malformed" && fits(ASK_MS)) {
       // One refused draft is noise on its own (internal-only); the sweep counts
       // them, and six in an hour raises reading-failure-rate.
-      await noteFailure(health, "gemini-refused", {
+      // A form of placeholders ("string" in its slots) is its own kind (10/22).
+      const kind = String(made.detail ?? "").startsWith(PLACEHOLDERS) ? "gemini-placeholder" : "gemini-refused";
+      await noteFailure(health, kind, {
         detail: made.detail ?? null,
         excerpt: made.text ?? null,
         now,
@@ -100,6 +103,8 @@ export async function interpretOne({
     } else if (made.reason === "timeout" && !reaskedTimeout && fits(TIMEOUT_REASK_MS)) {
       // Once only: a second timeout is reported as one, below.
       reaskedTimeout = true;
+      // Internal-only, like a refusal: the sweep counts it toward reading-failure-rate.
+      await noteFailure(health, "gemini-timeout-reasked", { detail: made.detail ?? null, now });
       made = await generate(reading.output, { apiKey, prompt, shape, timeoutMs: TIMEOUT_REASK_MS });
     } else break;
   }

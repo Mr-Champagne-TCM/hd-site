@@ -349,7 +349,8 @@ test("TIMEOUT: only once; a second timeout is reported as one, by name", async (
   const r = await interpretOne({ id, store, health, apiKey: "k", prompt: "p", generate: async () => (n++, TIMEOUT) });
   assert.equal(n, 2);
   assert.equal(r.reason, "timeout");
-  assert.deepEqual([...health.data.values()].map((e) => e.kind), ["gemini-timeout"]);
+  // The first is noted when it is re-asked (internal, counted by health); the second pages, by name.
+  assert.deepEqual([...health.data.values()].map((e) => e.kind), ["gemini-timeout-reasked", "gemini-timeout"]);
 });
 
 test("TIMEOUT: the re-ask is one of the five asks, and refused drafts after it are asked for as before", async () => {
