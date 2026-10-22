@@ -11,7 +11,7 @@
  * So this is plausible prose for the chart it belongs to -- Manifesting
  * Generator, 2/4, Sacral authority, Throat and Sacral defined, channel 20-34,
  * Solar Plexus and Root undefined (white with a gate), Head open (no gate).
- * Three centre states, because the prompt now demands the distinction and the
+ * Three center states, because the prompt now demands the distinction and the
  * margin notes beside this text print both lists.
  * It is NOT approved copy and it is not what a buyer receives. It exists so a
  * page of this document looks like a page of this document.
@@ -61,7 +61,7 @@ const SECTIONS = [
     "Your energy, and how it starts",
     "Running from a defined Sacral straight to the Throat, your energy starts with a physical yes rather than a plan.",
     [
-      "Because your Sacral centre is defined, you carry a motor that generates rather than borrows. " +
+      "Because your Sacral center is defined, you carry a motor that generates rather than borrows. " +
         "It builds over a day and renews overnight, and what refills it is work that actually matched " +
         "its appetite. The distinction that matters is not busy against idle — it is whether the thing " +
         "you spent yourself on was one you responded to, or one you talked yourself into.",
@@ -101,11 +101,11 @@ const SECTIONS = [
     "What is consistently yours",
     "Your Throat and Sacral are fixed, which makes expression and life force the two things that do not change with company.",
     [
-      "Defined centres do not fluctuate. Your Sacral and your Throat are yours in every room, which " +
+      "Defined centers do not fluctuate. Your Sacral and your Throat are yours in every room, which " +
         "means the capacity to work and the capacity to voice are reliable — you can be counted on " +
         "for both, including by yourself.",
       "This is also what other people feel most immediately from you. A defined Sacral is amplified " +
-        "by anyone open in that centre nearby, so your ordinary working pace can register as " +
+        "by anyone open in that center nearby, so your ordinary working pace can register as " +
         "considerable drive to somebody standing next to it.",
     ],
   ],
@@ -145,13 +145,13 @@ const TAKEAWAY_BLOCK = [
   "These are invitations to test against your own experience rather than instructions, and you remain " +
     "the authority on what fits and what does not.",
   "",
-  "(Sacral authority) Notice what the body does in the first second after a question, before any reasoning arrives.",
+  "(Sacral authority) The next time a small question comes up, like what to eat, you might wait for the body's first sound before you answer and notice which way it goes, so that sound is familiar when the question is heavier.",
   "",
-  "(Channel 20-34) Watch what happens when speaking and doing arrive together rather than one after the other.",
+  "(Channel 20-34) This week, on an easy job like clearing a shelf, you might start the moment it feels right and notice whether the energy holds, so that feeling is familiar when more rides on it.",
   "",
-  "(Undefined Solar Plexus) Notice how a room's mood reads as your own while you are in it, and how it changes once you leave.",
+  "(Undefined Solar Plexus) Once or twice this week, as you leave a lively but easy room, you might name your mood in one word and notice how much of it stayed behind, so the check is within reach after a tense day.",
   "",
-  "(Profile line 4) Watch where opportunity actually arrives from over a month, and how much of it comes through people you already know.",
+  "(Profile line 4) Over the next few days, in an easy catch-up with a friend, you might mention one thing you are working on and notice whether they draw you out, so that pull is familiar when an opening matters more.",
   "",
   "This reading describes a Human Design chart and is offered for self-reflection. It is not medical, " +
     "psychological, legal or financial advice, and it does not predict the future.",

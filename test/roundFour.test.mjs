@@ -30,21 +30,21 @@ const P_8E5 = {
 test("R-07: denying a defined Sacral is not claiming one, however it is worded", () => {
   for (const prose of [
     // verbatim, delivered reading 8e5ff09e -- still refused on 2325218
-    "Because your Projector type lacks a defined Sacral centre, your vitality works best in bursts.",
+    "Because your Projector type lacks a defined Sacral center, your vitality works best in bursts.",
     // verbatim, the auditor's
-    "You are missing a defined Sacral centre, which shapes how you work.",
-    "The absence of a defined Sacral centre is the whole point.",
-    "Free of a defined Sacral centre, you work in bursts.",
-    "Devoid of a defined Sacral centre, rest matters more.",
-    "Short of a defined Sacral centre, you borrow vitality.",
-    "Your chart shows no sign of a defined Sacral centre.",
+    "You are missing a defined Sacral center, which shapes how you work.",
+    "The absence of a defined Sacral center is the whole point.",
+    "Free of a defined Sacral center, you work in bursts.",
+    "Devoid of a defined Sacral center, rest matters more.",
+    "Short of a defined Sacral center, you borrow vitality.",
+    "Your chart shows no sign of a defined Sacral center.",
   ]) {
     assert.equal(check(reading(P_8E5, { [ENERGY]: prose }), P_8E5), null, prose);
   }
 });
 
 test("R-07: the same chart told it HAS a defined Sacral is refused", () => {
-  const prose = "Your defined Sacral centre gives you stamina that renews overnight.";
+  const prose = "Your defined Sacral center gives you stamina that renews overnight.";
   assert.match(
     check(reading(P_8E5, { [ENERGY]: prose }), P_8E5),
     /calls the Sacral center "defined", but on this chart it is open/,

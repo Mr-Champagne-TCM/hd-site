@@ -207,8 +207,106 @@ export function firstProblem(
     centreStateProblem(reading, definedCenters, undefinedCenters, openCenters) ??
     oldWordProblem(reading) ??
     trackRowProblem(reading) ??
-    nearMissProblem(reading, type)
+    nearMissProblem(reading, type) ??
+    spellingProblem(reading) ??
+    takeawayProblem(reading)
   );
+}
+
+/**
+ * US SPELLING (10/21 rig: a stored reading said "Defined Sacral centre"). The
+ * house rule is US spelling everywhere, and nothing checked the model's words
+ * for it. A named list, not an "-ise" pattern: advise, exercise, surprise and
+ * promise are US words too. "analyses" (the plural noun) is US; "analyse" is not.
+ */
+const UK_WORDS = new RegExp(
+  String.raw`\b(` +
+    [
+      String.raw`centre[sd]?`,
+      String.raw`colour(?:s|ed|ful|ing)?`,
+      String.raw`behaviour(?:s|al)?`,
+      String.raw`favour(?:s|ed|ing|ite|ites|able)?`,
+      String.raw`honour(?:s|ed|ing|able)?`,
+      String.raw`neighbour(?:s|hood|ing)?`,
+      String.raw`labour(?:s|ed|ing)?`,
+      String.raw`endeavour(?:s|ed|ing)?`,
+      String.raw`rumour(?:s|ed)?`,
+      String.raw`savour(?:s|ed|ing)?`,
+      String.raw`harbour(?:s|ed|ing)?`,
+      String.raw`recognis(?:e|ed|es|ing|able)`,
+      String.raw`realis(?:e|ed|es|ing|ation)`,
+      String.raw`organis(?:e|ed|es|ing|ation)`,
+      String.raw`emphasis(?:e|ed|es|ing)`,
+      String.raw`prioritis(?:e|ed|es|ing)`,
+      String.raw`minimis(?:e|ed|es|ing)`,
+      String.raw`maximis(?:e|ed|es|ing)`,
+      String.raw`energis(?:e|ed|es|ing)`,
+      String.raw`harmonis(?:e|ed|es|ing)`,
+      String.raw`criticis(?:e|ed|es|ing)`,
+      String.raw`apologis(?:e|ed|es|ing)`,
+      String.raw`sympathis(?:e|ed|es|ing)`,
+      String.raw`analys(?:e|ed|ing)`,
+      String.raw`practis(?:e|ed|es|ing)`,
+      String.raw`programmes?`,
+      String.raw`travell(?:ed|ing|er|ers)`,
+      String.raw`cancell(?:ed|ing)`,
+      String.raw`labell(?:ed|ing)`,
+      String.raw`modell(?:ed|ing)`,
+      String.raw`fulfil(?:s|ment)?`,
+      "grey",
+      "learnt",
+      "spelt",
+      "whilst",
+      "amongst",
+      "defence",
+      "licence",
+    ].join("|") +
+    String.raw`)\b`,
+  "i",
+);
+
+export function spellingProblem(raw) {
+  for (const [where, text] of writtenText(raw)) {
+    const m = UK_WORDS.exec(text);
+    if (m) return `The reading spells "${m[1]}" the UK way in ${where}; the house spelling is US: "${quoteAt(text, m.index, m[0].length)}"`;
+  }
+  return null;
+}
+
+/**
+ * THE TRY-THIS SHAPE (Jeremy 10/21, shape A: "The line specificity is way more
+ * clear and a direct call to action with a future goal tied on... SO GOOD.").
+ * All 56 stored try-this lines opened "Notice / Watch / Observe / Pay
+ * attention" and none said when; the prompt's two sample openers were being
+ * copied. Each takeaway now carries, in its one sentence: WHEN (a small,
+ * ordinary moment), ONE thing to try ("you might ..."), what to NOTICE, and the
+ * calm-practice tail (", so ... is familiar when ..."). The model writes it and
+ * this checks it, as for every other rule. No two may begin the same way.
+ */
+const SOFT_OPENER = /^(notice|watch|observe|pay attention)\b/i;
+// ", so the pause is familiar when ...", or as one approved line has it, ", which is practice for when ...".
+const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
+const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
+
+export function takeawayProblem(raw) {
+  const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
+  const lines = (section?.paragraphs ?? []).filter((p) => /^\([^)]+\)\s/.test(p));
+  const starts = new Set();
+  for (const line of lines) {
+    const body = line.replace(/^\([^)]+\)\s*/, "");
+    const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
+    if (SOFT_OPENER.test(body)) return say(`opens with "${SOFT_OPENER.exec(body)[1]}"; it begins with when, not with what to watch`);
+    const might = body.search(/\byou might\b/i);
+    if (might < 0) return say(`has no "you might ..." (the one thing to try)`);
+    if (!WHEN.test(body.slice(0, might))) return say(`does not say when, before the thing to try`);
+    const notice = body.slice(might).search(/\bnotice\b/i);
+    if (notice < 0) return say(`names nothing to notice`);
+    if (!CALM_TAIL.test(body.slice(might + notice))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
+    const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
+    if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
+    starts.add(start);
+  }
+  return null;
 }
 
 /**

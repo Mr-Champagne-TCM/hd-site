@@ -18,9 +18,13 @@
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-// The shop's near-miss check, where the checked-out shop has one (10/21 fixes on);
+// The shop's near-miss and try-this checks, where the checked-out shop has them (10/21 fixes on);
 // code from before it has none, never refuses a stored reading, and never asks twice.
-const { nearMissProblem = () => null } = await import("../../../netlify/lib/interpretation.mjs");
+const {
+  nearMissProblem = () => null,
+  takeawayProblem = () => null,
+  TAKEAWAYS = "Things to experiment with",
+} = await import("../../../netlify/lib/interpretation.mjs");
 
 const INTERPRETATION = [
   "Your energy, and how it starts",
@@ -178,9 +182,35 @@ export function loadReadingFixtures(dir) {
  * So a repeat request for the same chart gets the stored words without the
  * sentences the shop's own near-miss check names -- the smallest rewrite that
  * passes, and a no-op for a reading with no near miss.
+ *
+ * Two more rules came with the try-this rewrite (10/21): a UK spelling is
+ * written the US way, and try-this lines the shop refuses (every stored one
+ * opens "Notice / Watch") are replaced by the placeholder's own, in the shape
+ * the new prompt asks for and plainly marked. A stored reading written to the
+ * new prompt keeps its own lines.
  */
+const US = [
+  [/\b(c)entre(s|d)?\b/gi, (_, c, e = "") => `${c}enter${e === "d" ? "ed" : e}`],
+  [/\b(colo|behavio|favo|hono|neighbo|labo|endeavo|rumo|savo|harbo)ur/gi, "$1r"],
+  [/\b(recogn|real|organ|emphas|priorit|minim|maxim|energ|harmon|critic|apolog|sympath)is(e|ed|es|ing|able|ation)\b/gi, "$1iz$2"],
+  [/\banalys(e|ed|ing)\b/gi, "analyz$1"],
+  [/\bpractis(e|ed|es|ing)\b/gi, (_, e) => ({ e: "practice", ed: "practiced", es: "practices", ing: "practicing" })[e]],
+  [/\bprogramme(s?)\b/gi, "program$1"],
+  [/\b(travel|cancel|label|model)l(ed|ing|er|ers)\b/gi, "$1$2"],
+  [/\bfulfil(s|ment)?\b/gi, (_, e = "") => (e === "ment" ? "fulfillment" : `fulfill${e}`)],
+  [/\bgrey\b/gi, "gray"],
+  [/\blearnt\b/gi, "learned"],
+  [/\bspelt\b/gi, "spelled"],
+  [/\bwhilst\b/gi, "while"],
+  [/\bamongst\b/gi, "among"],
+  [/\bdefence\b/gi, "defense"],
+  [/\blicence\b/gi, "license"],
+];
+const usSpelling = (v) =>
+  typeof v === "string" ? US.reduce((t, [re, to]) => t.replace(re, to), v) : Array.isArray(v) ? v.map(usSpelling) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, usSpelling(x)])) : v;
 const ON_TRACK = INTERPRETATION[5];
-export function nextDraft(form, type) {
+export function nextDraft(form, f) {
+  const type = f.type;
   const named = (heading) => (s) => nearMissProblem(`${heading}\n\n${s}\n`, type) !== null;
   const keep = (text, bad) =>
     typeof text === "string" ? text.split(/(?<=[.!?])\s+/).filter((s) => !bad(s)).join(" ") : text;
@@ -192,7 +222,14 @@ export function nextDraft(form, type) {
   out.summary.notSelf = keep(out.summary.notSelf, onTrack);
   for (const slot of SLOTS) out[slot] = sec(out[slot], slot === "working" ? onTrack : anywhere);
   out.takeaways = (out.takeaways ?? []).map((t) => keep(t, anywhere));
-  return out;
+  // A no-op on words already spelled the US way.
+  const written = usSpelling(out);
+  const tryThis = [TAKEAWAYS, written.experimentIntro ?? "", ...(written.takeaways ?? [])].join("\n\n") + "\n";
+  if (takeawayProblem(tryThis)) {
+    written.experimentIntro = placeholderForm(f).experimentIntro;
+    written.takeaways = placeholderForm(f).takeaways;
+  }
+  return written;
 }
 
 export function fakeGemini({ dir, fixturesDir }) {
@@ -210,7 +247,7 @@ export function fakeGemini({ dir, fixturesDir }) {
     // Newest stored reading for this chart wins (the live shop's latest words).
     const hit = fixtures.filter((x) => x.key === key).sort((a, b) => (b.record.purchasedAt ?? 0) - (a.record.purchasedAt ?? 0))[0];
     const stored = hit ? formFromWritten(hit.record.written) : null;
-    const form = stored ? (again ? nextDraft(stored, f.type) : stored) : placeholderForm(f);
+    const form = stored ? (again ? nextDraft(stored, f) : stored) : placeholderForm(f);
     const n = asked.length + 1;
     const entry = { n, at: Date.now(), type: f.type, authority: f.authority, profile: f.profile, cross: f.cross, source: hit ? `${hit.source}${again ? " (next draft)" : ""}` : "placeholder" };
     asked.push(entry);

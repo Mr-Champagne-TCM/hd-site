@@ -13,7 +13,7 @@ const form = (over = {}) => ({
   profileLines: [{ line: 3, sentence: "You learn by trying." }, { line: 5, sentence: "Others project onto you." }],
   energy: section(), decide: section(), meet: section(), consistent: section(), takeIn: section(), working: section(),
   experimentIntro: "These are invitations to test against your own experience; you are the authority.",
-  takeaways: ["(Sacral) Notice a.", "(Channel 10-34) Watch b.", "(Line 3) Notice c.", "(Split) Watch d."],
+  takeaways: ["(Sacral) The next time a small choice comes, you might pause and notice the answer, so the pause is familiar later.", "(Channel 10-34) This week, on an easy job, you might start at once and notice your energy, so that pace is familiar later.", "(Line 3) Once or twice this week, you might try a small thing twice and notice what changes, so trying is familiar later.", "(Split) Over the next few days, when a choice feels stuck, you might wait a day and notice what joins up, so the wait is familiar later."],
   ...over,
 });
 const chart = { type: "Generator", profile: "3/5", channels: ["10-34 (Exploration)"],

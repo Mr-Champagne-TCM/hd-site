@@ -30,14 +30,14 @@ const CHART = {
 /** A structurally sound reading for CHART, with named sections replaced. */
 const reading = (overrides = {}, chart = CHART) => build(chart, overrides);
 
-/** Section 5 carrying `prose` AND the chart's white centres, so only `prose` is judged. */
+/** Section 5 carrying `prose` AND the chart's white centers, so only `prose` is judged. */
 const inS5 = (prose, chart = CHART) => ({ [S5]: `${prose} ${whiteCentres(chart)}` });
 
 const ENERGY = "Your energy, and how it starts";
 
 /* ------------------------------------------------------------------ F38 */
 
-test("F38: the bare word 'open' no longer stands in for naming a centre", () => {
+test("F38: the bare word 'open' no longer stands in for naming a center", () => {
   // All three passed the shipped rule. The third is the one that matters --
   // good readings genuinely write it.
   for (const prose of [
@@ -46,13 +46,13 @@ test("F38: the bare word 'open' no longer stands in for naming a centre", () => 
     "Because it is undefined rather than open, the quality is different here.",
   ]) {
     const problem = check(reading({ [S5]: prose }), CHART);
-    assert.ok(problem, `"${prose}" was accepted without naming a centre`);
+    assert.ok(problem, `"${prose}" was accepted without naming a center`);
     assert.match(problem, /never names one of this chart's 2 open centers/);
   }
 });
 
-test("F38: naming an open centre still passes", () => {
-  const prose = "Your open Head centre takes in the questions other people are carrying, and your Heart is undefined besides.";
+test("F38: naming an open center still passes", () => {
+  const prose = "Your open Head center takes in the questions other people are carrying, and your Heart is undefined besides.";
   assert.equal(check(reading({ [S5]: prose }), CHART), null);
 });
 
@@ -61,7 +61,7 @@ test("F38: the undefined branch runs at all, which it never did in production", 
   // undefinedCenters arrived undefined and this half was dead code.
   const prose = "Your open Head and open Solar Plexus amplify whatever the room is carrying.";
   const problem = check(reading({ [S5]: prose }), CHART);
-  assert.ok(problem, "a section naming no undefined centre was accepted");
+  assert.ok(problem, "a section naming no undefined center was accepted");
   assert.match(problem, /never names one of this chart's 1 undefined centers \(Heart\)/);
 });
 
@@ -164,13 +164,13 @@ const REFLECTOR = {
   openCenters: ["G", "Solar Plexus"],
 };
 
-test("F44: a Reflector may name all seven undefined centres in section 5", () => {
+test("F44: a Reflector may name all seven undefined centers in section 5", () => {
   const prose =
     "Your undefined Head, Ajna, Throat, Heart, Sacral, Spleen and Root each take in what the room is carrying.";
   assert.equal(check(reading(inS5(prose, REFLECTOR), REFLECTOR), REFLECTOR), null);
 });
 
-test("F44: seven centres OUTSIDE section 5 are still refused", () => {
+test("F44: seven centers OUTSIDE section 5 are still refused", () => {
   const prose =
     "Your Head, Ajna, Throat, Heart, Sacral, Spleen and Root all move together here.";
   const problem = check(reading({ "When it's on track, and when it's off track": prose }, REFLECTOR), REFLECTOR);
@@ -185,7 +185,7 @@ test("F44: the anti-padding rule still holds for a chart with few undefined", ()
 
 /* ------------------------------------------------------- N-01 and N-04 */
 
-test("N-01: a reading may not call an undefined centre defined", () => {
+test("N-01: a reading may not call an undefined center defined", () => {
   const prose = "Your defined Heart center contributes a consistent thread of willpower.";
   const problem = check(reading({ "What is consistently yours": prose }), CHART);
   assert.match(problem, /calls the Heart center "defined", but on this chart it is undefined/);
@@ -205,7 +205,7 @@ test("N-01, R-08 residual: an unowned predicate is not judged", () => {
   assert.equal(check(reading({ [ENERGY]: prose }), CHART), null);
 });
 
-test("N-01: truthful prose about the same centres passes", () => {
+test("N-01: truthful prose about the same centers passes", () => {
   const prose = "Your defined Sacral carries the work, and the Heart is undefined beside it.";
   assert.equal(check(reading({ "What is consistently yours": prose }), CHART), null);
 });
@@ -235,16 +235,16 @@ test("N-04: a negation IN FRONT of the phrase is not a claim", () => {
   // Caught in review: this matches from "your" onwards, so the "None of" that
   // makes it true sits outside the match and the rule refused honest prose.
   for (const prose of [
-    "None of your centres is undefined, which is unusual.",
-    "You have no undefined centres at all on this chart.",
-    "Not one of your centres is undefined here.",
+    "None of your centers is undefined, which is unusual.",
+    "You have no undefined centers at all on this chart.",
+    "Not one of your centers is undefined here.",
   ]) {
     assert.equal(check(reading(inS5(prose, NO_UNDEFINED), NO_UNDEFINED), NO_UNDEFINED), null, prose);
   }
 });
 
 test("N-04: explaining the word is still allowed", () => {
-  const prose = "A centre that is undefined carries gates without a full channel; none of yours is.";
+  const prose = "A center that is undefined carries gates without a full channel; none of yours is.";
   assert.equal(check(reading(inS5(prose, NO_UNDEFINED), NO_UNDEFINED), NO_UNDEFINED), null);
 });
 

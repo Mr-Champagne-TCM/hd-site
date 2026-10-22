@@ -17,7 +17,7 @@ import { S5, check, reading, whiteCentres } from "./support/chain.mjs";
  * four refusals that were his own harness. See support/chain.mjs.
  */
 
-/** Section 5 carrying `prose` AND the chart's white centres, so only `prose` is judged. */
+/** Section 5 carrying `prose` AND the chart's white centers, so only `prose` is judged. */
 const inS5 = (prose, chart) => ({ [S5]: `${prose} ${whiteCentres(chart)}` });
 
 /* --------------------------------------------------- R-01: negation */
@@ -32,11 +32,11 @@ const WONE = {
 
 test("R-01: a sentence that mentions a state is not always claiming it", () => {
   for (const prose of [
-    "Yours is not a defined Heart centre, and that difference matters.",
+    "Yours is not a defined Heart center, and that difference matters.",
     "Rather than a defined Heart, you carry a white one that takes the room in.",
-    "Without a defined Heart centre, willpower is not a constant you own.",
+    "Without a defined Heart center, willpower is not a constant you own.",
     "This is never a defined Heart in the mechanical sense.",
-    "There is no defined Head centre anywhere on this chart.",
+    "There is no defined Head center anywhere on this chart.",
     "Unlike a defined Heart, yours amplifies what the room is already doing.",
     "You have neither defined Head nor defined Ajna, so pressure passes through.",
     "Someone with a defined Heart will push to prove their worth; you will not.",
@@ -68,7 +68,7 @@ const ZERO_UND = {
 test("R-02: the negation may sit further out than any fixed window", () => {
   for (const prose of [
     // 43 characters out -- past the old 40-character lookback.
-    "Not one of the nine energy centres drawn on your bodygraph is undefined at all.",
+    "Not one of the nine energy centers drawn on your bodygraph is undefined at all.",
     "Across the whole of the drawing there is no place where your chart is undefined.",
   ]) {
     assert.equal(check(reading(ZERO_UND, inS5(prose, ZERO_UND)), ZERO_UND), null, prose);
@@ -82,7 +82,7 @@ test("R-02: a real claim on a zero-undefined chart is still refused", () => {
 
 /* ------------------------------- R-06: the limit was keyed to the wrong list */
 
-test("R-06: section 5 counts the WHITE centres, undefined and open together", () => {
+test("R-06: section 5 counts the WHITE centers, undefined and open together", () => {
   // 41158805, a delivered Manifesting Generator: 0 undefined, 7 open.
   const chart = {
     type: "Manifesting Generator",
@@ -91,7 +91,7 @@ test("R-06: section 5 counts the WHITE centres, undefined and open together", ()
     openCenters: ["Head", "Ajna", "G", "Heart", "Spleen", "Solar Plexus", "Root"],
   };
   const prose =
-    "Because your Head, Ajna, G, Heart, Spleen, Solar Plexus, and Root centres are all open, you take the room in whole.";
+    "Because your Head, Ajna, G, Heart, Spleen, Solar Plexus, and Root centers are all open, you take the room in whole.";
   assert.equal(check(reading(chart, { [S5]: prose }), chart), null);
 });
 
@@ -129,7 +129,7 @@ test("R-06: padding OUTSIDE section 5 is still refused at four", () => {
 
 /* ------------------------------------------- US spelling (10/5) */
 
-test("US SPELLING: both 'center' and 'centre' are judged the same, so stored readings still pass", () => {
+test("US SPELLING: the center rules read 'center' and 'centre' alike; a new draft spelling it 'centre' is then refused for that (10/21)", () => {
   const chart = { type: "Generator", definedCenters: ["Sacral"], undefinedCenters: ["Heart"], openCenters: ["Head"] };
   for (const word of ["center", "centre"]) {
     assert.match(
@@ -137,10 +137,8 @@ test("US SPELLING: both 'center' and 'centre' are judged the same, so stored rea
       /calls the Heart center "defined"/,
       word,
     );
-    assert.equal(
-      check(reading(chart, { "What is consistently yours": `Your Sacral ${word} is defined.` }), chart),
-      null,
-      word,
-    );
   }
+  // Stored readings are never judged again (only a new draft is), so a past buyer's "centre" stays as delivered.
+  assert.equal(check(reading(chart, { "What is consistently yours": "Your Sacral center is defined." }), chart), null);
+  assert.match(check(reading(chart, { "What is consistently yours": "Your Sacral centre is defined." }), chart), /spells "centre" the UK way/);
 });

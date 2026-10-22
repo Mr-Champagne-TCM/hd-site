@@ -113,7 +113,8 @@ export const READING_SCHEMA = {
     experimentIntro: S("ONE paragraph: these are invitations to test, not instructions; they are the authority."),
     takeaways: {
       type: "ARRAY",
-      items: S("ONE sentence beginning with the chart feature in parentheses, e.g. \"(Channel 10-34) Watch what happens when...\"."),
+      // Shape A (Jeremy 10/21): when, one thing to try, what to notice, why it starts small.
+      items: S("ONE sentence beginning with the chart feature in parentheses, then when, \"you might ...\", what to notice, and \", so ... is familiar when ...\", e.g. \"(Undefined Root center) The next time you feel hurried to finish something small, you might leave it until tomorrow and notice whether the hurry was yours, so the pause is familiar when the pressure is heavier.\""),
       minItems: 4,
       maxItems: 4,
     },
