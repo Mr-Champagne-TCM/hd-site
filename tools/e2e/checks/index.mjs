@@ -15,7 +15,10 @@ import { pathToFileURL } from "node:url";
 import { FIXTURES, REPO, SIBLINGS } from "../harness/paths.mjs";
 import { loadReadingFixtures } from "../harness/fakeGemini.mjs";
 import { block, editDistance, inSource, loadRun, norm, rows, sentences, tagged, truthFor } from "./load.mjs";
-import { GATES_NOTE, holdsLine, offerText, usableSpread } from "../../../shared/timeSpread.mjs";
+import { ADD_TIME, GATES_NOTE, holdsLine, offerText, usableSpread } from "../../../shared/timeSpread.mjs";
+import { birthLine } from "../../../shared/birthLine.mjs";
+import { sayTime } from "../../../shared/correctionNote.mjs";
+import { MESSAGES } from "../../../shared/customerMessages.mjs";
 import { baselineDiff } from "./baseline.mjs";
 
 export const CENTERS = ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Spleen", "Solar Plexus", "Root"];
@@ -57,6 +60,8 @@ export const LABEL_FIELD = {
 };
 /** What a kept spread is compared on, against the engine's own /v1/spread answer. */
 const SPREAD_KEYS = ["v", "ok", "minutes", "noon", "window", "changes", "segments", "clock", "gates"];
+/** The PDF's "add it here" (10/22): the record's never-expiring add-time key, /t/<body>.<mac>. */
+export const ADD_TIME_KEY_LINK = /^https?:\/\/[^/]+\/t\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 /**
  * The PDF's glance pages (page 2, and any page after it still under "Your
@@ -79,6 +84,63 @@ export function pdfTagged(pages) {
     });
   }
   return { shown, tagged: tags };
+}
+
+/**
+ * START HERE AND THE READING'S MARGIN NOTES (reading tier, unknown birth
+ * time, 10/22): Jeremy's rule is that every line whose value changes during
+ * the birth day carries PROVISIONAL beside its label, wherever it prints. So
+ * Start here's "Colored in" / "Not colored in" lists, its channels and its
+ * profile, and each margin note (the type, Definition, Authority, Center,
+ * Profile, Incarnation cross, On track / Off track) carry the tag when their
+ * value is in the spread's changes, and only then. `lines` is a page's text
+ * or the PDF's pages after page 1, line by line. Returns the findings.
+ */
+export function laterTags(lines, out, changing, where) {
+  const L = lines.map((l) => String(l).trim().replace(/’/g, "'")).filter(Boolean);
+  // "Start here" on a page; in the PDF, the page's running head ("Start here HUMAN DESIGN by ...").
+  const start = L.findIndex((l) => /^(\d+ )?Start here( HUMAN DESIGN by .*)?$/.test(l));
+  if (start < 0) return [];
+  const found = [];
+  const judge = (i, want, name, has) => {
+    if (want && !has) found.push({ what: `${name} changes during the birth day but carries no PROVISIONAL tag beside its label (${where})`, line: L[i] });
+    if (!want && has) found.push({ what: `${name} is marked PROVISIONAL but holds all day (${where})`, line: L[i] });
+  };
+  /* Start here */
+  const at = (re) => L.findIndex((l, i) => i > start && re.test(l));
+  const colored = at(/^COLORED IN \(\d+\)/);
+  if (colored >= 0) judge(colored, changing.has("definedCenters"), "Start here's \"Colored in\" list", /PROVISIONAL$/.test(L[colored]));
+  const notColored = at(/^NOT COLORED IN \(\d+\)/);
+  if (notColored >= 0) judge(notColored, changing.has("undefinedCenters") || changing.has("openCenters"), "Start here's \"Not colored in\" list", /PROVISIONAL$/.test(L[notColored]));
+  // "Your channels" / "(4)" / "PROVISIONAL" on a page; "2 Your channels (4) PROVISIONAL" in the PDF.
+  const ch = at(/^(\d+ )?Your channels\b/);
+  if (ch >= 0) judge(ch, changing.has("channels"), "Start here's channels", /PROVISIONAL$/.test(L[ch]) || (/^\(\d+\)$/.test(L[ch + 1] ?? "") && L[ch + 2] === "PROVISIONAL") || L[ch + 1] === "PROVISIONAL");
+  const pr = at(/^(\d+ )?Your profile\b/);
+  if (pr >= 0) judge(pr, changing.has("profile"), "Start here's profile", /PROVISIONAL$/.test(L[pr]) || (/^\d\/\d$/.test(L[pr + 1] ?? "") && L[pr + 2] === "PROVISIONAL") || L[pr + 1] === "PROVISIONAL");
+  /* the margin notes, each by its label (the label may wrap in the PDF's narrow margin) */
+  const labels = [
+    [String(out.type ?? "").toUpperCase(), ["type", "strategy"]],
+    ["DEFINITION", ["definition"]],
+    [`${String(out.authority ?? "").toUpperCase()} AUTHORITY`, ["authority"]],
+    ...(AUTHORITY_CENTER[out.authority] ? [["CENTER", ["authority"]]] : []),
+    [`PROFILE ${out.profile ?? ""}`, ["profile"]],
+    ["INCARNATION CROSS", ["incarnationCross"]],
+    ["ON TRACK, THE FEELING IS", ["signature"]],
+    ["OFF TRACK, THE FEELING IS", ["notSelfTheme"]],
+  ];
+  const after = Math.max(start, pr, ch, notColored, colored);
+  for (const [label, fields] of labels) {
+    const parts = label.startsWith("ON TRACK") || label.startsWith("OFF TRACK") ? [label, label.replace(" THE FEELING IS", "")] : [label];
+    let i = -1;
+    let last = -1;
+    for (let k = after + 1; k < L.length && i < 0; k++) {
+      if (L[k] === parts[0]) [i, last] = [k, k];
+      else if (parts[1] && L[k] === parts[1] && L[k + 1] === "THE FEELING IS") [i, last] = [k, k + 1];
+    }
+    if (i < 0) continue;
+    judge(i, fields.some((f) => changing.has(f)), `the reading's margin note ${label}`, L[last + 1] === "PROVISIONAL");
+  }
+  return found;
 }
 
 const clip = (s, n = 160) => {
@@ -308,6 +370,8 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         }
         // The 26 activations (reading tier): always marked with no birth time.
         if (/Technical values: your \d+ planet numbers/.test(t) && !/planet numbers[^\n]*PROVISIONAL/i.test(t)) c.fail(p.journey, docName(p), "the technical values (the 26 activations) are not marked PROVISIONAL", "");
+        // Start here's lists and the reading's margin notes (Jeremy's rule, 10/22: wherever a changing value prints).
+        for (const f of laterTags(t.split(/\r?\n/), out, changing, "page")) c.fail(p.journey, docName(p), f.what, f.line);
         // The PDF: page 1's facts line, then the value rows (tag on the label's line, or the line under it).
         if (p.pdfData?.pageText?.length) {
           const first = p.pdfData.pageText[0];
@@ -325,6 +389,7 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
             if (want && !pdfTags.tagged.has(label)) c.fail(p.journey, `PDF ${p.id}`, field === "gates" ? `${label} is not marked PROVISIONAL (with no birth time the gates always are)` : `${label} changes during the birth day but carries no PROVISIONAL tag beside its label`, label);
             if (!want && pdfTags.tagged.has(label)) c.fail(p.journey, `PDF ${p.id}`, `${label} is marked PROVISIONAL but holds all day`, label);
           }
+          for (const f of laterTags(p.pdfData.pageText.slice(1).join("\n").split("\n"), out, changing, "pdf")) c.fail(p.journey, `PDF ${p.id}`, f.what, f.line);
         }
       } else {
         // No spread kept (an older record, or the spread could not be had): the marks as before.
@@ -400,7 +465,109 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         if (!first.includes(norm(line))) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the one line about the birth time", line);
         if (!/cast at noon 12 am 6 am 12 pm 6 pm 12 am/.test(first)) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the bar (\"cast at noon\" over the clock)", "");
         if (!first.includes(norm(offer))) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the offer to add a found birth time", offer);
-        if (!(p.pdfData.links ?? []).some((l) => l.page === 1 && /\/r\/[^#]+#add-time$/.test(l.href))) c.fail(p.journey, `PDF ${p.id} page 1`, "\"add it here\" in the PDF does not link to the reading's #add-time", "");
+        // The PDF is kept for years: its "add it here" is the record's own never-expiring key (/t/<key>, 10/22), not the six-day reading link.
+        if (!(p.pdfData.links ?? []).some((l) => l.page === 1 && ADD_TIME_KEY_LINK.test(l.href))) c.fail(p.journey, `PDF ${p.id} page 1`, "\"add it here\" in the PDF is not the never-expiring add-time link (/t/<key>)", clip((p.pdfData.links ?? []).filter((l) => l.page === 1).map((l) => l.href.replace(/[A-Za-z0-9_-]{20,}/g, "<token>")).join(" "), 200));
+      }
+    }
+  }
+
+  /* -------------------------- 2c. a birth time found later, added (offer A, 10/22) */
+  if (on("add-time")) {
+    const c = add(check("add-time", "OfferA", "A birth time found later: added once and free, from the page or the PDF; the chart redone with nothing provisional; both ways in then say kindly it is used", "Jeremy 10/22: \"they can 'update birth time at no cost and get an updated reading'\"; \"TEST THIS HARD!!!!\". The form asks only the time and shows the kept date and place; the PDF's link never expires; once used, the offer is gone everywhere, an upgrade included."));
+    const atStep = (s) => run.pages.filter((p) => p.step === s.id);
+    const T_ = (e) => run.emails.find((x) => x.file === e.file)?.text ?? "";
+    for (const j of run.manifest.journeys) {
+      let addedAt = null; // the clock reading ("3:10 PM") once a time is added in this journey
+      for (const s of j.steps) {
+        if (s.do === "upgrade" && addedAt) {
+          // An upgrade after the time was added: the chart keeps it, and the offer stays spent.
+          c.saw(j.id);
+          for (const p of atStep(s).filter((p) => p.kind === "result")) {
+            if (p.apiBody?.output?.timeKnown !== true) c.fail(j.id, docName(p), "the upgrade after the birth time was added is cast with an unknown time again", "");
+            if (norm(p.text).includes(norm("Found your birth time?"))) c.fail(j.id, docName(p), "the upgrade offers to add a birth time again (the offer was used)", "");
+            if (!p.text.includes(addedAt)) c.fail(j.id, docName(p), `the upgrade's birth line lacks the added time (${addedAt})`, clip(p.text.split("\n").find((l) => / · /.test(l) && /\d{4}/.test(l)) ?? "", 160));
+          }
+          if (!atStep(s).some((p) => p.kind === "addtime-used")) c.fail(j.id, `step ${s.id}`, "the first link's #add-time was not opened again after the upgrade (the driver captures it)", "");
+        }
+        if (s.do !== "add-time") continue;
+        c.saw(j.id);
+        const mine = atStep(s);
+        const birth = run.combos.births?.[s.birth] ?? null;
+        const time = s.time ?? (run.combos.journeys.find((x) => x.id === j.id)?.steps ?? [])[Number(s.id.split("-")[1]) - 1]?.time ?? null;
+        const clock = time ? sayTime(time) : null;
+        addedAt = clock;
+        /* the form */
+        const form = mine.find((p) => p.kind === "addtime-form");
+        if (!form) c.fail(j.id, `step ${s.id}`, `the time box did not open from the ${s.via === "pdf" ? "PDF's link" : "page's #add-time"}`, "");
+        else {
+          const t = norm(form.text);
+          if (!t.includes(norm(ADD_TIME.title))) c.fail(j.id, docName(form), `the form's heading "${ADD_TIME.title}" is missing`, "");
+          if (!t.includes(norm(ADD_TIME.intro(s.tier)))) c.fail(j.id, docName(form), "the form's opening line is missing or not the tier's", ADD_TIME.intro(s.tier));
+          if (/i don.t know|know (my|their) birth time/i.test(form.text)) c.fail(j.id, docName(form), "the form offers \"I don't know\" (the time has just been found)", "");
+          if (!(form.buttons ?? []).includes(ADD_TIME.button(s.tier))) c.fail(j.id, docName(form), `the button is not "${ADD_TIME.button(s.tier)}"`, (form.buttons ?? []).join(" | "));
+          const kept = birth ? birthLine({ date: birth.date, time: null, timeKnown: false, place: birth.pick, zone: birth.zone }).split(" · ").filter((x) => !/^Time unknown/.test(x)).join(" · ") : null;
+          const keptAt = form.text.split("\n").findIndex((l) => /^Kept from your chart$/i.test(l.trim()));
+          const keptLine = keptAt >= 0 ? form.text.split("\n").slice(keptAt + 1).find((l) => l.trim())?.trim() : null;
+          if (!keptLine) c.fail(j.id, docName(form), "the kept birth date and place are not shown with the form", "");
+          else {
+            if (kept && norm(keptLine) !== norm(kept)) c.fail(j.id, docName(form), "the kept line is not the chart's own date and place", `${keptLine} (want ${kept})`);
+            if (/\d{1,2}:\d{2}\s?[AP]M|time unknown|noon/i.test(keptLine)) c.fail(j.id, docName(form), "the kept line shows a time (the time is what is being added)", keptLine);
+          }
+        }
+        if (s.via === "pdf" && s.clockDays >= 6) {
+          const exp = mine.find((p) => p.kind === "addtime-link-expired");
+          if (!exp || !/expired|run out|six days/i.test(exp.text)) c.fail(j.id, `step ${s.id}`, `${s.clockDays} days on, the page's own link did not read as expired, so the PDF link's lasting was not shown`, clip(exp?.text ?? "", 160));
+        }
+        /* the chart, redone */
+        const after = mine.find((p) => p.kind === "result");
+        if (!after) c.fail(j.id, `step ${s.id}`, "no chart was captured after the time was added", "");
+        else {
+          const out = after.apiBody?.output ?? {};
+          const t = norm(after.text);
+          if (out.timeKnown !== true) c.fail(j.id, docName(after), "the chart after the time was added is still cast with an unknown time", "");
+          if (out.timeSpread) c.fail(j.id, docName(after), "the chart after the time was added still keeps an unknown-time spread", "");
+          if (after.apiBody?.addTime !== "used") c.fail(j.id, docName(after), `the page is told "${after.apiBody?.addTime}" where the offer is spent ("used")`, "");
+          for (const h of hits(after.text, /PROVISIONAL/)) c.fail(j.id, docName(after), "PROVISIONAL is still on the page after the time was added", h.ctx);
+          if (/cast at noon|charted at noon/.test(t)) c.fail(j.id, docName(after), "the page still says the chart is cast at noon", "");
+          if (t.includes(norm("Found your birth time?"))) c.fail(j.id, docName(after), "the offer to add a birth time is still on the page after it was used", "");
+          if ((after.linksList ?? []).some((l) => /#add-time$/.test(l.href))) c.fail(j.id, docName(after), "an \"add it here\" link is still on the page after the offer was used", "");
+          if (clock && !after.text.includes(clock)) c.fail(j.id, docName(after), `the birth line lacks the added time (${clock})`, "");
+          if (!/Your correction/i.test(after.text) || (clock && !t.includes(norm(`Birth time added: ${clock}`)))) c.fail(j.id, docName(after), `the calm note ("Birth time added: ${clock}") is missing`, "");
+          if (s.tier >= 2) {
+            if (/being written/i.test(after.text)) c.fail(j.id, docName(after), "the reading was not written again for the redone chart (still \"being written\")", "");
+            if (!after.apiBody?.written) c.fail(j.id, docName(after), "the redone chart has no reading", "");
+          }
+          if (s.tier >= 1) {
+            const pages = after.pdfData?.pageText ?? [];
+            if (!pages.length) c.fail(j.id, `PDF ${after.id}`, "no PDF captured for the redone chart", "");
+            const all = pages.join("\n");
+            for (const h of hits(all, /PROVISIONAL/)) c.fail(j.id, `PDF ${after.id}`, "PROVISIONAL is still in the PDF after the time was added", h.ctx);
+            if (/Found\s+your\s+birth\s+time/i.test(all)) c.fail(j.id, `PDF ${after.id}`, "the PDF still offers to add a birth time", "");
+            if ((after.pdfData?.links ?? []).some((l) => /\/t\//.test(l.href))) c.fail(j.id, `PDF ${after.id}`, "the PDF still carries an add-time link", "");
+            if (pages.length && clock && !pages[0].replace(/\s+/g, " ").includes(clock)) c.fail(j.id, `PDF ${after.id} page 1`, `page 1's birth line lacks the added time (${clock})`, "");
+          }
+        }
+        /* both ways in, again */
+        const used = mine.filter((p) => p.kind === "addtime-used");
+        const ways = s.tier >= 1 ? ["page", "pdf"] : ["page"];
+        for (const via of ways) {
+          const p = used.find((x) => x.via === via);
+          if (!p) {
+            c.fail(j.id, `step ${s.id}`, `the ${via === "pdf" ? "PDF's link" : "page's #add-time"}, opened again after the time was added, did not say it was used`, "");
+            continue;
+          }
+          const t = norm(p.text);
+          if (!t.includes(norm(MESSAGES["addtime-used"].heading))) c.fail(j.id, docName(p), `opened again from the ${via}, it does not say "${MESSAGES["addtime-used"].heading}"`, "");
+          if (!/hd-readings@thechampagnemethod\.co/.test(p.text)) c.fail(j.id, docName(p), "the used note does not point to hd-readings@", "");
+          if (t.includes(norm(ADD_TIME.title))) c.fail(j.id, docName(p), "the time box opens again after the time was added (once only)", "");
+        }
+        /* the email */
+        const ready = (s.emails ?? []).filter((e) => /is ready/.test(e.subject));
+        for (const e of ready) {
+          const body = T_(e);
+          if (!/\/r\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(body)) c.fail(j.id, `email "${e.subject}"`, "the ready email for the redone chart has no link to it", "");
+          for (const h of hits(body, /PROVISIONAL|cast at noon|Found your birth time/i)) c.fail(j.id, `email "${e.subject}"`, "the ready email for the redone chart still speaks of an unknown time", h.ctx);
+        }
       }
     }
   }
@@ -501,10 +668,11 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         }
       }
       if (p.pdfData?.pageText?.length) {
-        // The PDF's margin note, "CENTER" over its value: the same rule as the page's.
+        // The PDF's margin note, "CENTER" over its value: the same rule as the page's. An unknown
+        // birth time's PROVISIONAL under the label (10/22) is the label's tag, not the value.
         const all = p.pdfData.pageText.join("\n");
         const want = AUTHORITY_CENTER[out.authority];
-        for (const m of all.matchAll(/(?:^|\n)CENTER(?:[ \t]*\n[ \t]*|[ \t]+)([^\n]+)/g)) {
+        for (const m of all.matchAll(/(?:^|\n)CENTER(?:[ \t]*\n[ \t]*PROVISIONAL)?(?:[ \t]*\n[ \t]*|[ \t]+)([^\n]+)/g)) {
           const v = m[1].trim();
           if (/^(?:Single|Split|Triple Split|Quadruple Split|None)$/.test(v)) c.fail(p.journey, `PDF ${p.id}`, `side note prints "CENTER ${v}" (a definition, not a center)`, `CENTER ${v}`);
           else if (!CENTERS.includes(v)) c.fail(p.journey, `PDF ${p.id}`, `side note prints "CENTER ${v}" (not a center)`, `CENTER ${v}`);
@@ -944,14 +1112,15 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
 
   /* ------------------------------------- 24. two emails per purchase */
   if (on("two-emails")) {
-    const c = add(check("two-emails", "rules", "Each purchase sends two emails: the receipt, then one \"ready\"", "Jeremy 10/19 (fix 4A): two, not three; never none."));
+    const c = add(check("two-emails", "rules", "Each purchase sends two emails: the receipt, then one \"ready\"; a birth time added sends the one \"ready\"", "Jeremy 10/19 (fix 4A): two, not three; never none. A birth time added (10/22) is no purchase: no receipt, and the chart redone is said in one \"ready\" email with a fresh link."));
     for (const j of run.manifest.journeys)
       for (const s of j.steps) {
         c.saw(j.id);
         const mine = (s.emails ?? []).filter((e) => !/^HD readings:/.test(e.subject));
         const receipts = mine.filter((e) => /^Receipt/.test(e.subject)).length;
         const ready = mine.filter((e) => /is ready/.test(e.subject)).length;
-        if (receipts !== 1 || ready !== 1) c.fail(j.id, `step ${s.id}`, `${receipts} receipt(s) and ${ready} "ready" email(s)`, mine.map((e) => e.subject).join(" | "));
+        const want = s.do === "add-time" ? 0 : 1;
+        if (receipts !== want || ready !== 1) c.fail(j.id, `step ${s.id}`, `${receipts} receipt(s) and ${ready} "ready" email(s)${s.do === "add-time" ? " for a birth time added (want none and one)" : ""}`, mine.map((e) => e.subject).join(" | "));
       }
   }
 

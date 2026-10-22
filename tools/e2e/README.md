@@ -35,7 +35,7 @@ node tools/e2e/run.mjs        (or: npm run e2e -- <options>)
 
 | | |
 |---|---|
-| Whole run | about 10 to 12 minutes (21 purchases, ~100 page states, ~200 links) |
+| Whole run | about 13 to 15 minutes (28 purchases and 5 birth times added, ~140 page states, ~230 links) |
 | Re-check an earlier run | about 5 seconds |
 | Netlify credits | 0 (nothing is deployed) |
 | Stripe | 0 (a local fake; no key) |
@@ -70,6 +70,11 @@ node tools/e2e/run.mjs        (or: npm run e2e -- <options>)
 | mental | reading new | Projector, Mental |
 | ch6 | chart new | MG, 6 channels |
 | manifestor | summary new | Manifestor, Emotional |
+| addSum | summary, **unknown time**; the time added from the page; then the chart | the chart keeps the time and the spent offer |
+| addChart | chart, **unknown time**; a week on (rig clock), the page's link expired, the time added from the **PDF's** link | the PDF's link never expires |
+| addPage | chart, **unknown time**; the time added from the page | |
+| addRead | reading, **unknown time**; the time added from the page | the reading written again |
+| addUp | chart, **unknown time**, grown to the reading before use; the time added from the reading's PDF | the offer goes with the upgrade |
 
 Plus: 10 pre-10/16 purchases written into the store the old way (no name, no birth), the expired-link page and its "send a fresh link", a link cut short, "Email me my charts" for the heavy inbox (timed at live store speed), the phone readings site with a link that never existed, the shop's 404, and the website's readings, privacy, library and tools pages and sample PDFs.
 
@@ -82,8 +87,8 @@ Plus: 10 pre-10/16 purchases written into the store the old way (no name, no bir
 |---|---|---|
 | run-complete, no-live-calls, no-incidents | the rig | a journey that could not finish; any call to an outside host; any alert that would have paged Jeremy |
 | values-match-engine | #2 | a table value differing from the engine's full chart for that birth; "None" where the chart has data; a channel list with one too many or one missing |
-| provisional-marks | #3 #17 | unknown time, with the engine's spread kept (10/22): a line that changes during the birth day without PROVISIONAL beside its label, a line that holds all day marked, a tag after the value, the gates or the 26 activations unmarked (page, three-lines box, PDF page 1 and its value rows). With no spread (an older record): Type / Authority / Profile without "provisional"; Type provisional but its centers not. Everywhere: "usually your Type and Authority" (shop, website, phone source) |
-| unknown-time-line | #17 | unknown time: the one line missing, said twice, or not the kept spread's; the kept spread not the engine's own `/v1/spread` answer (the harness keeps those in `<run>\spread-truth\`); the bar ("cast at noon" over the clock) missing; the offer missing or reworded; "add it here" not a link to `#add-time`; the gates' note missing; the same on PDF page 1; no spread kept on an engine that makes them |
+| provisional-marks | #3 #17 | unknown time, with the engine's spread kept (10/22): a line that changes during the birth day without PROVISIONAL beside its label, a line that holds all day marked, a tag after the value, the gates or the 26 activations unmarked (page, three-lines box, PDF page 1 and its value rows); Start here's lists, channels and profile and the reading's margin notes tagged other than by the spread's changes (page and PDF). With no spread (an older record): Type / Authority / Profile without "provisional"; Type provisional but its centers not. Everywhere: "usually your Type and Authority" (shop, website, phone source) |
+| unknown-time-line | #17 | unknown time: the one line missing, said twice, or not the kept spread's; the kept spread not the engine's own `/v1/spread` answer (the harness keeps those in `<run>\spread-truth\`); the bar ("cast at noon" over the clock) missing; the offer missing or reworded; "add it here" not a link to `#add-time`; the gates' note missing; the same on PDF page 1, where "add it here" must be the record's never-expiring `/t/<key>`; no spread kept on an engine that makes them |
 | stripe-next-step | #4 | Stripe's line under Pay asking for birth details on an upgrade that keeps them |
 | confirm-button-tier | #5 | "make my reading" on a chart upgrade |
 | someone-new-their | #16 #19 W8 | "your birth date", "your summary", "I don't know my birth time", a "Your Human Design" title, in what the buyer reads about someone else's chart; a nameless gift chart titled with the buyer's name |
@@ -105,7 +110,8 @@ Plus: 10 pre-10/16 purchases written into the store the old way (no name, no bir
 | correction-note | W15 | the correction note gone once the chart grows |
 | fresh-link-email | W7 | the fresh-link email not saying it is one |
 | phone-width | rules | any page wider than 390 px |
-| two-emails | 4A | a purchase sending other than one receipt and one "ready" |
+| two-emails | 4A | a purchase sending other than one receipt and one "ready"; a birth time added sending other than one "ready" and no receipt |
+| add-time | Offer A | the time box not opening from the page's `#add-time` or the PDF's `/t/<key>`; "I don't know" on it; the kept line not the chart's date and place, or showing a time; the wrong button; a week on, the page's link not expired while the PDF's opens; after the add: an unknown-time chart, a spread, PROVISIONAL, "cast at noon", the offer or an add-it-here link left on the page or in the PDF; no "Birth time added" note or no time in the birth line; the reading not written again; either way in, opened again, not saying it is used; the ready email without a link; an upgrade after use cast at noon or offering it again |
 | ai-writing | AI1 AI3 AI4 | most try-this lines opening "Notice / Watch / Observe"; glance rows that are fragments (an -ing opening and no main verb; "Waiting for the invitation keeps…" is a sentence); the known word slips |
 
 Findings are tagged **AI / data** when the words are not in the source (the model wrote them, or they are chart data), so a fix goes to the prompt and checker rather than the code.

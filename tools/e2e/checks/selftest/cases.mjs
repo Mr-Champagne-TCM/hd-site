@@ -25,7 +25,8 @@ import { join } from "node:path";
 import { AUTHORITY_CENTER, FEELINGS } from "../index.mjs";
 import { norm, sentences, truthFor } from "../load.mjs";
 import { P } from "./mini.mjs";
-import { GATES_NOTE, holdsLine, offerText } from "../../../../shared/timeSpread.mjs";
+import { ADD_TIME, GATES_NOTE, holdsLine, offerText } from "../../../../shared/timeSpread.mjs";
+import { MESSAGES } from "../../../../shared/customerMessages.mjs";
 
 /* ------------------------------------------------------------ helpers ---- */
 
@@ -138,6 +139,8 @@ const SPREAD = {
 };
 const SPREAD_KEY = "2001-12-05_America-Los_Angeles_t1";
 const LINE = holdsLine(SPREAD).text;
+/** A made-up add-time key link, in the shape the PDF carries (/t/<body>.<mac>). */
+const ADD_TIME_KEY_HREF = "https://humandesign.thechampagnemethod.co/t/eyJhIjoiMDAwMCIsImsiOiJ0In0.Wren-made-up-mac_0123456789";
 const BAR = ["cast at noon", "12 AM", "6 AM", "12 PM", "6 PM", "12 AM"].join("\n");
 
 /**
@@ -168,7 +171,14 @@ function measuredPages(m) {
         ls.splice(r[1], 0, "ACTIVATED GATES", "PROVISIONAL", "2, 5, 7, 10", GATES_NOTE);
         s = ls.join("\n");
       }
-      return s.replace(/(Technical values: your \d+ planet numbers \(for the curious\))/, "$1PROVISIONAL");
+      s = s.replace(/(Technical values: your \d+ planet numbers \(for the curious\))/, "$1PROVISIONAL");
+      // Start here's lists and the reading's margin notes (Q4, 10/22): the spread's profile, centers and channels change.
+      return s
+        .replace(/^(COLORED IN \(\d+\) · .+)$/m, "$1PROVISIONAL")
+        .replace(/^(NOT COLORED IN \(\d+\) · .+)$/m, "$1PROVISIONAL")
+        .replace(/^(Your channels\n\(\d+\))$/m, "$1\nPROVISIONAL")
+        .replace(/^(Your profile\n\d\/\d)$/m, "$1\nPROVISIONAL")
+        .replace(/^(PROFILE \d\/\d)$/gm, "$1\nPROVISIONAL");
     });
     m.editLinks(p, (ls) => [...ls, { text: "add it here", href: "http://127.0.0.1:1/r/tok#add-time" }]);
     if (p.pdf?.textFile) {
@@ -181,6 +191,14 @@ function measuredPages(m) {
             ls.splice(at + 1, 0, LINE, "cast at noon", "12 AM 6 AM 12 PM 6 PM 12 AM", offerText(p.tier));
             return ls.join("\n");
           }
+          // Start here's lists and the margin notes (Q4): as on the page.
+          if (i > 1)
+            return t
+              .replace(/^(COLORED IN \(\d+\) .+)$/m, "$1 PROVISIONAL")
+              .replace(/^(NOT COLORED IN \(\d+\) .+)$/m, "$1 PROVISIONAL")
+              .replace(/^(\d Your channels \(\d+\))$/m, "$1 PROVISIONAL")
+              .replace(/^(\d Your profile \d\/\d)$/m, "$1 PROVISIONAL")
+              .replace(/^(PROFILE \d\/\d)$/gm, "$1\nPROVISIONAL");
           if (i !== 1) return t;
           let s = t;
           for (const label of ["PROFILE", "DEFINED CENTERS", "UNDEFINED CENTERS", "CHANNELS"]) s = s.replace(new RegExp(`^${label} `, "m"), `${label} PROVISIONAL `);
@@ -191,10 +209,60 @@ function measuredPages(m) {
           return ls.join("\n");
         }),
       );
-      m.editPdfLinks(p, (ls) => [...ls, { page: 1, href: "https://humandesign.thechampagnemethod.co/r/tok#add-time" }]);
+      // The PDF's "add it here" is the record's never-expiring add-time key (10/22), not the reading link.
+      m.editPdfLinks(p, (ls) => [...ls.filter((l) => !/#add-time$/.test(l.href)), { page: 1, href: ADD_TIME_KEY_HREF }]);
     }
   }
   m.spreadTruth(SPREAD_KEY, SPREAD);
+}
+
+/**
+ * A BIRTH TIME ADDED (offer A, 10/22), as the driver records one: a made-up
+ * journey "wren" whose second step added the time from the PDF's link a week
+ * on. The base run's known-time chart page (with its PDF) stands for the
+ * chart redone, the same buyer's reading page for the upgrade after it; the
+ * form, the expired link and the "used" pages are made up in the words the
+ * shop draws (shared/timeSpread.mjs ADD_TIME, shared/customerMessages.mjs).
+ */
+function addTimeScene(m) {
+  const [after, up] = m.pages;
+  const line = m.api(after).birthLine ?? "";
+  const [date, clock, place] = line.split(" · ");
+  const t = /^(\d{1,2}):(\d{2}) ([AP]M)$/.exec(clock ?? "");
+  if (!t || !place) throw new Error(`the base chart's birth line is not "date · time · place": ${line}`);
+  m.clock = clock;
+  m.kept = `${date} · ${place}`;
+  const hhmm = `${String((Number(t[1]) % 12) + (t[3] === "PM" ? 12 : 0)).padStart(2, "0")}:${t[2]}`;
+  const step = {
+    id: "wren-2-add-time-t1",
+    do: "add-time",
+    tier: 1,
+    via: "pdf",
+    time: hhmm,
+    clockDays: 7,
+    birth: "wren",
+    emails: [m.addMail("960-ready", "Wren’s Human Design chart is ready", "Wren’s chart is ready.\nOpen it: https://humandesign.thechampagnemethod.co/r/eyJyIjoiMDAwIn0.Wren-made-up-mac\n")],
+  };
+  const upStep = { id: "wren-3-upgrade-t2", do: "upgrade", tier: 2, birth: "wren", emails: [] };
+  m.manifest.journeys.push({ id: "wren", about: "made up", steps: [{ id: "wren-1-buy-t1", do: "buy", tier: 1, birth: "wren", emails: [] }, step, upStep] });
+  m.combos.journeys.push({ id: "wren", buyer: "Wren Testwell", steps: [{ do: "buy", tier: 1 }, { do: "add-time", tier: 1, via: "pdf", time: hhmm, days: 7 }, { do: "upgrade", tier: 2 }] });
+  m.combos.births = { ...(m.combos.births ?? {}), wren: { date: new Date(`${date} 12:00 UTC`).toISOString().slice(0, 10), time: null, pick: place, zone: "America/Denver" } };
+  // The chart redone: its correction note under the birth line, and the page told the offer is spent.
+  Object.assign(after, { journey: "wren", step: step.id, via: "pdf", addedTime: true });
+  const esc = line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  m.edit(after, (s) => addAfter(s, new RegExp(`^${esc}$`), ["YOUR CORRECTION", `Birth time added: ${clock} — your chart is cast from the corrected details.`, "Your Type, Profile and Authority are the same."].join("\n")));
+  m.editApi(after, (a) => void (a.addTime = "used"));
+  Object.assign(up, { journey: "wren", step: upStep.id });
+  // Seven days on, the page's own link has run out; the PDF's opens the form.
+  m.addPage({ id: "wren-2-add-time-t1-expired", kind: "addtime-link-expired", journey: "wren", step: step.id, tier: 1, clockDays: 7 }, "This link has finished its six days\n\nThis link has expired — they last six days. Your reading is kept for a year, so it can be sent to you again.\n");
+  m.addPage(
+    { id: "wren-2-add-time-t1-form", kind: "addtime-form", journey: "wren", step: step.id, tier: 1, via: "pdf", buttons: [ADD_TIME.button(1)] },
+    [ADD_TIME.title, "", ADD_TIME.intro(1), "", "KEPT FROM YOUR CHART", "", m.kept, "", "Time of birth", "Choose the time", "Open clock", "Why the time matters", ADD_TIME.button(1)].join("\n"),
+  );
+  // Both ways in, opened again; and the first link after the upgrade.
+  const used = `${MESSAGES["addtime-used"].heading}\n\n${MESSAGES["addtime-used"].text}\n`;
+  for (const via of ["page", "pdf"]) m.addPage({ id: `wren-2-add-time-t1-again-${via}`, kind: "addtime-used", journey: "wren", step: step.id, tier: 1, via }, used);
+  m.addPage({ id: "wren-3-upgrade-t2-again", kind: "addtime-used", journey: "wren", step: upStep.id, tier: 2, via: "page" }, used);
 }
 
 /** The shop's checker as the fix should leave it: every near-miss refused. */
@@ -348,6 +416,11 @@ export const CASES = [
       { name: "the gates unmarked", plant: (m) => m.edit(m.pages[0], (t) => t.replace("ACTIVATED GATES\nPROVISIONAL\n", "ACTIVATED GATES\n")), expect: /ACTIVATED GATES is not marked PROVISIONAL/ },
       { name: "the 26 activations unmarked", plant: (m) => m.edit(m.pages[1], (t) => t.replace(/(planet numbers[^\n]*?)\s*PROVISIONAL/, "$1")), expect: /technical values .* not marked PROVISIONAL/ },
       { name: "a steady PDF row marked", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 1 ? t.replace(/^OPEN CENTERS /m, "OPEN CENTERS PROVISIONAL ") : t))), expect: /OPEN CENTERS is marked PROVISIONAL but holds all day/ },
+      // Q4 (10/22): Start here's lists and the reading's margin notes, page and PDF.
+      { name: "Q4: Start here's Colored in list untagged on the page", plant: (m) => m.edit(m.pages[1], (t) => t.replace(/^(COLORED IN \(\d+\) · .+)PROVISIONAL$/m, "$1")), expect: /Start here's "Colored in" list changes during the birth day but carries no PROVISIONAL tag beside its label \(page\)/ },
+      { name: "Q4: Start here's channels untagged in the PDF", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t) => t.replace(/^(\d Your channels \(\d+\)) PROVISIONAL$/m, "$1"))), expect: /Start here's channels changes during the birth day but carries no PROVISIONAL tag beside its label \(pdf\)/ },
+      { name: "Q4: the margin's PROFILE untagged in the PDF", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t) => t.replace(/^(PROFILE \d\/\d)\nPROVISIONAL$/m, "$1"))), expect: /margin note PROFILE \d\/\d changes during the birth day but carries no PROVISIONAL tag beside its label \(pdf\)/ },
+      { name: "Q4: the margin's DEFINITION tagged though it holds all day", plant: (m) => m.edit(m.pages[1], (t) => { const ls = t.split("\n"); const at = ls.findIndex((l, i) => i > ls.indexOf("Start here") && l.trim() === "DEFINITION"); ls.splice(at + 1, 0, "PROVISIONAL"); return ls.join("\n"); }), expect: /margin note DEFINITION is marked PROVISIONAL but holds all day \(page\)/ },
     ],
   },
   {
@@ -372,8 +445,54 @@ export const CASES = [
       { name: "the line said twice", plant: (m) => m.edit(m.pages[0], (t) => t.replace(LINE, `${LINE}\n${LINE}`)), expect: /said more than once/ },
       { name: "the engine's older note beside it", plant: (m) => m.edit(m.pages[0], (t) => t.replace(LINE, `${LINE}\nBirth time unknown — charted at noon. Treat Type, Authority and Profile as provisional.`)), expect: /older note is shown beside the one line/ },
       { name: "PDF page 1 without the line", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 0 ? t.replace(LINE, "") : t))), expect: /page 1 lacks the one line/ },
-      { name: "PDF add it here with no link", plant: (m) => m.editPdfLinks(m.pages[1], (ls) => ls.filter((l) => !/#add-time$/.test(l.href))), expect: /does not link to the reading's #add-time/ },
+      { name: "PDF add it here with no link", plant: (m) => m.editPdfLinks(m.pages[1], (ls) => ls.filter((l) => l.href !== ADD_TIME_KEY_HREF)), expect: /not the never-expiring add-time link/ },
+      {
+        name: "PDF add it here as the six-day reading link (it expires; the PDF is kept for years)",
+        plant: (m) => m.editPdfLinks(m.pages[1], (ls) => ls.map((l) => (l.href === ADD_TIME_KEY_HREF ? { ...l, href: "https://humandesign.thechampagnemethod.co/r/eyJyIjoiMDAwIn0.mac#add-time" } : l))),
+        expect: /not the never-expiring add-time link \(\/t\/<key>\)/,
+      },
       { name: "a chart with no spread kept, on an engine that has them", plant: (m) => m.editApi(m.pages[0], (a) => void delete a.output.timeSpread), expect: /no spread kept for this unknown-time chart/ },
+    ],
+  },
+
+  /* ---------------------------------------- offer A: add a birth time (10/22) */
+  {
+    check: "add-time",
+    item: "OfferA",
+    take: {
+      pages: [
+        P("rowan's chart page with its PDF (a known time: stands for the chart redone)", (p, B) => isResult(p) && p.journey === "rowan" && p.tier === 1 && withPdf(p) && B.api(p)?.output?.timeKnown === true),
+        P("rowan's reading page (stands for an upgrade after the time was added)", (p, B) => isResult(p) && p.journey === "rowan" && p.tier === 2 && B.api(p)?.output?.timeKnown === true),
+      ],
+    },
+    good: (m) => addTimeScene(m),
+    bad: [
+      { name: "PROVISIONAL left on the redone page", plant: (m) => m.edit(m.pages[0], (t) => append(t, "PROFILE\nPROVISIONAL\n6/2")), expect: /PROVISIONAL is still on the page after the time was added/ },
+      { name: "the offer still on the redone page", plant: (m) => m.edit(m.pages[0], (t) => append(t, offerText(1))), expect: /offer to add a birth time is still on the page after it was used/ },
+      { name: "an add it here link still on the redone page", plant: (m) => m.editLinks(m.pages[0], (ls) => [...ls, { text: "add it here", href: "http://127.0.0.1:1/r/tok#add-time" }]), expect: /"add it here" link is still on the page/ },
+      { name: "the chart still cast at noon", plant: (m) => m.editApi(m.pages[0], (a) => void (a.output.timeKnown = false)), expect: /still cast with an unknown time/ },
+      { name: "a spread still kept", plant: (m) => m.editApi(m.pages[0], (a) => void (a.output.timeSpread = SPREAD)), expect: /still keeps an unknown-time spread/ },
+      { name: "the page not told the offer is spent", plant: (m) => m.editApi(m.pages[0], (a) => void (a.addTime = "open")), expect: /where the offer is spent/ },
+      { name: "no calm note", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^Birth time added: .*$/m, "")), expect: /the calm note \("Birth time added: \d{1,2}:\d{2} [AP]M"\) is missing/ },
+      { name: "the birth line without the time", plant: (m) => m.edit(m.pages[0], (t) => t.replaceAll(m.clock, "")), expect: /birth line lacks the added time \(\d{1,2}:\d{2} [AP]M\)/ },
+      { name: "the form offers I don't know", plant: (m) => m.edit(m.page("addtime-form"), (t) => append(t, "I don’t know my birth time")), expect: /offers "I don't know"/ },
+      { name: "the kept line shows a time", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace(m.kept, m.kept.replace(" · ", ` · ${m.clock} · `))), expect: /the kept line shows a time/ },
+      { name: "the kept line is another chart's", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace(m.kept, "March 3, 1991 · Reno, Nevada")), expect: /not the chart's own date and place/ },
+      { name: "no kept line at all", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace(/^KEPT FROM YOUR CHART$/m, "")), expect: /kept birth date and place are not shown/ },
+      { name: "the button for another tier", plant: (m) => (m.page("addtime-form").buttons = [ADD_TIME.button(2)]), expect: /the button is not "Redo my chart"/ },
+      { name: "the form's heading missing", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace(ADD_TIME.title, "Your birth time")), expect: /heading "Add your birth time" is missing/ },
+      { name: "the time box did not open", plant: (m) => (m.manifest.pages = m.manifest.pages.filter((p) => p.kind !== "addtime-form")), expect: /time box did not open from the PDF's link/ },
+      { name: "a week on, the page's link still opened (so the PDF link's lasting was not shown)", plant: (m) => m.edit(m.page("addtime-link-expired"), () => "Wren’s Human Design\nTHE CHART"), expect: /did not read as expired/ },
+      { name: "the PDF still offers", plant: (m) => m.editPdf(m.pages[0], (pages) => pages.map((t, i) => (i === 0 ? `${t}\n${offerText(1)}` : t))), expect: /the PDF still offers to add a birth time/ },
+      { name: "the PDF still carries the add-time link", plant: (m) => m.editPdfLinks(m.pages[0], (ls) => [...ls, { page: 1, href: ADD_TIME_KEY_HREF }]), expect: /still carries an add-time link/ },
+      { name: "PROVISIONAL left in the PDF", plant: (m) => m.editPdf(m.pages[0], (pages) => pages.map((t, i) => (i === 1 ? `${t}\nPROFILE PROVISIONAL 6/2` : t))), expect: /PROVISIONAL is still in the PDF/ },
+      { name: "the PDF's link, opened again, not saying it is used", plant: (m) => (m.manifest.pages = m.manifest.pages.filter((p) => !(p.kind === "addtime-used" && p.via === "pdf"))), expect: /the PDF's link, opened again after the time was added, did not say it was used/ },
+      { name: "the time box opens again after use", plant: (m) => m.edit(m.manifest.pages.find((p) => p.kind === "addtime-used" && p.via === "page"), (t) => `${ADD_TIME.title}\n${t}`), expect: /time box opens again after the time was added/ },
+      { name: "the used note without hd-readings@", plant: (m) => m.edit(m.manifest.pages.find((p) => p.kind === "addtime-used" && p.via === "pdf"), (t) => t.replace("hd-readings@thechampagnemethod.co reaches Jeremy", "Jeremy can help")), expect: /does not point to hd-readings@/ },
+      { name: "the ready email with no link", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => t.replace(/https:\S+/g, "")), expect: /ready email for the redone chart has no link/ },
+      { name: "the ready email still speaks of noon", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => append(t, "Your chart is cast at noon.")), expect: /still speaks of an unknown time/ },
+      { name: "the upgrade after use offers the time again", plant: (m) => m.edit(m.pages[1], (t) => append(t, offerText(2))), expect: /the upgrade offers to add a birth time again/ },
+      { name: "the upgrade after use cast at noon", plant: (m) => m.editApi(m.pages[1], (a) => void (a.output.timeKnown = false)), expect: /upgrade after the birth time was added is cast with an unknown time again/ },
     ],
   },
 
@@ -478,9 +597,12 @@ export const CASES = [
         for (const notes of Object.values(a.notes)) for (const n of notes) if (n[0] === "CENTER") n[1] = want;
       });
       m.editPdf(p, (pages) => pages.map((t) => t.replace(/(^|\n)CENTER([ \t]*\n[ \t]*)[^\n]+/g, `$1CENTER$2${want}`)));
+      // Right as it is: an unknown birth time's tag under the label (10/22) is not the note's value.
+      m.editPdf(p, (pages) => [...pages, `HOW YOU DECIDE\nCENTER\nPROVISIONAL\n${want}`]);
     },
     bad: [
       { name: "#14: CENTER Single on the page", plant: (m) => m.editApi(m.pages[0], (a) => Object.values(a.notes).forEach((ns) => ns.forEach((n) => n[0] === "CENTER" && (n[1] = "Single")))), expect: /CENTER: "Single" is not a center/ },
+      { name: "#14: CENTER Single in the PDF, under the tag", plant: (m) => m.editPdf(m.pages[0], (pages) => pages.map((t) => t.replace(/CENTER\nPROVISIONAL\n[^\n]+/, "CENTER\nPROVISIONAL\nSingle"))), expect: /side note prints "CENTER Single" \(a definition, not a center\)/ },
       { name: "#14: CENTER Single in the PDF", plant: (m) => m.editPdf(m.pages[0], (pages) => pages.map((t) => t.replace(/(^|\n)CENTER([ \t]*\n[ \t]*)[^\n]+/g, "$1CENTER$2Single"))), expect: /side note prints "CENTER Single" \(a definition, not a center\)/ },
       { name: "the wrong center on the page", plant: (m) => m.editApi(m.pages[0], (a) => Object.values(a.notes).forEach((ns) => ns.forEach((n) => n[0] === "CENTER" && (n[1] = n[1] === "Root" ? "Head" : "Root")))), expect: /authority is the/ },
       { name: "the wrong center in the PDF", plant: (m) => m.editPdf(m.pages[0], (pages) => pages.map((t) => t.replace(/(^|\n)CENTER([ \t]*\n[ \t]*)([^\n]+)/g, (a, s, gap, v) => `${s}CENTER${gap}${v === "Root" ? "Head" : "Root"}`))), expect: /side note prints "CENTER (Root|Head)", but/ },
@@ -854,10 +976,15 @@ export const CASES = [
       const s = m.manifest.journeys[0].steps[0];
       // Right as it is: an alert to Jeremy is not one of the buyer's two.
       s.emails.push(m.addMail("950-alert", "HD readings: a made-up alert", "Made-up alert."));
+      // Right as it is: a birth time added (10/22) is no purchase, so ONE email, the "ready", and no receipt.
+      const r = s.emails.find(ready);
+      m.manifest.journeys[0].steps.push({ id: `${m.manifest.journeys[0].id}-9-add-time-t${s.tier}`, do: "add-time", tier: s.tier, via: "page", emails: [m.addMail("952-ready-redone", r.subject, "Your chart, redone.")] });
     },
     bad: [
       { name: "4A: three emails for one purchase", plant: (m) => { const s = m.manifest.journeys[0].steps[0]; const r = s.emails.find(ready); s.emails.push(m.addMail("951-ready-again", r.subject, "Hello again.")); }, expect: /1 receipt\(s\) and 2 "ready" email\(s\)/ },
       { name: "none at all", plant: (m) => (m.manifest.journeys[0].steps[0].emails = []), expect: /0 receipt\(s\) and 0 "ready"/ },
+      { name: "a birth time added sends a receipt (nothing was bought)", plant: (m) => { const s = m.manifest.journeys[0].steps.at(-1); s.emails.push(m.addMail("953-receipt", "Receipt: a made-up purchase", "Made up.")); }, expect: /1 receipt\(s\) and 1 "ready" email\(s\) for a birth time added/ },
+      { name: "a birth time added, and nobody told", plant: (m) => (m.manifest.journeys[0].steps.at(-1).emails = []), expect: /0 receipt\(s\) and 0 "ready" email\(s\) for a birth time added/ },
     ],
   },
 

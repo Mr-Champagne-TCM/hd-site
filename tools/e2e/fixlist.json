@@ -280,10 +280,10 @@
     },
     {
       "id": "W9",
-      "about": "website footer version marker v2.3 · Oct 2026; privacy 'Last updated' in US order (the go-live day: update this entry with the date on push day)",
+      "about": "website footer version marker v2.3 · Oct 2026; privacy 'Last updated' in US order (the go-live day: update this entry with the date on push day; on that day itself the baseline masks the date as <today>)",
       "docs": "^page web-",
       "minus": ["^v2\\.2 · Aug 2026$", "^Last updated 20 October 2026\\.$"],
-      "plus": ["^v2\\.3 · Oct 2026$", "^Last updated October 22, 2026\\.$"]
+      "plus": ["^v2\\.3 · Oct 2026$", "^Last updated October 22, 2026\\.$", "^Last updated <today>\\.$"]
     },
     {
       "id": "10",
@@ -395,6 +395,20 @@
       ]
     },
     {
+      "id": "2-website",
+      "about": "the website's /readings/ page says the tier split as the shop does (Jeremy 10/22, card B): the summary card's list line, its sample summary now listing CHANNELS and ACTIVATED GATES as values, and the chart card's line",
+      "docs": "^page web-readings$",
+      "minus": ["^Your channels named, and your activated gates numbered\\.$"],
+      "plus": [
+        "^Your channels and your activated gates, listed as values — the library explains each one\\.$",
+        "^CHANNELS$",
+        "^\\d{1,2}-\\d{1,2} \\([^)]+\\)$",
+        "^ACTIVATED GATES$",
+        "^\\d{1,2}(, \\d{1,2})+$",
+        "^Every channel and gate from the summary, in its place on the drawing\\.$"
+      ]
+    },
+    {
       "id": "17",
       "about": "an unknown birth time, measured (Jeremy 10/22): the one line with the engine's window, the bar under it (its clock labels), offer A; PROVISIONAL only on the lines that change, beside each label (page: its own line under the label; three lines: after the row's words; PDF: on the label's line or under it); the gates always, with their note; the engine's older note and the PDF's older sentence go",
       "docs": "^(page (theo|egoP)-\\d-[a-z-]+-t[012](-old\\d)?|pdf (theo|egoP)-\\d-[a-z-]+-t[12] p\\d+)$",
@@ -413,6 +427,7 @@
         "^Your birth time isn’t known, so this chart is cast at noon\\. It holds for a birth (between|before|after|at almost any hour)[^;]*; (outside those hours|after that,|before that,|only in) .*the lines marked PROVISIONAL (may )?change\\.$",
         "^Your birth time isn’t known, so this chart is cast at noon\\. It holds for a birth",
         "^[^;]*(AM|PM|noon|midnight); (outside those hours|after that,|before that,) the lines marked PROVISIONAL may change\\.$",
+        "^(outside those hours|after that,|before that,) the lines marked PROVISIONAL may change\\.$",
         "^(cast at noon|12 AM|6 AM|12 PM|6 PM|12 AM 6 AM 12 PM 6 PM 12 AM)$",
         "^Found your birth time\\? You’re welcome to add it here, once and free — your (summary is|chart is|chart and your reading are) redone from it\\.$",
         "^PROVISIONAL$",
@@ -447,6 +462,13 @@
         "^HEARTHEART$",
         "^\\(EGO\\)\\(EGO\\)$"
       ]
+    },
+    {
+      "id": "W13-website",
+      "about": "the website's drawings name the center as the shop's do: 'HEART' over a smaller '(EGO)' (engine 0.6.0), on /readings/ and on the library's two pages",
+      "docs": "^page web-(readings|library-human-design|library-bodygraph)$",
+      "minus": ["^EGO$"],
+      "plus": ["^HEART$", "^\\(EGO\\)$", "^HEART \\(EGO\\)$"]
     },
     {
       "id": "W14",
@@ -489,8 +511,8 @@
     },
     {
       "id": "G",
-      "about": "the home page's 'From a real reading' strip: Jeremy's pick of the test readings' lines (favorite #2, a defined Spleen), with his edits, and its caption",
-      "docs": "^page offer$",
+      "about": "the home page's 'From a real reading' strip: Jeremy's pick of the test readings' lines (favorite #2, a defined Spleen), with his edits, and its caption (on the home page and on the someone-new tiers pages, which show the same strip)",
+      "docs": "^page (offer|[a-zA-Z0-9]+-\\d-someone-new-t\\d-tiers)$",
       "minus": [
         "^“Watch what happens when you balance your public involvement with periods of quiet, uninterrupted solitude\\.”$",
         "^One of the four things to try, written for a 5/2 profile\\. More real excerpts$"
@@ -506,6 +528,29 @@
       "docs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: ",
       "addsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: ([A-Z][^,]*, a|A) Human Design (summary|chart|reading) for someone else(, \\$\\d+\\.\\d{2})?$",
       "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: [A-Z][^’]*’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$"
+    },
+    {
+      "id": "Q4",
+      "about": "Jeremy's rule (10/22): every line whose value changes during the birth day carries PROVISIONAL beside its label, wherever it prints -- so Start here's 'Colored in' / 'Not colored in' lists, its channels and its profile, and the reading's margin notes (Type, Definition, Authority, Center, Profile, Incarnation cross, On / Off track) are tagged when their value is in the spread's changes, on the page and in the PDF, as the phone does (hd-reading-app bc41072)",
+      "docs": "^(page (theo|egoP)-\\d-[a-z-]+-t2(-old\\d)?|pdf (theo|egoP)-\\d-[a-z-]+-t2 p\\d+)$",
+      "minus": [
+        "^(NOT )?COLORED IN \\(\\d+\\) · [A-Z ,]+$",
+        "^\\d Your (channels \\(\\d+\\)|profile \\d/\\d)$"
+      ],
+      "plus": [
+        "^(NOT )?COLORED IN \\(\\d+\\) · [A-Z ,]+ ?PROVISIONAL$",
+        "^\\d Your (channels \\(\\d+\\)|profile \\d/\\d) PROVISIONAL$",
+        "^PROVISIONAL$"
+      ]
+    },
+    {
+      "id": "OfferA",
+      "about": "the self-serve 'add your birth time' flow (Jeremy 10/22: 'Yes self-serve', 'one time birth time update at this link', 'TEST THIS HARD!!!!'): five new journeys -- a summary, two charts and two readings bought with no birth time, the time added from the page or (a week on, the page's link run out) from the PDF's never-expiring link, then both ways in opened again -- so new documents all; and their buyers' rows in 'Email me my charts'",
+      "docs": "^email my-charts \\| Your Human Design charts, with fresh links$",
+      "plus": [
+        "^(Ari|Cass|Pax|Remy|Uma)’s (summary|chart|reading) — The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [A-Z][^·]+$"
+      ],
+      "addsDocs": "^((page|pdf) (addSum|addChart|addPage|addRead|addUp)-\\d-[a-z-]+-t\\d|email (addSum|addChart|addPage|addRead|addUp)-\\d-[a-z-]+-t\\d \\| )"
     }
   ]
 }

@@ -199,6 +199,40 @@ def result(page, ctx, cid, meta, tier):
     return token
 
 
+def add_time_key(jid):
+    """The PDF's "add it here" (10/22): the never-expiring /t/<key> link in the
+    journey's latest captured PDF, pointed at this shop."""
+    for rec in reversed(manifest["pages"]):
+        if rec.get("journey") != jid or rec.get("kind") != "result" or not rec.get("pdf", {}).get("linksFile"):
+            continue
+        for l in json.load(open(rec["pdf"]["linksFile"], encoding="utf-8")):
+            m = re.match(r"^https?://[^/]+(/t/[A-Za-z0-9_.-]+)$", l["href"])
+            if m:
+                return m.group(1)
+        return None
+    return None
+
+
+def until(page, js, what, seconds=60):
+    """Poll a condition across a page load (the form replaces the page when it is done)."""
+    t0 = time.time()
+    while time.time() - t0 < seconds:
+        try:
+            if page.evaluate(js):
+                return
+        except Exception:  # noqa: BLE001  (navigating)
+            pass
+        page.wait_for_timeout(300)
+    tail = page.inner_text("body")[-600:].replace("\n", " ")
+    raise RuntimeError(f"{what}; the page says: {tail}")
+
+
+def add_time_page(page, state, seconds=30):
+    """Wait for the time box (or its kind words) to be drawn: data-add-time=<state>."""
+    page.wait_for_selector(f"[data-add-time={state}]", timeout=seconds * 1000)
+    settle(page, 400)
+
+
 def journey(browser, j):
     ctx = browser.new_context(viewport={"width": 1280, "height": 900}, extra_http_headers={"x-rig-visitor": j["id"]})
     page = ctx.new_page()
@@ -207,6 +241,7 @@ def journey(browser, j):
     token = None
     birth = None
     own_tokens = []  # this buyer's links so far, oldest first (someone-new charts are their own)
+    added = None  # the PDF's add-time key once a birth time was added in this journey ("" when added from the page)
     for i, st in enumerate(j["steps"]):
         sid = f"{j['id']}-{i + 1}-{st['do']}-t{st['tier']}"
         step = {"id": sid, "do": st["do"], "tier": st["tier"], "birth": st.get("birth") or birth, "name": st.get("name")}
@@ -264,7 +299,56 @@ def journey(browser, j):
                     page.goto(f"{SHOP}/r/{quote(old)}", wait_until="networkidle")
                     settle(page)
                     capture(page, f"{sid}-old{k + 1}", {**meta, "kind": "old-link", "upgrade": True, "birth": birth})
+                if added is not None:
+                    # A birth time added before this upgrade: the offer stays spent on the grown chart,
+                    # from the first link the buyer ever had.
+                    page.goto(f"{SHOP}/r/{quote(own_tokens[0])}#add-time", wait_until="networkidle")
+                    add_time_page(page, "used")
+                    capture(page, f"{sid}-again", {**meta, "kind": "addtime-used", "via": "page", "upgrade": True, "birth": birth})
                 own_tokens.append(token)
+            elif st["do"] == "add-time":
+                # "FOUND YOUR BIRTH TIME? YOU'RE WELCOME TO ADD IT HERE, ONCE AND FREE" (10/22).
+                via = st.get("via", "page")
+                key = add_time_key(j["id"]) if st["tier"] >= 1 else None
+                step["via"] = via
+                step["time"] = st["time"]
+                try:
+                    if via == "pdf":
+                        if not key:
+                            raise RuntimeError("the PDF has no add-it-here link (/t/<key>)")
+                        if st.get("days"):
+                            # Later on: the page's six-day link has run out, the PDF's has not.
+                            rig(f"/__rig/clock?days={st['days']}")
+                            step["clockDays"] = st["days"]
+                            page.goto(f"{SHOP}/r/{quote(token)}", wait_until="networkidle")
+                            settle(page)
+                            capture(page, sid + "-expired", {**meta, "kind": "addtime-link-expired", "clockDays": st["days"]})
+                        page.goto(SHOP + key, wait_until="networkidle")
+                    else:
+                        page.goto(f"{SHOP}/r/{quote(token)}#add-time", wait_until="networkidle")
+                    add_time_page(page, "open")
+                    capture(page, sid + "-form", {**meta, "kind": "addtime-form", "via": via, "clockDays": st.get("days", 0)})
+                    set_time(page, st["time"])
+                    capture(page, sid + "-form-filled", {**meta, "kind": "addtime-form-filled", "via": via, "clockDays": st.get("days", 0)})
+                    page.get_by_role("button", name=re.compile(r"^Redo my")).click()
+                    until(page, "() => location.pathname.startsWith('/r/') && !location.hash && !document.querySelector('[data-add-time]')", "the chart did not come back redone after the time was sent")
+                    settle(page, 800)
+                    COMBOS["births"][birth] = {**COMBOS["births"][birth], "time": st["time"]}
+                    token = result(page, ctx, sid, {**meta, "addedTime": True, "via": via, "birth": birth, "clockDays": st.get("days", 0)}, st["tier"])
+                    if token not in own_tokens:
+                        own_tokens.append(token)  # from the PDF: the fresh link the form handed back
+                    # Both ways in, opened again: said kindly that it is used.
+                    page.goto(f"{SHOP}/r/{quote(token)}#add-time", wait_until="networkidle")
+                    add_time_page(page, "used")
+                    capture(page, sid + "-again-page", {**meta, "kind": "addtime-used", "via": "page"})
+                    if key:
+                        page.goto(SHOP + key, wait_until="networkidle")
+                        add_time_page(page, "used")
+                        capture(page, sid + "-again-pdf", {**meta, "kind": "addtime-used", "via": "pdf", "clockDays": st.get("days", 0)})
+                    added = key or ""
+                finally:
+                    if st.get("days"):
+                        rig("/__rig/clock?days=0")
             elif st["do"] == "someone-new":
                 page.goto(f"{SHOP}/u/{quote(token)}#new", wait_until="networkidle")
                 settle(page)

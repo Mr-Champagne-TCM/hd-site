@@ -3,7 +3,7 @@
  *
  * One Node process serves:
  *   - the built site (dist/, the same files Netlify publishes) with the
- *     netlify.toml rewrites (/r/*, /u/*, /charts -> app.html);
+ *     netlify.toml rewrites (/r/*, /u/*, /t/*, /charts -> app.html);
  *   - every Netlify function under /api/*, imported from netlify/functions/
  *     and called exactly as Netlify calls a v2 function (Request in,
  *     Response out; background functions answer 202 and run on);
@@ -15,7 +15,9 @@
  *     live call cannot happen by accident, and an attempt is reported;
  *   - the phone app's readings site handler (/__readings/r/<id>), against an
  *     empty local store;
- *   - /__rig/* controls for the driver.
+ *   - /__rig/* controls for the driver, among them a clock that can be set
+ *     days ahead (/__rig/clock): what a six-day link, a year-long record and
+ *     the PDF's never-expiring "add it here" look like later, without waiting.
  *
  * Nothing here is deployed and nothing reaches a real service.
  */
@@ -163,6 +165,11 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     throw new TypeError(`rig: outbound network to ${url.hostname} is blocked`);
   };
 
+  /* ------------------------------------------------------ the clock ---- */
+  // Everything in this process reads Date.now(); /__rig/clock moves it.
+  clockOffsetMs = 0;
+  Date.now = () => REAL_NOW() + clockOffsetMs;
+
   /* -------------------------------------------------- the environment ---- */
   const secret = () => randomBytes(32).toString("hex");
   Object.assign(process.env, {
@@ -220,7 +227,7 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
   /* ------------------------------------------------------ static dist ---- */
   const dist = join(REPO, "dist");
   function staticFile(pathname) {
-    if (/^\/(r|u)\/.+/.test(pathname) || /^\/charts(\/.*)?$/.test(pathname)) return { file: join(dist, "app.html"), status: 200 };
+    if (/^\/(r|u|t)\/.+/.test(pathname) || /^\/charts(\/.*)?$/.test(pathname)) return { file: join(dist, "app.html"), status: 200 };
     let p = decodeURIComponent(pathname);
     if (p.endsWith("/")) p += "index.html";
     const f = join(dist, p);
@@ -241,6 +248,28 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
         }
         res.writeHead(200, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ idle: inflight.size === 0, waitedMs: Date.now() - t0 }));
+      }
+      if (url.pathname === "/__rig/clock") {
+        // The functions' clock (Date.now), moved: ?days=7 is a week from now, ?days=0 is now again.
+        clockOffsetMs = Math.round(Number(url.searchParams.get("days") ?? 0) * 86_400_000) || 0;
+        hlog(`clock: ${clockOffsetMs ? `+${clockOffsetMs / 86_400_000} day(s)` : "now"}`);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ offsetDays: clockOffsetMs / 86_400_000 }));
+      }
+      if (url.pathname === "/__rig/engine") {
+        // The engine answering as a stopped machine does (?down=1), or as itself again (?down=0): what
+        // a buyer sees when a request cannot be cast (renders and hand checks; no journey uses it).
+        engineDown = url.searchParams.get("down") === "1";
+        hlog(`engine: ${engineDown ? "DOWN (rig)" : "up"}`);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ down: engineDown }));
+      }
+      if (url.pathname === "/__rig/addtime-key") {
+        // The PDF's never-expiring add-time key for a record id (any id: a key for a record that
+        // is no longer kept is how the "no longer kept" page is reached).
+        const { mintAddTimeKey } = await import(pathToFileURL(join(REPO, "netlify", "lib", "addTime.mjs")).href);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ key: mintAddTimeKey(url.searchParams.get("id"), process.env.GRANT_SECRET) }));
       }
       if (url.pathname === "/__rig/latency") {
         latencyMs = Number(url.searchParams.get("ms") ?? 0) || 0;
@@ -307,6 +336,10 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
       /* --- the engine --- */
       if (url.pathname.startsWith("/__engine/")) {
         const path = url.pathname.replace(/^\/__engine/, "") + url.search;
+        if (engineDown) {
+          res.writeHead(503, { "Content-Type": "text/html" });
+          return res.end("<html><body>rig: the engine is down</body></html>");
+        }
         if (req.headers["x-engine-key"] !== engineKey) {
           res.writeHead(401, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ error: { code: "no_key", message: "bad key" } }));
@@ -413,6 +446,7 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     async stop() {
       console.log = realLog;
       globalThis.fetch = REAL_FETCH;
+      Date.now = REAL_NOW;
       await new Promise((r) => server.close(r));
       server.closeAllConnections?.();
       await new Promise((r) => blobProxy.close(r));
@@ -424,6 +458,9 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
 }
 
 const REAL_FETCH = globalThis.fetch;
+const REAL_NOW = Date.now;
+let clockOffsetMs = 0;
+let engineDown = false;
 
 /** The Blobs package's local server, on loopback only (its own start() binds every interface). */
 class LoopbackBlobs extends BlobsServer {
