@@ -28,8 +28,8 @@ import { fix } from "./fixMock.mjs";
  */
 const CHART_A = "Everything in the summary, plus your bodygraph drawn: a page you can share and a PDF you keep.";
 const CHART_A_THEIR = "Everything in the summary, plus their bodygraph drawn: a page you can share and a PDF you keep.";
-const CHART_B = "Your bodygraph, drawn — the summary's values as a picture, on a page you can share and a PDF you keep.";
-const CHART_B_THEIR = "Their bodygraph, drawn — the summary's values as a picture, on a page you can share and a PDF you keep.";
+const CHART_B = "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
+const CHART_B_THEIR = "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
 
 export const SUMMARY = {
   sku: "hd_summary",
