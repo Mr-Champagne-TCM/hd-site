@@ -69,6 +69,28 @@ def settle(page, ms=600):
     page.wait_for_timeout(ms)
 
 
+MOCK_BOX_JS = """() => {
+  const out = [];
+  const sel = 'h1,h2,h3,section,article,p,li,ul,dl,div[class*="border-l-"]';
+  for (const e of document.querySelectorAll(sel)) {
+    const r = e.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    out.push({tag: e.tagName, cls: (e.className && e.className.baseVal === undefined ? e.className : '') || '',
+      text: (e.innerText || '').slice(0, 200), x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height});
+  }
+  return {dpr: devicePixelRatio, docH: document.documentElement.scrollHeight, docW: document.documentElement.scrollWidth, boxes: out};
+}"""
+
+
+def mock_boxes(page, cid, which):
+    """MOCK AI2 (throwaway): element boxes in page coordinates, to mark the screenshots."""
+    try:
+        data = page.evaluate(MOCK_BOX_JS)
+        json.dump(data, open(os.path.join(CAP, f"{cid}.boxes.{which}.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def capture(page, cid, meta):
     """The page as it is now: text, links, full-page screenshots at 1280 and 390."""
     rec = {"id": cid, "url": page.url, **meta}
@@ -86,10 +108,12 @@ def capture(page, cid, meta):
     # Element ids (not the drawing's gradients), for same-page #anchor links.
     rec["ids"] = page.eval_on_selector_all("[id]", "els => els.map(e => e.id).filter(i => i && !/^pg\\d+$/.test(i))")
     page.screenshot(path=os.path.join(CAP, cid + ".desk.png"), full_page=True)
+    mock_boxes(page, cid, "desk")
     page.set_viewport_size({"width": 390, "height": 844})
     page.wait_for_timeout(350)
     rec["phoneScrollWidth"] = page.evaluate("document.documentElement.scrollWidth")
     page.screenshot(path=os.path.join(CAP, cid + ".phone.png"), full_page=True)
+    mock_boxes(page, cid, "phone")
     page.set_viewport_size({"width": 1280, "height": 900})
     page.wait_for_timeout(150)
     manifest["pages"].append(rec)
