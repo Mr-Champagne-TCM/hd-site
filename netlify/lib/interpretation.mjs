@@ -209,8 +209,72 @@ export function firstProblem(
     trackRowProblem(reading) ??
     nearMissProblem(reading, type) ??
     spellingProblem(reading) ??
+    glanceProblem(reading) ??
+    slipProblem(reading) ??
     takeawayProblem(reading)
   );
+}
+
+/**
+ * A GLANCE ROW IS A WHOLE SENTENCE (10/21 live test, AI3). Rows like "Carrying
+ * a design that guides others" and "Waiting for the proper invitation before
+ * committing" printed as if they were sentences. A row that opens on an -ing
+ * word and never reaches a main verb is refused. "Waiting for the invitation
+ * ensures..." (an -ing subject with its verb) passes, as does "Waiting, you
+ * notice..." The same test the local rig judges with (tools/e2e/checks).
+ */
+export function glanceFragment(v) {
+  const s = String(v ?? "").trim();
+  if (!/^[A-Z][a-z]+ing\b/.test(s)) return false;
+  if (/^[^.;]*?,\s+(?:you|it|they|we|he|she)\s+(?!and\b|or\b)[a-z]+/.test(s)) return false;
+  const w = s.replace(/[“”"(),.;:!?—–]/g, " ").split(/\s+/).filter(Boolean);
+  const CLAUSE = /^(?:that|which|who|whom|whose|when|whenever|where|so|because|while|if|until|unless|once|though|although|than|what)$/i;
+  const NOT_VERB_AFTER = /^(?:a|an|the|your|my|his|her|its|their|our|these|those|this|that|many|few|some|all|any|each|every|other|what|who|which)$/i;
+  const OBJECT = /^(?:a|an|the|your|you|yourself|it|its|them|their|his|her|our|us|me|my|this|these|those|what|how|more|less|most)$/i;
+  const MAIN = /^(?:is|was|becomes|will|can|may|must|might|should|could|would)$/i;
+  for (let i = 1; i < w.length; i++) {
+    if (CLAUSE.test(w[i])) return true;
+    if (NOT_VERB_AFTER.test(w[i - 1])) continue;
+    if (MAIN.test(w[i])) return false;
+    if (/^[a-z]{2,}s$/.test(w[i]) && !/(?:ss|us|is)$/.test(w[i]) && OBJECT.test(w[i + 1] ?? "")) return false;
+  }
+  return true;
+}
+
+export function glanceProblem(raw) {
+  const text = sanitize(raw);
+  const body = text.includes(DISCLAIMER) ? text.slice(0, text.indexOf(DISCLAIMER)) : text;
+  for (const [k, v] of Object.entries(summaryRows(body))) {
+    if (glanceFragment(v)) return `The "${SUMMARY_LABELS[k] ?? k}" line is a fragment, not a sentence: "${String(v).slice(0, 90)}"`;
+  }
+  return null;
+}
+
+/**
+ * KNOWN WORD SLIPS (10/21 live test, AI4), each found in a delivered reading:
+ * "body graph" for bodygraph, gate numbers spelled out, "This mechanics",
+ * "must ride out" (a command), and four odd phrasings. A named list: a new
+ * slip is still a human read, and joins this list when found.
+ */
+const SLIPS = [
+  /\bbody graph\b/i,
+  /\bThis mechanics\b/,
+  /\bpeople you happen to inhabit\b/i,
+  /\bEntering your open\b/i,
+  /\bmaterial manipulation\b/i,
+  /\bdeeply vulnerable\b/i,
+  /\bmust ride out\b/i,
+  /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i,
+];
+
+export function slipProblem(raw) {
+  for (const [where, text] of writtenText(raw)) {
+    for (const re of SLIPS) {
+      const m = re.exec(text);
+      if (m) return `The reading says "${m[0]}" in ${where}, a known slip: "${quoteAt(text, m.index, m[0].length)}"`;
+    }
+  }
+  return null;
 }
 
 /**
@@ -290,11 +354,13 @@ const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|ov
 
 export function takeawayProblem(raw) {
   const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
-  const lines = (section?.paragraphs ?? []).filter((p) => /^\([^)]+\)\s/.test(p));
+  // Every paragraph after the one that introduces them is a try-this line.
+  const lines = (section?.paragraphs ?? []).slice(1);
   const starts = new Set();
   for (const line of lines) {
     const body = line.replace(/^\([^)]+\)\s*/, "");
     const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
+    if (body === line) return say(`does not begin with the chart feature it comes from, in parentheses`);
     if (SOFT_OPENER.test(body)) return say(`opens with "${SOFT_OPENER.exec(body)[1]}"; it begins with when, not with what to watch`);
     const might = body.search(/\byou might\b/i);
     if (might < 0) return say(`has no "you might ..." (the one thing to try)`);

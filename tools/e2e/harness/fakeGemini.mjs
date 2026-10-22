@@ -23,6 +23,8 @@ import { join } from "node:path";
 const {
   nearMissProblem = () => null,
   takeawayProblem = () => null,
+  slipProblem = () => null,
+  glanceFragment = () => false,
   TAKEAWAYS = "Things to experiment with",
 } = await import("../../../netlify/lib/interpretation.mjs");
 
@@ -211,7 +213,8 @@ const usSpelling = (v) =>
 const ON_TRACK = INTERPRETATION[5];
 export function nextDraft(form, f) {
   const type = f.type;
-  const named = (heading) => (s) => nearMissProblem(`${heading}\n\n${s}\n`, type) !== null;
+  // A sentence the shop refuses: a near miss, or a known word slip (10/21).
+  const named = (heading) => (s) => nearMissProblem(`${heading}\n\n${s}\n`, type) !== null || slipProblem(`${heading}\n\n${s}\n`) !== null;
   const keep = (text, bad) =>
     typeof text === "string" ? text.split(/(?<=[.!?])\s+/).filter((s) => !bad(s)).join(" ") : text;
   const onTrack = named(ON_TRACK);
@@ -222,8 +225,18 @@ export function nextDraft(form, f) {
   out.summary.notSelf = keep(out.summary.notSelf, onTrack);
   for (const slot of SLOTS) out[slot] = sec(out[slot], slot === "working" ? onTrack : anywhere);
   out.takeaways = (out.takeaways ?? []).map((t) => keep(t, anywhere));
+  // The mechanics paragraphs too (a slip like "gates fifty" sits in the cross).
+  for (const k of ["incarnationCross", "definition"]) out[k] = keep(out[k], anywhere);
+  for (const list of [out.channels, out.profileLines]) for (const x of list ?? []) x.sentence = keep(x.sentence, anywhere);
   // A no-op on words already spelled the US way.
   const written = usSpelling(out);
+  // A glance row that is a fragment is written again whole; the rig marks its stand-in (AI3, 10/21).
+  for (const k of Object.keys(written.summary ?? {})) {
+    const row = String(written.summary[k] ?? "");
+    // A fragment, or a row under five words (the 10/17 bare-word rule).
+    if (glanceFragment(row) || row.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length < 5)
+      written.summary[k] = "[RIG STAND-IN] This row is written again by the model as one whole sentence.";
+  }
   const tryThis = [TAKEAWAYS, written.experimentIntro ?? "", ...(written.takeaways ?? [])].join("\n\n") + "\n";
   if (takeawayProblem(tryThis)) {
     // Only the refused lines are stood in for, each marked [RIG STAND-IN], not

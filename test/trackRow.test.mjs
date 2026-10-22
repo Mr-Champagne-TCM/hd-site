@@ -82,7 +82,7 @@ const section = () => ({ lede: "You carry this one thing.", paragraphs: [para(),
 const form = (summary = {}) => ({
   summary: {
     type: "A motor that renews.", strategy: "Let the question arrive first.", authority: "The gut answers.",
-    profile: "Trial then example.", signature: SHORTEST_REAL, notSelf: "Forcing a door that will not open.", ...summary,
+    profile: "Trial then example.", signature: SHORTEST_REAL, notSelf: "You wear yourself down forcing a door that will not open.", ...summary,
   },
   incarnationCross: para(60), definition: para(50),
   channels: [{ channel: "10-34", sentence: "Power goes where you believe." }],
@@ -114,7 +114,7 @@ test("form: a bare word in the notSelf slot is refused after rendering", () => {
 
 test("form: a 4-word slot is refused, 5 passes", () => {
   assert.match(run(form({ notSelf: "Forcing the wrong door." })) ?? "", /4 words/);
-  assert.equal(run(form({ notSelf: "Forcing the wrong door again." })), null);
+  assert.equal(run(form({ notSelf: "You force the wrong door." })), null); // 5 words, a whole sentence (a fragment is refused for that, 10/21)
 });
 
 /* ---------- the call: a refusal is "malformed", which the job asks again for ---------- */

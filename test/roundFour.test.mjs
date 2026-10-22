@@ -110,7 +110,9 @@ test("R-09: another type's word used in passing, later in the sentence, is not",
     // the shape of fdbabee6 (Projector, not-self Bitterness): the word arrives late
     ["Not-self", "Being overlooked leaves a persistent taste of resentment and frustration."],
   ]) {
-    assert.equal(check(withLine(projector, label, line), projector), null, line);
+    // 10/21: a row that is a fragment is now refused for THAT (AI3); never for the type word.
+    const why = check(withLine(projector, label, line), projector);
+    assert.ok(why === null || /is a fragment, not a sentence/.test(why), `${line}: ${why}`);
   }
 });
 

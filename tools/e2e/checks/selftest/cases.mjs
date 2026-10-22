@@ -757,7 +757,8 @@ export const CASES = [
       { name: "AI3: a fragment with a before-phrase", plant: (m) => m.editApi(m.pages[0], (a) => (a.written.summary.Strategy = "Waiting for the proper invitation before committing your energy to new paths.")), expect: /glance row Strategy.*a fragment/ },
       { name: "AI4: body graph", plant: (m) => m.editApi(m.pages[0], (a) => a.written.sections[0].paragraphs.push("Your body graph holds the map.")), expect: /word slip "body graph"/ },
       { name: "AI4: gate numbers spelled out", plant: (m) => m.editApi(m.pages[0], (a) => a.written.sections[0].paragraphs.push("Through gates twenty-one and forty-eight you build.")), expect: /word slip "gates twenty"/ },
-      { name: "AI1 in a stored live reading", plant: (m) => { const a = m.api(m.pages[0]); const w = JSON.parse(JSON.stringify(a.written)); const ex = w.sections.find((s) => /experiment/i.test(s.heading)); ex.paragraphs = [ex.paragraphs[0], "Notice the pause.", "Watch the room.", "Observe the wave.", "Notice the door."]; m.fixture("stored.json", [{ tier: 2, output: a.output, written: w }]); }, expect: /stored live reading stored\.json#0.*4 of 4 try-this lines open softly/ },
+      // A stored reading fails only when the shop's checker would still let it through.
+      { name: "AI1 in a stored live reading the checker would let through", plant: (m) => { m.opts.checker = PERMISSIVE; const a = m.api(m.pages[0]); const w = JSON.parse(JSON.stringify(a.written)); const ex = w.sections.find((s) => /experiment/i.test(s.heading)); ex.paragraphs = [ex.paragraphs[0], "Notice the pause.", "Watch the room.", "Observe the wave.", "Notice the door."]; m.fixture("stored.json", [{ tier: 2, output: a.output, written: w }]); }, expect: /stored live reading stored\.json#0.*4 of 4 try-this lines open softly/ },
     ],
   },
 ];

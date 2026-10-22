@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { TRY_THIS } from "./support/chain.mjs";
 import assert from "node:assert/strict";
 import {
   DISCLAIMER,
@@ -6,6 +7,7 @@ import {
   INTERPRETATION,
   MECHANICS,
   SUMMARY_KEYS,
+  TAKEAWAYS,
   chartFactsOnly,
   firstProblem,
   marginNotes,
@@ -96,7 +98,9 @@ function wellFormed({ drop = null, question = false, short = false } = {}) {
   ];
   for (const h of HEADINGS) {
     if (h === drop) continue;
-    parts.push(h, "", words.trim(), "", words.trim(), "");
+    // The try-this section ends in tagged lines in the shape the checker asks for (10/21).
+    if (h === TAKEAWAYS) parts.push(h, "", words.trim(), "", ...TRY_THIS.flatMap((t) => [t, ""]));
+    else parts.push(h, "", words.trim(), "", words.trim(), "");
   }
   if (question) parts.push("Does this resonate with you?", "");
   parts.push(DISCLAIMER);

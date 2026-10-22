@@ -832,15 +832,25 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
       if (JSON.stringify(w).includes("[RIG PLACEHOLDER]")) continue;
       c.saw(p.journey);
       readingsSeen.push(p);
+      // A stored reading was delivered before the fix: its findings stand only if
+      // the shop's checker would still let it through (as for near-miss-words).
+      const found = [];
+      const flag = (...a) => (s.combo === "stored readings" ? found.push(a) : c.fail(...a));
       const take = (w.sections ?? []).find((s) => /experiment/i.test(s.heading))?.paragraphs?.slice(1) ?? [];
       const soft = take.filter((t) => /^\([^)]*\)\s*(Notice|Watch|Observe|Pay attention|Consider|See how|Try noticing)\b/i.test(t) || /^(Notice|Watch|Observe)\b/.test(t));
-      if (take.length && soft.length / take.length >= 0.5) c.fail(p.journey, docName(p), `${soft.length} of ${take.length} try-this lines open softly ("Notice…", "Watch…", "Observe…")`, soft.slice(0, 2).join(" | "));
-      for (const [k, v] of Object.entries(w.summary ?? {})) if (glanceFragment(v)) c.fail(p.journey, `${docName(p)}, glance row ${k}`, "a fragment, not a sentence (opens on an -ing word and has no main verb)", v);
+      if (take.length && soft.length / take.length >= 0.5) flag(p.journey, docName(p), `${soft.length} of ${take.length} try-this lines open softly ("Notice…", "Watch…", "Observe…")`, soft.slice(0, 2).join(" | "));
+      for (const [k, v] of Object.entries(w.summary ?? {})) if (glanceFragment(v)) flag(p.journey, `${docName(p)}, glance row ${k}`, "a fragment, not a sentence (opens on an -ing word and has no main verb)", v);
       const all = [Object.values(w.summary ?? {}).join(" "), ...(w.sections ?? []).flatMap((s) => [s.lede, ...(s.paragraphs ?? [])])].filter(Boolean).join(" ");
       const SLIPS = [/\bbody graph\b/i, /\bThis mechanics\b/, /\bpeople you happen to inhabit\b/i, /\bEntering your open\b/i, /\bmaterial manipulation\b/i, /\bdeeply vulnerable\b/i, /\bmust ride out\b/i, /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i];
-      for (const re of SLIPS) for (const h of hits(all, re)) c.fail(p.journey, docName(p), `word slip "${h.match}"`, h.ctx);
+      for (const re of SLIPS) for (const h of hits(all, re)) flag(p.journey, docName(p), `word slip "${h.match}"`, h.ctx);
+      if (found.length) {
+        const why = await shopProblem(w, s.out, checker);
+        if (why) (c.delivered ??= []).push(`${s.where}: ${found.length} finding(s); the shop's checker now refuses it (${String(why).slice(0, 90)})`);
+        else for (const a of found) c.fail(...a);
+      }
     }
     c.note = `${readingsSeen.length} real readings read (${readingsSeen.filter((r) => r.journey !== "stored readings").length} on this run's pages, the rest stored live readings).`;
+    if (c.delivered?.length) c.note += ` Stored readings delivered before the fix, now refused by the checker: ${c.delivered.length}.`;
   }
 
   /* --------------------------------------- 26. changed words (baseline) */

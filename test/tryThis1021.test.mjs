@@ -72,3 +72,40 @@ test("US SPELLING: US words that look like UK ones pass (advise, exercise, surpr
     assert.equal(spellingProblem(reading(sentence)), null, sentence);
   }
 });
+
+import { glanceProblem, slipProblem } from "../netlify/lib/interpretation.mjs";
+
+const glance = (row) => `IN SHORT\n\nType: ${row}\n\nYour energy, and how it starts\n\nYou carry a motor.\n`;
+
+test("AI3 A GLANCE ROW THAT IS A FRAGMENT IS REFUSED ('Carrying a design that guides others')", () => {
+  for (const row of ["Carrying a design that guides others.", "Waiting for the proper invitation before committing your energy."]) {
+    assert.match(glanceProblem(glance(row)), /is a fragment, not a sentence/, row);
+  }
+});
+
+test("AI3 whole sentences pass, -ing subjects with their verb included", () => {
+  for (const row of ["You guide other people's energy rather than outwork it.", "Waiting for the invitation ensures your guidance lands.", "Waiting, you notice who asks for you."]) {
+    assert.equal(glanceProblem(glance(row)), null, row);
+  }
+});
+
+test("AI4 THE KNOWN WORD SLIPS ARE REFUSED; their right forms pass", () => {
+  const read = (s) => `Your energy, and how it starts\n\n${s}\n`;
+  for (const [slip, s] of [
+    ["body graph", "Your body graph holds the map."],
+    ["gates twenty", "Through gates twenty and thirty-four you build."],
+    ["must ride out", "You must ride out the wave."],
+    ["This mechanics", "This mechanics shapes your day."],
+  ]) {
+    assert.match(slipProblem(read(s)), new RegExp(`says "${slip}"`, "i"), slip);
+  }
+  for (const s of ["Your bodygraph holds the map.", "Through gates 20 and 34 you build.", "You can ride out the wave before you decide."]) {
+    assert.equal(slipProblem(read(s)), null, s);
+  }
+});
+
+test("A TRY-THIS LINE WITHOUT ITS (chart feature) IS REFUSED; the paragraph that introduces them needs none", () => {
+  const untagged = "This week, on small asks, you might wait for your gut's sound and notice which one comes, so it is familiar later.";
+  assert.match(takeawayProblem(block(untagged, ...A.slice(1))), /does not begin with the chart feature/);
+  assert.equal(takeawayProblem(block(...A)), null);
+});
