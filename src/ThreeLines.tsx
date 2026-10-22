@@ -75,7 +75,13 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             <p className="text-[17px] leading-relaxed text-brand-paper">
               <span className="font-semibold text-brand-teal">{label}</span>
               {measured?.has(rowField[label]) && <Tag className="ml-2" />}
-              {value ? <span className="text-brand-muted"> · {value}</span> : null}
+              {/* "· Generator" keeps together: on a phone the tag can push it to the next line, the dot with it. */}
+              {value ? (
+                <span className="text-brand-muted">
+                  {" "}
+                  <span className="whitespace-nowrap">· {value}</span>
+                </span>
+              ) : null}
               {!measured && unsure.has(rowField[label]) && (
                 <span className="ml-2 align-middle text-[12px] uppercase tracking-[0.14em] text-brand-gold/80">
                   provisional

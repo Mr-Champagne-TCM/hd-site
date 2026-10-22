@@ -10,7 +10,7 @@
  *   six-t1           a known time with six channels (the chart PDF's page 2 is fullest)
  *   nia-t1           unknown time, the hardest edge (noon sits by a Type change)
  *
- *   node tools/time-spread/renders.mjs --out=<folder outside the repo>
+ *   node tools/time-spread/renders.mjs --out=<folder outside the repo> [--cases=theo-t1,nia-t1]
  *
  * Needs `npm run build` first (the page is served from dist/), Java, uv. The
  * engine is the one HD_WORKSPACE's hd-engine builds (engine 0.6.0 answers
@@ -56,8 +56,10 @@ const CASES = [
 
 const readings = getStore({ name: "readings", consistency: "strong" });
 const manifest = { origin: rig.origin, engine: rig.engine?.version ?? null, cases: [] };
+// --cases=theo-t1,nia-t1: just those (a quick look after a small change).
+const only = arg("cases", "") ? arg("cases", "").split(",") : null;
 try {
-  for (const c of CASES) {
+  for (const c of CASES.filter((x) => !only || only.includes(x.id))) {
     const id = await saveReading(readings, {
       tier: c.tier,
       output: null,
