@@ -91,6 +91,32 @@ def mock_boxes(page, cid, which):
         pass
 
 
+def mock_hires(page, cid, which, w, h):
+    """MOCK AI2 (throwaway): the reading page again at device scale 2, for sharp close-ups."""
+    if cid != "maya-3-upgrade-t2":
+        return
+    try:
+        cdp = page.context.new_cdp_session(page)
+        cdp.send("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2, "mobile": False})
+        page.wait_for_timeout(600)
+        doc_h = page.evaluate("document.documentElement.scrollHeight")
+        # In 3000 px slices: one 2x shot of a whole tall page passes Chrome's texture limit.
+        y, n = 0, 0
+        while y < doc_h:
+            hh = min(3000, doc_h - y)
+            page.screenshot(path=os.path.join(CAP, f"{cid}.{which}.2x.part{n:02d}-y{y}.png"),
+                            clip={"x": 0, "y": y, "width": w, "height": hh}, full_page=True)
+            y += hh
+            n += 1
+        mock_boxes(page, cid, which + ".2x")
+        cdp.send("Emulation.clearDeviceMetricsOverride")
+        cdp.detach()
+    except Exception as e:  # noqa: BLE001
+        open(os.path.join(CAP, f"{cid}.{which}.2x.err.txt"), "w", encoding="utf-8").write(repr(e))
+    page.set_viewport_size({"width": w, "height": h})
+    page.wait_for_timeout(300)
+
+
 def capture(page, cid, meta):
     """The page as it is now: text, links, full-page screenshots at 1280 and 390."""
     rec = {"id": cid, "url": page.url, **meta}
@@ -109,11 +135,13 @@ def capture(page, cid, meta):
     rec["ids"] = page.eval_on_selector_all("[id]", "els => els.map(e => e.id).filter(i => i && !/^pg\\d+$/.test(i))")
     page.screenshot(path=os.path.join(CAP, cid + ".desk.png"), full_page=True)
     mock_boxes(page, cid, "desk")
+    mock_hires(page, cid, "desk", 1280, 900)
     page.set_viewport_size({"width": 390, "height": 844})
     page.wait_for_timeout(350)
     rec["phoneScrollWidth"] = page.evaluate("document.documentElement.scrollWidth")
     page.screenshot(path=os.path.join(CAP, cid + ".phone.png"), full_page=True)
     mock_boxes(page, cid, "phone")
+    mock_hires(page, cid, "phone", 390, 844)
     page.set_viewport_size({"width": 1280, "height": 900})
     page.wait_for_timeout(150)
     manifest["pages"].append(rec)
