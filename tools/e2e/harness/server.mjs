@@ -324,6 +324,19 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
           }
           appendFileSync(join(runDir, "engine-calls.jsonl"), JSON.stringify(engineCalls.at(-1)) + "\n");
         }
+        // An unknown birth time's spread (engine 0.6.0): the engine's own answer, kept so the
+        // checks can hold what a page says to it (unknown-time-line).
+        if (path.startsWith("/v1/spread") && body) {
+          const ask = JSON.parse(body);
+          const b = ask.birth ?? {};
+          const key = `${b.date}_${String(b.zone).replace(/\//g, "-")}_t${ask.tier}`;
+          engineCalls.push({ at: Date.now(), tier: ask.tier, key: `spread ${key}`, status: ans.status });
+          if (ans.status === 200) {
+            mkdirSync(join(runDir, "spread-truth"), { recursive: true });
+            writeFileSync(join(runDir, "spread-truth", key + ".json"), JSON.stringify(ans.json));
+          }
+          appendFileSync(join(runDir, "engine-calls.jsonl"), JSON.stringify(engineCalls.at(-1)) + "\n");
+        }
         res.writeHead(ans.status, { "Content-Type": "application/json" });
         return res.end(JSON.stringify(ans.json));
       }

@@ -97,8 +97,12 @@ export function loadRun(runDir) {
   const truth = [];
   const td = join(runDir, "truth");
   if (existsSync(td)) for (const f of readdirSync(td)) truth.push({ key: f.replace(/\.json$/, ""), chart: J(join(td, f)) });
+  // The engine's own /v1/spread answers (unknown birth times, engine 0.6.0), as the harness kept them.
+  const spreadTruth = [];
+  const sd = join(runDir, "spread-truth");
+  if (existsSync(sd)) for (const f of readdirSync(sd)) spreadTruth.push({ key: f.replace(/\.json$/, ""), spread: J(join(sd, f)) });
 
-  return { runDir, manifest: m, rig, combos, pages, emails, truth, samples: (m.samples ?? []).map((s) => ({ ...s, pageText: existsSync(s.textFile) ? J(s.textFile) : [] })), links: m.links ?? [] };
+  return { runDir, manifest: m, rig, combos, pages, emails, truth, spreadTruth, samples: (m.samples ?? []).map((s) => ({ ...s, pageText: existsSync(s.textFile) ? J(s.textFile) : [] })), links: m.links ?? [] };
 }
 
 /** The engine's full answer for the chart a page shows (matched on its own values). */
@@ -109,14 +113,35 @@ export function truthFor(run, output) {
   return run.truth.find((t) => sig(t.chart) === want)?.chart ?? null;
 }
 
-/** "LABEL\nvalue" rows in captured page text (the glance and value tables). */
+export const ROW_LABELS = ["TYPE", "STRATEGY", "AUTHORITY", "PROFILE", "WHEN IT'S ON TRACK", "WHEN IT'S OFF TRACK", "DEFINITION", "INCARNATION CROSS", "DEFINED CENTERS", "UNDEFINED CENTERS", "OPEN CENTERS", "CHANNELS", "ACTIVATED GATES"];
+/** The tag beside a label (unknown birth time, 10/22): its own line right under the label on a page. */
+const TAG_LINE = /^PROVISIONAL$/i;
+
+/**
+ * "LABEL\nvalue" rows in captured page text (the glance and value tables). A
+ * PROVISIONAL tag beside the label (its own line, under it) is not the value:
+ * the value is the line after it (see tagged()).
+ */
 export function rows(text) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const out = {};
-  const LABELS = ["TYPE", "STRATEGY", "AUTHORITY", "PROFILE", "WHEN IT'S ON TRACK", "WHEN IT'S OFF TRACK", "DEFINITION", "INCARNATION CROSS", "DEFINED CENTERS", "UNDEFINED CENTERS", "OPEN CENTERS", "CHANNELS"];
   for (let i = 0; i < lines.length - 1; i++) {
     const l = lines[i].replace(/’/g, "'");
-    if (LABELS.includes(l) && !(l in out)) out[l] = lines[i + 1];
+    if (ROW_LABELS.includes(l) && !(l in out)) out[l] = TAG_LINE.test(lines[i + 1]) ? (lines[i + 2] ?? "") : lines[i + 1];
+  }
+  return out;
+}
+
+/** The row labels that carry the PROVISIONAL tag beside them (page text: the tag's line right under the label). */
+export function tagged(text) {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const out = new Set();
+  const seen = new Set();
+  for (let i = 0; i < lines.length - 1; i++) {
+    const l = lines[i].replace(/’/g, "'");
+    if (!ROW_LABELS.includes(l) || seen.has(l)) continue;
+    seen.add(l);
+    if (TAG_LINE.test(lines[i + 1])) out.add(l);
   }
   return out;
 }
@@ -127,7 +152,8 @@ export function rows(text) {
  */
 export function block(text, label) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const at = lines.findIndex((l) => l.replace(/’/g, "'") === label);
+  let at = lines.findIndex((l) => l.replace(/’/g, "'") === label);
+  if (at >= 0 && TAG_LINE.test(lines[at + 1] ?? "")) at++; // the tag beside the label, not the value
   if (at < 0 || at === lines.length - 1) return null;
   const out = [lines[at + 1]];
   for (let i = at + 2; i < lines.length && /^(?:\d{1,2}-\d{1,2}\b|PROVISIONAL$)/i.test(lines[i]); i++) out.push(lines[i]);

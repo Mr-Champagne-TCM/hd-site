@@ -188,6 +188,21 @@ export class Mini {
     const s = this.session(p);
     W(join(this.dir, p.session), JSON.stringify(objOr(fn(s), s)));
   }
+  /** A page's captured links ([{ text, href }]). */
+  editLinks(p, fn) {
+    const f = join(this.dir, p.links);
+    const a = existsSync(f) ? J(f) : [];
+    W(f, JSON.stringify(arrOr(fn(a), a)));
+  }
+  /** A PDF's link annotations ([{ page, href }]). */
+  editPdfLinks(p, fn) {
+    const a = existsSync(p.pdf.linksFile) ? J(p.pdf.linksFile) : [];
+    W(p.pdf.linksFile, JSON.stringify(arrOr(fn(a), a)));
+  }
+  /** The engine's /v1/spread answer for a birth, as the harness keeps it (spread-truth/). */
+  spreadTruth(key, spread) {
+    W(join(this.dir, "spread-truth", `${key}.json`), JSON.stringify(spread));
+  }
   pdf(p) {
     return J(p.pdf.textFile);
   }

@@ -25,6 +25,7 @@ import { join } from "node:path";
 import { AUTHORITY_CENTER, FEELINGS } from "../index.mjs";
 import { norm, sentences, truthFor } from "../load.mjs";
 import { P } from "./mini.mjs";
+import { GATES_NOTE, holdsLine, offerText } from "../../../../shared/timeSpread.mjs";
 
 /* ------------------------------------------------------------ helpers ---- */
 
@@ -115,6 +116,86 @@ const ready = (e) => /is ready/.test(e.subject);
 const truthOf = (m, out) => truthFor({ truth: readdirSync(join(m.dir, "truth")).map((f) => ({ chart: JSON.parse(readFileSync(join(m.dir, "truth", f), "utf8")) })) }, out);
 const token = (id) => `${Buffer.from(JSON.stringify({ r: id, t: 2, x: 1 })).toString("base64url")}.sig`;
 const hex = (n) => n.toString(16).padStart(32, "0");
+
+/* -------------------------------- an unknown birth time, measured (10/22) */
+
+/** A made-up spread in the engine's /v1/spread shape: four lines change; the chart holds from 12:06 AM to 2:20 PM. */
+const SPREAD = {
+  v: 1,
+  ok: true,
+  minutes: 1440,
+  noon: 720,
+  window: [6, 860],
+  changes: ["profile", "definedCenters", "undefinedCenters", "channels"],
+  segments: {
+    profile: [[0, "2/5"], [6, "3/5"], [861, "3/6"]],
+    definedCenters: [[0, "G, Root"], [861, "G, Root, Spleen"]],
+    undefinedCenters: [[0, "Head, Spleen"], [861, "Head"]],
+    channels: [[0, "16-48"], [861, "16-48, 18-58"]],
+  },
+  clock: [[0, 0]],
+  gates: "change",
+};
+const SPREAD_KEY = "2001-12-05_America-Los_Angeles_t1";
+const LINE = holdsLine(SPREAD).text;
+const BAR = ["cast at noon", "12 AM", "6 AM", "12 PM", "6 PM", "12 AM"].join("\n");
+
+/**
+ * The base run's unknown-time pages, said the way the release says them for
+ * SPREAD: the one line, the bar and the offer under the three lines; the tag
+ * beside each changing row's label (and the gates'), nowhere else; the PDF's
+ * page 1 and value rows the same; the engine's answer kept as the harness
+ * keeps it.
+ */
+function measuredPages(m) {
+  for (const p of m.pages) {
+    m.editApi(p, (a) => {
+      a.output.timeSpread = SPREAD;
+    });
+    m.edit(p, (t) => {
+      let s = t
+        .replace(/PROVISIONAL$/gm, "")
+        .replace(/^\s*PROVISIONAL\s*$/gm, "")
+        .replace(/^.*Charted at noon: these are provisional\..*\n?/m, "")
+        .replace(/^Birth time unknown[^\n]*\n?/m, "")
+        .replace(/(?:still accurate|usually|almost always)[^.]{0,140}\bType and Authority\b[^.]*\./gi, "")
+        .replace(/^How you meet the world( · Profile)/m, "How you meet the worldPROVISIONAL$1");
+      s = addAfter(s, /^Below:/, [LINE, BAR, offerText(p.tier)].join("\n"));
+      for (const label of ["PROFILE", "DEFINED CENTERS", "UNDEFINED CENTERS", "CHANNELS"]) s = s.replace(new RegExp(`^${label}$`, "m"), `${label}\nPROVISIONAL`);
+      if (!/^ACTIVATED GATES$/m.test(s)) {
+        const ls = s.split("\n");
+        const r = channelBlock(ls);
+        ls.splice(r[1], 0, "ACTIVATED GATES", "PROVISIONAL", "2, 5, 7, 10", GATES_NOTE);
+        s = ls.join("\n");
+      }
+      return s.replace(/(Technical values: your \d+ planet numbers \(for the curious\))/, "$1PROVISIONAL");
+    });
+    m.editLinks(p, (ls) => [...ls, { text: "add it here", href: "http://127.0.0.1:1/r/tok#add-time" }]);
+    if (p.pdf?.textFile) {
+      m.editPdf(p, (pages) =>
+        pages.map((t, i) => {
+          if (i === 0) {
+            let s = t.replace(/^Birth time was not known[^\n]*\n?/m, "").replace(/(Profile \d\/\d[^·\n]*?)(\s+·)/, "$1 PROVISIONAL$2");
+            const ls = s.split("\n");
+            const at = ls.findIndex((l) => /Profile \d\/\d/.test(l));
+            ls.splice(at + 1, 0, LINE, "cast at noon", "12 AM 6 AM 12 PM 6 PM 12 AM", offerText(p.tier));
+            return ls.join("\n");
+          }
+          if (i !== 1) return t;
+          let s = t;
+          for (const label of ["PROFILE", "DEFINED CENTERS", "UNDEFINED CENTERS", "CHANNELS"]) s = s.replace(new RegExp(`^${label} `, "m"), `${label} PROVISIONAL `);
+          const ls = s.split("\n");
+          let end = ls.findIndex((l) => /^CHANNELS /.test(l)) + 1;
+          while (end < ls.length && /^\d{1,2}-\d{1,2}\b/.test(ls[end])) end++;
+          ls.splice(end, 0, "ACTIVATED GATES", "PROVISIONAL", "2, 5, 7, 10", GATES_NOTE);
+          return ls.join("\n");
+        }),
+      );
+      m.editPdfLinks(p, (ls) => [...ls, { page: 1, href: "https://humandesign.thechampagnemethod.co/r/tok#add-time" }]);
+    }
+  }
+  m.spreadTruth(SPREAD_KEY, SPREAD);
+}
 
 /** The shop's checker as the fix should leave it: every near-miss refused. */
 export const STRICT = {
@@ -242,6 +323,57 @@ export const CASES = [
       { name: "TYPE row not marked", plant: (m) => m.edit(m.pages[0], (t) => setRow(t, "TYPE", getRow(t, "TYPE").replace(/PROVISIONAL$/, ""))), expect: /TYPE not marked provisional/ },
       { name: "#17: the phone says Type and Authority are usually right", plant: (m) => m.phoneFile("kotlin/Entry.kt", 'Text("Still accurate: most gates and centers, and usually your Type and Authority.")\n'), expect: /phone app source .*usually right|usually right.*phone/ },
       { name: "#17: the shop page says Type and Authority are usually right", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Even so, your Type and Authority are usually right.")), expect: /usually right, while the chart says/ },
+    ],
+  },
+
+  /* ------------------------ #3 #17, unknown time MEASURED (10/22) ---- */
+  // The same check on a chart that keeps the engine's spread: PROVISIONAL on exactly the lines
+  // that change, beside each label (the base run's pages, re-said the way the release says them).
+  {
+    check: "provisional-marks",
+    item: "#3 #17",
+    take: {
+      pages: [
+        P("an unknown-time summary", (p, B) => isResult(p) && p.tier === 0 && B.api(p)?.output?.timeKnown === false),
+        P("an unknown-time page with a PDF", (p, B) => isResult(p) && withPdf(p) && B.api(p)?.output?.timeKnown === false),
+      ],
+    },
+    good: (m) => measuredPages(m),
+    bad: [
+      { name: "#3: the three-lines box leaves a changing row unmarked", plant: (m) => m.edit(m.pages[0], (t) => t.replace("How you meet the worldPROVISIONAL", "How you meet the world")), expect: /three-lines box states "How you meet the world" with no provisional mark/ },
+      { name: "#3: PDF page 1 leaves the changing Profile unmarked", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 0 ? t.replace(/ PROVISIONAL(?=\s+·)/, "") : t))), expect: /page 1 states Profile with no provisional mark/ },
+      { name: "a changing center row with no tag", plant: (m) => m.edit(m.pages[0], (t) => t.replace("DEFINED CENTERS\nPROVISIONAL\n", "DEFINED CENTERS\n")), expect: /DEFINED CENTERS changes during the birth day but carries no PROVISIONAL tag/ },
+      { name: "a line that holds all day, marked", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^TYPE\n/m, "TYPE\nPROVISIONAL\n")), expect: /TYPE is marked PROVISIONAL but holds all day/ },
+      { name: "the tag after the value, not beside the label", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^PROFILE\nPROVISIONAL\n(.+)$/m, "PROFILE\n$1PROVISIONAL")), expect: /PROFILE's PROVISIONAL sits after its value/ },
+      { name: "the gates unmarked", plant: (m) => m.edit(m.pages[0], (t) => t.replace("ACTIVATED GATES\nPROVISIONAL\n", "ACTIVATED GATES\n")), expect: /ACTIVATED GATES is not marked PROVISIONAL/ },
+      { name: "the 26 activations unmarked", plant: (m) => m.edit(m.pages[1], (t) => t.replace(/(planet numbers[^\n]*?)\s*PROVISIONAL/, "$1")), expect: /technical values .* not marked PROVISIONAL/ },
+      { name: "a steady PDF row marked", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 1 ? t.replace(/^OPEN CENTERS /m, "OPEN CENTERS PROVISIONAL ") : t))), expect: /OPEN CENTERS is marked PROVISIONAL but holds all day/ },
+    ],
+  },
+  {
+    check: "unknown-time-line",
+    item: "#17",
+    take: {
+      pages: [
+        P("an unknown-time summary", (p, B) => isResult(p) && p.tier === 0 && B.api(p)?.output?.timeKnown === false),
+        P("an unknown-time page with a PDF", (p, B) => isResult(p) && withPdf(p) && B.api(p)?.output?.timeKnown === false),
+      ],
+    },
+    good: (m) => measuredPages(m),
+    bad: [
+      { name: "the one line missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(LINE, "")), expect: /one line about the birth time is missing/ },
+      { name: "the line's hours not the spread's", plant: (m) => m.edit(m.pages[0], (t) => t.replace("about 2:15", "about 3:15")), expect: /one line about the birth time is missing or not the spread's/ },
+      { name: "a window that is not the engine's", plant: (m) => m.spreadTruth(SPREAD_KEY, { ...SPREAD, window: [6, 870] }), expect: /not the engine's \/v1\/spread answer/ },
+      { name: "the bar missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(BAR, "")), expect: /the bar under the line is missing/ },
+      { name: "the offer missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(offerText(0), "")), expect: /offer to add a found birth time is missing/ },
+      { name: "the offer worded as an order", plant: (m) => m.edit(m.pages[0], (t) => t.replace("You’re welcome to add it here", "Add it here")), expect: /offer to add a found birth time is missing or reworded/ },
+      { name: "add it here, not a link", plant: (m) => m.editLinks(m.pages[0], (ls) => ls.filter((l) => l.text !== "add it here")), expect: /"add it here" is not a link to #add-time/ },
+      { name: "the gates' note missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(GATES_NOTE, "")), expect: /their short note is missing/ },
+      { name: "the line said twice", plant: (m) => m.edit(m.pages[0], (t) => t.replace(LINE, `${LINE}\n${LINE}`)), expect: /said more than once/ },
+      { name: "the engine's older note beside it", plant: (m) => m.edit(m.pages[0], (t) => t.replace(LINE, `${LINE}\nBirth time unknown — charted at noon. Treat Type, Authority and Profile as provisional.`)), expect: /older note is shown beside the one line/ },
+      { name: "PDF page 1 without the line", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 0 ? t.replace(LINE, "") : t))), expect: /page 1 lacks the one line/ },
+      { name: "PDF add it here with no link", plant: (m) => m.editPdfLinks(m.pages[1], (ls) => ls.filter((l) => !/#add-time$/.test(l.href))), expect: /does not link to the reading's #add-time/ },
+      { name: "a chart with no spread kept, on an engine that has them", plant: (m) => m.editApi(m.pages[0], (a) => void delete a.output.timeSpread), expect: /no spread kept for this unknown-time chart/ },
     ],
   },
 

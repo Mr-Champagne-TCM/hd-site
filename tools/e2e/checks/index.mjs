@@ -14,7 +14,8 @@ import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { FIXTURES, REPO, SIBLINGS } from "../harness/paths.mjs";
 import { loadReadingFixtures } from "../harness/fakeGemini.mjs";
-import { block, editDistance, inSource, loadRun, norm, rows, sentences, truthFor } from "./load.mjs";
+import { block, editDistance, inSource, loadRun, norm, rows, sentences, tagged, truthFor } from "./load.mjs";
+import { GATES_NOTE, holdsLine, offerText, usableSpread } from "../../../shared/timeSpread.mjs";
 import { baselineDiff } from "./baseline.mjs";
 
 export const CENTERS = ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Spleen", "Solar Plexus", "Root"];
@@ -37,6 +38,48 @@ export const FEELINGS = {
   Reflector: ["surpris", "disappoint"],
 };
 const TIER = ["summary", "chart", "reading"];
+
+/** The glance and values rows, by their page label, and the chart field behind each (unknown birth time, 10/22). */
+export const LABEL_FIELD = {
+  TYPE: "type",
+  STRATEGY: "strategy",
+  AUTHORITY: "authority",
+  PROFILE: "profile",
+  "WHEN IT'S ON TRACK": "signature",
+  "WHEN IT'S OFF TRACK": "notSelfTheme",
+  DEFINITION: "definition",
+  "INCARNATION CROSS": "incarnationCross",
+  "DEFINED CENTERS": "definedCenters",
+  "UNDEFINED CENTERS": "undefinedCenters",
+  "OPEN CENTERS": "openCenters",
+  CHANNELS: "channels",
+  "ACTIVATED GATES": "gates",
+};
+/** What a kept spread is compared on, against the engine's own /v1/spread answer. */
+const SPREAD_KEYS = ["v", "ok", "minutes", "noon", "window", "changes", "segments", "clock", "gates"];
+
+/**
+ * The PDF's glance pages (page 2, and any page after it still under "Your
+ * chart at a glance"): which row labels are shown, and which carry the tag --
+ * on the label's line ("DEFINITION PROVISIONAL Triple Split") or the line
+ * under it, when the label column is too narrow for both.
+ */
+export function pdfTagged(pages) {
+  const shown = new Set();
+  const tags = new Set();
+  const labels = Object.keys(LABEL_FIELD).sort((a, b) => b.length - a.length);
+  for (const pt of pages.filter((x) => /^Your chart at a glance/.test(x))) {
+    const ls = pt.split(/\r?\n/).map((l) => l.trim().replace(/’/g, "'"));
+    ls.forEach((l, i) => {
+      const label = labels.find((x) => l === x || l.startsWith(x + " "));
+      if (!label || shown.has(label)) return;
+      shown.add(label);
+      const rest = l.slice(label.length).trim();
+      if (/^PROVISIONAL\b/i.test(rest) || (!rest && /^PROVISIONAL\b/i.test(ls[i + 1] ?? ""))) tags.add(label);
+    });
+  }
+  return { shown, tagged: tags };
+}
 
 const clip = (s, n = 160) => {
   const t = String(s ?? "").replace(/\s+/g, " ").trim();
@@ -192,6 +235,8 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         "UNDEFINED CENTERS": (truth.undefinedCenters ?? []).join(", ") || "None",
         "OPEN CENTERS": (truth.openCenters ?? []).join(", ") || "None",
         CHANNELS: (truth.channels ?? []).length ? truth.channels : "None",
+        // On every tier since 10/22 ("gates/channels go to summary"), as numbers, lowest first.
+        "ACTIVATED GATES": [...(truth.activatedGates ?? [])].map(Number).sort((a, b) => a - b).join(", ") || "None",
       };
       for (const [label, v] of Object.entries(want)) {
         if (!(label in shown)) continue;
@@ -225,24 +270,79 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
 
   /* ---------------------------- 2. provisional wherever time unknown (#3, #17) */
   if (on("provisional-marks")) {
-    const c = add(check("provisional-marks", "#3 #17", "Unknown birth time: every Type / Authority / Profile shown is marked provisional, and so is what Type is made of", "Charted at noon. The three-lines box states Type, Authority and Profile too, and the centers decide the Type."));
+    const c = add(check("provisional-marks", "#3 #17", "Unknown birth time: PROVISIONAL on exactly the lines that change during the birth day, beside each one's label", "Charted at noon (Jeremy 10/22): a line that holds all day is not marked; one that changes is, next to its label, never after its value; the gates and the 26 activations always. With no spread kept (an older record), Type, Authority and Profile are marked as before, and so is what Type is made of."));
     for (const p of resultPages.filter((p) => p.apiBody.output?.timeKnown === false)) {
       c.saw(p.journey);
       const t = p.text;
-      const box = t.match(/Your chart in three lines([\s\S]*?)(Below:|Your chart at a glance)/);
-      if (box && !/provisional/i.test(box[1])) c.fail(p.journey, docName(p), "the three-lines box states Type, Authority and Profile with no provisional mark", clip(box[1], 200));
-      const r = rows(t);
-      for (const label of ["TYPE", "AUTHORITY", "PROFILE"]) if (r[label] && !/provisional/i.test(r[label])) c.fail(p.journey, docName(p), `${label} not marked provisional`, r[label]);
-      if (r.TYPE && /provisional/i.test(r.TYPE)) {
-        for (const label of ["DEFINED CENTERS", "CHANNELS", "DEFINITION"]) {
-          // CHANNELS runs one channel a line; a mark after the last one counts.
-          const v = label === "CHANNELS" ? block(t, label) : r[label];
-          if (v && !/provisional/i.test(v)) c.fail(p.journey, docName(p), `Type is provisional but ${label} (what Type is made of) is not marked`, `${label}: ${r[label]}`);
+      const out = p.apiBody.output;
+      const spread = usableSpread(out);
+      if (spread) {
+        const changing = new Set(spread.changes);
+        // The page: the glance and values tables.
+        const tags = tagged(t);
+        const r = rows(t);
+        for (const [label, field] of Object.entries(LABEL_FIELD)) {
+          if (!(label in r)) continue;
+          const want = field === "gates" || changing.has(field);
+          const has = tags.has(label);
+          if (want && !has) {
+            const what = ["definedCenters", "undefinedCenters", "openCenters", "channels", "definition"].includes(field) && changing.has("type") ? ` (what Type is made of; Type is provisional)` : "";
+            if (field === "gates") c.fail(p.journey, docName(p), `${label} is not marked PROVISIONAL (with no birth time the gates always are)`, `${label}: ${r[label]}`);
+            else c.fail(p.journey, docName(p), `${label} changes during the birth day but carries no PROVISIONAL tag beside its label${what}`, `${label}: ${r[label]}`);
+          }
+          if (!want && has) c.fail(p.journey, docName(p), `${label} is marked PROVISIONAL but holds all day (only lines that change are marked)`, `${label}: ${r[label]}`);
+          // Beside the label, never after the value.
+          if (/PROVISIONAL$/i.test(r[label] ?? "")) c.fail(p.journey, docName(p), `${label}'s PROVISIONAL sits after its value, not beside its label`, `${label}: ${r[label]}`);
         }
-      }
-      if (p.pdfData?.pageText?.length) {
-        const first = p.pdfData.pageText[0];
-        if (/Profile \d\/\d/.test(first) && !/provisional/i.test(first)) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 states Type / Profile / Authority with no provisional mark", clip(first.split("\n").slice(0, 5).join(" "), 200));
+        // The three-lines box: each row's tag beside its words ("How you meet the worldPROVISIONAL · Profile 3/5").
+        const box = t.match(/Your chart in (?:three|two|one) lines?([\s\S]*?)(?:Below:|Your chart at a glance)/);
+        if (box) {
+          for (const [row, field] of [["Your energy", "type"], ["How you decide", "authority"], ["How you meet the world", "profile"]]) {
+            const line = box[1].split("\n").map((l) => l.trim()).find((l) => l.startsWith(row));
+            if (!line) continue;
+            const has = /^[^·]*PROVISIONAL/i.test(line);
+            if (changing.has(field) && !has) c.fail(p.journey, docName(p), `the three-lines box states "${row}" with no provisional mark, and it changes during the birth day`, line);
+            if (!changing.has(field) && /PROVISIONAL/i.test(line)) c.fail(p.journey, docName(p), `the three-lines box marks "${row}" PROVISIONAL, but it holds all day`, line);
+            if (/·.*PROVISIONAL\s*$/i.test(line)) c.fail(p.journey, docName(p), `the three-lines box puts "${row}"'s PROVISIONAL after the value, not beside the row's words`, line);
+          }
+        }
+        // The 26 activations (reading tier): always marked with no birth time.
+        if (/Technical values: your \d+ planet numbers/.test(t) && !/planet numbers[^\n]*PROVISIONAL/i.test(t)) c.fail(p.journey, docName(p), "the technical values (the 26 activations) are not marked PROVISIONAL", "");
+        // The PDF: page 1's facts line, then the value rows (tag on the label's line, or the line under it).
+        if (p.pdfData?.pageText?.length) {
+          const first = p.pdfData.pageText[0];
+          const facts = first.split("\n").find((l) => /Profile \d\/\d/.test(l)) ?? "";
+          for (const [re, field, name] of [[/^[^·]*?(Manifesting Generator|Generator|Projector|Manifestor|Reflector)/, "type", "Type"], [/Profile \d\/\d[^·]*/, "profile", "Profile"], [/[A-Z][\w-]+(?: [A-Z][\w-]+)? authority/, "authority", "Authority"]]) {
+            const m = facts.split("·").find((part) => re.test(part)) ?? "";
+            const has = /PROVISIONAL/i.test(m);
+            if (changing.has(field) && !has) c.fail(p.journey, `PDF ${p.id} page 1`, `page 1 states ${name} with no provisional mark, and it changes during the birth day`, clip(facts, 200));
+            if (!changing.has(field) && has) c.fail(p.journey, `PDF ${p.id} page 1`, `page 1 marks ${name} PROVISIONAL, but it holds all day`, clip(facts, 200));
+          }
+          const pdfTags = pdfTagged(p.pdfData.pageText.slice(1));
+          for (const [label, field] of Object.entries(LABEL_FIELD)) {
+            if (!pdfTags.shown.has(label)) continue;
+            const want = field === "gates" || changing.has(field);
+            if (want && !pdfTags.tagged.has(label)) c.fail(p.journey, `PDF ${p.id}`, field === "gates" ? `${label} is not marked PROVISIONAL (with no birth time the gates always are)` : `${label} changes during the birth day but carries no PROVISIONAL tag beside its label`, label);
+            if (!want && pdfTags.tagged.has(label)) c.fail(p.journey, `PDF ${p.id}`, `${label} is marked PROVISIONAL but holds all day`, label);
+          }
+        }
+      } else {
+        // No spread kept (an older record, or the spread could not be had): the marks as before.
+        const box = t.match(/Your chart in three lines([\s\S]*?)(Below:|Your chart at a glance)/);
+        if (box && !/provisional/i.test(box[1])) c.fail(p.journey, docName(p), "the three-lines box states Type, Authority and Profile with no provisional mark", clip(box[1], 200));
+        const r = rows(t);
+        for (const label of ["TYPE", "AUTHORITY", "PROFILE"]) if (r[label] && !/provisional/i.test(r[label])) c.fail(p.journey, docName(p), `${label} not marked provisional`, r[label]);
+        if (r.TYPE && /provisional/i.test(r.TYPE)) {
+          for (const label of ["DEFINED CENTERS", "CHANNELS", "DEFINITION"]) {
+            // CHANNELS runs one channel a line; a mark after the last one counts.
+            const v = label === "CHANNELS" ? block(t, label) : r[label];
+            if (v && !/provisional/i.test(v)) c.fail(p.journey, docName(p), `Type is provisional but ${label} (what Type is made of) is not marked`, `${label}: ${r[label]}`);
+          }
+        }
+        if (p.pdfData?.pageText?.length) {
+          const first = p.pdfData.pageText[0];
+          if (/Profile \d\/\d/.test(first) && !/provisional/i.test(first)) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 states Type / Profile / Authority with no provisional mark", clip(first.split("\n").slice(0, 5).join(" "), 200));
+        }
       }
     }
     // One story, told one way, on every surface (#17): shop, website, phone app.
@@ -258,6 +358,50 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
         for (const h of hits(text, contradicts)) c.fail("phone", `phone app source ${relative(phoneRoot, f)}`, "the phone tells unknown-time clients Type / Authority are usually right", h.ctx);
       }
       c.saw("phone");
+    }
+  }
+
+  /* -------------------------------- 2b. an unknown birth time, said (#17, 10/22) */
+  if (on("unknown-time-line")) {
+    const c = add(check("unknown-time-line", "#17", "Unknown birth time: the one line, its window the engine's, the bar under it, the offer with its link", "Jeremy 10/22: ONE line (\"...It holds for a birth between about X and Y; outside those hours the lines marked PROVISIONAL may change.\"), the bar only, and \"Found your birth time? You're welcome to add it here...\". The window must be the engine's own /v1/spread answer for that birth, kept as it came."));
+    for (const p of resultPages.filter((p) => p.apiBody.output?.timeKnown === false)) {
+      c.saw(p.journey);
+      const out = p.apiBody.output;
+      const spread = usableSpread(out);
+      if (!spread) {
+        // Every unknown-time chart made by this release asks the engine; none kept means the call failed or was refused.
+        if (out.timeSpread) c.fail(p.journey, docName(p), "the chart keeps a spread the page cannot use (not ok, or misshapen)", clip(JSON.stringify(out.timeSpread), 160));
+        else if (run.spreadTruth.length || /^0\.(?:[6-9]|\d{2,})\./.test(String(run.rig.engine ?? ""))) c.fail(p.journey, docName(p), "no spread kept for this unknown-time chart (the /v1/spread call failed or was refused)");
+        continue;
+      }
+      const t = norm(p.text);
+      const line = holdsLine(spread).text;
+      if (!t.includes(norm(line))) c.fail(p.journey, docName(p), "the one line about the birth time is missing or not the spread's", line);
+      if ((t.match(/this chart is cast at noon/g) ?? []).length > 1) c.fail(p.journey, docName(p), "the birth-time line is said more than once on the page", "");
+      if (/charted at noon\. treat type, authority and profile/.test(t)) c.fail(p.journey, docName(p), "the engine's older note is shown beside the one line", "");
+      // The engine's own answer for this birth: the kept spread must be exactly one of them.
+      if (run.spreadTruth.length) {
+        const kept = JSON.stringify(SPREAD_KEYS.map((k) => spread[k]));
+        if (!run.spreadTruth.some((x) => JSON.stringify(SPREAD_KEYS.map((k) => x.spread[k])) === kept)) {
+          c.fail(p.journey, docName(p), "the window shown is not the engine's /v1/spread answer for this birth", `window ${JSON.stringify(spread.window)}`);
+        }
+      }
+      // The bar: "cast at noon" over it, the clock under it.
+      if (!/cast at noon\s*\n\s*12 AM\s*\n\s*6 AM\s*\n\s*12 PM\s*\n\s*6 PM\s*\n\s*12 AM/.test(p.text)) c.fail(p.journey, docName(p), "the bar under the line is missing (no \"cast at noon\" over a midnight-to-midnight clock)", "");
+      // The offer, and its link to this link's own time box.
+      const offer = offerText(p.tier);
+      if (!t.includes(norm(offer))) c.fail(p.journey, docName(p), "the offer to add a found birth time is missing or reworded", offer);
+      if (!p.linksList.some((l) => l.text === "add it here" && /#add-time$/.test(l.href))) c.fail(p.journey, docName(p), "\"add it here\" is not a link to #add-time", "");
+      // The gates' short note, under the gate numbers.
+      if (/ACTIVATED GATES/.test(p.text) && !t.includes(norm(GATES_NOTE))) c.fail(p.journey, docName(p), "the gates are marked but their short note is missing", "");
+      // The PDF: the same line, the bar, the offer and a link that opens this reading's time box.
+      if (p.pdfData?.pageText?.length) {
+        const first = norm(p.pdfData.pageText[0].replace(/\n/g, " "));
+        if (!first.includes(norm(line))) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the one line about the birth time", line);
+        if (!/cast at noon 12 am 6 am 12 pm 6 pm 12 am/.test(first)) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the bar (\"cast at noon\" over the clock)", "");
+        if (!first.includes(norm(offer))) c.fail(p.journey, `PDF ${p.id} page 1`, "page 1 lacks the offer to add a found birth time", offer);
+        if (!(p.pdfData.links ?? []).some((l) => l.page === 1 && /\/r\/[^#]+#add-time$/.test(l.href))) c.fail(p.journey, `PDF ${p.id} page 1`, "\"add it here\" in the PDF does not link to the reading's #add-time", "");
+      }
     }
   }
 

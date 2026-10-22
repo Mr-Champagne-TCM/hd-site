@@ -359,6 +359,153 @@
       "docs": "^page web-library-bodygraph$",
       "minus": ["You recognise these when you read them", "the sentence you either recognised instantly"],
       "plus": ["You recognize these when you read them", "the sentence you either recognized instantly"]
+    },
+    {
+      "id": "2",
+      "about": "the tier split (Jeremy 10/22: \"gates/channels go to summary (with no explanation)\"; \"chart option should only show the BG as upgrade\"): the gate numbers on every tier's table and PDF, the summary and chart cards' words (card B), what each step adds on the step-further choice, the ready emails' ticks and the 'contains' line",
+      "docs": "^(page (offer|[a-zA-Z0-9]+-\\d-[a-z-]+-t[012](-old\\d)?|[a-zA-Z0-9]+-\\d-[a-z-]+-t\\d-(choose|tiers))|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t[12] p\\d+|email [a-zA-Z0-9]+-\\d-[a-z-]+-t\\d \\| .*)$",
+      "minus": [
+        "^Type, Strategy, Authority, Profile, Definition, (your|their) centers, (your|their) incarnation cross\\.$",
+        "^(Your|Their) bodygraph, drawn — a page you can share and a PDF you keep — with (your|their) channels and activated gates\\.$",
+        "^The chart contains (your|their) bodygraph, drawn — a page you can share and a PDF you keep — with (your|their) channels and activated gates\\. It is offered on the page above, and what you have already paid comes off the price there — nobody pays twice for the same thing\\.$",
+        "^✓ (Your|Their) channels and activated gates$"
+      ],
+      "plus": [
+        "^Type, Strategy, Authority, Profile, Definition, (your|their) centers, (your|their) channels and activated gates, (your|their) incarnation cross\\.$",
+        "^(Your|Their) bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\\.$",
+        "^The chart contains (your|their) bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\\. It is offered on the page above, and what you have already paid comes off the price there — nobody pays twice for the same thing\\.$",
+        "^✓ (Your|Their) channels and activated gates$",
+        "^✓ (Your|Their) chart values, with (your|their) channels and activated gates$",
+        "^ACTIVATED GATES$",
+        "^ACTIVATED GATES \\d{1,2}(, \\d{1,2})*$",
+        "^\\d{1,2}(, \\d{1,2})+$",
+        "^(Your bodygraph, drawn, and its PDF to keep\\.|All twenty-six activations and the written reading\\.|Your bodygraph drawn, all twenty-six activations and the written reading\\.)$"
+      ]
+    },
+    {
+      "id": "2-summary",
+      "about": "the summary (and the offer page's example summary) lists its channels by name instead of 'None', and the example gains its CHANNELS row",
+      "docs": "^page (offer|[a-zA-Z0-9]+-\\d-[a-z-]+-t0(-old\\d)?)$",
+      "minus": [
+        "^None$"
+      ],
+      "plus": [
+        "^CHANNELS$",
+        "^\\d{1,2}-\\d{1,2} \\([^)]+\\)$"
+      ]
+    },
+    {
+      "id": "17",
+      "about": "an unknown birth time, measured (Jeremy 10/22): the one line with the engine's window, the bar under it (its clock labels), offer A; PROVISIONAL only on the lines that change, beside each label (page: its own line under the label; three lines: after the row's words; PDF: on the label's line or under it); the gates always, with their note; the engine's older note and the PDF's older sentence go",
+      "docs": "^(page (theo|egoP)-\\d-[a-z-]+-t[012](-old\\d)?|pdf (theo|egoP)-\\d-[a-z-]+-t[12] p\\d+)$",
+      "minus": [
+        "^Birth time unknown - charted at noon\\. Treat Type, Authority and Profile as provisional\\.$",
+        "^Birth time was not known, so this chart is cast at noon\\. Type, Authority and Profile should be treated as provisional\\.$",
+        "PROVISIONAL$",
+        "^(Your energy|How you decide|How you meet the world) · .+$",
+        "^(Manifesting Generator|Generator|Projector|Manifestor|Reflector) · Profile \\d/\\d — [A-Za-z /]+ · [A-Za-z-]+( [A-Za-z-]+)? authority$",
+        "^(DEFINITION|DEFINED CENTERS|UNDEFINED CENTERS|OPEN CENTERS|CHANNELS|PROFILE|TYPE|STRATEGY|AUTHORITY|WHEN IT'S ON TRACK|WHEN IT'S OFF TRACK) .+$",
+        "^Technical values: your \\d+ planet numbers \\(for the curious\\)$",
+        "^TECHNICAL VALUES: YOUR \\d+ PLANET NUMBERS \\(FOR THE CURIOUS\\)$",
+        "^thechampagnemethod\\.co/library/bodygraphHow to read your bodygraph → Scan: how to read$"
+      ],
+      "plus": [
+        "^Your birth time isn’t known, so this chart is cast at noon\\. It holds for a birth (between|before|after|at almost any hour)[^;]*; (outside those hours|after that,|before that,|only in) .*the lines marked PROVISIONAL (may )?change\\.$",
+        "^Your birth time isn’t known, so this chart is cast at noon\\. It holds for a birth",
+        "^[^;]*(AM|PM|noon|midnight); (outside those hours|after that,|before that,) the lines marked PROVISIONAL may change\\.$",
+        "^(cast at noon|12 AM|6 AM|12 PM|6 PM|12 AM 6 AM 12 PM 6 PM 12 AM)$",
+        "^Found your birth time\\? You’re welcome to add it here, once and free — your (summary is|chart is|chart and your reading are) redone from it\\.$",
+        "^PROVISIONAL$",
+        "^(Your energy|How you decide|How you meet the world)(PROVISIONAL)? · .+$",
+        "^The Moon moves to a new gate about every ten hours, so this list can change even where the rest of the chart holds\\.$",
+        "^The Moon moves to a new gate about every ten hours, so this list can change even( where the rest of the)?$",
+        "^(where the rest of the )?chart holds\\.$",
+        "^Technical values: your \\d+ planet numbers \\(for the curious\\) ?PROVISIONAL$",
+        "^TECHNICAL VALUES: YOUR \\d+ PLANET NUMBERS \\(FOR THE CURIOUS\\) PROVISIONAL$",
+        "^(Manifesting Generator|Generator|Projector|Manifestor|Reflector)( PROVISIONAL)? · Profile \\d/\\d — [A-Za-z /]+( PROVISIONAL)? · [A-Za-z-]+( [A-Za-z-]+)? authority( PROVISIONAL)?$",
+        "^(DEFINITION|DEFINED CENTERS|UNDEFINED CENTERS|OPEN CENTERS|CHANNELS|PROFILE|TYPE|STRATEGY|AUTHORITY|WHEN IT'S ON TRACK|WHEN IT'S OFF TRACK|ACTIVATED GATES)( PROVISIONAL)?( .+)?$",
+        "^(Head|Ajna|Throat|G|Heart|Sacral|Spleen|Solar Plexus|Root)(, (Head|Ajna|Throat|G|Heart|Sacral|Spleen|Solar Plexus|Root))*$",
+        "^(Manifesting Generator|Generator|Projector|Manifestor|Reflector|Wait to respond|Wait to respond, then inform|Wait for the invitation|Inform before acting|Wait a lunar cycle|Emotional|Sacral|Splenic|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar|Single|Split|Triple Split|Quadruple Split|None|\\d/\\d — [A-Za-z /]+|The feeling is [a-z]+)$",
+        "^(Manifesting Generator|Generator|Projector|Manifestor|Reflector|Wait to respond|Wait to respond, then inform|Wait for the invitation|Inform before acting|Wait a lunar cycle|Emotional|Sacral|Splenic|Ego Manifested|Ego Projected|Self-Projected|Mental|Lunar|\\d/\\d — [A-Za-z /]+|The feeling is [a-z]+)\\. .*[^L]$",
+        "^\\d{1,2}-\\d{1,2} \\([^)]+\\)$",
+        "^(\\d{1,2} )+\\d{1,2}$",
+        "^thechampagnemethod\\.co/library/bodygraphHow to read your bodygraph →$",
+        "^Scan: how to read$"
+      ]
+    },
+    {
+      "id": "W13",
+      "about": "the drawing names the center as the tables do: 'HEART' over a smaller '(EGO)', drawn by engine 0.6.0 (halo and ink, so each word twice)",
+      "docs": "^(page [a-zA-Z0-9]+-\\d-[a-z-]+-t[12](-old\\d)?|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t[12] p1)$",
+      "minus": [
+        "^EGO$",
+        "^EGOEGO$"
+      ],
+      "plus": [
+        "^HEART$",
+        "^\\(EGO\\)$",
+        "^HEARTHEART$",
+        "^\\(EGO\\)\\(EGO\\)$"
+      ]
+    },
+    {
+      "id": "W14",
+      "about": "cross names say 'Cross of the', lowercase, as engine 0.6.0 names them (the Reflector's Sphinx here)",
+      "docs": "^(page|pdf|email) ",
+      "minus": [
+        "Cross of The [A-Z]"
+      ],
+      "plus": [
+        "Cross of the [A-Z]"
+      ]
+    },
+    {
+      "id": "AI2",
+      "about": "the repeat, option A (Jeremy 10/22): the two center sections drop their bold opening line when it is the sentence Start here's centers Takeaway box already holds; and no paragraph's sentence is broken across two PDF pages (pages break between sentences), so the written reading's lines re-wrap and move between pages",
+      "docs": "^(page [a-zA-Z0-9]+-\\d-[a-z-]+-t2(-old\\d)?|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+)$",
+      "minus": [
+        "^Download your full reading \\(PDF, \\d+ pages\\)$",
+        "^Your full reading as a PDF: \\d+ pages, with the chart at print size, its values and the written reading\\.$"
+      ],
+      "plus": [
+        "^Download your full reading \\(PDF, \\d+ pages\\)$",
+        "^Your full reading as a PDF: \\d+ pages, with the chart at print size, its values and the written reading\\.$"
+      ],
+      "sections": [
+        {
+          "from": "^WHAT IS CONSISTENTL ?Y YOURS$",
+          "to": "^(WHAT YOU TAKE IN FROM OTHERS|Things to experiment with|THINGS TO EXPERIMENT WITH)$"
+        },
+        {
+          "from": "^WHAT YOU TAKE IN FROM OTHERS$",
+          "to": "^(Things to experiment with|THINGS TO EXPERIMENT WITH)$"
+        },
+        {
+          "from": "^HOW YOU DECIDE$",
+          "to": "^THINGS TO EXPERIMENT WITH$"
+        }
+      ],
+      "moves": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$"
+    },
+    {
+      "id": "G",
+      "about": "the home page's 'From a real reading' strip: Jeremy's pick of the test readings' lines (favorite #2, a defined Spleen), with his edits, and its caption",
+      "docs": "^page offer$",
+      "minus": [
+        "^“Watch what happens when you balance your public involvement with periods of quiet, uninterrupted solitude\\.”$",
+        "^One of the four things to try, written for a 5/2 profile\\. More real excerpts$"
+      ],
+      "plus": [
+        "^“Once or twice this week, when a sudden intuitive hunch tells you to take a different route home from the grocery store, you might follow that silent prompt immediately\\. Notice whether the alternative path feels naturally light, so that instant bodily trust is familiar when a heavier choice appears\\.”$",
+        "^One of the four things to try, written for a defined Spleen\\. More real excerpts$"
+      ]
+    },
+    {
+      "id": "H",
+      "about": "the receipt for a chart bought for someone else (Jeremy 10/22, Release-Calls call 5): 'Receipt: Emery Testwell, a Human Design chart for someone else, <the price>' -- still the buyer's name (it is their purchase, and Gmail keeps each purchase its own thread), no longer read as the buyer's chart; a new subject, so a new document",
+      "docs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: ",
+      "addsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: ([A-Z][^,]*, a|A) Human Design (summary|chart|reading) for someone else(, \\$\\d+\\.\\d{2})?$",
+      "dropsDocs": "^email [a-zA-Z0-9]+-\\d-someone-new-t\\d \\| Receipt: [A-Z][^’]*’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$"
     }
   ]
 }
