@@ -132,6 +132,41 @@ export async function generateReading(
   return last;
 }
 
+/**
+ * EVERY CHECK A DRAFT MUST PASS, in order, on its sanitized text: the first
+ * problem, or null. Exported so the local rig's stand-in writer
+ * (tools/e2e/harness/fakeGemini.mjs) holds its drafts to exactly this.
+ */
+export function draftCheck(clean, output, { instruction, facts, json }) {
+  return (
+    // The TYPE comes from the chart, never from the reading. The check exists to
+    // catch the reading disagreeing with the chart it was written from.
+    // All three centre lists travel, not just the open one: the undefined branch
+    // of openCentreProblem had never run in production because this call passed
+    // four arguments to a function that takes five, and centreStateProblem needs
+    // the defined list to catch a reading calling an undefined centre defined.
+    firstProblem(
+      clean,
+      output?.type,
+      output?.profile,
+      output?.openCenters,
+      output?.undefinedCenters,
+      output?.definedCenters,
+    ) ??
+    // 10/22, every check that needs the chart itself (interpretation.mjs
+    // draftProblem, the phone's the same): a try-this tag names a feature this
+    // chart has; no "birth time was not known" on a time-known chart and no
+    // astrology words; an unknown birth time said once, only about the values
+    // the birth day changes; another type's word about the reader; "you must";
+    // a word said twice; a misspelled feeling word.
+    draftProblem(clean, output) ??
+    // 10/22: words lifted from the instructions are a copy, not a reading. Only
+    // this file knows the prompt, so the check runs here; the facts just sent
+    // (cross name, centers, channel lines) are the reading's own vocabulary.
+    copyProblem(clean, [instruction, ...(json ? schemaNotes() : [])], [facts])
+  );
+}
+
 async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape }) {
   // "json": the model fills READING_SCHEMA and structured.mjs writes the
   // document. "text": the original letter-shaped prompt. See structured.mjs.
@@ -202,32 +237,7 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   const clean = sanitize(text);
   if (!clean) return { ok: false, reason: "malformed", detail: "gemini returned nothing" };
 
-  // The TYPE comes from the chart, never from the reading. The check exists to
-  // catch the reading disagreeing with the chart it was written from.
-  // All three centre lists travel, not just the open one: the undefined branch
-  // of openCentreProblem had never run in production because this call passed
-  // four arguments to a function that takes five, and centreStateProblem needs
-  // the defined list to catch a reading calling an undefined centre defined.
-  const problem =
-    firstProblem(
-      clean,
-      output?.type,
-      output?.profile,
-      output?.openCenters,
-      output?.undefinedCenters,
-      output?.definedCenters,
-    ) ??
-    // 10/22, every check that needs the chart itself (interpretation.mjs
-    // draftProblem, the phone's the same): a try-this tag names a feature this
-    // chart has; no "birth time was not known" on a time-known chart and no
-    // astrology words; an unknown birth time said once, only about the values
-    // the birth day changes; another type's word about the reader; "you must";
-    // a word said twice; a misspelled feeling word.
-    draftProblem(clean, output) ??
-    // 10/22: words lifted from the instructions are a copy, not a reading. Only
-    // this file knows the prompt, so the check runs here; the facts just sent
-    // (cross name, centers, channel lines) are the reading's own vocabulary.
-    copyProblem(clean, [instruction, ...(json ? schemaNotes() : [])], [facts]);
+  const problem = draftCheck(clean, output, { instruction, facts, json });
   // The rejected text travels with the reason, so an incident can show WHAT
   // was refused -- without it a prompt regression is indistinguishable from
   // Google having a bad week.
