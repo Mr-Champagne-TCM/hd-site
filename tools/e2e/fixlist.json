@@ -324,6 +324,36 @@
       "moves": "^pdf (rowan-3-upgrade-t2|maya-3-upgrade-t2|theo-2-upgrade-t2|jordan-1-buy-t2) p\\d+$"
     },
     {
+      "id": "AI3",
+      "about": "a glance row that is a fragment ('Carrying a design that...') is refused and written again whole (in the rig, a marked stand-in): only the rows of the glance box",
+      "docs": "^(page|pdf) (rowan-3-upgrade-t2|maya-3-upgrade-t2|theo-2-upgrade-t2|jordan-1-buy-t2)(-old\\d)?( p\\d+)?$",
+      "minus": ["^(Projector|Generator|Manifestor|Manifesting Generator|Reflector|Wait for the invitation|Wait to respond|Wait to respond, then inform|Inform|Wait a lunar cycle|Self-Projected|Emotional|Sacral|Splenic|Mental|Lunar|Ego Manifested|Ego Projected|\\d/\\d — [A-Za-z /]+|The feeling is \\w+)\\. [A-Z][a-z]+ing\\b"],
+      "plus": ["^(Projector|Generator|Manifestor|Manifesting Generator|Reflector|Wait for the invitation|Wait to respond|Wait to respond, then inform|Inform|Wait a lunar cycle|Self-Projected|Emotional|Sacral|Splenic|Mental|Lunar|Ego Manifested|Ego Projected|\\d/\\d — [A-Za-z /]+|The feeling is \\w+)\\. \\[RIG STAND-IN\\] This row is written again by the model as one whole sentence\\.$"],
+      "sections": [{ "from": "^Your chart at a glance HUMAN DESIGN by THE CHAMPAGNE METHOD COACHING AND CONSULTING$", "to": "^YOUR CHART VALUES$" }]
+    },
+    {
+      "id": "AI4",
+      "about": "a known word slip is refused and the sentence written again (in the rig, dropped): Maya's 'must ride out', Jordan's 'gates fifty-six, sixty...'; only in the section that held it; with AI1 and AI3 Maya's PDF is a page shorter",
+      "docs": "^(page|pdf) (maya-3-upgrade-t2|jordan-1-buy-t2)(-old\\d)?( p\\d+)?$",
+      "minus": [
+        "^Because your Emotional authority defines your inner guidance, you are never designed to make spontaneous decisions\\. Every choice you face must ride out ",
+        "^The Right Angle Cross of Laws brings .*Through gates fifty-six, sixty, three, and fifty",
+        "^Download your full reading \\(PDF, 9 pages\\)$",
+        "^Your full reading as a PDF: 9 pages, with the chart at print size, its values and the written reading\\.$"
+      ],
+      "plus": [
+        "^Because your Emotional authority defines your inner guidance, you are never designed to make spontaneous decisions\\. Waiting through this emotional journey ",
+        "^The Right Angle Cross of Laws brings a lifelong thematic engagement with limitation, structure, and foundational rules\\. This cross places you directly",
+        "^Download your full reading \\(PDF, 8 pages\\)$",
+        "^Your full reading as a PDF: 8 pages, with the chart at print size, its values and the written reading\\.$"
+      ],
+      "sections": [
+        { "from": "^HOW YOU DECIDE$", "to": "^[A-Z][A-Z ,'’]{3,}$" },
+        { "from": "^YOUR INCARNATION CROSS$", "to": "^[A-Z][A-Z ,'’]{3,}$" }
+      ],
+      "dropsDocs": "^pdf maya-3-upgrade-t2 p9$"
+    },
+    {
       "id": "us-spelling-library",
       "about": "'Reading your bodygraph': recognize / recognized (found by the 10/21 rig)",
       "docs": "^page web-library-bodygraph$",
