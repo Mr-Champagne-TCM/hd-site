@@ -190,15 +190,15 @@ test("ADDED FROM THE PAGE: cast once with the time known, at the tier bought; hi
   assert.equal(r.correction.type, "time-added");
   const n = correctionNote(r.correction, { tier: 1 });
   assert.equal(n.eyebrow, "Your birth time");
-  assert.equal(n.lead, "Birth time added: 3:10 PM — your chart is now cast from it.");
+  assert.equal(n.lead, "Birth time added: 3:10 PM — your chart is now redone from it.");
   assert.equal(
     n.body,
     "One part came out differently: your Profile is now 3/6 (it was 3/5). That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now. Your Type and Authority are the same.",
   );
   assert.doesNotMatch(JSON.stringify(n), /correct/i);
-  assert.equal(correctionNote(r.correction, { tier: 0 }).lead, "Birth time added: 3:10 PM — your summary is now cast from it.");
+  assert.equal(correctionNote(r.correction, { tier: 0 }).lead, "Birth time added: 3:10 PM — your summary is now redone from it.");
   assert.match(correctionNote(r.correction, { tier: 0 }).body, /written for your summary as it is now/);
-  assert.equal(correctionNote(r.correction, { tier: 2 }).lead, "Birth time added: 3:10 PM — your chart and your reading are now cast from it.");
+  assert.equal(correctionNote(r.correction, { tier: 2 }).lead, "Birth time added: 3:10 PM — your chart and your reading are now redone from it.");
   // Nothing moved: the note says only that, and what stayed.
   assert.equal(correctionNote({ ...r.correction, chart: [] }, { tier: 1 }).body, "Your Type, Profile and Authority are the same.");
   // Jeremy hears of it; the buyer gets the ready email (the writer is rung on the reading tier).

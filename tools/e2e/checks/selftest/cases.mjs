@@ -252,7 +252,7 @@ function addTimeScene(m) {
   // The chart redone: its correction note under the birth line, and the page told the offer is spent.
   Object.assign(after, { journey: "wren", step: step.id, via: "pdf", addedTime: true });
   const esc = line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  m.edit(after, (s) => addAfter(s, new RegExp(`^${esc}$`), ["YOUR BIRTH TIME", `Birth time added: ${clock} — your chart is now cast from it.`, "Your Type, Profile and Authority are the same."].join("\n")));
+  m.edit(after, (s) => addAfter(s, new RegExp(`^${esc}$`), ["YOUR BIRTH TIME", `Birth time added: ${clock} — your chart is now redone from it.`, "Your Type, Profile and Authority are the same."].join("\n")));
   m.editApi(after, (a) => void (a.addTime = "used"));
   Object.assign(up, { journey: "wren", step: upStep.id });
   // Seven days on, the page's own link has run out; the PDF's opens the form.
@@ -493,7 +493,7 @@ export const CASES = [
       { name: "the used note without hd-readings@", plant: (m) => m.edit(m.manifest.pages.find((p) => p.kind === "addtime-used" && p.via === "pdf"), (t) => t.replace("hd-readings@thechampagnemethod.co reaches Jeremy", "Jeremy can help")), expect: /does not point to hd-readings@/ },
       { name: "the ready email with no link", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => t.replace(/https:\S+/g, "")), expect: /ready email for the redone chart has no link/ },
       { name: "the ready email still speaks of noon", plant: (m) => m.editMail(m.mails((e) => /is ready/.test(e.subject))[0], (t) => append(t, "Your chart is cast at noon.")), expect: /still speaks of an unknown time/ },
-      { name: "the note for an added time worded as a correction", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/now cast from it\./, "cast from the corrected details.")), expect: /the note for an added time speaks of a correction/ },
+      { name: "the note for an added time worded as a correction", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/now redone from it\./, "cast from the corrected details.")), expect: /the note for an added time speaks of a correction/ },
       { name: "the note's eyebrow missing", plant: (m) => m.edit(m.pages[0], (t) => t.replace(/^YOUR BIRTH TIME$/m, "YOUR CORRECTION")), expect: /the calm note \("Your birth time"/ },
       { name: "the form speaks of a correction", plant: (m) => m.edit(m.page("addtime-form"), (t) => append(t, "Your chart is then cast from the corrected details.")), expect: /the form speaks of a correction/ },
       { name: "the kept line labeled for another tier", plant: (m) => m.edit(m.page("addtime-form"), (t) => t.replace("KEPT FROM YOUR CHART", "KEPT FROM YOUR SUMMARY")), expect: /the kept line is labeled "KEPT FROM YOUR SUMMARY", not "Kept from your chart"/ },

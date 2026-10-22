@@ -135,7 +135,7 @@ export function correctionNote(c, { tier: pageTier } = {}) {
     const thing = tier >= 1 ? "chart" : "summary";
     return {
       eyebrow: "Your birth time",
-      lead: `Birth time added: ${at} — ${what} now cast from it.`,
+      lead: `Birth time added: ${at} — ${what} now redone from it.`,
       body: moved.length
         ? `${movedSentence} That follows from your birth time — nothing went wrong, and everything below is written for your ${thing} as it is now. ${sameSentence}`.trim()
         : sameSentence,
