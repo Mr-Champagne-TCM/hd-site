@@ -1279,6 +1279,15 @@
         "came out differently: .+\\.( Your [A-Za-z, ]+ (is|are) the same\\.)? That follows from your correction — nothing went wrong, and everything below is written for the corrected chart\\.$",
         "came out differently: .+\\.( Your [A-Za-z, ]+ (is|are) the same\\.)? A birth time that was guessed before and is known now would do exactly this — nothing went wrong, and everything below is written for this chart\\.$"
       ]
+    },
+    {
+      "id": "PICKS-D6",
+      "about": "Decision 6 (GO v3 p13, my pick, pending Jeremy): a cut-short add-time link (/t/<token>, printed in the client's PDF) showed the reading link's page, 'Opening the link again from the message it came in usually works'. It now says 'Links like this one are long, and some apps cut them short. Opening the link again from your PDF usually works, or you’re welcome to write to … with your birth time.' (hd-reading-app hosting delivery.mjs notFound({ fromPdf })). The rig drives only the readings site's unknown-link page, so the line is claimed in case it ever captures this one.",
+      "docs": "^page readings-site",
+      "minus": [],
+      "plus": [
+        "^Links like this one are long, and some apps cut them short\\. Opening the link again from your PDF usually works, or you’re welcome to write to \\S+ with your birth time\\.$"
+      ]
     }
   ]
 }
