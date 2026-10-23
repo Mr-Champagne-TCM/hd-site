@@ -1,43 +1,26 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { birthTimeNote, chartFactsOnly } from "../netlify/lib/interpretation.mjs";
+import { BIRTH_TIME_NOTE, birthTimeNote, chartFactsOnly } from "../netlify/lib/interpretation.mjs";
 
 /**
- * THE READING'S FACTS NOTE, BYTE FOR BYTE THE PHONE'S (10/22). An unknown birth
- * time: when the record keeps a usable spread (engine /v1/spread, ok), the NOTE
- * names only what the birth day changes. The phone builds the same NOTE from
- * the same changes (hd-reading-app f04afa5, BirthTime.noteChanges ->
- * Reading.birthTimeNote). Its wording code is copied by
+ * THE READING'S FACTS NOTE, BYTE FOR BYTE THE PHONE'S. An unknown birth time:
+ * since 10/23 (the word-for-word read of round rk-a3, M2) one NOTE for every
+ * unknown-time chart, asking the reading never to mention the birth time or
+ * call a value provisional -- the page shows the time line, the bar and the
+ * PROVISIONAL tags. (Before: a NOTE naming the values the birth day changes,
+ * and a rule that the reading name every one; every unknown-time reading of
+ * rk-a3 then carried a forced sentence.) The phone builds the same NOTE
+ * (Reading.BIRTH_TIME_NOTE). Its wording code is copied by
  * tools/phone-parity-sync.mjs into test/fixtures/phone-parity/birthTimeNote.kt.txt;
  * this test reads the phone's words out of it and holds the shop's NOTE, as the
- * model gets it, to them. (Re-synced 10/23 from hd-reading-app release-1022
- * ccc7ee2, the phone's prompt-v3 merge: "naming every one of those values as
- * provisional", the same words the shop's prompt-v3 merge brings.)
- *
- * The shop asks in form mode (the live prompt fills the JSON form), so the
- * on-track / off-track names are the form's, as the phone's always are.
+ * model gets it, to them.
  */
 
 const kt = readFileSync(new URL("./fixtures/phone-parity/birthTimeNote.kt.txt", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-// "…" +\n "…", with any whole-line // comments between the two (the phone's 10/23 NOTE has one).
-const joinLiterals = (expr) => expr.replace(/"\s*\+\s*\n(?:[ \t]*\/\/[^\n]*\n)*\s*"/g, "");
-const centers = /val centers = "([^"]+)"/.exec(kt)[1];
-const NAMES = Object.fromEntries([...kt.matchAll(/"(\w+)" to (?:"([^"]+)"|(centers))/g)].map((m) => [m[1], m[2] ?? centers]));
-const HEAD = /val head = "([^"]+)"/.exec(kt)[1];
-const EMPTY = joinLiterals(/isEmpty\(\)\) \{\s*return ("[\s\S]*?")\s*\}/.exec(kt)[1]).slice(1, -1).replace("$head", HEAD);
-const MAIN = joinLiterals(/\n {8}return ("\$head [\s\S]*?")\n {4}\}/.exec(kt)[1]).slice(1, -1);
-const [, MEASURED, NOT_MEASURED] = /\$\{if \(p\.measured\) "([^"]+)" else "([^"]+)"\}/.exec(MAIN);
-
-/** The phone's NOTE for these (already filtered) fields, in its own words. */
-function phoneNote(fields, measured) {
-  if (!fields.length) return EMPTY;
-  const said = [...new Set(fields.map((f) => NAMES[f]).filter(Boolean))];
-  const list = said.length < 2 ? said.join("") : `${said.slice(0, -1).join(", ")} and ${said.at(-1)}`;
-  return MAIN.replace("$head", HEAD)
-    .replace(/\$\{if \(p\.measured\) "[^"]+" else "[^"]+"\}/, measured ? MEASURED : NOT_MEASURED)
-    .replace("${provisionalNames(p.fields)}", list);
-}
+// const val BIRTH_TIME_NOTE =\n "…" +\n "…"
+const decl = /const val BIRTH_TIME_NOTE =\s*((?:"[^"]*"\s*\+?\s*)+)/.exec(kt)?.[1] ?? "";
+const PHONE = [...decl.matchAll(/"([^"]*)"/g)].map((m) => m[1]).join("");
 
 const chart = (spread) => ({
   type: "Generator",
@@ -49,42 +32,36 @@ const chart = (spread) => ({
 });
 
 const CASES = [
-  // The phone's own PromptV3lTest case, and the made-up days of the 10/22 rig (theo, addRead, addUp).
   ["profile", "definedCenters", "undefinedCenters", "channels"],
-  ["profile", "definition", "definedCenters", "undefinedCenters", "channels"],
   ["authority", "profile", "definition", "incarnationCross", "definedCenters", "undefinedCenters", "channels"],
-  ["authority", "profile", "definedCenters", "undefinedCenters", "openCenters", "channels"],
   ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "openCenters", "channels"],
-  ["incarnationCross"],
   ["signature", "notSelfTheme"],
   [],
 ];
 
 test("the phone's NOTE code was found and read (the fixture is the phone's own, synced)", () => {
-  assert.equal(HEAD, "NOTE: birth time was not known and the chart was cast at noon.");
-  assert.equal(Object.keys(NAMES).length, 12);
-  assert.match(MAIN, /\$\{provisionalNames\(p\.fields\)\}/);
+  assert.match(PHONE, /^NOTE: the birth time was not known\. /);
+  assert.match(kt, /fun birthTimeNote\(timeKnown: Boolean, spreadChanges: List<String>\?\): String\? =\s*if \(provisionalValues\(timeKnown, spreadChanges\) == null\) null else BIRTH_TIME_NOTE/);
+  assert.equal(BIRTH_TIME_NOTE, PHONE);
 });
 
 for (const changes of CASES) {
   test(`a measured day changing ${changes.join(", ") || "nothing"}: the shop's NOTE is the phone's, byte for byte`, () => {
     const out = chart(changes);
     const shop = birthTimeNote(out, { form: true });
-    assert.equal(shop, phoneNote(changes, true));
+    assert.equal(shop, PHONE);
     // What the model is actually sent ends with it.
     assert.ok(chartFactsOnly(out, { form: true }).trimEnd().endsWith(shop));
-    // A value the day does not change is never named.
-    if (!changes.includes("type")) assert.doesNotMatch(shop, /\bType\b/);
-    if (!changes.includes("authority")) assert.doesNotMatch(shop, /Inner Authority/);
+    // No value is named: the page tags them.
+    assert.doesNotMatch(shop, /\bType\b|Inner Authority|Profile|Channels/);
   });
 }
 
-test("no usable spread: the phone's three (Type, Inner Authority, Profile); a known time: no NOTE", () => {
-  assert.equal(birthTimeNote(chart(null), { form: true }), phoneNote(["type", "authority", "profile"], false));
-  // A spread that is not ok is no spread.
+test("no usable spread: the same NOTE; a known time: no NOTE", () => {
+  assert.equal(birthTimeNote(chart(null), { form: true }), PHONE);
   const bad = chart(["profile"]);
   bad.timeSpread.ok = false;
-  assert.equal(birthTimeNote(bad, { form: true }), phoneNote(["type", "authority", "profile"], false));
+  assert.equal(birthTimeNote(bad, { form: true }), PHONE);
   assert.equal(birthTimeNote({ ...chart(["profile"]), timeKnown: true }, { form: true }), null);
   assert.doesNotMatch(chartFactsOnly({ ...chart(["profile"]), timeKnown: true }, { form: true }), /NOTE/);
 });
