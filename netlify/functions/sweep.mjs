@@ -26,6 +26,10 @@ import { SITE } from "../lib/siteLinks.mjs";
  * was nothing to do.
  *
  * Finding nothing is the NORMAL case here. That is what a safety net is.
+ *
+ * A reading another run is writing right now is left to that run (decision
+ * 23, 10/23): the writer this rings passes over any reading whose "writing"
+ * lock is live (interpretJob.mjs, writingLock.mjs), and says so in its log.
  */
 export default async () => {
   const secret = process.env.GRANT_SECRET;

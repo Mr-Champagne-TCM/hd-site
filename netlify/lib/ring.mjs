@@ -17,6 +17,8 @@
  * ringing every few seconds.
  */
 
+import { liveLock } from "./writingLock.mjs";
+
 /** How long a filled chart may sit unwritten before a poll is allowed to ring. */
 export const RING_AFTER_MS = 90_000;
 /** How long after one ring the next may follow. */
@@ -37,6 +39,12 @@ export function shouldRing({ filledAtMs, lastRingMs, now = Date.now() }) {
  * Ring if due, remembering when. `gate` is a tiny key-value store (Netlify
  * Blobs in production, a Map in tests) keyed by reading id; `ring` performs
  * the POST. Never throws: a failed ring is a missed nudge, not a broken page.
+ *
+ * NOT WHILE A WRITER IS ON IT (decision 23, 10/23, writingLock.mjs): a poll
+ * that finds the reading's writing lock live does not ring, and does not
+ * count as a ring either, so the first poll after the writer lets go (or
+ * after a crashed writer's lock expires) may ring at once. The answer says
+ * so (`writing`: the lock's end), for the log.
  */
 export async function ringIfDue({ id, filledAtMs, gate, ring, now = Date.now() }) {
   let lastRingMs = null;
@@ -47,6 +55,8 @@ export async function ringIfDue({ id, filledAtMs, gate, ring, now = Date.now() }
     /* an unreadable gate rings; a duplicate ring is idempotent */
   }
   if (!shouldRing({ filledAtMs, lastRingMs, now })) return { rang: false };
+  const writing = await liveLock(gate, id, now);
+  if (writing) return { rang: false, writing: writing.until };
   try {
     await gate.setJSON(`ring/${id}`, { at: now }, { expiration: new Date(now + 24 * 60 * 60 * 1000) });
   } catch {
@@ -81,11 +91,22 @@ export async function ringIfDue({ id, filledAtMs, gate, ring, now = Date.now() }
  */
 export const RERINGS = 2;
 export const RERING_GAP_MS = 15_000;
-/** Job endings another job cannot change: nothing to write, or the configuration. */
-const NOT_AGAIN = new Set(["not_found", "wrong_tier", "no_chart_yet", "already_written", "misconfigured", "no_chart"]);
+/**
+ * Job endings another job cannot change: nothing to write, or the
+ * configuration -- and a reading another job is writing right now (decision
+ * 23: that job re-rings for itself if it ends without words).
+ */
+const NOT_AGAIN = new Set(["not_found", "wrong_tier", "no_chart_yet", "already_written", "misconfigured", "no_chart", "writing_elsewhere"]);
 export const reringWorth = (reason) => !NOT_AGAIN.has(String(reason ?? ""));
 
+/**
+ * A re-ring 15 s on finds the reading's writing lock live (another job took it
+ * in the gap -- the page's poll, the sweep): it does not ring, and the count
+ * is not spent (decision 23, writingLock.mjs). The answer says so.
+ */
 export async function reringIfDue({ id, gate, ring, now = Date.now() }) {
+  const writing = await liveLock(gate, id, now);
+  if (writing) return { rang: false, count: null, writing: writing.until };
   let count = 0;
   try {
     const prior = await gate.get(`rering/${id}`, { type: "json" });
