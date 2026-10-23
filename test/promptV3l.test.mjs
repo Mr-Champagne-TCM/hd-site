@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   INTERPRETATION,
+  MECHANICS,
   TAKEAWAYS,
+  adviceOrderProblem,
   birthTimeNote,
   birthTimeProblem,
   borrowedWordProblem,
@@ -11,6 +13,7 @@ import {
   draftProblem,
   provisionalValues,
   slipProblem,
+  themeCapProblem,
   themeSpellingProblem,
   voiceProblem,
 } from "../netlify/lib/interpretation.mjs";
@@ -235,4 +238,41 @@ test("gemini.mjs runs every chart check on a new draft: 'you must', another type
   const caveat = await ask(TEXT.replace("Doing and saying arrive together here", "Because your birth time was not known, your Type cannot be confirmed, and doing and saying arrive together here"), unknownTime);
   assert.match(caveat.detail, /calls the Type uncertain/);
   assert.equal(draftProblem(TEXT, OUTPUT), null);
+});
+
+/* ------------------------------------- the verbatim read of the rig's stored readings (10/22, section D) */
+
+test("SECTION D: a rule set for the reader is refused; a description passes", () => {
+  assert.match(voiceProblem(section("Your Emotional authority means you can never rush into commitments.", INTERPRETATION[1])), /sets the reader a rule, "you can never", in "How you decide"; it describes the design, it never rules/);
+  assert.match(voiceProblem(section("Because your authority is emotional, you are never designed to make spontaneous decisions.")), /"you are never designed to"/);
+  for (const p of [
+    "This radical openness means you can never be pinned down to one rigid way of being.",
+    "Outcomes arrive that you could never have manufactured through willpower.",
+  ]) assert.equal(voiceProblem(section(p)), null, p);
+});
+
+test("SECTION D: a feeling word or 'Strategy' capitalized mid-sentence is refused; a tag and a list of names pass", () => {
+  assert.match(themeCapProblem(section("When you are on track, you experience deep Satisfaction as your engine meets what arrives.")), /capitalizes "Satisfaction" mid-sentence in "How you meet the world"; in a sentence it is lower case/);
+  assert.match(themeCapProblem(section("Because your Strategy of waiting governs your interactions, you thrive.")), /"Strategy"/);
+  assert.equal(themeCapProblem(section("Satisfaction arrives when your energy is well spent.")), null, "a sentence may open with it");
+  assert.equal(themeCapProblem(section("Your exact Type, Strategy, and Authority are listed beside the chart.")), null, "a list of the chart's names");
+  assert.equal(themeCapProblem(`${TAKEAWAYS}\n\nThese are invitations to test.\n\n(Your Strategy) This week, when a plan comes, you might wait. Notice it, so it is familiar.\n`), null, "a try-this tag is a label");
+});
+
+test("SECTION D: a definition explained by its own name, and one stem said twice across a clause, are known slips", () => {
+  const def = (p) => `${MECHANICS[1]}\n\n${p}\n`;
+  assert.match(slipProblem(def("Your Split definition means your defined centers are split into two separate islands.")), /says "Split definition means your defined centers are split" in "Your definition", a known slip/);
+  assert.equal(slipProblem(def("Your Split definition means your defined centers form two groups that need a bridge.")), null);
+  assert.match(slipProblem(def("Energy flows between your centers without needing bridges or outside help to bridge gaps.")), /a known slip/);
+  const decide = `${INTERPRETATION[1]}\n\nYour voice guides you.\n\nYour G center connects to your Throat, bypassing the mind entirely. When you speak, your voice shows the way. This allows you to bypass second-guessing.\n`;
+  assert.match(slipProblem(decide), /says "bypassing the mind entirely\. .*bypass" in "How you decide", a known slip/);
+  // Across a lede and its first paragraph too.
+  assert.match(slipProblem(`${INTERPRETATION[1]}\n\nYour choices bypass the mind.\n\nThis lets you bypass second-guessing.\n`), /a known slip/);
+});
+
+test("SECTION D: the kinds of advice, where the reading names them, come in the disclaimer's order", () => {
+  const intro = (s) => `${TAKEAWAYS}\n\n${s}\n`;
+  assert.match(adviceOrderProblem(intro("These are invitations to test, never medical, legal, financial, or psychological advice.")), /lists the kinds of advice in its own order in "Things to experiment with"; the disclaimer says "medical, psychological, legal or financial"/);
+  assert.equal(adviceOrderProblem(intro("These are invitations to test, never medical, psychological, legal or financial advice.")), null);
+  assert.equal(adviceOrderProblem(intro("Nothing here is medical or legal advice.")), null, "two kinds are not a list");
 });
