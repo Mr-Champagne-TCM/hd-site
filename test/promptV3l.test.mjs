@@ -324,14 +324,40 @@ test("TRY-THIS ENDINGS (rev o): a size word is fine on a real situation; the sam
   assert.equal(takeawayProblem(four(line("so the pause is familiar when a heavier choice appears."), second)), null, "two different words pass");
 });
 
-test("TRY-THIS MONEY: a line set in money is refused; an errand with a purchase passes", () => {
+test("TRY-THIS MONEY: a line set in financial matters is refused; an errand with a purchase passes", () => {
   const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
   const r19 = "(Emotional authority) This week, when an evening choice about dinner arises, you might wait until the morning before giving your final answer. Notice how your clarity shifts overnight, so letting your wave settle is familiar when financial commitments arise.";
-  assert.match(takeawayProblem(four(r19)), /is set in money \("financial"\); its moments are everyday ones the reading can know/);
+  assert.match(takeawayProblem(four(r19)), /is set in financial matters \("financial"\), the advice the page disclaims; everyday moments, work and purchases included, are fine/);
   const budget = "(Ego authority) This week, when organizing your budget at the kitchen table, you might sort the figures yourself. Notice how your will responds, so the habit is familiar when a friend asks for help.";
-  assert.match(takeawayProblem(four(budget)), /set in money \("budget"\)/);
+  assert.match(takeawayProblem(four(budget)), /set in financial matters \("budget"\)/);
   const errand = "(Splenic authority) This week, when a small purchase catches your eye on an errand, you might wait until tomorrow before buying it. Notice how the pull shifts, so that pause is familiar when a friend proposes a trip.";
   assert.equal(takeawayProblem(four(errand)), null);
+});
+
+test("WORK AND PURCHASES ARE EVERYDAY MOMENTS (Jeremy 10/23: 'PPL work and buy stuff'); only financial-advice topics are refused", () => {
+  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
+  const line = (moment, tail = "so that pause is familiar when a friend proposes a trip.") =>
+    `(Splenic authority) This week, ${moment}, you might wait a moment before you answer. Notice how the pull shifts, ${tail}`;
+  for (const [moment, tail] of [
+    ["when a new project lands on your desk"],
+    ["when a coworker asks for help before a meeting", "so that pause is familiar when a deadline moves at work."],
+    ["when you buy groceries for the week", "so that pause is familiar when a bigger purchase tempts you."],
+    ["when you spend money on a small treat"],
+    ["when the bills arrive in the mail"],
+    ["when you budget your energy for a long evening"],
+    ["when a friend asks to borrow a book, and you loan a friend your umbrella too"],
+    ["when an email asks for your opinion", "so that pause is familiar when household expenses come up."],
+  ]) assert.equal(takeawayProblem(four(line(moment, tail))), null, moment);
+  for (const [moment, said] of [
+    ["when you check a bank account balance online", "bank account"],
+    ["when a credit card statement arrives", "credit card"],
+    ["when you sort your tax return papers", "tax return"],
+    ["when the mortgage papers come", "mortgage"],
+    ["when a friend mentions paying down a debt", "debt"],
+    ["when a car loan offer comes by email", "loan"],
+    ["when you review your savings", "savings"],
+  ]) assert.match(takeawayProblem(four(line(moment))), new RegExp(`set in financial matters \\("${said}"\\)`), moment);
+  assert.match(takeawayProblem(four(line("when choosing lunch", "so that pause is familiar when evaluating a major investment."))), /\("investment"\)/);
 });
 
 /* ------------------------------------------------------------- the 10/23 live rounds */
@@ -358,7 +384,15 @@ test("ROUND 10/23: a particle, contrasting modifiers, an and / or pairing and a 
     "Meeting the world as a Projector involves projecting your focused awareness outward.",
   ]) assert.equal(doubledWordProblem(section(p)), null, p);
   assert.match(doubledWordProblem(section("You bring a resilient resilience to hard days.")), /a slip/);
-  assert.match(structuredFacts({ type: "Generator" }), /\nNever in a try-this line, in any form: money, finances, financial, budget, bills, expenses\.\n/);
+  assert.match(structuredFacts({ type: "Generator" }), /\nNever in a try-this line, in any form: finances, financial, budget, debt, loans, taxes, mortgage, investments, savings, bank accounts\.\n/);
+  assert.doesNotMatch(structuredFacts({ type: "Generator" }), /\bmoney\b|\bbills\b|\bexpenses\b/, "money itself, bills and expenses are everyday (10/23)");
+});
+
+test("A SPLIT CHART'S FACTS SAY WHAT JOINS THE GROUPS, and that the split never creates a bridge (10/23 nudge)", async () => {
+  const { structuredFacts } = await import("../netlify/lib/structured.mjs");
+  const said = /\nThis chart's definition is split: its defined centers form separate groups that no channel of this chart joins, and other people's gates or the transits are what join them\. Never write that the split creates, forms or builds a bridge\.\n/;
+  for (const definition of ["Split", "Triple Split", "Quadruple Split"]) assert.match(structuredFacts({ type: "Projector", definition }), said, definition);
+  for (const definition of ["Single", "None", "", undefined]) assert.doesNotMatch(structuredFacts({ type: "Projector", definition }), /definition is split/, String(definition));
 });
 
 test("READ IN THE v3s READINGS (10/23): the same word twice in a row, 'acknowledgement', 'The next time when' are refused", async () => {

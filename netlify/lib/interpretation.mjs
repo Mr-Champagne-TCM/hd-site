@@ -481,10 +481,20 @@ const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
  *   - an ending whose size word sizes nothing real: "a heavier moment", "bigger
  *     moments", "when things get bigger", "the bigger version of this";
  *   - the v2 round's worn tails, each used 4+ times there, word for word.
- * And a line set in money (10/22, "when financial commitments arise", right
- * above the disclaimer that this is not financial advice): money joins the
- * settings the reading does not know. Shopping, purchases and "spending an
- * evening" are everyday errands, not money.
+ * And a line set in financial matters (10/22, "when financial commitments
+ * arise", right above the disclaimer that this is not financial advice).
+ * NARROWED 10/23, Jeremy on the GO PDF: "work and purchases are OK. PPL work and
+ * buy stuff." Only the topics of financial advice are refused now: finances,
+ * a budget (not "budget your energy"), debt, loans (not "loan a friend"),
+ * taxes, a mortgage, investments, savings, bank accounts, credit cards,
+ * interest rates, the stock market. Money itself, bills, expenses, salary,
+ * prices, shopping, purchases, a desk, a meeting, a project at work: everyday
+ * moments, and they pass. Measured on all 2,752 stored try-this lines: 41 of
+ * the old rule's 43 lines stay refused (37 say "financial", 7 a budget, 3 both); the 2
+ * that pass are household expenses ("when bigger expenses approach", "a
+ * household expense"); 1 new hit, a real one ("when evaluating a major
+ * investment", v3p R15, not delivered). Jeremy's approved lines: 0 hits. Work
+ * words are in 653 stored lines, purchases in 161; no rule ever judged them.
  */
 const TAIL_SIZE = /\b(?:bigger|biggest|larger|largest|heavier|heaviest|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)\b/gi;
 const SIZE_WORD = "(?:bigger|biggest|larger|largest|heavier|heaviest|higher|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)";
@@ -496,7 +506,15 @@ const TAIL_BARE = new RegExp(
 );
 const TAIL_WORN = /\b(?:when|before|by the time)\s+(?:a heavier moment (?:arrives|arises)|the pressure is heavier|the stakes are heavier|the wave is high|larger commitments are on the table|decisions arise)\s*[.!?]?$/i;
 const sizeKey = (w) => w.toLowerCase().replace(/\s+/g, "-");
-const MONEY = /\b(?:money|finances?|financial(?:ly)?|budget(?:s|ing|ed)?|bills|debts?|loans?|savings|expenses?|salary|salaries|paychecks?|bank accounts?|taxes|mortgage)\b/i;
+export const FINANCE = new RegExp(
+  String.raw`\b(?:financ(?:e|es|ial|ially)` +
+    String.raw`|(?<!\b(?:energy|time|attention)\s)budget(?:s|ing|ed)?\b(?!\s+(?:of\s+|for\s+|your\s+|their\s+)?(?:energy|time|attention|effort)\b)` +
+    String.raw`|debts?|loans?\b(?!\s+(?:a|an|the|your|them|him|her|me|us|it)\b)` +
+    String.raw`|taxes|tax\s+(?:returns?|forms?|bills?|refunds?)` +
+    String.raw`|mortgages?|investments?|invest(?:s|ed|ing)?\s+(?:money|savings|funds)` +
+    String.raw`|savings|bank\s+(?:accounts?|balances?|statements?)|credit\s+(?:cards?|scores?)|interest\s+rates?|stock\s+market)\b`,
+  "i",
+);
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
 // A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
 const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
@@ -542,10 +560,10 @@ export function takeawayProblem(raw) {
     if (bare) return say(`ends on "${bare[0]}", which names no real situation`);
     const worn = TAIL_WORN.exec(ending);
     if (worn) return say(`ends on a worn tail ("${worn[0].replace(/[.!?]$/, "").trim()}"); each ending names its own situation`);
-    // Everyday moments, never money (10/22: "when financial commitments arise", right above
-    // the disclaimer that this is not financial advice).
-    const money = MONEY.exec(body);
-    if (money) return say(`is set in money ("${money[0]}"); its moments are everyday ones the reading can know`);
+    // Everyday moments, work and purchases included, never financial matters (10/22: "when
+    // financial commitments arise", right above the disclaimer; narrowed 10/23, above).
+    const money = FINANCE.exec(body);
+    if (money) return say(`is set in financial matters ("${money[0]}"), the advice the page disclaims; everyday moments, work and purchases included, are fine`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);
