@@ -23,12 +23,29 @@ test("the tier words: channels and gates on the summary, the drawing as the char
   assert.match(SUMMARY.blurb, /your channels and activated gates/);
   assert.match(SUMMARY.checkoutDescription, /channels and activated gates/);
   assert.doesNotMatch(CHART.blurb, /channels|gates/);
-  assert.match(READING.blurb, /twenty-six activations/);
+  assert.match(READING.blurb, /twenty-six planet numbers/);
   // "The same chart, a step further": each price says only what that step adds.
   assert.match(CHART.adds, /bodygraph/);
   assert.doesNotMatch(CHART.adds, /channels|gates/);
-  assert.match(READING.addsToSummary, /bodygraph.*twenty-six activations.*written reading/);
+  assert.match(READING.addsToSummary, /bodygraph.*twenty-six planet numbers.*written reading/);
   assert.equal(SUMMARY.adds, null);
+});
+
+test("PLANET NUMBERS everywhere (Jeremy's GO PDF, 10/23): the shop's cards say what the page and the PDF say", () => {
+  assert.equal(READING.blurb, "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.");
+  assert.equal(READING.theirBlurb, READING.blurb);
+  assert.equal(READING.adds, "All twenty-six planet numbers and the written reading.");
+  assert.equal(READING.addsToSummary, "Your bodygraph drawn, all twenty-six planet numbers and the written reading.");
+  for (const t of [SUMMARY, CHART, READING]) {
+    for (const k of ["blurb", "theirBlurb", "adds", "addsToSummary", "checkoutDescription"]) {
+      assert.doesNotMatch(String(t[k] ?? ""), /activation/i, `${t.sku}.${k}`);
+    }
+  }
+  // The top-tier card names them the same way, and no other buyer-facing line in src/copy.ts uses the old word.
+  const copy = readFileSync(new URL("../src/copy.ts", import.meta.url), "utf8");
+  assert.match(copy, /"The chart, all twenty-six planet numbers and the written reading\. /);
+  const said = copy.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  assert.doesNotMatch(said, /activations/i, "src/copy.ts says activations to a buyer");
 });
 
 test("the chart card is option B, word for word, with the site's curly apostrophe", () => {

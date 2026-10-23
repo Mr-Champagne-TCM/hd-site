@@ -61,11 +61,13 @@ export const READING = {
   label: "The reading",
   checkoutName: "Human Design reading",
   checkoutDescription: "The chart, a written reading of about 1,200 words, and a PDF to keep.",
-  blurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
-  theirBlurb: "All twenty-six activations with the planet behind each, and the written interpretation.",
+  // "Planet numbers", as the page and the PDF name them ("Technical values: your 26 planet numbers"):
+  // Jeremy's GO PDF call (10/23), "Good, be consistent. I like planet numbers better."
+  blurb: "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.",
+  theirBlurb: "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.",
   /** Under its price on "The same chart, a step further": what it adds to a chart, and to a summary. */
-  adds: "All twenty-six activations and the written reading.",
-  addsToSummary: "Your bodygraph drawn, all twenty-six activations and the written reading.",
+  adds: "All twenty-six planet numbers and the written reading.",
+  addsToSummary: "Your bodygraph drawn, all twenty-six planet numbers and the written reading.",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */

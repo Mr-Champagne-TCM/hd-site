@@ -44,7 +44,7 @@ export default function Activations({
   return (
     <section className="mt-12 border-t border-brand-gold/15 pt-10">
       <h2 className="font-display text-[20px] font-medium text-brand-paper">
-        Your {total === 26 ? "twenty-six" : total} activations
+        Your {total === 26 ? "twenty-six" : total} planet numbers
       </h2>
       <p className="mt-2 max-w-[62ch] text-[16px] leading-relaxed text-brand-muted">
         Every gate your chart activates, and the planet behind each one. Each number is
