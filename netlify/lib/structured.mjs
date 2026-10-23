@@ -61,27 +61,28 @@ const TRACK_SLOT =
  */
 const TAKEAWAY_SLOT =
   'TWO sentences. First: the chart feature in parentheses, one time phrase, one small moment, then "you might" and one action, ending with a period. ' +
-  'Second: opens "Notice", says what to notice, then ", so" and why starting small helps.';
+  'Second: opens "Notice", says what to notice, then ", so" and why starting small helps. Words of your own, never these.';
 
 /**
- * A NOTE ON EVERY NODE (10/22 round). On v3 drafts the model began filling
- * whole forms with the type name -- "string" in every text slot, 0 in the
- * line numbers, 421 tokens -- (1 in 16 drafts at rev a, 10 in 41 at rev j;
- * none in 143 v2 drafts). The v2 and v3 forms differed only in the try-this
- * note, which, like a rule added to the v3 prompt, told the model the notes
- * were "never wording to reuse": both are gone, and every object, list and
- * number now says in plain rules what goes in it, as every text slot always
- * did. A form that still comes back as placeholders is refused (renderReading)
- * and re-asked, counted as "gemini-placeholder".
+ * NOTES ON THE TEXT SLOTS ONLY, AND "Words of your own, never these." KEPT
+ * (10/23, measured on the live model). On v3 drafts the model sometimes
+ * filled whole forms with the type name -- "string" in every text slot, 0 in
+ * the line numbers, 421 tokens. A note on every object, list and number was
+ * tried (10/22, offline) and made it far worse: 4 of 6 asks came back as
+ * placeholders, and the summary rows came back as the bare value
+ * ("Type: generator") -- the summary note said "one per chart value". With
+ * the notes on the text slots only, as here, and the try-this note's last
+ * words kept, 0 of 14 asks did (diag-o-B, diag-o-F, diag-p-F); with those
+ * last words dropped, 3 of 6 did again (diag-o-C). A form that still comes
+ * back as placeholders is refused (renderReading), re-asked, and counted as
+ * "gemini-placeholder".
  */
 const SECTION = {
   type: "OBJECT",
-  description: "One section: a lede sentence, then two paragraphs, all about this chart.",
   properties: {
     lede: S("ONE sentence, at most 25 words, stating the whole point of the section. Contains \"you\"."),
     paragraphs: {
       type: "ARRAY",
-      description: "Exactly two paragraphs of plain prose.",
       items: S("60-75 words. Names the chart value it rests on."),
       minItems: 2,
       maxItems: 2,
@@ -94,11 +95,9 @@ const SECTION = {
 /** Gemini's responseSchema (OpenAPI subset). Every slot required. */
 export const READING_SCHEMA = {
   type: "OBJECT",
-  description: "The whole reading for this chart, one slot per part, every slot written in full sentences.",
   properties: {
     summary: {
       type: "OBJECT",
-      description: "Six summary sentences, one per chart value, each opening with a capital letter.",
       properties: Object.fromEntries(
         SUMMARY_SLOTS.map((k) => [k, S(TRACK_SLOTS.includes(k) ? TRACK_SLOT : "ONE sentence, at most 22 words.")]),
       ),
@@ -109,10 +108,8 @@ export const READING_SCHEMA = {
     definition: S("ONE paragraph, 45-60 words, on what their definition means mechanically."),
     channels: {
       type: "ARRAY",
-      description: "One entry for each channel in the facts, in the order given; none when it has none.",
       items: {
         type: "OBJECT",
-        description: "One channel: its numbers, then one sentence about it.",
         properties: {
           channel: S("The channel's numbers exactly as supplied, e.g. \"10-34\"."),
           sentence: S("ONE sentence, at most 26 words."),
@@ -123,12 +120,10 @@ export const READING_SCHEMA = {
     },
     profileLines: {
       type: "ARRAY",
-      description: "The profile's two lines, in the order of its two numbers.",
       items: {
         type: "OBJECT",
-        description: "One profile line: its number, then one sentence about it.",
         properties: {
-          line: { type: "INTEGER", description: "The line's number from the profile, 1 to 6." },
+          line: { type: "INTEGER" },
           // 10/7: "Your first profile line" under Line 6 -- every 6/2 draft that night.
           sentence: S(PROFILE_LINE_SENTENCE),
         },
@@ -142,7 +137,6 @@ export const READING_SCHEMA = {
     experimentIntro: S("ONE paragraph: these are invitations to test, not instructions; they are the authority."),
     takeaways: {
       type: "ARRAY",
-      description: "Four try-this lines, each on a different feature of this chart.",
       // Shape A (Jeremy 10/21) in two sentences (10/22: "This sentence division adds
       // clarity and avoids a needlessly lengthy sentence"). Rules only, no example:
       // 11 delivered lines on 10/22 were the old example sentence copied.
@@ -196,20 +190,43 @@ export function reservedWords(type) {
   return [...all];
 }
 
+/**
+ * THE OTHER TYPES' WORDS IN EVERY FORM (10/23 round). Named as nouns only
+ * ("Frustration"), they still came back as "frustrated", "frustrating",
+ * "satisfying" in the on / off track writing: 19 refusals in round v3p, 0
+ * first-try passes for 7 Manifestors. Named in every form, per chart, 2 of 14
+ * asks on the same Manifestor and Projector charts (diag-ab-pR) against 6 of
+ * 14 (diag-ab-p).
+ */
+const WORD_FORMS = {
+  Satisfaction: "satisfaction, satisfied, satisfying",
+  Frustration: "frustration, frustrated, frustrating",
+  Success: "success, successful",
+  Bitterness: "bitterness, bitter",
+  Surprise: "surprise, surprised, surprising",
+  Disappointment: "disappointment, disappointed, disappointing",
+  Peace: "peace, peaceful",
+  Anger: "anger, angry",
+};
+
 /** Extra lines appended to the chart facts for the structured request. */
 export function structuredFacts(output) {
   const lines = [];
   const reserved = reservedWords(output?.type);
   if (reserved.length) {
     lines.push(
-      `Words that belong to OTHER types and must not appear anywhere in this reading: ${reserved.join(", ")}.`,
+      `Words that belong to OTHER types and must not appear anywhere in this reading, in any form: ${reserved.map((w) => WORD_FORMS[w] ?? w.toLowerCase()).join("; ")}.`,
     );
   }
+  // 10/23 rounds: endings set in money ("when financial commitments arise") 20 times in three rounds,
+  // the prompt's own rule notwithstanding; named here, per reading, as the other types' words are.
+  lines.push(`Never in a try-this line, in any form: ${MONEY_WORDS}.`);
   if (Array.isArray(output?.channelLines) && output.channelLines.length) {
     lines.push(`Channel lines (printed for you, write only the sentence): ${output.channelLines.join("; ")}`);
   }
   return lines.length ? "\n" + lines.join("\n") + "\n" : "";
 }
+const MONEY_WORDS = "money, finances, financial, budget, bills, expenses";
 
 /**
  * #4 / F45, Jeremy's ruling (option C, 2026-09-09): look for the Projector's

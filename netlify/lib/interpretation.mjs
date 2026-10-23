@@ -349,6 +349,12 @@ const SLIPS = [
   // sentences, 8).
   /\b(single|split|triple split|quadruple split)\s+definition\b[^.]*?\b(?:means|shows|tells you)\b[^.]*?\b(?:is|are|stay|stays|remain|remains)\s+(?:\w+\s+)?\1\b/i,
   /\bbridges?\b[^.!?]{0,160}\bto bridge\b/i,
+  // The facts' strategy label pasted into a sentence (10/23): "your strategy of wait to respond",
+  // "Because your strategy is wait to respond" -- 28 stored drafts, every one ungrammatical.
+  /\bstrateg(?:y|ies)\s+(?:of|is)\s+(?:wait|inform)\b/i,
+  // A try-this time phrase run into its moment (10/23): "The next time when greeting neighbors" -- 6 stored drafts,
+  // every one a slip (2 delivered in v3s).
+  /\bthe next time when\b/i,
   /\bbypass\w*\b[^.!?]*[.!?](?:\s+[^.!?]*[.!?])?\s+[^.!?]*\bbypass\w*\b/i,
   /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i,
 ];
@@ -414,6 +420,9 @@ const UK_WORDS = new RegExp(
       "amongst",
       "defence",
       "licence",
+      // 10/23 v3s R25, delivered: "without proper acknowledgement" (1 stored draft, a slip).
+      String.raw`acknowledgements?`,
+      String.raw`judgements?`,
     ].join("|") +
     String.raw`)\b`,
   "i",
@@ -931,16 +940,30 @@ export function adviceOrderProblem(raw) {
  * words (center, defined, channel...) are not judged.
  */
 const DOUBLE_STOP = /^(?:the|a|an|and|or|of|to|in|on|at|for|with|your|you|yours|this|that|these|those|is|are|was|were|be|been|being|as|it|its|by|from|into|onto|over|under|than|then|so|not|no|nor|but|if|when|while|which|who|whom|whose|what|where|how|all|any|each|every|both|more|most|less|least|very|just|only|also|even|still)$/;
-const DOUBLE_HD = /^(?:center|centers|defined|undefined|open|gate|gates|channel|channels|line|lines|profile|authority|strategy|sacral|spleen|splenic|throat|heart|ajna|head|root|solar|plexus|emotional|energy|design|type|cross|angle|right|left|wave|waves|body|bodygraph|inner|outer)$/;
+const DOUBLE_HD = /^(?:center|centers|defined|undefined|open|gate|gates|channel|channels|line|lines|profile|authority|strategy|sacral|spleen|splenic|throat|heart|ajna|head|root|solar|plexus|emotional|energy|design|type|cross|angle|right|left|wave|waves|body|bodygraph|inner|outer|projector|projectors|generator|generators|manifestor|manifestors|reflector|reflectors)$/;
 const DOUBLE_NUMBER = /^(?:twenty|thirty|forty|fifty|sixty)/;
 const DOUBLED_PAIR = /\b([a-z]{5,})\s+(?:and|or)\s+([a-z]{3,})\s+\1\b/gi;
+const DOUBLE_PARTICLE = /^(?:off|on|out|up|down|in|not|no|non|over|under|back|away)$/i;
+/** Contrasting modifiers are a pair, not a slip: "high points and low points" (10/23 round). */
+const DOUBLE_OPPOSITE = new Set(["high low", "low high", "good bad", "bad good", "inner outer", "outer inner", "conscious unconscious", "unconscious conscious", "big small", "small big", "early late", "late early", "light dark", "dark light", "old new", "new old", "best worst", "worst best"]);
+/**
+ * THE SAME WORD TWICE IN A ROW (10/23, read in a delivered v3s reading: "talking things out with trusted trusted
+ * environments"; tags "(Profile Profile 6/2)", "(Channel Channel 16-48)", "(Sacral center center)"). Measured on
+ * every stored draft (537): 15 hits, 14 slips, every slip a word of five letters or more; the one that is
+ * English ("tell you you have done enough") is shorter, as "that that" and "had had" are, so short words pass.
+ */
+const DOUBLE_SAME = /\b([A-Za-z]{5,})\s+\1\b/gi;
 
 export function doubledWordProblem(raw) {
   const say = (where, text, at, len) => `The reading says a word twice in ${where}, a slip: "${quoteAt(text, at, len)}"`;
   for (const [where, text] of proseOf(raw)) {
+    for (const m of text.matchAll(DOUBLE_SAME)) return say(where, text, m.index, m[0].length);
     for (const m of text.matchAll(DOUBLED_PAIR)) {
       const w = m[1].toLowerCase();
-      if (m[2].toLowerCase() === w || DOUBLE_STOP.test(w) || DOUBLE_HD.test(w)) continue;
+      // "whether you are on track or off track" (10/23 round): the middle word is a particle, not a second modifier.
+      if (m[2].toLowerCase() === w || DOUBLE_STOP.test(w) || DOUBLE_HD.test(w) || DOUBLE_PARTICLE.test(m[2])) continue;
+      const before = /([A-Za-z]+)\s+$/.exec(text.slice(0, m.index))?.[1]?.toLowerCase();
+      if (before && DOUBLE_OPPOSITE.has(`${before} ${m[2].toLowerCase()}`)) continue;
       return say(where, text, m.index, m[0].length);
     }
     const words = [...text.matchAll(/[A-Za-z][A-Za-z'-]*/g)];
@@ -952,6 +975,8 @@ export function doubledWordProblem(raw) {
         if (b.length < 7 || a === b || DOUBLE_HD.test(b) || a.slice(0, 7) !== b.slice(0, 7)) continue;
         const span = text.slice(words[i].index, words[j].index + b.length);
         if (/[^A-Za-z'\s-]/.test(span)) continue;
+        // Two forms joined by and / or are a pairing, not a slip: "mental concepts and conceptual frameworks" (10/23).
+        if (j === i + 2 && /^(?:and|or)$/i.test(words[i + 1][0])) continue;
         return say(where, text, words[i].index, span.length);
       }
     }
@@ -1215,7 +1240,8 @@ const FEELING_FORMS = {
   Anger: String.raw`ang(?:er\w*|ry|rier|riest|rily)`,
   Satisfaction: String.raw`satisf\w*`,
   Frustration: String.raw`frustrat\w*`,
-  Success: String.raw`success\w*`,
+  // "successfully" is a manner, never the feeling (10/23 round: "your clear communications successfully remove friction").
+  Success: String.raw`success(?!fully)\w*`,
   Bitterness: String.raw`bitter\w*`,
   Surprise: String.raw`surpris\w*`,
   Disappointment: String.raw`disappoint\w*`,
