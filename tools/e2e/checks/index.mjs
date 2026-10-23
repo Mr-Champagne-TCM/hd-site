@@ -836,17 +836,15 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
       else groups.set(d.id, d);
     }
     /**
-     * THE ONE COPY BY DESIGN (fix 1A, Jeremy 10/19): "Your chart in three lines"
-     * on the reading tier shows the reading's first try-this line, moved up
-     * whole, under "Something to try this week"; the list below still holds it.
-     * That one copy is left out of the count; a second copy anywhere else, or
-     * the same line twice in the list, is still a repeat.
+     * No copy is excused (CALL 2 = B, Jeremy 10/23): "Your chart in three
+     * lines" no longer repeats the reading's first try-this line, so fix 1A's
+     * exception for the box's copy is gone. A try-this line printed twice
+     * anywhere, the box included, is a repeat.
      */
-    const withoutBoxCopy = (text) => text.replace(/^(Something to try this week\s*\n)[^\n]*\n?/gm, "$1");
     for (const d of groups.values()) {
       c.saw(d.combo);
       const count = new Map();
-      const text = d.kind === "pdf" || d.kind === "email" ? d.text : withoutBoxCopy(d.text);
+      const text = d.text;
       for (const { u, whole } of unitsOf(text, text.includes("[RIG PLACEHOLDER]"))) {
         const k = norm(u);
         const was = count.get(k);

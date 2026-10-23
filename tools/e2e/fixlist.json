@@ -831,6 +831,18 @@
           "to": "^Below: "
         }
       ]
+    },
+    {
+      "id": "CALL2-B",
+      "about": "Jeremy's GO PDF call 2 = option B (10/23): the three-lines box's third row is the profile one-liner on the reading tier too (as on the summary and the chart); the box no longer copies the first try-this line under 'Something to try this week'. The four try-this lines stay in their own section.",
+      "docs": "^page [a-zA-Z0-9]+-\\d-[a-z-]+-t2(-[a-z0-9-]+)?$",
+      "minus": [
+        "^Something to try this week$"
+      ],
+      "plus": [
+        "^How you meet the world(PROVISIONAL)? · Profile \\d/\\d$",
+        "^(Studies the ground, then tests it by living it\\.|Builds a solid base, then shares it through people it trusts\\.|A natural gift that wants time alone, in a life that comes through people\\.|A private talent that others see as the one who can fix it\\.|Learns by trial and error, then turns lessons into practical fixes for others\\.|Many lessons early, then some distance, then living what was learned\\.|Lives through its people, and over time becomes someone they look up to\\.|A steady, set path, carried through people and built on firm ground\\.|Seen as the one with answers, and quietly built on solid research\\.|A natural gift others call on, and a strong pull to stay apart\\.|Three acts of life, with a natural gift others are waiting to see\\.|A life of trying, stepping back, and trying again, ending in hard-earned wisdom\\.)$"
+      ]
     }
   ]
 }

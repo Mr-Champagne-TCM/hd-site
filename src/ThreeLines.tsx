@@ -7,12 +7,17 @@ import { Tag, measuredSpread } from "./TimeSpread";
  * top of the result page, on a computer and on a phone. BELOW the chart the
  * page keeps today's order (his 1B half: the tables stay where they are).
  *
- * Nothing here is written by the model except the third line on the reading
- * tier, which is the reading's own first experiment, moved up and never
- * rewritten. The other lines are the library's one-liners -- Jeremy's
- * approved words, generated into shared/libraryGlance.mjs -- picked by the
- * chart's own values. A chart without a reading (the chart tier) gets its
- * profile's one-liner as the third line instead.
+ * Nothing here is written by the model. The three lines are the library's
+ * one-liners -- Jeremy's approved words, generated into
+ * shared/libraryGlance.mjs -- picked by the chart's own values: Type,
+ * Authority, Profile, on EVERY tier.
+ *
+ * CALL 2 = OPTION B (Jeremy, GO PDF 10/23): the reading tier's third row used
+ * to be the reading's first try-this line, moved up whole, so the line printed
+ * twice (here and in the list below), under a label ("Something to try this
+ * week") that doubled every v3 line's own "This week,". Now the third row is
+ * the profile's one-liner on the reading tier too, as on the summary and the
+ * chart; the four try-this lines stay only in their own section.
  */
 
 type Chart = {
@@ -29,21 +34,12 @@ const GLANCE_AUTH = AUTHORITY_GLANCE as Record<string, string>;
 const authorityGlance = (a: string) => GLANCE_AUTH[a] ?? (/^Ego\b/.test(a) ? GLANCE_AUTH.Ego : null) ?? null;
 const GLANCE_PROFILE = PROFILE_GLANCE as Record<string, string>;
 
-/** "(Sacral authority) Notice how..." -> "Notice how..." */
-export const firstExperiment = (takeaways: string[] | undefined | null) => {
-  const t = (takeaways ?? []).find((s) => /^\(/.test(s));
-  return t ? t.replace(/^\([^)]*\)\s*/, "") : null;
-};
-
 export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeaways?: string[] | null }) {
   const profile = String(chart.profile ?? "").replace(/\s/g, "");
-  const experiment = firstExperiment(takeaways);
   const rows: Array<[string, string, string | null]> = [
     ["Your energy", chart.type ?? "", GLANCE_TYPE[chart.type ?? ""] ?? null],
     ["How you decide", chart.authority ?? "", authorityGlance(chart.authority ?? "")],
-    experiment
-      ? ["Something to try this week", "", experiment]
-      : ["How you meet the world", profile ? `Profile ${profile}` : "", GLANCE_PROFILE[profile] ?? null],
+    ["How you meet the world", profile ? `Profile ${profile}` : "", GLANCE_PROFILE[profile] ?? null],
   ];
   const shown = rows.filter(([, , line]) => line);
   if (!shown.length) return null;

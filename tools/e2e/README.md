@@ -97,7 +97,7 @@ Plus: 10 pre-10/16 purchases written into the store the old way (no name, no bir
 | pdf-page-fill | #6 | a PDF page under 15% filled (measured on the rendered page); "above" with nothing above; a page that is only the coaching card |
 | links | links | any link on our sites not 200; any #anchor missing or not in view when the page loads with the hash (library entries open from the hash) |
 | near-miss-words | #9 #15 AI5 | a near miss of "not-self" / "signature"; another type's feeling word in on-track / off-track text; **the shop's own checker probed** with "not-sf", "not self", "signiture" and another type's word: each must be refused |
-| doubled-text | W6 AI2 | the same sentence or clause (6+ words) twice in one page, PDF or email (the three-lines box's copy of the first try-this line, fix 1A, is the one copy by design) |
+| doubled-text | W6 AI2 | the same sentence or clause (6+ words) twice in one page, PDF or email, the three-lines box included (since call 2 = B, 10/23, the box no longer copies a try-this line, so nothing is excused) |
 | my-charts-rows | #8 | two rows reading the same; one chart listed twice |
 | my-charts-time | #7 | more than 6 s with every store request slowed to the live 400 ms |
 | readings-site-unknown | #18 | "expired" for a link that never existed |

@@ -163,13 +163,25 @@ test("#3 WITH NO BIRTH TIME the three-lines box marks what can move, as the tabl
   assert.match(page, /How you meet the world · Profile 3\/5 provisional/);
 });
 
-test("#3 a known time marks nothing; a first thing to try is never marked", () => {
+test("#3 a known time marks nothing", () => {
   assert.doesNotMatch(text(lines.render("default", { chart: THEO })), /provisional/);
-  const page = text(
-    lines.render("default", { chart: { ...THEO, provisional: ["type", "authority", "profile"] }, takeaways: ["(Authority) Sleep on it."] }),
-  );
-  assert.equal(page.match(/provisional/g).length, 2);
-  assert.match(page, /Something to try this week Sleep on it\./);
+});
+
+test("CALL 2 = B (10/23): the reading tier's third row is the profile one-liner too; no try-this line in the box", () => {
+  const takeaways = ["Intro.", "(Authority) This week, when Wren plans the day, you might sleep on it."];
+  const reading = text(lines.render("default", { chart: THEO, takeaways }));
+  const chartTier = text(lines.render("default", { chart: THEO }));
+  const summary = text(lines.render("default", { chart: { type: "Generator", authority: "Emotional", profile: "3/5" } }));
+  for (const page of [reading, chartTier, summary]) {
+    assert.match(page, /Your chart in three lines/);
+    assert.match(page, /How you meet the world · Profile 3\/5 Learns by trial and error, then turns lessons into practical fixes for others\./);
+    assert.doesNotMatch(page, /Something to try/);
+    assert.doesNotMatch(page, /sleep on it/i, "the try-this line stays only in its own section");
+  }
+  // Unknown time: the profile row's tag follows the same rule on the reading tier (all three move with no spread).
+  const unknown = text(lines.render("default", { chart: { ...THEO, provisional: ["type", "authority", "profile"] }, takeaways }));
+  assert.equal(unknown.match(/provisional/g).length, 3);
+  assert.match(unknown, /How you meet the world · Profile 3\/5 provisional/);
 });
 
 test("W2 THE SUMMARY HAS NO DRAWING, so the box does not promise one", () => {

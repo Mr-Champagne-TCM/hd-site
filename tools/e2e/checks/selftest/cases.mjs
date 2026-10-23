@@ -141,7 +141,7 @@ const SPREAD_KEY = "2001-12-05_America-Los_Angeles_t1";
 const LINE = holdsLine(SPREAD).text;
 /** A made-up add-time key link, in the shape the PDF carries (/t/<body>.<mac>). */
 const ADD_TIME_KEY_HREF = "https://humandesign.thechampagnemethod.co/t/eyJhIjoiMDAwMCIsImsiOiJ0In0.Wren-made-up-mac_0123456789";
-/** A made-up first try-this line, as the three-lines box copies it (fix 1A). */
+/** A made-up try-this line (the three-lines box no longer copies it: CALL 2 = B, 10/23). */
 const BOX_LINE = "Once this week, when Wren walks home, you might take the long way by the river. Notice how the evening settles, so that pace is familiar later.";
 const BAR = ["cast at noon", "12 AM", "6 AM", "12 PM", "6 PM", "12 AM"].join("\n");
 
@@ -699,21 +699,26 @@ export const CASES = [
     item: "W6 AI2",
     take: { pages: [P("the expired-link page", (p) => p.kind === "expired"), P("the cut-short-link page", (p) => p.kind === "cut-short"), P("a reading page with its PDF", (p) => isResult(p) && p.tier === 2 && withPdf(p))] },
     good(m) {
+      // CALL 2 = B (10/23): the box's third row is the profile one-liner on the reading tier too.
+      // (A base run from before the fix still copies the first try-this line there: corrected the way the fix does.)
+      m.edit(m.pages[2], (t) => t.replace(/^Something to try this week\s*\n[^\n]*\n/m, "How you meet the world · Profile 1/3\nA made-up one-liner for Wren.\n"));
       for (const p of m.pages) {
         m.edit(p, (t) => dedupe([t.replace(MARK, "")])[0]);
         if (p.pdf?.textFile) m.editPdf(p, (pages) => dedupe(pages));
       }
       // Right as they are: a heading said twice is layout; so is a cross name in two tables.
       m.edit(m.pages[2], (t) => append(t, "Things you might try this week\nThings you might try this week\nRight Angle Cross of the Wren (1/2 | 3/4)\nRight Angle Cross of the Wren (1/2 | 3/4)"));
-      // Right as it is (fix 1A): the three-lines box's copy of the first try-this line, and the line itself in the list.
-      m.edit(m.pages[2], (t) => append(t, `Something to try this week\n${BOX_LINE}\nThings to experiment with\n${BOX_LINE}`));
+      // Right as it is: the try-this line once, in its own list.
+      m.edit(m.pages[2], (t) => append(t, `Things to experiment with\n${BOX_LINE}`));
     },
     bad: [
       { name: "W6: the expired page says the same clause twice", plant: (m) => m.edit(m.pages[0], (t) => append(t, "A fresh one can be sent now — to the address on your purchase, and only there.\nYour link can be sent again — to the address on your purchase, and only there.")), expect: /said \d times: "to the address on your purchase, and only there"/ },
       { name: "W6: the cut-short page repeats its heading as its first line", plant: (m) => m.edit(m.pages[1], (t) => (/^That link could not be opened$/m.test(t) ? addAfter(t, /^That link could not be opened$/, "That link could not be opened. Try the email it came in.") : append(t, "That link could not be opened\nThat link could not be opened. Try the email it came in."))), expect: /said 2 times: "That link could not be opened"/ },
       { name: "AI2: a takeaway in Start here and again as the section's first line", plant: (m) => m.edit(m.pages[2], (t) => append(append(t, "Wren keeps a lantern lit for the slow walk home."), "Wren keeps a lantern lit for the slow walk home.")), expect: /said 2 times: "Wren keeps a lantern lit for the slow walk home"/ },
       // 10/21: stand-in try-this lines once made the whole reading count as a placeholder, and its real words went unjudged.
-      { name: "a try-this line twice in the list (besides the box's copy)", plant: (m) => m.edit(m.pages[2], (t) => append(t, BOX_LINE)), expect: /said 2 times: "Once this week, when Wren walks home, you might take the long way/ },
+      { name: "a try-this line twice in the list", plant: (m) => m.edit(m.pages[2], (t) => append(t, BOX_LINE)), expect: /said 2 times: "Once this week, when Wren walks home, you might take the long way/ },
+      // CALL 2 = B (10/23): the box's old copy of the first try-this line is no longer excused.
+      { name: "the three-lines box copies the first try-this line again", plant: (m) => m.edit(m.pages[2], (t) => t.replace(/^How you meet the world · Profile 1\/3\nA made-up one-liner for Wren\.\n/m, `Something to try this week\n${BOX_LINE}\n`)), expect: /said 2 times: "Once this week, when Wren walks home, you might take the long way/ },
       { name: "AI2 on a reading whose try-this lines are rig stand-ins", plant: (m) => m.edit(m.pages[2], (t) => append(append(append(t, "(Type) [RIG STAND-IN] The next time a small job comes, you might start at once. Notice the pace, so it is familiar later."), "Wren keeps a lantern lit for the slow walk home."), "Wren keeps a lantern lit for the slow walk home.")), expect: /said 2 times: "Wren keeps a lantern lit for the slow walk home"/ },
     ],
   },
