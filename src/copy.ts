@@ -370,7 +370,7 @@ export const RETURNING = {
     "You have the whole of it. And if there is someone whose chart you would love to see, theirs can " +
     "start whenever you like.",
   topCard:
-    "The chart, all twenty-six planet numbers and the written reading. It stays on your link for a year, " +
+    "The chart, all twenty-six activations and the written reading. It stays on your link for a year, " +
     "and the PDF is there whenever you want it.",
   confirmBody:
     "Payment received, thank you. Your birth details are kept, so there is nothing to type — just a " +

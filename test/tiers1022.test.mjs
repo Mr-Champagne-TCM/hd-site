@@ -23,11 +23,11 @@ test("the tier words: channels and gates on the summary, the drawing as the char
   assert.match(SUMMARY.blurb, /your channels and activated gates/);
   assert.match(SUMMARY.checkoutDescription, /channels and activated gates/);
   assert.doesNotMatch(CHART.blurb, /channels|gates/);
-  assert.match(READING.blurb, /twenty-six planet numbers/);
+  assert.match(READING.blurb, /twenty-six activations/);
   // "The same chart, a step further": each price says only what that step adds.
   assert.match(CHART.adds, /bodygraph/);
   assert.doesNotMatch(CHART.adds, /channels|gates/);
-  assert.match(READING.addsToSummary, /bodygraph.*twenty-six planet numbers.*written reading/);
+  assert.match(READING.addsToSummary, /bodygraph.*twenty-six activations.*written reading/);
   assert.equal(SUMMARY.adds, null);
 });
 

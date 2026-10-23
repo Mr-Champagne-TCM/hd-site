@@ -337,7 +337,7 @@ export function optionLines(entry, { link, retryLink, shop } = {}) {
             : "Reply with a ready-made note (their email is on their Stripe payment, found by the time above):";
       // Signed "Very Respectfully" when money was involved, "Respectfully" when
       // nothing was charged -- from the kind and the incident, never by hand.
-      return `${lead}\n"${fillNote(o.slice(5), { link, shop, kind: entry?.kind, paid: Boolean(entry?.paid) })}"`;
+      return `${lead}\n"${fillNote(o.slice(5), { link, shop, kind: entry?.kind, paid: Boolean(entry?.paid), tier: entry?.ref?.tier })}"`;
     }
     return o;
   });

@@ -106,6 +106,22 @@ test("the ready-made notes are in Jeremy's voice: warm, no command, no blame, no
   assert.match(fillNote("safe-link", {}), /\[their reading link\]/, "a missing link stays visible");
 });
 
+test("the ready-made notes say the tier the incident names, and name nothing when it names none (10/22 verbatim read)", () => {
+  const said = (key, tier) => fillNote(key, { link: "https://x/r/1", tier });
+  assert.match(said("safe-link", 0), /^Your purchase went through and your summary is safe\./);
+  assert.match(said("safe-link", 1), /^Your purchase went through and your chart is safe\./);
+  assert.match(said("safe-link", 2), /^Your purchase went through and your reading is safe\./);
+  assert.match(said("safe-link", undefined), /^Your purchase went through and is safe\./);
+  assert.match(said("link-again", 1), /^Here is your chart link: /);
+  assert.match(said("pdf", 1), /^Your chart is safe\. The PDF couldn't be made just now/);
+  assert.match(said("time-again", 0), /^Your summary is safe and unchanged\./);
+  assert.match(said("chart-again", 0), /Your summary couldn't be made just now/);
+  // A summary or a chart never hears "your reading"; the words for an unknown tier name nothing.
+  for (const key of ["safe-link", "setting-up", "confirm-later", "chart-again", "reading-page", "time-again", "pdf", "link-again"]) {
+    for (const tier of [0, 1, undefined]) assert.doesNotMatch(said(key, tier).replace("[their reading link]", ""), /your reading/i, `${key} tier ${tier}`);
+  }
+});
+
 // --- one alert -------------------------------------------------------------------------
 
 test("THE ALERT: brief (when + how many), which (Stripe + reading links), numbered options", async () => {
@@ -138,7 +154,8 @@ test("THE ALERT: brief (when + how many), which (Stripe + reading links), number
   // OPTIONS: resend, a ready-made note with their link filled in, a retry code
   assert.match(text, /OPTIONS TO RESOLVE\n  1\. Resend their link: open their reading link/);
   assert.match(text, /  2\. Reply with a ready-made note/);
-  assert.ok(text.includes(`"Your purchase went through and your reading is safe. Here is your link: ${link}`));
+  // The incident is a chart (tier 1), so the note says chart, not reading (10/22 verbatim read).
+  assert.ok(text.includes(`"Your purchase went through and your chart is safe. Here is your link: ${link}`));
   assert.match(text, /  3\. Give a free retry code \(one use, 100% off the tier they bought, or any tier when that is not known\).*one tap -> https:\/\/shop\.example\/api\/admin\/retry-code\?t=/);
   assert.match(text, /Severity: page-jeremy \(money was taken\)/);
   // HTML has real links
