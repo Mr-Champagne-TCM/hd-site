@@ -1266,6 +1266,19 @@
           "to": "^(Talk it through with Jeremy$|The Champagne Method Coaching and Consulting · )"
         }
       ]
+    },
+    {
+      "id": "PICKS-EXTRA-note-order",
+      "about": "Extra (copy-fix 'For Jeremy' item 3, built as my pick 'yes, all three notes the same order', pending Jeremy): the 'Change a detail' note and the first-details note ('What changed from your summary') said what stayed the same after their closing sentence. They now say it beside what moved, before the close, as the 'Birth time added' note does since the 10/23 read's N1 (correctionNote.mjs). No words change, only the order. The last full run captured neither note, so these lines are claimed in case it ever does.",
+      "docs": "^page ",
+      "minus": [
+        "came out differently: .+\\. That follows from your correction — nothing went wrong, and everything below is written for the corrected chart\\. Your [A-Za-z, ]+ (is|are) the same\\.$",
+        "came out differently: .+\\. A birth time that was guessed before and is known now would do exactly this — nothing went wrong, and everything below is written for this chart\\. Your [A-Za-z, ]+ (is|are) the same\\.$"
+      ],
+      "plus": [
+        "came out differently: .+\\.( Your [A-Za-z, ]+ (is|are) the same\\.)? That follows from your correction — nothing went wrong, and everything below is written for the corrected chart\\.$",
+        "came out differently: .+\\.( Your [A-Za-z, ]+ (is|are) the same\\.)? A birth time that was guessed before and is known now would do exactly this — nothing went wrong, and everything below is written for this chart\\.$"
+      ]
     }
   ]
 }

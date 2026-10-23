@@ -116,9 +116,15 @@ export function correctionNote(c, { tier: pageTier } = {}) {
     return {
       eyebrow: "What changed from your summary",
       lead: "Your chart is cast from the details typed today.",
-      body:
-        `${movedSentence} A birth time that was guessed before and is known now would do exactly this — ` +
-        `nothing went wrong, and everything below is written for this chart. ${sameSentence}`.trim(),
+      // What stayed the same beside what moved, before the closing sentence, as the
+      // "Birth time added" note says it (10/23 read N1; extra, picks-1023, pending Jeremy).
+      body: [
+        movedSentence,
+        sameSentence,
+        "A birth time that was guessed before and is known now would do exactly this — nothing went wrong, and everything below is written for this chart.",
+      ]
+        .filter(Boolean)
+        .join(" "),
       learn,
     };
   }
@@ -159,8 +165,12 @@ export function correctionNote(c, { tier: pageTier } = {}) {
   const lead = details.length
     ? `${details.join(". ")} — your chart is cast from the corrected details.`
     : "Your chart is cast from the corrected details.";
+  // The same order as the other two notes: what moved, what stayed the same, then the close
+  // (10/23 read N1; extra, picks-1023, pending Jeremy).
   const body = moved.length
-    ? `${movedSentence} That follows from your correction — nothing went wrong, and everything below is written for the corrected chart. ${sameSentence}`.trim()
+    ? [movedSentence, sameSentence, "That follows from your correction — nothing went wrong, and everything below is written for the corrected chart."]
+        .filter(Boolean)
+        .join(" ")
     : sameSentence;
   return { eyebrow: "Your correction", lead, body, learn };
 }
