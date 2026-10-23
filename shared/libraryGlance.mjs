@@ -110,7 +110,7 @@ export const TYPE_GLANCE = Object.freeze({
   "Manifesting Generator": "The Generator’s motor, with a faster, many-paths streak.",
   "Projector": "Built to see and guide other people’s energy, not to outwork it.",
   "Manifestor": "Starts things. Works best letting people know before moving.",
-  "Reflector": "No steady hubs of its own. Reflects the people and places around it."
+  "Reflector": "No steady centers of its own. Reflects the people and places around it."
 });
 
 /** Each profile's glance, keyed "5/2". */

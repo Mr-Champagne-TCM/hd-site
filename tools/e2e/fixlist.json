@@ -1173,6 +1173,29 @@
       "plus": [
         "^A record of what happens on that site, so a problem can be found and fixed What happened and when — a link that had expired or wasn’t complete, a code that didn’t match, a birth time added, a failure — with, where there is one, the first six characters of the link it was about\\. Never your name, your code, your birth details or a birth time\\. Each record runs for fourteen days, and a monthly clean-up clears the ones that have run out$"
       ]
+    },
+    {
+      "id": "PICKS-D28",
+      "about": "Decision 28 (GO v3 p16, my pick, pending Jeremy; 10/23 read F4): the centers have one name, 'centers'. The Reflector's one-liner (HD-Library-Work types.json -> the shop's libraryGlance.mjs, the website's data.ts) 'No steady hubs of its own.' -> 'No steady centers of its own.'; the Human Design library's topic map, eyebrow, intro and Topics-bar word say 'centers' for 'hubs'; 'Reading your bodygraph' drops its 'engines' synonym sentence from the Centers card ('engine' collides with 'motor'). Builds on PICKS-D1 (that sentence's 'I use them').",
+      "docs": "^page ",
+      "minus": [
+        "^No steady hubs of its own\\. Reflects the people and places around it\\.$",
+        "^The nine hubs on the chart$",
+        "^How your hubs connect$",
+        "^the nine hubs$",
+        "^THE NINE HUBS$",
+        "^Nine hubs on the chart\\. Each one is colored in, or not\\.$",
+        "^The nine shapes — squares, triangles, diamonds\\. Each one governs a different kind of energy\\. You will also hear them called engines — the two words mean the same thing and (we|I) use them interchangeably\\.$"
+      ],
+      "plus": [
+        "^No steady centers of its own\\. Reflects the people and places around it\\.$",
+        "^The nine centers on the chart$",
+        "^How your centers connect$",
+        "^the nine centers$",
+        "^THE NINE CENTERS$",
+        "^Nine centers on the chart\\. Each one is colored in, or not\\.$",
+        "^The nine shapes — squares, triangles, diamonds\\. Each one governs a different kind of energy\\.$"
+      ]
     }
   ]
 }
