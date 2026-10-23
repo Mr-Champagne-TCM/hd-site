@@ -261,8 +261,9 @@ export const TIERS_INTRO = {
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   // The credit idea is said ONCE on this page (Jeremy's GO PDF, 10/23: "Good, be consistent"): in
   // LADDER_NOTE under the cards, beside the prices it is about. That note already says "the total is
-  // identical either way" and "goes toward whatever you choose next, so nobody pays twice", so this
-  // line no longer says "comes off what you pay next" or "costs the same in the end".
+  // identical either way" and "comes off what you pay next — nobody pays twice", so this
+  // line no longer says it, or "costs the same in the end". The credit sentence is the same words on
+  // the chart and summary pages, the emails, the PDF and the website (10/23 verbatim read, S4).
   body: "The price is here before anything is asked of you.",
 };
 
@@ -275,8 +276,7 @@ export const TIERS_INTRO = {
  */
 export const LADDER_NOTE =
   "Straight to the reading, or a step at a time — the total is identical either way. " +
-  "What you have already paid goes toward whatever you choose next, so nobody pays twice " +
-  "for the same thing.";
+  "What you have already paid comes off what you pay next — nobody pays twice for the same thing.";
 
 export const ENTRY = {
   /**
@@ -288,7 +288,7 @@ export const ENTRY = {
   /** Release 2 (mock v2, accepted): a first purchase's form, which may be for anyone. */
   titleFirst: "The birth details for this chart",
   body:
-    "Three things are needed: the date, the place, and the time if it is known. " +
+    "All that’s needed is the date, the place and the time if it is known. " +
     "An unknown time is welcome — the chart is cast at noon and says so plainly, " +
     "and the parts that depend on a time are marked as provisional rather than quietly guessed.",
   /**
@@ -326,11 +326,14 @@ export const ENTRY = {
  * its year, so going a step further never means typing them again, and one
  * sentence says so before anything is typed.
  *
+ * Not "entered here" (10/23 verbatim read, N4): the upgrade's check page
+ * shows it too, and nothing is typed there.
+ *
  * Said BEFORE the form, never after. A privacy sentence that appears once
  * somebody is already committed reads as something you hoped they would miss.
  */
 export const PRIVACY_NOTE =
-  "The name and birth details entered here are kept with this chart for a year, so it can show " +
+  "The name and birth details are kept with this chart for a year, so it can show " +
   "whose chart it is and when and where they were born — and so going a step further later never " +
   "means typing them again. Your email always brings you back to it.";
 
@@ -434,7 +437,8 @@ export const CARDS = {
   readingTicks: ["How you decide", "How you meet the world", "What you take in from others", "Four small things to try"],
   readingPdf: "A PDF to keep.",
   summaryNote: ["With the free ", "Human Design library", " beside it, this comes close to a full reading."],
-  chartNote: ["Read alongside the free ", "Human Design library", ", it comes close to a full reading."],
+  // "Comes close to a full reading" once per page, on the summary's card (10/23 verbatim read, S5).
+  chartNote: ["Every word on it is explained in the free ", "Human Design library", "."],
   stripHead: "From a real reading",
   // Jeremy 10/22: his pick of the test readings' lines (favorite #2), with his edits, word for word.
   stripQuote:

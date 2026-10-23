@@ -18,7 +18,7 @@ const { PRIVACY_NOTE, privacyFor } = await importTs("src", "copy.ts");
 test("one privacy sentence for every tier, word for word", () => {
   assert.equal(
     PRIVACY_NOTE,
-    "The name and birth details entered here are kept with this chart for a year, so it can show " +
+    "The name and birth details are kept with this chart for a year, so it can show " +
       "whose chart it is and when and where they were born — and so going a step further later never " +
       "means typing them again. Your email always brings you back to it.",
   );

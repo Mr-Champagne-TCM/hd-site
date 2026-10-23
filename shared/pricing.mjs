@@ -52,7 +52,8 @@ export const CHART = {
   blurb: CHART_CARD,
   theirBlurb: CHART_CARD_THEIR,
   /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
-  adds: "Your bodygraph, drawn, and its PDF to keep.",
+  // The same punctuation as READING.addsToSummary, "Your bodygraph drawn, …" (10/23 verbatim read, N5).
+  adds: "Your bodygraph drawn, and its PDF to keep.",
 };
 
 export const READING = {

@@ -161,20 +161,20 @@ test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
   const { sellable } = await import("../shared/availability.mjs");
   for (const tier of [0, 1, 2]) {
     const { text, html } = build(tier, "J");
-    const offered = /comes off the price/.test(text);
+    const offered = /comes off what you pay next/.test(text);
     assert.equal(
       offered,
       sellable(tier + 1),
       `tier ${tier} ${offered ? "offered" : "did not offer"} the next tier, which is ${sellable(tier + 1) ? "" : "not "}sellable`,
     );
-    assert.equal(/comes off the price/.test(html), offered, "html and text disagree");
+    assert.equal(/comes off what you pay next/.test(html), offered, "html and text disagree");
   }
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {
   const top = build(2, "J");
-  assert.doesNotMatch(top.text, /comes off the price/, "the top tier was offered an upgrade");
-  assert.doesNotMatch(top.html, /comes off the price/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.text, /comes off what you pay next/, "the top tier was offered an upgrade");
+  assert.doesNotMatch(top.html, /comes off what you pay next/, "the top tier was offered an upgrade");
 });
 
 test("the upgrade uses the SAME link, because there is only one", () => {

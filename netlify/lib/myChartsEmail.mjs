@@ -3,7 +3,7 @@ import { emailFooter } from "./emailFooter.mjs";
 import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
 import { receiptDate } from "./deliveryEmail.mjs";
-import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
+import { HINT, actionHint, hintAttrs, ownPageHint } from "../../shared/linkHints.mjs";
 
 /**
  * THE "EMAIL ME MY CHARTS" EMAIL (release 2, Jeremy 10/20), two ways:
@@ -56,8 +56,10 @@ const boughtAt = (ms) =>
  * time). `atTime`: an older record names the time it was bought too, when the
  * date alone would read the same as another row's.
  */
+const whoseName = (reading) => reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
+
 export function chartCard(reading, { atTime = false } = {}) {
-  const whose = reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
+  const whose = whoseName(reading);
   // A nameless chart bought for someone else is theirs (10/22 verbatim read), as its ready email says.
   const title = whose ? `${whose}’s ${word(reading.tier)}` : `${reading.fresh === true ? "Their" : "Your"} ${word(reading.tier)}`;
   const label = TIERS[reading.tier]?.label ?? "The chart";
@@ -81,6 +83,16 @@ export function chartCard(reading, { atTime = false } = {}) {
   return { title, line, action };
 }
 
+/**
+ * WHERE AN "OPEN" BUTTON GOES (10/23 verbatim read, S1): the card's own
+ * words, "Opens Uma’s reading", "Opens their chart". actionHint() reads a
+ * button's words, and a bare "Open" said only "Opens the page to open".
+ */
+export function openHint(reading) {
+  const whose = whoseName(reading);
+  return ownPageHint(whose ? `${whose}’s` : reading.fresh === true ? "their" : "your", word(reading.tier));
+}
+
 export function myChartsEmail({ charts = [], links, origin }) {
   const end = emailFooter("E", links);
   const none = charts.length === 0;
@@ -102,6 +114,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
   const cards = charts.map(({ reading, url }, i) => ({
     ...(seen.get(`${plain[i].title}|${plain[i].line}`) > 1 ? chartCard(reading, { atTime: true }) : plain[i]),
     url,
+    where: plain[i].action === "Open" ? openHint(reading) : actionHint(plain[i].action),
   }));
 
   const lead = none
@@ -155,7 +168,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PANEL};border-radius:12px">
       <tr><td style="padding:14px 18px 2px;font-size:17px;font-weight:700;color:${PAPER}">${esc(c.title)}</td></tr>
       <tr><td style="padding:0 18px 10px;font-size:15px;color:${MUTED}">${esc(c.line)}</td></tr>
-      <tr><td style="padding:0 18px 16px">${button(c.url, c.action, { small: true })}</td></tr>
+      <tr><td style="padding:0 18px 16px">${button(c.url, c.action, { small: true, where: c.where })}</td></tr>
     </table>
   </td></tr>`,
           )

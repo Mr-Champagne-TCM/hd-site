@@ -35,7 +35,7 @@ export const CENTER_UNDEFINED = Object.freeze({
   "Throat": "Your voice changes with the people around you.",
   "G": "Your sense of self shifts with the people and places around you.",
   "Heart": "You can feel the willpower of people around you, and it may push you to prove yourself.",
-  "Spleen": "You’re sensitive to how others feel, physically and emotionally.",
+  "Spleen": "You’re sensitive to how others feel, in body and health.",
   "Sacral": "You don’t have steady work energy of your own.",
   "Solar Plexus": "You feel other people’s emotions, often more strongly than they do.",
   "Root": "You feel pressure from people and situations around you, often more than they do."

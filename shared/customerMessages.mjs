@@ -32,7 +32,7 @@ export const MESSAGES = {
   },
   "checkout-not-offered": {
     act: false,
-    text: "That one isn’t on offer, so nothing was charged. The readings that are on offer are on the home page whenever you’d like them.",
+    text: "That one isn’t on offer, so nothing was charged. The readings that are on offer are on the front page whenever you’d like them.",
   },
   "checkout-not-yet": {
     act: false,
@@ -55,7 +55,7 @@ export const MESSAGES = {
   },
   "claim-not-paid": {
     act: false,
-    text: "That purchase hasn’t completed, so nothing was charged. The readings are on the home page whenever you’d like them.",
+    text: "That purchase hasn’t completed, so nothing was charged. The readings are on the front page whenever you’d like them.",
   },
   "purchase-safe-setup-pending": {
     act: false,
@@ -106,7 +106,7 @@ export const MESSAGES = {
     act: false,
     text:
       "This one needs to be paid for first. Nothing was charged just now, and your birth details were not stored. " +
-      "The readings, and what each one includes, are on the home page whenever you’d like them.",
+      "The readings, and what each one includes, are on the front page whenever you’d like them.",
   },
   // The text is written by ratelimit.mjs (it names the wait); this is the key.
   "chart-too-many": { act: false, text: null },

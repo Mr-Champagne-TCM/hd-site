@@ -292,8 +292,10 @@ export function deliveryEmail({
     pending || top || !sellable(tier + 1)
       ? null
       : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.[their ? "theirBlurb" : "blurb"])} ` +
-        `It is offered on your page, and what you have already paid comes off the price ` +
-        `there — nobody pays twice for the same thing.`;
+        // The site's one credit sentence (10/23 verbatim read, S4); a gift's chart is offered on its own
+        // page, not "your page" beside "Open their chart" (N29).
+        `It is offered on ${their ? "the chart’s page" : "your page"}, and what you have already paid comes off ` +
+        `what you pay next — nobody pays twice for the same thing.`;
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
   const keptLine =

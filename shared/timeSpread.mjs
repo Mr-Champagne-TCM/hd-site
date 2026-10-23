@@ -200,12 +200,16 @@ export const ADD_TIME = {
   /** "Kept from your chart" (the site's label), "Kept from your summary" on the summary tier. */
   kept: (tier) => (tier === 0 ? "Kept from your summary" : "Kept from your chart"),
   /**
-   * NEW (10/22 verbatim read): nothing earlier changes but "time unknown", so the
-   * line says that, not "Change a detail"'s "Your earlier details stay on file".
+   * What is kept, exactly as retimeReading (netlify/lib/reading.mjs) keeps it
+   * (10/23 verbatim read, S2: "a note" understated it): the details as they
+   * were, with the time unknown, and the chart -- on the reading tier, the
+   * chart and its written reading -- made from them, in the record's history
+   * for its year, never on a page, a PDF or an email. The privacy page's
+   * "Earlier details" row says the same.
    */
   privacy: (tier) =>
-    `Nothing else on file changes. A note that the time was unknown before stays with this ${tier === 0 ? "summary" : "chart"}, ` +
-    "seen only by Jeremy, in case you ever write in about it.",
+    `Your earlier details, and the ${tier >= 2 ? "chart and reading" : tier === 1 ? "chart" : "summary"} made from them, ` +
+    `stay with this ${tier === 0 ? "summary" : "chart"}, seen only by Jeremy, in case you ever write in about them.`,
 };
 
 /* -------------------------------------------------------------- the drawing */

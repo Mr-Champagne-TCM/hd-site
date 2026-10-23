@@ -73,11 +73,12 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             <p className="text-[17px] leading-relaxed text-brand-paper">
               <span className="font-semibold text-brand-teal">{label}</span>
               {measured?.has(rowField[label]) && <Tag className="ml-2" />}
-              {/* "· Generator" keeps together: on a phone the tag can push it to the next line, the dot with it. */}
+              {/* "Profile 6/2" keeps together, and the dot stays behind the label or its tag (a no-break
+                  space before it): on a phone a lone "·" opened the next line (10/23 verbatim read, N19). */}
               {value ? (
                 <span className="text-brand-muted">
-                  {" "}
-                  <span className="whitespace-nowrap">· {value}</span>
+                  {"\u00a0· "}
+                  <span className="whitespace-nowrap">{value}</span>
                 </span>
               ) : null}
               {!measured && unsure.has(rowField[label]) && (

@@ -36,7 +36,7 @@ object LibraryGlance {
         "Throat" to "Your voice changes with the people around you.",
         "G" to "Your sense of self shifts with the people and places around you.",
         "Heart" to "You can feel the willpower of people around you, and it may push you to prove yourself.",
-        "Spleen" to "You're sensitive to how others feel, physically and emotionally.",
+        "Spleen" to "You're sensitive to how others feel, in body and health.",
         "Sacral" to "You don't have steady work energy of your own.",
         "Solar Plexus" to "You feel other people's emotions, often more strongly than they do.",
         "Root" to "You feel pressure from people and situations around you, often more than they do.",

@@ -73,7 +73,7 @@ const pagesOf = (r) => Math.max(...r.runs.map((x) => x.page));
 test("item 12, option B: the chart tier ends on a calm page 3 of its own", async () => {
   assert.equal(NEXT_STEPS_HEAD, "Where to go from here");
   assert.equal(ONWARD_NOTE_PAGE, ONWARD_NOTE.replace("Every word above", "Every word on page 2"));
-  assert.ok(ONWARD_NOTE_PAGE.startsWith("Every word on page 2 is explained in The Human Design library"));
+  assert.ok(ONWARD_NOTE_PAGE.startsWith("Every word on page 2 is explained in the Human Design library"));
   const r = await render(1);
   assert.equal(pagesOf(r), 3);
   assert.equal(headOf(r, 2), "Your chart at a glance");
@@ -81,13 +81,14 @@ test("item 12, option B: the chart tier ends on a calm page 3 of its own", async
   assert.ok(r.runs.some((x) => x.page === 3 && x.text === WORDMARK), "page 3 has no running brand line");
   const p2 = r.runs.filter((x) => x.page === 2).map((x) => x.text).join(" ");
   const p3 = r.runs.filter((x) => x.page === 3).map((x) => x.text);
-  assert.doesNotMatch(p2, /comes off the price|Every word above|FREE TO READ/, "page 2 still carries the end block");
+  assert.doesNotMatch(p2, /comes off what you pay next|Every word above|FREE TO READ/, "page 2 still carries the end block");
   const at = (t) => p3.findIndex((x) => x === t);
   assert.ok(at("FREE TO READ, EITHER WAY") > 0);
   assert.ok(at("IF YOU WOULD LIKE MORE THAN THIS CHART") > at("FREE TO READ, EITHER WAY"), p3.join(" | "));
   const text3 = p3.join(" ");
   assert.match(text3, /Every word on page 2 is explained/);
-  assert.match(text3, /Nobody pays twice for the same thing\./);
+  // The site's one credit sentence (10/23 verbatim read, S4).
+  assert.match(text3, /What you have already paid comes off what you pay next — nobody pays twice for the same thing\./);
   // The note's three names are still links, now on page 3.
   const note = r.links.filter((l) => l.page === 3 && (l.uri === LIBRARY || l.uri === BODYGRAPH_GUIDE));
   assert.ok(note.length >= 3, `${note.length} note links on page 3`);
@@ -96,7 +97,7 @@ test("item 12, option B: the chart tier ends on a calm page 3 of its own", async
 test("the reading tier keeps the note under its values, and no offer", async () => {
   const r = await render(2);
   const all = r.runs.map((x) => x.text).join(" ");
-  assert.doesNotMatch(all, /Where to go from here|comes off the price/);
+  assert.doesNotMatch(all, /Where to go from here|comes off what you pay next/);
   /**
    * Fix 6 (10/21): the note never stands on a page alone. Here page 2 cannot
    * give enough room, so the technical values go over with it -- and with page

@@ -179,10 +179,10 @@ function Example() {
         Every word in it is explained in{" "}
         <a
           href={SITE.hd101}
-          {...hint("The Human Design library", HINT.library)}
+          {...hint("the Human Design library", HINT.library)}
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
         >
-          The Human Design library
+          the Human Design library
         </a>
         , free.
       </p>

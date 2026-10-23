@@ -192,11 +192,11 @@ export default function WrittenReading({
         Every word in it is explained in{" "}
         <a
           href={SITE.hd101}
-          {...hint("The Human Design library", HINT.library)}
+          {...hint("the Human Design library", HINT.library)}
           rel="noreferrer"
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
         >
-          The Human Design library
+          the Human Design library
         </a>
         , free.
       </p>
@@ -329,8 +329,8 @@ export function ReadingInOrder({
       {/* The PDFs' onward note: both free pages, as an invitation. */}
       <p className="text-[15px] leading-relaxed text-brand-muted">
         Every word above is explained in{" "}
-        <a href={LIBRARY} {...hint("The Human Design library", HINT.library)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
-          The Human Design library
+        <a href={LIBRARY} {...hint("the Human Design library", HINT.library)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+          the Human Design library
         </a>
         , and the drawing at the top in{" "}
         <a href={SITE.bodygraph} {...hint("“Reading your bodygraph.”", HINT.bodygraph)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">

@@ -40,7 +40,7 @@ test("CREDIT ONCE: the price page says the credit idea in one place, under the c
   assert.equal(
     LADDER_NOTE,
     "Straight to the reading, or a step at a time — the total is identical either way. " +
-      "What you have already paid goes toward whatever you choose next, so nobody pays twice for the same thing.",
+      "What you have already paid comes off what you pay next — nobody pays twice for the same thing.",
   );
   const page = `${TIERS_INTRO.lead}\n${TIERS_INTRO.title}\n${TIERS_INTRO.body}\n${LADDER_NOTE}`;
   const count = (re) => (page.match(re) ?? []).length;

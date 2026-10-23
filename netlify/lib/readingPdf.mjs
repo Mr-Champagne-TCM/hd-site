@@ -158,7 +158,7 @@ export const FOOTER = "The Champagne Method Coaching and Consulting · thechampa
  * .../library/human-design", where the bodygraph guide is not).
  */
 export const ONWARD_NOTE =
-  "Every word above is explained in The Human Design library, and the drawing on " +
+  "Every word above is explained in the Human Design library, and the drawing on " +
   "page 1 in “Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
   "and thechampagnemethod.co/library/bodygraph.";
 
@@ -172,7 +172,7 @@ export const ONWARD_NOTE_PAGE = ONWARD_NOTE.replace("Every word above", "Every w
 
 /** Page-2 note phrases that are links, and where they go. */
 export const ONWARD_LINKS = Object.freeze([
-  ["The Human Design library", LIBRARY],
+  ["the Human Design library", LIBRARY],
   ["Reading your bodygraph", BODYGRAPH_GUIDE],
   ["thechampagnemethod.co/library/human-design", LIBRARY],
   ["thechampagnemethod.co/library/bodygraph", BODYGRAPH_GUIDE],
@@ -1030,9 +1030,10 @@ function offerLayouts(d, tier) {
   const label = (TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase();
   const head = `IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim();
   const body = d.L(
+    // The site's one credit sentence (10/23 verbatim read, S4), then where the credit lives.
     `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
-      "the price, and the link in your email is what proves it — so opening this from there " +
-      "means the credit is already applied. Nobody pays twice for the same thing.",
+      "what you pay next — nobody pays twice for the same thing. The link in your email is what " +
+      "proves it, so opening this from there means the credit is already applied.",
     paint(10, INK),
   );
   return { head, body };

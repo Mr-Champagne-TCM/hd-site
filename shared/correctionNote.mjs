@@ -146,8 +146,9 @@ export function correctionNote(c, { tier: pageTier } = {}) {
     return {
       eyebrow: "Your birth time",
       lead: `Birth time added: ${at} — ${what} now redone from it.`,
+      // What stayed the same is said beside what moved, before the closing sentence (10/23 verbatim read, N1).
       body: moved.length
-        ? [scoped, alsoSentence, follows, sameSentence].filter(Boolean).join(" ")
+        ? [scoped, sameSentence, alsoSentence, follows].filter(Boolean).join(" ")
         : [sameSentence, alsoSentence, follows].filter(Boolean).join(" "),
       learn,
     };

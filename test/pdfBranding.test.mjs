@@ -48,7 +48,7 @@ test("the brand lines are Jeremy's wording, 'by' lowercase", () => {
   assert.equal(
     ONWARD_NOTE,
     // W12 (10/21): each free page at its own address; the guide is not at .../human-design.
-    "Every word above is explained in The Human Design library, and the drawing on page 1 in " +
+    "Every word above is explained in the Human Design library, and the drawing on page 1 in " +
       "“Reading your bodygraph.” Both are free: thechampagnemethod.co/library/human-design " +
       "and thechampagnemethod.co/library/bodygraph.",
   );
