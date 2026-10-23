@@ -212,13 +212,46 @@ function locateRender(message, ctx) {
 }
 
 /**
+ * EVERY HIT OF A CHECK, NOT ONLY ITS FIRST (10/23, round rk-a: a draft with all
+ * six summary rows in lower case took five part asks, one row each, because a
+ * check names only its first hit). With the slots of the first hit blanked, the
+ * same check is run again: a new answer that does not quote the blank is the
+ * next hit, located the same way on the blanked draft. Up to FIX_SLOTS of them.
+ * The messages are the checker's own, as it would give them once the hits
+ * before were mended.
+ */
+function furtherHits(first, ctx) {
+  const out = [];
+  let blanked = [...first.slots];
+  let last = first.message;
+  for (let i = 0; i < FIX_SLOTS; i++) {
+    const form = setSlots(ctx.form, Object.fromEntries(blanked.map((id) => [id, BLANK])));
+    const r = renderReading(form, ctx.output);
+    if (r.problem) break;
+    const text = sanitize(r.text);
+    const check = checkFor(first.rule);
+    const answer = check ? check(text, ctx.output, ctx.copy) ?? null : null;
+    if (!answer || answer === last || answer.includes(BLANK)) break;
+    const slots = locate({ rule: first.rule, message: answer }, { ...ctx, form, text, spans: r.spans });
+    if (!slots || slots.some((id) => blanked.includes(id))) break;
+    out.push({ rule: first.rule, message: answer, slots });
+    blanked = [...blanked, ...slots];
+    last = answer;
+  }
+  return out;
+}
+
+/**
  * THE PLAN FOR A REFUSED DRAFT: every problem and the slots it rests on, and,
  * when every one of them is local and they touch at most FIX_SLOTS slots, the
  * parts to ask for again: [{ id, label, words, messages }] in page order.
  */
 export function planFix({ form, output, text = null, spans = [], problems, copy }) {
   const ctx = { form, output, text, spans, copy };
-  const located = problems.map((p) => ({ ...p, slots: locate(p, ctx) }));
+  const located = problems.flatMap((p) => {
+    const first = { ...p, slots: locate(p, ctx) };
+    return [first, ...(first.slots && p.rule !== "render" ? furtherHits(first, ctx) : [])];
+  });
   const local = located.length > 0 && located.every((p) => p.slots && p.slots.length);
   const ids = [...new Set(located.flatMap((p) => p.slots ?? []))];
   if (!local || ids.length > FIX_SLOTS) return { problems: located, parts: null };

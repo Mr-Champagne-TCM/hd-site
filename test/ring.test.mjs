@@ -68,3 +68,45 @@ test("THE READING ENDPOINT RINGS -- structurally, because it holds the secret", 
   assert.match(src, /ringIfDue/, "the reading endpoint no longer rings the writer for a stuck reading");
   assert.match(src, /TRIGGER_HEADER/, "the ring does not carry the trigger token");
 });
+
+/* ------------------------------------------- RETRY SOONER (Jeremy 10/23: "Better to retry sooner") */
+
+test("an unwritten reading rings the writer again, RERINGS times at most, then the sweep carries on as before", async () => {
+  const { RERINGS, reringIfDue } = await import("../netlify/lib/ring.mjs");
+  const gate = fakeGate();
+  const rung = [];
+  const ring = async (id) => rung.push(id);
+  for (let i = 0; i < RERINGS + 3; i++) await reringIfDue({ id: "abc", gate, ring, now: T0 + i * 60_000 });
+  assert.deepEqual(rung, Array(RERINGS).fill("abc"));
+  assert.equal(gate.m.get("rering/abc").count, RERINGS);
+  // The page's poll counts it as a ring: no second ring from the page a moment later.
+  assert.equal(shouldRing({ filledAtMs: T0 - 10 * 60_000, lastRingMs: gate.m.get("ring/abc").at, now: gate.m.get("ring/abc").at + 30_000 }), false);
+  // Each reading has its own count.
+  assert.deepEqual(await reringIfDue({ id: "xyz", gate, ring, now: T0 }), { rang: true, count: 1 });
+});
+
+test("bounded even when the store is not: a count that cannot be written rings nothing", async () => {
+  const { reringIfDue } = await import("../netlify/lib/ring.mjs");
+  const rung = [];
+  const readOnly = { async get() { return null; }, async setJSON() { throw new Error("down"); } };
+  assert.deepEqual(await reringIfDue({ id: "abc", gate: readOnly, ring: async (id) => rung.push(id), now: T0 }), { rang: false, count: 0 });
+  assert.deepEqual(rung, []);
+  const angryRing = await reringIfDue({ id: "abc", gate: fakeGate(), ring: async () => { throw new Error("no"); }, now: T0 });
+  assert.equal(angryRing.rang, false, "a failed ring is a missed nudge, never a thrown error");
+});
+
+test("only endings another job could change ring again: not a reading written, missing or misconfigured", async () => {
+  const { reringWorth } = await import("../netlify/lib/ring.mjs");
+  for (const r of ["malformed", "timeout", "http", "network", "unreadable", "out_of_time", "unknown"]) assert.equal(reringWorth(r), true, r);
+  for (const r of ["already_written", "not_found", "wrong_tier", "no_chart_yet", "misconfigured", "no_chart"]) assert.equal(reringWorth(r), false, r);
+});
+
+test("the writer rings itself again for what it could not write, once per run, inside its fifteen minutes", () => {
+  const writer = readFileSync(fileURLToPath(new URL("../netlify/functions/interpret.mjs", import.meta.url)), "utf8");
+  assert.match(writer, /reringIfDue\(/);
+  assert.match(writer, /if \(out\.rang\) return;/, "one ring per run");
+  assert.match(writer, /RERING_GAP_MS \+ 30_000 > deadline \+ 60_000/, "only while it fits the fifteen minutes");
+  // The sweep is unchanged: still every fifteen minutes, still only rings.
+  const sweep = readFileSync(fileURLToPath(new URL("../netlify/functions/sweep.mjs", import.meta.url)), "utf8");
+  assert.match(sweep, /schedule: "\*\/15 \* \* \* \*"/);
+});

@@ -482,19 +482,21 @@ export function renderReading(json, output) {
     out.push(heading, "");
     put("", sec.lede, `${slot}_lede`);
     out.push("");
-    (Array.isArray(sec.paragraphs) ? sec.paragraphs : []).forEach((p, j) => {
-      put("", p, `${slot}_paragraph_${j + 1}`);
+    const paras = Array.isArray(sec.paragraphs) ? sec.paragraphs : [];
+    for (let j = 0; j < paras.length; j++) {
+      put("", paras[j], `${slot}_paragraph_${j + 1}`);
       out.push("");
-    });
+    }
   });
 
   out.push(TAKEAWAYS, "");
   put("", json.experimentIntro, "experimentIntro");
   out.push("");
-  (Array.isArray(json.takeaways) ? json.takeaways : []).forEach((t, j) => {
-    put("", t, `takeaway_${j + 1}`);
+  const tries = Array.isArray(json.takeaways) ? json.takeaways : [];
+  for (let j = 0; j < tries.length; j++) {
+    put("", tries[j], `takeaway_${j + 1}`);
     out.push("");
-  });
+  }
   out.push(DISCLAIMER);
   const starts = [];
   let at = 0;

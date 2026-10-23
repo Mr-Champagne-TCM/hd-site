@@ -111,6 +111,14 @@ test("two problems in two slots: both asked for, in page order, each with its ow
   assert.match(p.parts[1].messages.join(" "), /takeaway/i);
 });
 
+test("EVERY HIT of a check, not only its first: rows in lower case are all asked for at once (round rk-a, R04: five asks, one row each)", () => {
+  const f = setSlots(form(), { summary_type: "a motor that renews.", summary_strategy: "let the question arrive first.", summary_authority: "the gut answers." });
+  const p = plan(f);
+  assert.deepEqual(p.parts.map((x) => x.id), ["summary_type", "summary_strategy", "summary_authority"]);
+  assert.match(p.parts[1].messages[0], /^The "Strategy" line does not begin a sentence/);
+  assert.equal(p.problems.filter((x) => x.rule === "glance").length, 3);
+});
+
 test("a center missing from What you take in from others: the section is asked for (nothing to blank)", () => {
   const f = form({ takeIn: section() });
   const p = plan(f);
