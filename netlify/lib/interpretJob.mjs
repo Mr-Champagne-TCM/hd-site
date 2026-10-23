@@ -53,6 +53,40 @@ const ASK_MS = 90_000;
 export const READING_BUDGET_MS = 8 * 60_000;
 const worstAsk = (limit) => 2 * limit + 5_000;
 
+/**
+ * RE-ASK ONLY THE FAILING PART, AND SOONER (Jeremy 10/23: "yes, reask only
+ * failing part"; "Better to retry sooner. Minimize delays to customer").
+ *
+ * A refused form whose every problem rests on at most reask.mjs FIX_SLOTS
+ * slots is not thrown away: the model is asked for those slots only, with its
+ * own draft and the checker's words, and the whole draft is judged again. Such
+ * an ask writes a sentence or a paragraph, not a reading, so it is cheap and
+ * quick, and there can be more of them inside the same eight minutes:
+ *
+ *   ASKS          fresh drafts, as before (the first ask is one);
+ *   PART_ASKS     asks for parts, on top of them;
+ *   PART_TRIES    the same slot asked for this many times and still refused:
+ *                 a fresh draft instead (a part that will not come right is
+ *                 usually the draft's framing, not the sentence);
+ *   PART_ASK_MS   a part's time limit (a whole reading's is 90 s);
+ *   ASK_GAP_MS    a part ask starts at least this long after the ask before
+ *                 it started (a fresh draft takes longer than that by
+ *                 itself). The free tier counts
+ *                 requests per minute per model (Google: "Rate limits are
+ *                 applied per project"; a 429's quota id is
+ *                 ...PerProjectPerModel-FreeTier); part asks can come back in
+ *                 a few seconds, and ten a minute is the most one reading may
+ *                 use, so a second reading at the same moment still fits.
+ *
+ * Fifteen asks at most, and the time rule above still decides: an ask starts
+ * only when its worst case ends inside the reading's budget and the caller's
+ * deadline, so the background function's fifteen minutes are never at risk.
+ */
+export const PART_ASKS = 10;
+export const PART_TRIES = 3;
+export const PART_ASK_MS = 45_000;
+export const ASK_GAP_MS = 6_000;
+
 export async function interpretOne({
   id,
   store,
@@ -66,6 +100,7 @@ export async function interpretOne({
   generate = generateReading,
   clock = Date.now,
   deadline = Infinity,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
 }) {
   const reading = await loadReading(store, id, now);
   if (!reading) return { ok: false, reason: "not_found" };
@@ -79,35 +114,78 @@ export async function interpretOne({
   const fits = (limit) => clock() + worstAsk(limit) <= stop;
   // Too little of the caller's time left to finish even one ask: leave it for the next run.
   if (!fits(ASK_MS)) return { ok: false, reason: "out_of_time" };
+  let lastAskAt = clock();
   let made = await generate(reading.output, { apiKey, prompt, shape });
   let reaskedTimeout = false;
+  let drafts = 1;
+  let partAsks = 0;
+  let noted = 0;
+  // How often each slot of the current draft has been asked for again.
+  const tries = new Map();
+  // A part ask starts ASK_GAP_MS after the ask before it started (the free tier's per-minute count; a fresh
+  // draft takes longer than that by itself). The wait is part of the time rule.
+  const gap = (part) => (part ? Math.max(0, lastAskAt + ASK_GAP_MS - clock()) : 0);
+  const ask = async (opts, limit) => {
+    const wait = gap(Boolean(opts.fix));
+    if (wait > 0) await sleep(wait);
+    lastAskAt = clock();
+    return generate(reading.output, { apiKey, prompt, shape, ...opts, ...(limit !== ASK_MS ? { timeoutMs: limit } : {}) });
+  };
+  const fitsAfterGap = (limit, part = false) => clock() + gap(part) + worstAsk(limit) <= stop;
   /**
-   * UP TO FIVE ASKS ON A REFUSED DRAFT (Jeremy 9/9 + 10/4: refuse and re-ask,
-   * five times, instead of rewriting). The first live buyer under the
-   * three-state prompt had two drafts refused and then waited on a sweep that
-   * never came; another ask costs seconds, leaving it to the net costs the
-   * buyer the afternoon. Every refusal is reported with its excerpt.
+   * UP TO FIVE FRESH DRAFTS ON A REFUSED DRAFT (Jeremy 9/9 + 10/4: refuse and
+   * re-ask, five times, instead of rewriting), and since 10/23 the failing
+   * part of a draft asked for on its own before a fresh draft is (PART_ASKS).
+   * The first live buyer under the three-state prompt had two drafts refused
+   * and then waited on a sweep that never came; another ask costs seconds,
+   * leaving it to the net costs the buyer the afternoon. Every refusal is
+   * reported with its excerpt.
    */
-  for (let ask = 1; ask < ASKS && !made.ok; ask++) {
-    if (made.reason === "malformed" && fits(ASK_MS)) {
+  while (!made.ok) {
+    if (made.reason === "malformed") {
       // One refused draft is noise on its own (internal-only); the sweep counts
-      // them, and six in an hour raises reading-failure-rate.
+      // them, and six in an hour raises reading-failure-rate. ASKS - 1 of them
+      // at most per job, as before part asks: the alarm still means two
+      // readings struggling at once, or one failing job after job.
       // A form of placeholders ("string" in its slots) is its own kind (10/22).
-      const kind = String(made.detail ?? "").startsWith(PLACEHOLDERS) ? "gemini-placeholder" : "gemini-refused";
-      await noteFailure(health, kind, {
-        detail: made.detail ?? null,
-        excerpt: made.text ?? null,
-        now,
-      });
-      made = await generate(reading.output, { apiKey, prompt, shape });
-    } else if (made.reason === "timeout" && !reaskedTimeout && fits(TIMEOUT_REASK_MS)) {
+      if (noted < ASKS - 1) {
+        noted += 1;
+        const kind = String(made.detail ?? "").startsWith(PLACEHOLDERS) ? "gemini-placeholder" : "gemini-refused";
+        await noteFailure(health, kind, {
+          detail: made.detail ?? null,
+          excerpt: made.text ?? null,
+          now,
+        });
+      }
+      const parts = made.plan?.parts ?? null;
+      const tired = (parts ?? []).some((p) => (tries.get(p.id) ?? 0) >= PART_TRIES);
+      if (parts && made.form && !tired && partAsks < PART_ASKS && fitsAfterGap(PART_ASK_MS, true)) {
+        partAsks += 1;
+        for (const p of parts) tries.set(p.id, (tries.get(p.id) ?? 0) + 1);
+        made = await ask({ fix: { form: made.form, parts } }, PART_ASK_MS);
+        continue;
+      }
+      if (drafts < ASKS && fitsAfterGap(ASK_MS)) {
+        drafts += 1;
+        tries.clear();
+        made = await ask({}, ASK_MS);
+        continue;
+      }
+      break;
+    }
+    if (made.reason === "timeout" && !reaskedTimeout && drafts < ASKS && fitsAfterGap(TIMEOUT_REASK_MS)) {
       // Once only: a second timeout is reported as one, below.
       reaskedTimeout = true;
+      drafts += 1;
+      tries.clear();
       // Internal-only, like a refusal: the sweep counts it toward reading-failure-rate.
       await noteFailure(health, "gemini-timeout-reasked", { detail: made.detail ?? null, now });
-      made = await generate(reading.output, { apiKey, prompt, shape, timeoutMs: TIMEOUT_REASK_MS });
-    } else break;
+      made = await ask({}, TIMEOUT_REASK_MS);
+      continue;
+    }
+    break;
   }
+  const asks = drafts + partAsks;
   if (!made.ok) {
     /**
      * REPORTED, NOT SWALLOWED. This is the one failure nobody else can see: the
@@ -125,7 +203,7 @@ export async function interpretOne({
       ref: { reading: id, tier: reading.tier },
       ...(deliver?.alert ? { send: deliver.alert, site: origin } : {}),
     });
-    return { ok: false, reason: made.reason, detail: made.detail };
+    return { ok: false, reason: made.reason, detail: made.detail, asks };
   }
 
   const filed = await fillInterpretation(store, id, made.text, now);
@@ -154,5 +232,5 @@ export async function interpretOne({
     }
   }
 
-  return { ok: true, words: made.text.split(/\s+/).length };
+  return { ok: true, words: made.text.split(/\s+/).length, asks, partAsks };
 }
