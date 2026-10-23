@@ -48,6 +48,20 @@ test("M1: motors said to reach a Throat no motor reaches are refused (R04, R32, 
   assert.match(connectionProblem(section("Your defined Root center continuously supplies mechanical stress and adrenaline. Working alongside your defined Throat center, this engine pushes you to manifest physical outcomes.", INTERPRETATION[3]), R32), /the Root works with the Throat in "What is consistently yours", but no channel of this chart joins the Root to the Throat/);
 });
 
+test("M1 (arms af-a/af-b): the Throat's vitality turned into words, and the same take-the-power claim moved to the G", () => {
+  const R01 = chart("Generator", ["1-8 (Inspiration)", "10-57 (Perfected Form)", "6-59 (Intimacy)"]); // Throat+G+Spleen | Sacral+Solar Plexus
+  // af-b R01: refused for the Throat, the part re-ask came back with the G -- no motor reaches either.
+  assert.match(connectionProblem(section("Your defined G center channels that sacral power into outward expression and daily tasks."), R01), /^The reading says motor power reaches the G in "Your energy, and how it starts", but no motor of this chart is joined to the G: "/);
+  assert.equal(connectionProblem(section("Your defined G center channels that sacral power into outward expression and daily tasks."), MG), null, "13-33 + 20-34: the G reaches the Sacral");
+  // af-a R04: "This defined outlet" is the Throat of the sentence before.
+  const r04 = "Because your Throat center stays colored in, your voice carries weight in any room you enter. This defined outlet ensures your vitality translates directly into tangible results whenever physical work meets your daily demands.";
+  assert.match(connectionProblem(section(r04), R04), /motor power reaches the Throat .* the Throat is joined only to the G, and no motor reaches it/);
+  assert.equal(connectionProblem(section(r04), MG), null);
+  // Vitality on a Throat joined to the Spleen may be the Spleen's: not judged.
+  assert.equal(connectionProblem(section("Your Throat center is defined, providing a direct channel to manifest your internal vitality into spoken words."), R01), null);
+  assert.match(connectionProblem(section("Your Throat center is defined, providing a direct channel to manifest your internal life force into spoken words."), R04), /motor power reaches the Throat/);
+});
+
 test("M1: denials and a Manifestor's real motor pass; an Ego Projected voice carrying the Heart is not a wiring claim", () => {
   for (const p of [
     "Because your Projector type lacks a defined motor connected to the Throat, your energy moves in waves.",

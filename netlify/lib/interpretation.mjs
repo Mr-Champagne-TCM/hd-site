@@ -2268,6 +2268,9 @@ export function connectionProblem(raw, output) {
  *      defined center", "this area"...) taking, translating or channelling the power of motors, wired to motors,
  *      working alongside them, or speaking whenever they engage; and "a motor connected to the Throat". A motor
  *      named must be joined to the Throat by this chart's channels; "your motors" needs one that is;
+ *      Also (arms af-a, af-b) the Throat turning "your vitality" into words or results (not judged on a Throat
+ *      joined to the Spleen, whose word vitality also is), and another centre taking or channelling a motor's power
+ *      ("Your defined G center channels that sacral power", a part re-ask that swapped the Throat for the G);
  *   2. any centre said to connect to "your motors": a motor must be in its part of the chart;
  *   3. the motor the sentence before names, working "alongside your Throat": the two must be joined;
  *   4. thoughts, ideas or mental processing finding an outlet, bridge or path into words, speech or expression:
@@ -2307,6 +2310,11 @@ const THROAT_FEEDS = [
   ["feed", String.raw`\b(?:emerg(?:e|es|ed|ing)|flow(?:s|ed|ing)?|com(?:e|es|ing)|mov(?:e|es|ed|ing)|ris(?:e|es|ing)|spring(?:s|ing)?)\s+(?:[a-z]+\s+){0,2}?from\s+your\s+((?:(?:sacral|root|solar plexus|heart)\s+(?:engine|motor|cent(?:er|re)))|${MOTOR_WORD})`],
   // "channels this physical power into outward expression"
   ["motorish", String.raw`\b(?:channel|translat|turn|convert|carr|push|transform)\w*\s+(?:this|that|your|the)\s+(?:(?:raw|steady|physical|vital)\s+)*(?:life[- ]force|physical\s+power|raw\s+power|motor\s+power|sacral\s+power|physical\s+drive)\s+(?:outward\s+)?into\s+(?:[a-z]+\s+){0,2}?(?:expression|speech|words|action|voice|communication)\b`],
+  // 10/23 (arm af-a R04, R05): "This defined outlet [the Throat] ensures your vitality translates directly into
+  // tangible results", "a direct channel to manifest your internal vitality into spoken words". Vitality is the
+  // Sacral's word, and the Spleen's too: on a Throat joined to the Spleen it is not judged (wiringClaim).
+  ["vital", String.raw`\b(?:your|this|that|the)\s+(?:(?:inner|internal|raw|physical|generative|sacral)\s+)?(vitality|life[- ]force|vital\s+force|sacral\s+(?:power|energy))\s+(?:translates?|flows?|moves?|pours?|turns?|is\s+channell?ed|finds?\s+(?:its\s+way|an?\s+outlet))\s+(?:(?:directly|effortlessly|naturally|smoothly|outward|straight)\s+)*(?:into|through)\s+(?:your\s+)?(?:spoken\s+words|speech|expression|words|voice|tangible\s+results|outward\s+expression)\b`],
+  ["vital", String.raw`\b(?:manifest|channel|translat|turn|carr|express)\w*\s+(?:your\s+|this\s+|that\s+|the\s+)?(?:(?:inner|internal|raw|physical)\s+)?(vitality|life[- ]force|vital\s+force)\s+(?:outward\s+)?into\s+(?:spoken\s+words|speech|expression|words|voice)\b`],
 ].map(([kind, src]) => [kind, new RegExp(src, "gi")]);
 /** "a motor connected to the Throat", in the round's denials and its Manifestors' claims. */
 const MOTOR_AT_THROAT = new RegExp(String.raw`\b(${MOTOR_WORD})\s+(?:[a-z]+\s+){0,2}?(?:connected|linked|wired|attached|joined|tied)\s+(?:directly\s+)?(?:to|with)\s+(?:your\s+|the\s+)(?:defined\s+)?throat\b`, "gi");
@@ -2382,8 +2390,8 @@ function wiringClaim(sentence, prev, where, wiring) {
       if (denied(m)) continue;
       const about = subject(m.index, kind !== "wire");
       const tail = m[1] ?? "";
-      const named = kind === "motorish" ? [] : motorsNamed(tail.split(/\b(?:into|and\s+(?:translat|turn|convert|giv|transform)\w*|to\s+(?:fuel|power|drive)|through)\b/i)[0]);
-      const generic = kind === "motorish" || /\b(?:motors?|motor\s+cent|engines?|motor|engine)\b/i.test(tail);
+      const named = kind === "motorish" || kind === "vital" ? [] : motorsNamed(tail.split(/\b(?:into|and\s+(?:translat|turn|convert|giv|transform)\w*|to\s+(?:fuel|power|drive)|through)\b/i)[0]);
+      const generic = kind === "motorish" || kind === "vital" || /\b(?:motors?|motor\s+cent|engines?|motor|engine)\b/i.test(tail);
       if (!named.length && !generic) continue;
       if (kind === "wire") {
         // 2. Any centre connected to "your motors".
@@ -2393,7 +2401,19 @@ function wiringClaim(sentence, prev, where, wiring) {
         if (about === "Throat") return `The reading says the Throat is wired to motors in ${where}, but ${throatSays()}: ${quote(m)}`;
         return `The reading says the ${about} connects to motors in ${where}, but no motor of this chart is joined to the ${about}: ${quote(m)}`;
       }
-      if (about !== "Throat") continue;
+      if (!about || MOTOR_CENTRES.includes(about)) continue;
+      if (about !== "Throat") {
+        // 10/23 (arm af-b R01, a part re-ask that swapped the Throat for the G): the same take-the-power claim made of
+        // another centre, "Your defined G center channels that sacral power into outward expression".
+        if (!(kind === "motorish" || re === THROAT_FEEDS[0][1] || re === THROAT_FEEDS[1][1])) continue;
+        const reach = MOTOR_CENTRES.filter((c) => wiring.joined(c, about));
+        const off = named.filter((c) => !reach.includes(c));
+        if (named.length ? !off.length : reach.length) continue;
+        if (named.length) return `The reading says the power of ${theList(off)} reaches the ${about} in ${where}, but no channel of this chart joins ${off.length > 1 ? "them" : "it"} to the ${about}: ${quote(m)}`;
+        return `The reading says motor power reaches the ${about} in ${where}, but no motor of this chart is joined to the ${about}: ${quote(m)}`;
+      }
+      // Vitality on a Throat joined to the Spleen may be the Spleen's own.
+      if (kind === "vital" && /vital/i.test(tail) && wiring.joined("Spleen", "Throat")) continue;
       if (named.length) {
         const off = named.filter((c) => !throatMotors.includes(c));
         if (off.length) return `The reading says the power of ${theList(off)} reaches the Throat in ${where}, but no channel of this chart joins ${off.length > 1 ? "them" : "it"} to the Throat: ${quote(m)}`;
