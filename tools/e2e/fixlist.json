@@ -336,6 +336,17 @@
       ]
     },
     {
+      "id": "13-gates-caption",
+      "about": "the gates example's banner: its old line said lit gates are not listed, which page 2's new ACTIVATED GATES row made false; it is now marker 4 and says what page 2 shows (10/22)",
+      "docs": "^sample /samples/charts/example-chart-gates\\.pdf\\.p[123]$",
+      "minus": [
+        "^Gates lit on their own aren[’']t listed there; the drawing shows every lit gate\\. Dark circles are not lit\\.$"
+      ],
+      "plus": [
+        "^4 Page 2[’']s ACTIVATED GATES row lists every lit gate by number\\. Dark circles are not lit\\.$"
+      ]
+    },
+    {
       "id": "us-dates",
       "about": "privacy: the three change dates in US order (found by the 10/21 check audit)",
       "docs": "^page web-readings-privacy$",
