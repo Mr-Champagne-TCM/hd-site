@@ -16,6 +16,7 @@ import {
   CHANNEL,
   PROFILE_LINE,
 } from "../../shared/libraryGlance.mjs";
+import { curly } from "../../shared/curlyQuotes.mjs";
 
 /**
  * "START HERE" AND THE READING'S NEW ORDER, as data -- PORTED from the phone
@@ -184,6 +185,66 @@ export function buildReadingView(chart, reading) {
     }).filter((x) => x.lede || x.paragraphs.length),
     takeaways: lines(s.get(TAKEAWAYS)),
     disclaimer: DISCLAIMER,
+  };
+}
+
+/**
+ * THE MODEL'S OWN SENTENCES, CURLED FOR DISPLAY (GO page v3, decision 4,
+ * 10/23: "The AI's own sentences keep straight apostrophes beside curly
+ * headings (e.g. "environment's"). Curl them for display only ... the stored
+ * text and the checker stay untouched.").
+ *
+ * A COPY of the view with every sentence the model wrote curled (the glance
+ * sentences, the three Start here Takeaways, each section's lead and
+ * paragraphs, the experiments). Untouched: the headings (they key the margin
+ * notes and are curled where they are drawn), the chart's names and numbers,
+ * the library's one-liners (curly already), the disclaimer. The view it is
+ * given is not changed, and nothing here reaches the store: the page and the
+ * PDF call it on the way out, after every check has read the stored text.
+ *
+ * The phone does the same to the same fields (hd-reading-app
+ * ReadingView.display(), and PdfExport where it draws from the text).
+ */
+export function forDisplay(view) {
+  if (!view) return view;
+  const all = (list) => (Array.isArray(list) ? list.map((s) => curly(s)) : list);
+  return {
+    ...view,
+    summary: summaryForDisplay(view.summary),
+    centersTakeaway: all(view.centersTakeaway),
+    channelsTakeaway: all(view.channelsTakeaway),
+    profileTakeaway: all(view.profileTakeaway),
+    profileLinesTakeaway: all(view.profileLinesTakeaway),
+    reading: (view.reading ?? []).map((s) => ({
+      ...s,
+      lede: s.lede == null ? s.lede : curly(s.lede),
+      paragraphs: all(s.paragraphs),
+    })),
+    takeaways: all(view.takeaways),
+  };
+}
+
+/** The glance sentences (summaryRows), curled for display; the keys stay as the checker names them. */
+export function summaryForDisplay(rows) {
+  if (!rows || typeof rows !== "object") return rows;
+  return Object.fromEntries(Object.entries(rows).map(([k, v]) => [k, typeof v === "string" ? curly(v) : v]));
+}
+
+/**
+ * The older shape (parseReading: a letter-mode reading, or one the new order
+ * cannot lay out), curled the same way: the sentences, never the headings,
+ * which the page matches against its own list.
+ */
+export function writtenForDisplay(written) {
+  if (!written) return written;
+  return {
+    ...written,
+    summary: summaryForDisplay(written.summary),
+    sections: (written.sections ?? []).map((s) => ({
+      ...s,
+      lede: s.lede == null ? s.lede : curly(s.lede),
+      paragraphs: Array.isArray(s.paragraphs) ? s.paragraphs.map((p) => curly(p)) : s.paragraphs,
+    })),
   };
 }
 
