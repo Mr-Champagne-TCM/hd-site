@@ -1299,6 +1299,15 @@
       "plus": [
         "^Once and free — Jeremy redoes your chart and your reading from it\\. The date and place stay as they are\\.$"
       ]
+    },
+    {
+      "id": "PICKS-D8",
+      "about": "Decision 8 (GO v3 p13, my pick, pending Jeremy): a birth place with an apostrophe, as the town search gives it ('Coeur d'Alene, Idaho'), is curled where the birth line is shown (shared/birthLine.mjs: the PDF, the pages, the add-time kept line; the phone's HumanText.birthLine the same). The kept place and the town data are untouched. No rig birth has such a place, so no line changes today; a birth line with a curled place is claimed in case one does.",
+      "docs": "^(page|pdf) ",
+      "minus": [],
+      "plus": [
+        "^(January|February|March|April|May|June|July|August|September|October|November|December) \\d{1,2}, \\d{4} · (\\d{1,2}:\\d{2} [AP]M · |Time unknown \\(charted at noon\\) · )?[^·]*’[^·]*$"
+      ]
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { curly } from "./curlyQuotes.mjs";
+
 /**
  * The birth line under the client's name, in words a client reads without
  * decoding -- the phone app's PdfExport.birthLine, ported (Jeremy 10/16):
@@ -92,7 +94,10 @@ export function birthLine(birth) {
    * from it. It is only not printed. `birthOffset` gives it to anyone who needs
    * it (the record, a support question).
    */
-  return [day, clock, ...(place ? [place] : [])].join(" · ");
+  // A place with an apostrophe ("Coeur d'Alene, Idaho") is curled here, where it is shown,
+  // like every other word a reader sees; the town search's own data and the kept place stay
+  // exactly as they are (decision 8, 10/23, pending Jeremy).
+  return [day, clock, ...(place ? [curly(place)] : [])].join(" · ");
 }
 
 /** "UTC-06:00": the zone's offset at that birth moment, or null. Never printed for a reader. */
