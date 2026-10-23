@@ -1118,17 +1118,6 @@
       ]
     },
     {
-      "id": "CF1023-S8",
-      "about": "10/23 verbatim read S8 (10/22 read B8, 'Commands at the reader'; Jeremy's GO PDF: 'good, bring into our voice'): the Human Design library's 'How this works' step 2 ended 'A reading names yours. Get yours!' (locked call 9). It ends 'A reading names yours, if you’d like it.', the link on 'A reading'. The ledger (HD-Library-Locked-Calls.md) records call 9 as changed.",
-      "docs": "^page web-library-human-design$",
-      "minus": [
-        "^You have one type, one profile, a handful of channels\\. A reading names yours\\. Get yours!$"
-      ],
-      "plus": [
-        "^You have one type, one profile, a handful of channels\\. A reading names yours, if you’d like it\\.$"
-      ]
-    },
-    {
       "id": "CF1023-readings-site",
       "about": "10/23 verbatim read N2 + N17, the readings site's add-time form (hd-reading-app hosting/netlify/lib/addtime.mjs): 'A short pause' said 'pausing for a few minutes' where the day's cap of 20 tries can mean hours ('for a while' now); the time box had no visible label ('Time of birth' over it now, as the shop's form has). The rig drives only the readings site's unknown-link page, so these lines are claimed in case it ever captures the form.",
       "docs": "^page readings-site",
