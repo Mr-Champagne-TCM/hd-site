@@ -119,6 +119,13 @@ test("EVERY HIT of a check, not only its first: rows in lower case are all asked
   assert.equal(p.problems.filter((x) => x.rule === "glance").length, 3);
 });
 
+test("EVERY HIT: both one-word track rows in one re-ask (round rk-a2, R31: 'Surprise', then 'Disappointment' a part ask later)", () => {
+  const f = setSlots(form(), { summary_signature: "Surprise", summary_notSelf: "Disappointment" });
+  const p = plan(f);
+  assert.deepEqual(p.parts.map((x) => x.id), ["summary_signature", "summary_notSelf"]);
+  assert.equal(p.problems.filter((x) => x.rule === "trackRow").length, 2);
+});
+
 test("a center missing from What you take in from others: the section is asked for (nothing to blank)", () => {
   const f = form({ takeIn: section() });
   const p = plan(f);

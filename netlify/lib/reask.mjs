@@ -47,7 +47,7 @@ import {
 /** More failing slots than this in one draft: a fresh draft instead. */
 export const FIX_SLOTS = 5;
 /** What a slot holds while a check is run without it. */
-const BLANK = "Blank.";
+const BLANK = "Blank words hold this place for now.";
 /** Checks that refuse what is MISSING from a section: blanking never moves them (step 3). */
 const ABSENCE = new Set(["openCentre", "structure"]);
 /** Never one slot's: a fresh draft. */
@@ -124,8 +124,10 @@ const claimOf = (message) => String(message).replace(/"[^"]{25,}"/g, '"..."');
  * with them blanked. It does when the check no longer answers, answers with
  * another claim, or makes the same claim from somewhere else (the next
  * takeaway ending on the same word). The same claim with the blank inside its
- * excerpt is the same place quoted again (a slip is read across a section's
- * lede and first paragraph), so it is not a yes.
+ * excerpt: when the excerpt is the blank alone, the check now only objects to
+ * the stand-in (a takeaway with no tag), so yes; when it runs on into a slot
+ * left as it was, it is the same place quoted again (a slip is read across a
+ * section's lede and first paragraph), so no.
  */
 function restsOn(ctx, problem, ids) {
   const form = setSlots(ctx.form, Object.fromEntries(ids.map((id) => [id, BLANK])));
@@ -138,7 +140,19 @@ function restsOn(ctx, problem, ids) {
   }
   if (answer === problem.message) return false;
   if (answer === null || claimOf(answer) !== claimOf(problem.message)) return true;
-  return !answer.includes(BLANK);
+  if (!answer.includes(BLANK) || r.problem) return !answer.includes(BLANK);
+  const at = placeOf(answer, sanitize(r.text), r.spans);
+  return Boolean(at && at.length && at.every((id) => ids.includes(id)));
+}
+
+/** The slots the longest quote of a message sits in, in this text (null when none is found). */
+function placeOf(message, text, spans) {
+  let best = null;
+  for (const q of quotesOf(message)) {
+    const at = findQuote(text, q);
+    if (at && (!best || q.length > best.q.length)) best = { q, at };
+  }
+  return best ? slotsAt(spans.filter((s) => s.end > s.start), best.at) : null;
 }
 
 /** A section heading or summary label the message names, as slots. */
