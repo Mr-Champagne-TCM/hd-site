@@ -978,6 +978,13 @@
           "to": "^(Talk it through with Jeremy$|The Champagne Method Coaching and Consulting · )"
         }
       ]
+    },
+    {
+      "id": "GO-reask",
+      "about": "Jeremy 10/23, 'yes, reask only failing part' and 'Better to retry sooner' (merge of reask-1023 13bdad7 in 2eb1461; the phone's 5920381 in 2e3bde7): a refused draft is no longer thrown away whole -- the model is asked again for only the failing parts, shown its own draft and the checker's words, and the whole draft is judged again; a job that ends without words rings the writer again 15 s later (2 per reading) instead of waiting for the 15-minute sweep. The rig's stand-in writer answers a part ask from its next draft (tools/e2e/harness/fakeGemini.mjs partsAsked), so the readings come out word for word as before (10/23 partial rig: Maya 4 part asks, Theo 4, the pages unchanged). No words a reader sees changed, so this entry claims no line; it is here so the list names every change the release means to make.",
+      "docs": "^(page|pdf|email) ",
+      "minus": [],
+      "plus": []
     }
   ]
 }

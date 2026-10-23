@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateReading } from "../netlify/lib/gemini.mjs";
-import { STAND_IN_ROWS, facts, fakeGemini, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
+import { STAND_IN_ROWS, facts, fakeGemini, partsAsked, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
 import { chartFactsOnly } from "../netlify/lib/interpretation.mjs";
-import { structuredFacts } from "../netlify/lib/structured.mjs";
+import { renderReading, structuredFacts } from "../netlify/lib/structured.mjs";
 import { parseReading } from "../netlify/lib/interpretation.mjs";
 
 /**
@@ -148,6 +148,45 @@ for (const [slug, output] of CHARTS) {
     assert.doesNotMatch(JSON.stringify(form.working), /Your signature emerges/);
   });
 }
+
+/**
+ * A RE-ASK OF ONLY THE FAILING PART (10/23, reask-1023). After a refused draft the
+ * shop asks for the failing parts alone, in a small form keyed by part id. The
+ * fake model answers those parts from its next draft; the shop puts them back
+ * into its own draft and the whole draft passes, the stored words kept elsewhere.
+ */
+test("a part re-ask: the fake model answers only the parts asked for, and the shop's draft then passes", async () => {
+  const output = parity("claude-test");
+  const stored = JSON.parse(JSON.stringify(placeholderForm(factsOf(output))).replaceAll("[RIG PLACEHOLDER] ", ""));
+  stored.summary.type = "Carrying a steady motor through the day.";
+  const written = parseReading(renderReading(stored, output).text);
+  const dir = mkdtempSync(join(tmpdir(), "fakegemini-part-"));
+  try {
+    mkdirSync(join(dir, "fx"));
+    writeFileSync(join(dir, "fx", "stored.json"), JSON.stringify({ written, output, purchasedAt: 1 }));
+    const fake = fakeGemini({ dir: join(dir, "log"), fixturesDir: join(dir, "fx") });
+    assert.equal(fake.fixtures.length, 1, "the stored reading is found");
+    const fetchImpl = async (url, init) => fake.api(new Request(String(url), init));
+    const first = await generateReading(output, { apiKey: "rig", prompt: PROMPT, shape: "json", fetchImpl });
+    assert.equal(first.ok, false, "the stored draft is refused (a glance row that is a fragment)");
+    assert.ok(first.plan?.parts?.length, `the refusal is one part's: ${first.detail}`);
+    const r = await generateReading(output, { apiKey: "rig", prompt: PROMPT, shape: "json", fetchImpl, fix: { form: first.form, parts: first.plan.parts } });
+    assert.equal(r.ok, true, `${r.reason}: ${r.detail}`);
+    assert.equal(fake.asked.length, 2);
+    assert.match(fake.asked[1].source, /\(part ask: summary_type\)$/);
+    assert.doesNotMatch(r.text, /Carrying a steady motor/);
+    assert.ok(r.text.includes(stored.energy.lede), "the stored words are kept where nothing was refused");
+    assert.doesNotMatch(r.text, /RIG PLACEHOLDER/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a whole draft is not a part re-ask (the reading's own form)", () => {
+  assert.equal(partsAsked({ generationConfig: { responseSchema: { type: "OBJECT", properties: { summary: {}, energy: {} } } } }), null);
+  assert.equal(partsAsked({ generationConfig: {} }), null);
+  assert.deepEqual(partsAsked({ generationConfig: { responseSchema: { type: "OBJECT", properties: { summary_type: {}, decide_paragraph_1: {} } } } }), ["summary_type", "decide_paragraph_1"]);
+});
 
 test("the stand-in glance rows share no run of five words (the page and PDF never read one twice)", () => {
   const runs = (s) => {

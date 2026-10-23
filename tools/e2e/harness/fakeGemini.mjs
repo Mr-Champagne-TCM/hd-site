@@ -30,7 +30,9 @@ const {
 } = await import("../../../netlify/lib/interpretation.mjs");
 // The writer's whole check (10/22, prompt v3 rev l), where the checked-out shop has it.
 const { draftCheck = null } = await import("../../../netlify/lib/gemini.mjs");
-const { renderReading = null } = await import("../../../netlify/lib/structured.mjs");
+const { renderReading = null, getSlot = null } = await import("../../../netlify/lib/structured.mjs");
+// The re-ask of only the failing part (10/23, reask-1023), where the checked-out shop has it.
+const { FIX_DRAFT = null } = await import("../../../netlify/lib/reask.mjs").catch(() => ({}));
 
 const INTERPRETATION = [
   "Your energy, and how it starts",
@@ -390,6 +392,20 @@ export function redraft(stored, f, { instruction = "", facts: text = "" } = {}) 
   return placeholderForm(f);
 }
 
+/**
+ * A RE-ASK OF ONLY THE FAILING PART (10/23, reask-1023: Jeremy "yes, reask
+ * only failing part"). The shop sends the facts, then its own draft and the
+ * parts it wants again (reask.mjs fixRequest), with a small form whose fields
+ * are the parts' ids ("summary_type", "decide_paragraph_1"...) instead of the
+ * reading's. The parts asked for, or null for a whole draft.
+ */
+export function partsAsked(body) {
+  const props = body?.generationConfig?.responseSchema?.properties;
+  if (!props || typeof props !== "object" || "summary" in props) return null;
+  const ids = Object.keys(props);
+  return ids.length ? ids : null;
+}
+
 export function fakeGemini({ dir, fixturesDir }) {
   mkdirSync(dir, { recursive: true });
   const fixtures = loadReadingFixtures(fixturesDir);
@@ -397,7 +413,11 @@ export function fakeGemini({ dir, fixturesDir }) {
   const tries = new Map(); // chart -> requests so far this run
   async function api(request) {
     const body = await request.json().catch(() => null);
-    const text = body?.contents?.[0]?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    const sent = body?.contents?.[0]?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    // A part re-ask carries the draft after the facts: the facts alone describe the chart.
+    const cut = FIX_DRAFT ? sent.indexOf(FIX_DRAFT) : -1;
+    const text = cut >= 0 ? sent.slice(0, cut).replace(/\n+$/, "\n") : sent;
+    const parts = partsAsked(body);
     const f = facts(text);
     const key = `${f.personality}|${f.design}`;
     const again = (tries.get(key) ?? 0) > 0;
@@ -406,13 +426,25 @@ export function fakeGemini({ dir, fixturesDir }) {
     const hit = fixtures.filter((x) => x.key === key).sort((a, b) => (b.record.purchasedAt ?? 0) - (a.record.purchasedAt ?? 0))[0];
     const stored = hit ? formFromWritten(hit.record.written) : null;
     const instruction = body?.system_instruction?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    const form = stored ? (again ? redraft(stored, f, { instruction, facts: text }) : stored) : placeholderForm(f);
+    let form;
+    let answer;
+    if (parts) {
+      // The parts asked for, as the next draft has them (redraft: the stored words without what the
+      // checker refuses; the placeholder's for a chart with no stored reading). The shop puts them back
+      // into its own draft and judges the whole draft again, as it does the real model's answer.
+      form = stored ? redraft(stored, f, { instruction, facts: text }) : placeholderForm(f);
+      answer = Object.fromEntries(parts.map((id) => [id, getSlot ? getSlot(form, id) : ""]));
+    } else {
+      form = stored ? (again ? redraft(stored, f, { instruction, facts: text }) : stored) : placeholderForm(f);
+      answer = form;
+    }
     const n = asked.length + 1;
-    const entry = { n, at: Date.now(), type: f.type, authority: f.authority, profile: f.profile, cross: f.cross, source: hit ? `${hit.source}${again ? " (next draft)" : ""}` : "placeholder" };
+    const source = `${hit ? hit.source : "placeholder"}${parts ? ` (part ask: ${parts.join(", ")})` : hit && again ? " (next draft)" : ""}`;
+    const entry = { n, at: Date.now(), type: f.type, authority: f.authority, profile: f.profile, cross: f.cross, source };
     asked.push(entry);
-    writeFileSync(join(dir, `${String(n).padStart(3, "0")}.json`), JSON.stringify({ ...entry, facts: text, form }, null, 1));
+    writeFileSync(join(dir, `${String(n).padStart(3, "0")}.json`), JSON.stringify({ ...entry, facts: text, ...(parts ? { parts, answer } : { form }) }, null, 1));
     return new Response(
-      JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(form) }], role: "model" }, finishReason: "STOP" }] }),
+      JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(answer) }], role: "model" }, finishReason: "STOP" }] }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   }
