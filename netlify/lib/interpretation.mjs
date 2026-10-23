@@ -1119,6 +1119,74 @@ export function draftProblem(raw, output) {
 }
 
 /**
+ * EVERY CHECK BY NAME, in the order production runs them (10/23, re-asking
+ * only the failing part): firstProblem's chain after its four opening checks,
+ * then draftProblem's, then the copy check. `allProblems` runs them all, so a
+ * refused draft shows EVERY problem it has, not only the first; its first entry
+ * is always the verdict production gives (firstProblem ?? draftProblem ??
+ * copyProblem). Each entry can be run again on its own (reask.mjs does, to see
+ * which slot a refusal rests on).
+ */
+export const CHECKS = [
+  ["structure", (t) => structureProblem(t)],
+  ["type", (t, o) => typeProblem(t, o?.type ?? null, o?.undefinedCenters ?? null, o?.openCenters ?? null)],
+  ["profileLine", (t, o) => profileLineProblem(t, o?.profile ?? null)],
+  ["profileOrdinal", (t) => profileOrdinalProblem(t)],
+  ["openCentre", (t, o) => openCentreProblem(t, o?.openCenters ?? null, o?.undefinedCenters ?? null)],
+  ["centreState", (t, o) => centreStateProblem(t, o?.definedCenters ?? null, o?.undefinedCenters ?? null, o?.openCenters ?? null)],
+  ["oldWord", (t) => oldWordProblem(t)],
+  ["trackRow", (t) => trackRowProblem(t)],
+  ["nearMiss", (t, o) => nearMissProblem(t, o?.type ?? null)],
+  ["spelling", (t) => spellingProblem(t)],
+  ["glance", (t) => glanceProblem(t)],
+  ["slip", (t) => slipProblem(t)],
+  ["takeaway", (t) => takeawayProblem(t)],
+  ["tag", (t, o) => tagProblem(t, o)],
+  ["timeClaim", (t, o) => timeClaimProblem(t, o)],
+  ["birthTime", (t, o) => birthTimeProblem(t, o)],
+  ["borrowedWord", (t, o) => borrowedWordProblem(t, o)],
+  ["connection", (t, o) => connectionProblem(t, o)],
+  ["motor", (t, o) => motorProblem(t, o)],
+  ["splitBridge", (t, o) => splitBridgeProblem(t, o)],
+  ["voice", (t) => voiceProblem(t)],
+  ["doubledWord", (t) => doubledWordProblem(t)],
+  ["themeSpelling", (t) => themeSpellingProblem(t)],
+  ["themeCap", (t) => themeCapProblem(t)],
+  ["adviceOrder", (t) => adviceOrderProblem(t)],
+  ["copy", (t, o, c) => copyProblem(t, c?.sources ?? [], c?.allowed ?? [])],
+];
+
+/**
+ * Every problem of a draft, as [{ rule, message }], the production verdict
+ * first. `copy` = { sources, allowed }, as gemini.mjs hands copyProblem. The
+ * four opening checks are firstProblem's: marks, the disclaimer (without it
+ * nothing else is judged), a closing question, too short.
+ */
+export function allProblems(raw, output, copy = {}) {
+  const t = String(raw ?? "");
+  const out = [];
+  const marks = formattingProblem(t);
+  if (marks) out.push({ rule: "formatting", message: marks });
+  if (!t.includes(DISCLAIMER)) {
+    out.push({ rule: "disclaimer", message: "The reading came back without the required disclaimer." });
+    return out;
+  }
+  const body = t.slice(0, t.indexOf(DISCLAIMER)).trim();
+  if (body.slice(-400).includes("?")) out.push({ rule: "question", message: "The reading ended by asking the client a question." });
+  if (body.split(/\s+/).filter(Boolean).length < 380) out.push({ rule: "tooShort", message: "The reading came back too short to hand over." });
+  for (const [rule, check] of CHECKS) {
+    const message = check(t, output, copy);
+    if (message) out.push({ rule, message });
+  }
+  return out;
+}
+
+/** One named check again, on another text (reask.mjs). Null for the four opening checks. */
+export function checkByName(rule) {
+  return CHECKS.find(([name]) => name === rule)?.[1] ?? null;
+}
+
+/**
  * NOTHING COPIED FROM THE INSTRUCTIONS (10/22 AI test round). 12 of 34
  * delivered readings carried words lifted whole from what the model was
  * handed: the form note's old example try-this line (11 lines), the prompt's
@@ -2088,7 +2156,7 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
  * connect") is not a claim. Measured: 1,290 claims pass, 5 refused, every one
  * wrong.
  */
-const GATE_CENTER = Object.fromEntries(
+export const GATE_CENTER = Object.fromEntries(
   Object.entries({
     Head: [64, 61, 63],
     Ajna: [47, 24, 4, 17, 43, 11],
@@ -2101,8 +2169,8 @@ const GATE_CENTER = Object.fromEntries(
     Root: [53, 60, 52, 19, 39, 41, 58, 38, 54],
   }).flatMap(([centre, gates]) => gates.map((g) => [g, centre])),
 );
-const channelKey = (a, b) => `${Math.min(a, b)}-${Math.max(a, b)}`;
-const CHANNEL_CENTRES = new Map(
+export const channelKey = (a, b) => `${Math.min(a, b)}-${Math.max(a, b)}`;
+export const CHANNEL_CENTRES = new Map(
   [[64, 47], [61, 24], [63, 4], [17, 62], [43, 23], [11, 56], [1, 8], [13, 33], [7, 31], [10, 20], [21, 45], [16, 48],
     [20, 57], [20, 34], [35, 36], [12, 22], [25, 51], [2, 14], [5, 15], [29, 46], [10, 34], [10, 57], [37, 40], [26, 44],
     [34, 57], [27, 50], [6, 59], [3, 60], [42, 53], [9, 52], [32, 54], [28, 38], [18, 58], [19, 49], [39, 55], [30, 41]]

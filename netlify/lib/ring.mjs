@@ -59,3 +59,56 @@ export async function ringIfDue({ id, filledAtMs, gate, ring, now = Date.now() }
     return { rang: false };
   }
 }
+
+/**
+ * RETRY SOONER (Jeremy 10/23: "Better to retry sooner. Minimize delays to
+ * customer when possible. especially when its something we inject into their
+ * process.").
+ *
+ * A writing job that ends without words (every ask refused, a timeout, Google
+ * busy, out of the function's time) used to leave the reading to the
+ * fifteen-minute sweep, or to the buyer's page if it was still open. Now the
+ * writer rings itself again for that reading, RERING_GAP_MS later, at most
+ * RERINGS times per reading; after that the sweep carries on exactly as
+ * before. The count lives in the health store beside the poll's gate, so a
+ * second writer cannot ring a third: when it cannot be written, nothing is
+ * rung (bounded is the point). The poll's gate is set too, so the page does
+ * not ring the same reading a moment later.
+ *
+ * Nothing the buyer sees changes ("being written", then "taking longer than it
+ * should"; never an error), and Jeremy's alert and the failure-rate alarm are
+ * untouched: each job still files what it files, under the same hourly gate.
+ */
+export const RERINGS = 2;
+export const RERING_GAP_MS = 15_000;
+/** Job endings another job cannot change: nothing to write, or the configuration. */
+const NOT_AGAIN = new Set(["not_found", "wrong_tier", "no_chart_yet", "already_written", "misconfigured", "no_chart"]);
+export const reringWorth = (reason) => !NOT_AGAIN.has(String(reason ?? ""));
+
+export async function reringIfDue({ id, gate, ring, now = Date.now() }) {
+  let count = 0;
+  try {
+    const prior = await gate.get(`rering/${id}`, { type: "json" });
+    if (prior && Number.isFinite(prior.count)) count = prior.count;
+  } catch {
+    /* an unreadable count is a zero; the write below still has to succeed */
+  }
+  if (count >= RERINGS) return { rang: false, count };
+  const expiration = new Date(now + 24 * 60 * 60 * 1000);
+  try {
+    await gate.setJSON(`rering/${id}`, { count: count + 1, at: now }, { expiration });
+  } catch {
+    return { rang: false, count };
+  }
+  try {
+    await gate.setJSON(`ring/${id}`, { at: now }, { expiration });
+  } catch {
+    /* the poll may ring as well; the writer is safe to run twice */
+  }
+  try {
+    await ring(id);
+    return { rang: true, count: count + 1 };
+  } catch {
+    return { rang: false, count: count + 1 };
+  }
+}

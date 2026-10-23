@@ -7,7 +7,8 @@ import { loadReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
-import { TRIGGER_HEADER, triggerOk } from "../lib/trigger.mjs";
+import { TRIGGER_HEADER, triggerOk, triggerToken } from "../lib/trigger.mjs";
+import { RERING_GAP_MS, reringIfDue, reringWorth } from "../lib/ring.mjs";
 
 /**
  * THE WRITER. Runs when there is something to write, not on a timer.
@@ -134,10 +135,13 @@ export default async (request) => {
   }
 
   const done = new Set();
+  // Readings this run could not write, for ringing the writer again soon (ring.mjs reringIfDue).
+  const unwritten = [];
   if (first) {
     const r = await run(first);
     done.add(first);
-    console.log(`interpret: named ${first} -> ${r.ok ? "written" : r.reason}`);
+    if (!r.ok && reringWorth(r.reason)) unwritten.push(first);
+    console.log(`interpret: named ${first} -> ${r.ok ? `written (${r.asks} asks, ${r.partAsks} for parts)` : r.reason}`);
   }
 
   let waiting;
@@ -146,11 +150,13 @@ export default async (request) => {
   } catch (e) {
     console.log(`interpret: could not read the store (${e.message})`);
     await noteFailure(health, "interpret-store", { detail: `list failed (${e?.name ?? "Error"})` });
+    await ringSoon(unwritten);
     return new Response(null, { status: 204 });
   }
 
   if (!waiting.length) {
     console.log(`interpret: nothing else waiting (wrote ${done.size ? 1 : 0})`);
+    await ringSoon(unwritten);
     return new Response(null, { status: 204 });
   }
 
@@ -171,13 +177,52 @@ export default async (request) => {
     }
     const result = await run(id);
     if (result.ok) wrote += 1;
-    else console.log(`interpret: skipped one (${result.reason})`);
+    else {
+      if (reringWorth(result.reason)) unwritten.push(id);
+      console.log(`interpret: skipped one (${result.reason})`);
+    }
   }
 
   console.log(
     `interpret: ${waiting.length} waiting, wrote ${wrote}${done.size ? " (+1 named)" : ""}`,
   );
+  await ringSoon(unwritten);
   return new Response(null, { status: 204 });
+
+  /**
+   * RETRY SOONER (Jeremy 10/23, ring.mjs RERINGS): a reading this run could not
+   * write rings the writer again RERING_GAP_MS from now instead of waiting for
+   * the sweep -- ONE ring per run, for the first such reading whose count
+   * allows it (the next run drains every other reading still waiting, so two
+   * rings would only race each other). Only while the gap and the ring still
+   * fit well inside this function's fifteen minutes.
+   */
+  async function ringSoon(ids) {
+    if (!ids.length) return;
+    const token = triggerToken(grantSecret);
+    if (!token) return;
+    if (Date.now() + RERING_GAP_MS + 30_000 > deadline + 60_000) {
+      console.log("interpret: no time left to ring again; the sweep will");
+      return;
+    }
+    await new Promise((r) => setTimeout(r, RERING_GAP_MS));
+    for (const id of ids) {
+      const out = await reringIfDue({
+        id,
+        gate: health,
+        ring: async (named) => {
+          const res = await fetch(`${origin}/api/interpret`, {
+            method: "POST",
+            headers: { [TRIGGER_HEADER]: token, "Content-Type": "application/json" },
+            body: JSON.stringify({ id: named }),
+          });
+          console.log(`interpret: rang the writer again for an unwritten reading -> ${res.status}`);
+        },
+      }).catch(() => ({ rang: false }));
+      if (out.rang) return;
+    }
+    console.log("interpret: every unwritten reading has had its rings; the sweep carries on");
+  }
 };
 
 /** Reading-tier purchases that have a chart and no words yet, oldest first. */

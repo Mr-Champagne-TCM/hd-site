@@ -1,5 +1,6 @@
 import { chartFactsOnly, copyProblem, draftProblem, firstProblem, sanitize } from "./interpretation.mjs";
-import { READING_SCHEMA, renderReading, schemaNotes, structuredFacts } from "./structured.mjs";
+import { FACT_CARDS, READING_SCHEMA, renderReading, schemaNotes, structuredFacts } from "./structured.mjs";
+import { FIX_WORDS, fixRequest, mergeFix, refusedPlan } from "./reask.mjs";
 
 /**
  * Asking Gemini for the written interpretation.
@@ -98,9 +99,20 @@ const ATTEMPTS = 1;
  * NEVER THROWS. This runs where a buyer is waiting, and an exception here would
  * be indistinguishable from the purchase itself failing.
  */
+/**
+ * `fix` (10/23, re-asking only the failing part): a refused draft's
+ * { form, parts } (reask.mjs planFix). The model is asked for those parts only,
+ * its answer goes back into its own draft, and the whole draft is judged again
+ * exactly as a new one is. `factCards`: the per-center notes in the facts
+ * (structured.mjs FACT_CARDS, an A/B arm, off by default).
+ *
+ * A refused form-mode draft comes back with `form` and `plan` (reask.mjs
+ * refusedPlan): every problem it has, the slots each rests on, and the parts
+ * to ask for again when all of them are local.
+ */
 export async function generateReading(
   output,
-  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text" } = {},
+  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text", fix = null, factCards = FACT_CARDS } = {},
 ) {
   if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
   const instruction = typeof prompt === "string" && prompt.trim() ? prompt.trim() : null;
@@ -111,9 +123,11 @@ export async function generateReading(
     return { ok: false, reason: "no_chart", detail: "nothing to interpret" };
   }
 
+  // A part can only be asked for in form mode, of a draft that has its parts listed.
+  const part = shape === "json" && fix && fix.form && Array.isArray(fix.parts) && fix.parts.length ? fix : null;
   let last = { ok: false, reason: "unknown" };
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape });
+    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards });
     if (last.ok) return last;
     /**
      * A BUSY MODEL IS NOT A VERDICT. On 2026-09-03 Google answered 503 for a
@@ -124,7 +138,7 @@ export async function generateReading(
     const busy = last.reason === "http" && /\b(503|429)\b/.test(String(last.detail));
     if (busy) {
       await new Promise((r) => setTimeout(r, 5000));
-      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape });
+      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards });
       if (last.ok) return last;
     }
     if (last.reason !== "malformed") return last;
@@ -136,8 +150,13 @@ export async function generateReading(
  * EVERY CHECK A DRAFT MUST PASS, in order, on its sanitized text: the first
  * problem, or null. Exported so the local rig's stand-in writer
  * (tools/e2e/harness/fakeGemini.mjs) holds its drafts to exactly this.
+ *
+ * `sources` / `allowed` (10/23, re-asking only the failing part): what the copy
+ * check holds the draft to. A re-ask passes its own (the prompt, the form notes
+ * AND the re-ask's words, reask.mjs FIX_WORDS); left out, they are the prompt
+ * and the form notes, and the facts just sent, as for any new draft.
  */
-export function draftCheck(clean, output, { instruction, facts, json }) {
+export function draftCheck(clean, output, { instruction, facts, json, sources = null, allowed = null }) {
   return (
     // The TYPE comes from the chart, never from the reading. The check exists to
     // catch the reading disagreeing with the chart it was written from.
@@ -163,15 +182,20 @@ export function draftCheck(clean, output, { instruction, facts, json }) {
     // 10/22: words lifted from the instructions are a copy, not a reading. Only
     // this file knows the prompt, so the check runs here; the facts just sent
     // (cross name, centers, channel lines) are the reading's own vocabulary.
-    copyProblem(clean, [instruction, ...(json ? schemaNotes() : [])], [facts])
+    // 10/23: after a re-ask, the words of the re-ask count as instructions too.
+    copyProblem(clean, sources ?? [instruction, ...(json ? schemaNotes() : [])], allowed ?? [facts])
   );
 }
 
-async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape }) {
+async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix = null, factCards = FACT_CARDS }) {
   // "json": the model fills READING_SCHEMA and structured.mjs writes the
   // document. "text": the original letter-shaped prompt. See structured.mjs.
   const json = shape === "json";
-  const facts = chartFactsOnly(output, { form: json }) + (json ? structuredFacts(output) : "");
+  const facts = chartFactsOnly(output, { form: json }) + (json ? structuredFacts(output, { cards: factCards }) : "");
+  // A re-ask of parts: the facts, then the draft and the parts (reask.mjs fixRequest), and the small form.
+  const asked = fix ? fixRequest(fix.form, output, fix.parts) : null;
+  // What the draft is held to for copying: the prompt, the form notes, and the words of a re-ask.
+  const sources = [instruction, ...(json ? schemaNotes() : []), ...(fix ? FIX_WORDS : [])];
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
@@ -181,14 +205,15 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: instruction }] },
-        // THE ONLY THING THAT LEAVES. See interpretation.mjs.
-        contents: [{ role: "user", parts: [{ text: facts }] }],
+        // THE ONLY THING THAT LEAVES. See interpretation.mjs. A re-ask adds the
+        // model's own draft of this chart and the checker's words, nothing else.
+        contents: [{ role: "user", parts: [{ text: facts + (asked ? asked.text : "") }] }],
         generationConfig: json
           ? {
               temperature: 1,
               maxOutputTokens: 8192,
               responseMimeType: "application/json",
-              responseSchema: READING_SCHEMA,
+              responseSchema: asked ? asked.schema : READING_SCHEMA,
             }
           : { temperature: 1, maxOutputTokens: 8192 },
       }),
@@ -222,22 +247,31 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
     return { ok: false, reason: "unreadable", detail: "gemini sent something that is not json" };
   }
 
+  let form = null;
+  let built = null;
+  const copy = { sources, allowed: [facts] };
   if (json) {
     let filled;
     try {
       filled = JSON.parse(text);
     } catch {
+      // A re-ask that came back unreadable leaves its draft as it was, to be asked for again.
+      if (fix) return { ok: false, reason: "malformed", detail: "the reading form came back unreadable", text, form: fix.form, plan: { parts: fix.parts } };
       return { ok: false, reason: "malformed", detail: "the reading form came back unreadable", text };
     }
-    const built = renderReading(filled, output);
-    if (built.problem) return { ok: false, reason: "malformed", detail: built.problem, text };
+    form = fix ? mergeFix(fix.form, fix.parts, filled) : filled;
+    built = renderReading(form, output);
+    if (built.problem) {
+      return { ok: false, reason: "malformed", detail: built.problem, text, form, plan: refusedPlan({ form, output, rendered: built, copy }) };
+    }
     text = built.text;
   }
 
   const clean = sanitize(text);
   if (!clean) return { ok: false, reason: "malformed", detail: "gemini returned nothing" };
 
-  const problem = draftCheck(clean, output, { instruction, facts, json });
+  // Every check, in order (draftCheck above); the copy check held to this ask's own sources.
+  const problem = draftCheck(clean, output, { instruction, facts, json, sources: copy.sources, allowed: copy.allowed });
   // The rejected text travels with the reason, so an incident can show WHAT
   // was refused -- without it a prompt regression is indistinguishable from
   // Google having a bad week.
@@ -249,8 +283,11 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
       .map((l) => l.trim())
       .filter((l) => l && l.length < 60 && !/[.!?]$/.test(l) && !/^\(/.test(l))
       .join(" | ");
-    return { ok: false, reason: "malformed", detail: problem, text: `${headings}\n---\n${clean}` };
+    const refused = { ok: false, reason: "malformed", detail: problem, text: `${headings}\n---\n${clean}` };
+    // Form mode: the draft and every problem it has, for a re-ask of only the failing part (interpretJob.mjs).
+    return json ? { ...refused, form, plan: refusedPlan({ form, output, rendered: built, copy }) } : refused;
   }
 
-  return { ok: true, text: clean };
+  // The form travels with a passing draft too (form mode), so a test round can read what was written where.
+  return json ? { ok: true, text: clean, form } : { ok: true, text: clean };
 }
