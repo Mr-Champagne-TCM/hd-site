@@ -585,6 +585,7 @@ export default function ReadingPage({ token }: { token: string }) {
         mechanics={reading.output}
         writing={reading.writing}
         pdfPages={reading.pdfPages ?? null}
+        gift={reading.fresh === true}
       />
     </div>
   );

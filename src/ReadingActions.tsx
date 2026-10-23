@@ -6,6 +6,7 @@ import MailtoText from "./MailtoText";
 import { PageEnd } from "./FooterTheme";
 import { SomeoneElseSection } from "./Returning";
 import { TIERS } from "../shared/pricing.mjs";
+import { GIFT_CREDIT_KEEPS, giftCredit } from "../shared/giftCopy.mjs";
 import {
   AUTHORITY_NOTES,
   STRATEGY_NOTES,
@@ -57,8 +58,11 @@ export default function ReadingActions({
   mechanics,
   writing = false,
   pdfPages = null,
+  gift = false,
 }: {
   token: string;
+  /** Bought for someone else (decision 30): the credit lines are true for whoever reads them. */
+  gift?: boolean;
   /** The PDF's real page count, from the server (fix 9A). */
   pdfPages?: number | null;
   upgrade: Upgrade;
@@ -201,8 +205,10 @@ export default function ReadingActions({
             {TIERS[upgrade.level]?.blurb}
           </p>
           <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
-            What you have already paid comes off what you pay next — nobody pays
-            twice for the same thing.
+            {/* A gift's page is read by the person it is for, who paid nothing (decision 30). */}
+            {gift
+              ? giftCredit(tier >= 1 ? "chart" : "summary")
+              : "What you have already paid comes off what you pay next — nobody pays twice for the same thing."}
           </p>
           {/*
             NO BUTTON FOR A TIER THAT CANNOT BE BOUGHT.
@@ -219,8 +225,7 @@ export default function ReadingActions({
           {upgrade.available === false ? (
             <p className="mt-4 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
               It is not ready to buy yet — the written interpretation is still
-              being made. Your credit keeps, and this link is how you come back
-              to it.
+              being made. {gift ? GIFT_CREDIT_KEEPS : "Your credit keeps, and this link is how you come back to it."}
             </p>
           ) : (
             <button

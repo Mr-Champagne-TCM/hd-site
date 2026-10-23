@@ -101,6 +101,8 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
       // Where "add it here" opens: the PDF's own never-expiring key for this chart (netlify/lib/addTime.mjs),
       // not the six-day reading link -- a PDF is kept far longer than six days.
       addTimeUrl: `${SHOP}t/${mintAddTimeKey(current.id, secret)}`,
+      // Bought for someone else: page 3 speaks to the person it is for too (decision 30).
+      gift: reading.fresh === true,
     });
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e?.message})`);

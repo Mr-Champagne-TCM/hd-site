@@ -19,6 +19,7 @@ import { buildReadingView, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView
 import { birthLine } from "../../shared/birthLine.mjs";
 import { curly } from "../../shared/curlyQuotes.mjs";
 import { chartTitle } from "../../shared/chartName.mjs";
+import { GIFT_PROOF, giftCredit } from "../../shared/giftCopy.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
 import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
@@ -547,7 +548,7 @@ export async function readingPdf(args) {
   return out(await buildPdf(args, { ...base, keepClosing: true }));
 }
 
-async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null }, opts = {}) {
+async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null, gift = false }, opts = {}) {
   const qr = (() => {
     try {
       return QRCode.create(BODYGRAPH_GUIDE, { errorCorrectionLevel: "M" });
@@ -582,6 +583,8 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     pdf.registerFont("svgBold", OUTFIT_600);
 
     const d = new Doc(pdf);
+    // A chart bought for someone else: its page 3 credit lines are true for the person it is for (decision 30).
+    d.gift = gift === true;
     Object.assign(d, opts);
     const runs = [];
     if (inspect) hooks.onText = (r) => runs.push({ page: d.pageNo, ...r });
@@ -1023,7 +1026,7 @@ function linkOnward(d, layout, top) {
  * (a shop-only block: the phone sells nothing). It says WHERE the credit
  * lives. Null when there is nothing sellable above this tier.
  */
-function offerLayouts(d, tier) {
+function offerLayouts(d, tier, gift = false) {
   if (tier >= 2) return null;
   const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
   if (!next) return null;
@@ -1031,9 +1034,12 @@ function offerLayouts(d, tier) {
   const head = `IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim();
   const body = d.L(
     // The site's one credit sentence (10/23 verbatim read, S4), then where the credit lives.
-    `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
-      "what you pay next — nobody pays twice for the same thing. The link in your email is what " +
-      "proves it, so opening this from there means the credit is already applied.",
+    // A gift is read by the person it is for, who paid nothing and has no email (decision 30).
+    gift
+      ? `${next.label} contains ${lowerFirst(next.blurb)} ${giftCredit("chart")} ${GIFT_PROOF}`
+      : `${next.label} contains ${lowerFirst(next.blurb)} What you have already paid comes off ` +
+          "what you pay next — nobody pays twice for the same thing. The link in your email is what " +
+          "proves it, so opening this from there means the credit is already applied.",
     paint(10, INK),
   );
   return { head, body };
@@ -1055,7 +1061,7 @@ function sectionLabel(d, text) {
  * and the note keeps "Every word above", which is then true.
  */
 function nextStepsPage(d, tier) {
-  const o = offerLayouts(d, tier);
+  const o = offerLayouts(d, tier, d.gift);
   let onward = d.L(ONWARD_NOTE, paint(10, INK), CONTENT_W);
   const total = 10 + 23 + onward.height + 34 + 23 + (o ? o.body.height : 0);
   if (d.pageNo >= 3 && d.y + 40 + total <= d.bottom) {

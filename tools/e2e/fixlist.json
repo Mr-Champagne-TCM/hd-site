@@ -1249,6 +1249,23 @@
       "docs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: ",
       "addsDocs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: [^ ,’]+’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$",
       "dropsDocs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: [^,’ ]+ [^,’]+’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$"
+    },
+    {
+      "id": "PICKS-D30",
+      "about": "Decision 30 (GO v3 p16, my pick, pending Jeremy; 10/23 read F6): a chart bought for someone else is read by the person it is for, who paid nothing and was sent no email. Its page's credit line 'What you have already paid comes off what you pay next — …' is now 'This (summary|chart) was a gift. What was paid for it comes off what is paid next — nobody pays twice for the same thing.' (shared/giftCopy.mjs; ReadingActions gift = reading.fresh), and its PDF's page 3 says that, then 'The link in the email that came with the purchase is what proves it, so going further from there means the credit is already applied.' (readingPdf.mjs offerLayouts, pdfHandler gift). Page 3's paragraph re-wraps (section). The buyer's own charts are as they were.",
+      "docs": "^(page [a-zA-Z0-9]+-\\d-someone-new-t[01]|pdf [a-zA-Z0-9]+-\\d-someone-new-t1 p3)$",
+      "minus": [
+        "^What you have already paid comes off what you pay next — nobody pays twice for the same thing\\.$"
+      ],
+      "plus": [
+        "^This (summary|chart) was a gift\\. What was paid for it comes off what is paid next — nobody pays twice for the same thing\\.$"
+      ],
+      "sections": [
+        {
+          "from": "^IF YOU WOULD LIKE MORE THAN THIS CHART$",
+          "to": "^(Talk it through with Jeremy$|The Champagne Method Coaching and Consulting · )"
+        }
+      ]
     }
   ]
 }
