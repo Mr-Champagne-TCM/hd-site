@@ -219,7 +219,9 @@ test("a refusal says which limit was hit to nobody", async () => {
     assert.doesNotMatch(res.body, internal, `the refusal leaked ${internal}`);
   }
   assert.equal(parse(res).error.code, "too_many", "the code should not name the window either");
-  assert.match(parse(res).error.message, /nothing is wrong with your reading/i);
+  // Said on every tier, so not "your reading" (10/22 verbatim read).
+  assert.match(parse(res).error.message, /nothing is wrong.$/i);
+  assert.doesNotMatch(parse(res).error.message, /reading/i);
 });
 
 test("a made-up token is stopped BEFORE the store is touched", async () => {
@@ -245,7 +247,7 @@ test("a failed send still costs an attempt", async () => {
 
   const res = await run({ token, store, counters, send: failing.send, now });
   assert.equal(res.status, 502);
-  assert.match(parse(res).error.message, /nothing has changed about your reading/i);
+  assert.match(parse(res).error.message, /^That could not be sent just now. Nothing has changed — /);
   assert.equal((await counters.load(`r:${(await import("../netlify/lib/reading.mjs")).readReadingLink(token, SECRET, 0).id}`)).length, 1);
 });
 

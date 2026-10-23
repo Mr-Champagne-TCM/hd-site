@@ -60,6 +60,8 @@ for (const [slug, output] of CHARTS) {
         assert.equal(take.length, 4);
         assert.equal(new Set(take).size, 4, "no try-this line repeated");
         for (const t of take) assert.equal(t.replace(/^\([^)]*\)\s*/, "").split(/(?<=[.!?])\s+(?=[A-Z])/).length, 2, t);
+        // Marked in words, since brackets are refused there (10/22 verbatim read: they read as real).
+        for (const t of take) assert.match(t, /^\([^)]*\) Rig stand-in: /, t);
       } finally {
         w.done();
       }

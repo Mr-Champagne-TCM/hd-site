@@ -25,6 +25,8 @@ type Chart = {
 
 const GLANCE_TYPE = TYPE_GLANCE as Record<string, string>;
 const GLANCE_AUTH = AUTHORITY_GLANCE as Record<string, string>;
+/** The engine names "Ego Manifested" / "Ego Projected"; the library has one Ego line for both (10/22). */
+const authorityGlance = (a: string) => GLANCE_AUTH[a] ?? (/^Ego\b/.test(a) ? GLANCE_AUTH.Ego : null) ?? null;
 const GLANCE_PROFILE = PROFILE_GLANCE as Record<string, string>;
 
 /** "(Sacral authority) Notice how..." -> "Notice how..." */
@@ -38,7 +40,7 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
   const experiment = firstExperiment(takeaways);
   const rows: Array<[string, string, string | null]> = [
     ["Your energy", chart.type ?? "", GLANCE_TYPE[chart.type ?? ""] ?? null],
-    ["How you decide", chart.authority ?? "", GLANCE_AUTH[chart.authority ?? ""] ?? null],
+    ["How you decide", chart.authority ?? "", authorityGlance(chart.authority ?? "")],
     experiment
       ? ["Something to try this week", "", experiment]
       : ["How you meet the world", profile ? `Profile ${profile}` : "", GLANCE_PROFILE[profile] ?? null],
@@ -104,8 +106,9 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
             , a short walk through it.
           </>
         ) : chart.bodygraphSvg === undefined ? (
-          // The summary has no drawing, so it does not promise one (W2, 10/21).
-          "Below: your chart at a glance, and what these three mean."
+          // The summary has no drawing, so it does not promise one (W2, 10/21). It names what the
+          // section below explains (10/22 verbatim read: "these three" read as the three lines above).
+          "Below: your chart at a glance, and what Type, Strategy and Authority mean."
         ) : (
           "Below: your chart and its tables."
         )}

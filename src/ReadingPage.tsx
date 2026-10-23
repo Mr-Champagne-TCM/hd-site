@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { customerText } from "../shared/customerMessages.mjs";
+import { customerHeading, customerText } from "../shared/customerMessages.mjs";
 import { type SummaryData } from "./Summary";
 import Bodygraph from "./Bodygraph";
 import ChartKey from "./ChartKey";
@@ -65,7 +65,13 @@ type Reading = {
   whose?: string | null;
   /** Pending upgrade: its chart's kept details, to confirm rather than retype. */
   kept?: { date: string; time: string | null; timeKnown: boolean; place: string | null; zone: string; name?: string; birthLine?: string | null } | null;
-  grewFrom?: { tier: number; label: string | null; chart: string | null; definedCenters: string[] } | null;
+  grewFrom?: {
+    tier: number;
+    label: string | null;
+    chart: string | null;
+    chartParts?: { text: string; provisional: boolean }[] | null;
+    definedCenters: string[];
+  } | null;
   typeOnce?: boolean;
   fresh?: boolean;
   /** This link was signed for an earlier tier and opens the chart it grew into. */
@@ -85,7 +91,7 @@ type State =
    * link could not be opened -- the second reads as the customer's problem,
    * and it is not one (10/16).
    */
-  | { at: "failed"; message: string; expired: boolean; ours: boolean };
+  | { at: "failed"; message: string; expired: boolean; ours: boolean; heading?: string | null };
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
@@ -120,6 +126,8 @@ export default function ReadingPage({ token }: { token: string }) {
             at: "failed",
             expired: body?.error?.code === "link_expired",
             ours,
+            // The server's heading is the tier's own ("Your summary is kept…" under it), 10/22.
+            heading: typeof body?.error?.heading === "string" ? body.error.heading : null,
             message: body?.error?.message ?? customerText(ours ? "reading-unavailable" : "reading-link-bad"),
           });
           return;
@@ -205,7 +213,7 @@ export default function ReadingPage({ token }: { token: string }) {
   if (state.at === "loading") {
     return (
       <div className={shell}>
-        <p className="text-[17px] text-brand-muted">Finding your reading…</p>
+        <p className="text-[17px] text-brand-muted">Finding your chart…</p>
       </div>
     );
   }
@@ -214,11 +222,12 @@ export default function ReadingPage({ token }: { token: string }) {
     return (
       <div className={shell}>
         <h1 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-          {state.expired
-            ? "This link has finished its six days"
-            : state.ours
-              ? "Your reading is safe"
-              : "That link could not be opened"}
+          {state.heading ??
+            (state.expired
+              ? "This link has finished its six days"
+              : state.ours
+                ? customerHeading("reading-unavailable")
+                : "That link could not be opened")}
         </h1>
         <div className="mt-5 max-w-[60ch]">
           <Panel>
@@ -376,6 +385,8 @@ export default function ReadingPage({ token }: { token: string }) {
             fromTier={reading.grewFrom?.tier ?? null}
             birthLine={reading.kept.birthLine ?? null}
             chart={reading.grewFrom?.chart ?? null}
+            chartParts={reading.grewFrom?.chartParts ?? null}
+            timeKnown={reading.kept?.timeKnown !== false}
             definedCenters={reading.grewFrom?.definedCenters ?? []}
             onChange={() => {
               setCorrecting(true);

@@ -57,7 +57,8 @@ const boughtAt = (ms) =>
  */
 export function chartCard(reading, { atTime = false } = {}) {
   const whose = reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
-  const title = whose ? `${whose}’s ${word(reading.tier)}` : `Your ${word(reading.tier)}`;
+  // A nameless chart bought for someone else is theirs (10/22 verbatim read), as its ready email says.
+  const title = whose ? `${whose}’s ${word(reading.tier)}` : `${reading.fresh === true ? "Their" : "Your"} ${word(reading.tier)}`;
   const label = TIERS[reading.tier]?.label ?? "The chart";
   const when = sayDate(reading.birth?.date);
   const where = reading.birth?.place ?? null;

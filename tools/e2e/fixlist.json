@@ -603,6 +603,203 @@
         "^(Ari|Cass|Pax|Remy|Uma)’s (summary|chart|reading) — The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [A-Z][^·]+$"
       ],
       "addsDocs": "^((page|pdf) (addSum|addChart|addPage|addRead|addUp)-\\d-[a-z-]+-t\\d|email (addSum|addChart|addPage|addRead|addUp)-\\d-[a-z-]+-t\\d \\| )"
+    },
+    {
+      "id": "V-A1",
+      "about": "10/22 verbatim read A1: the engine names the Ego authorities in full ('Ego Projected', 'Ego Manifested') and the shop looked them up under 'Ego', so they had no glance row, no side note and nothing after AUTHORITY on page 2 -- now each has its own note (Heart to the G for Projected, to the Throat for Manifested) and the library's one Ego line for the glance, so the two lines become three",
+      "docs": "^(page|pdf) ego[MP]-\\d-[a-z-]+-t\\d(-old\\d)?( p\\d+)?$",
+      "minus": [
+        "^Your chart in two lines$",
+        "^[1-3]$"
+      ],
+      "plus": [
+        "^Your chart in three lines$",
+        "^[1-3]$",
+        "^How you decide · Ego (Projected|Manifested)$",
+        "^What you really want, heard in what you say or do\\.$",
+        "^AUTHORITY · EGO (PROJECTED|MANIFESTED)$",
+        "^Your Heart center is defined and connected to the (G center|Throat)\\. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should\\.$"
+      ],
+      "sections": [
+        {
+          "from": "^STRATEGY ",
+          "to": "^PROFILE "
+        }
+      ]
+    },
+    {
+      "id": "V-B13",
+      "about": "10/22 verbatim read B13: 'What these three mean' explained Type, Strategy and Authority under three lines that are Type, Authority and Profile -- the heading and the summary's 'Below:' line name what the section explains",
+      "docs": "^page ",
+      "minus": [
+        "^What these three mean$",
+        "^Below: your chart at a glance, and what these three mean\\.$"
+      ],
+      "plus": [
+        "^What (Type, Strategy and Authority|Type and Strategy|Type and Authority|Strategy and Authority) mean$",
+        "^What (Type|Strategy|Authority) means$",
+        "^Below: your chart at a glance, and what Type, Strategy and Authority mean\\.$"
+      ]
+    },
+    {
+      "id": "V-A4",
+      "about": "10/22 verbatim read A4: 'Email me my charts' calls a nameless chart bought for someone else 'Their chart', as its ready email does",
+      "docs": "^email my-charts \\| ",
+      "minus": [
+        "^Your (summary|chart|reading) — The (summary|chart|reading)( · .+)?$"
+      ],
+      "plus": [
+        "^Their (summary|chart|reading) — The (summary|chart|reading)( · .+)?$"
+      ]
+    },
+    {
+      "id": "V-A5",
+      "about": "10/22 verbatim read A5: a summary or chart buyer is not told about 'your reading' -- the cut-short page's 'Links are long' (was 'Reading links are long'); the failure and loading words are tier-neutral or the tier's own (exercised by no journey but these)",
+      "docs": "^page ",
+      "minus": [
+        "^Reading links are long, and some apps cut them short — opening it again from the email it came in usually works\\.$"
+      ],
+      "plus": [
+        "^Links are long, and some apps cut them short — opening it again from the email it came in usually works\\.$",
+        "^This link has expired — they last six days\\. Your (summary|chart) is kept for a year, so it can be sent to you again\\.$",
+        "^Finding your chart…$",
+        "^Nothing is lost$"
+      ]
+    },
+    {
+      "id": "V-A6-B8",
+      "about": "10/22 verbatim read A6 + B8: the name box's hint says the title the chart really gets when the box is left empty (the name on the payment), and asks rather than tells ('you're welcome to change it'); the other shop commands become requests (the choice page, 'Change a detail', 'Email me my charts')",
+      "docs": "^page ",
+      "minus": [
+        "^It is the title of this chart: “[^”]+”\\. Change it if the chart is for someone else\\.$",
+        "^It is the title of this chart: “Your Human Design”\\.( Change it if the chart is for someone else\\.)?$",
+        "^Both are welcome\\. Choose one, and the right details and the right price come with it\\.$",
+        "^Your details as they are kept now\\. Change only what needs correcting — your chart is then cast from the corrected details\\.$",
+        "^Type the email you used when you bought\\. A fresh link to every chart bought with it goes to that inbox\\.$"
+      ],
+      "plus": [
+        "^It is the title of this chart: “[^”]+”\\. If the chart is for someone else, you’re welcome to change it\\.$",
+        "^Left empty, the chart is titled with the name on your payment: “[^”]+’s Human Design”\\.$",
+        "^Both are welcome\\. Whichever you choose, the right details and the right price come with it\\.$",
+        "^Your details as they are kept now\\. You’re welcome to change anything that needs correcting — your chart is then cast from the corrected details\\.$",
+        "^The email you used when you bought is the one that works here\\. A fresh link to every chart bought with it goes to that inbox\\.$"
+      ]
+    },
+    {
+      "id": "V-B2",
+      "about": "10/22 verbatim read B2: the confirm screen tags the values that change during an unknown birth day PROVISIONAL, as everywhere else, and with no time to make 'more exact' says how to add one",
+      "docs": "^page [a-zA-Z0-9]+-\\d-upgrade-t\\d-confirm$",
+      "minus": [
+        "^[A-Z][A-Za-z ]+ · \\d/\\d · [A-Za-z -]+ authority$",
+        "^Learned a more exact birth time\\? “Change a detail” corrects it, and your chart is cast from the corrected details\\.$"
+      ],
+      "plus": [
+        "^[A-Z][A-Za-z ]+( PROVISIONAL)? · \\d/\\d( PROVISIONAL)? · [A-Za-z -]+ authority( PROVISIONAL)?$",
+        "^Found your birth time\\? “Change a detail” adds it, and your chart is cast from it\\.$"
+      ]
+    },
+    {
+      "id": "V-B3-B4-B9",
+      "about": "10/22 verbatim read B3, B4, B9: the emails list what is 'In it:' (a PDF is not on a page), offer the next step 'on your page' (there is no page above an email), and an upgrade's receipt says the details are 'already kept' (from a summary as often as a chart)",
+      "docs": "^email ",
+      "minus": [
+        "^On one page:$",
+        "^The (chart|reading) contains .+ It is offered on the page above, and what you have already paid comes off the price there — nobody pays twice for the same thing\\.$",
+        "^Your birth details are kept from your chart, so there is nothing to type — only a look, to be sure they are right\\.$"
+      ],
+      "plus": [
+        "^In it:$",
+        "^The (chart|reading) contains .+ It is offered on your page, and what you have already paid comes off the price there — nobody pays twice for the same thing\\.$",
+        "^Your birth details are already kept, so there is nothing to type — only a look, to be sure they are right\\.$"
+      ]
+    },
+    {
+      "id": "V-B9-choice",
+      "about": "10/22 verbatim read B9 + C: the upgrade choice labels a summary's kept details 'Kept from your summary', and finishes 'The (price) you paid for this summary comes off' with what it comes off",
+      "docs": "^page [a-zA-Z0-9]+-\\d-upgrade-t\\d-choose$",
+      "minus": [
+        "^KEPT FROM YOUR CHART$",
+        "^The \\$\\d+\\.\\d\\d you paid for this (summary|chart) comes off$"
+      ],
+      "plus": [
+        "^KEPT FROM YOUR SUMMARY$",
+        "^The \\$\\d+\\.\\d\\d you paid for this (summary|chart) comes off (both prices|the price) above\\.$"
+      ]
+    },
+    {
+      "id": "V-B11",
+      "about": "10/22 verbatim read B11: the time help says what a time really moves (the Profile goes with the Suns; the gates, and sometimes the Authority or Type) and that those parts are marked",
+      "docs": "^page ",
+      "minus": [
+        "^Most of a chart holds without one\\. The Moon is the fast mover, and it carries the Profile with it — so a chart without a time is genuinely useful and honestly incomplete\\.$"
+      ],
+      "plus": [
+        "^Most of a chart holds without one, and the parts a time could change are marked as provisional — so a chart without a time is genuinely useful and honestly incomplete\\.$",
+        "^A different hour can change the gates, the Profile and sometimes the Authority or Type: the Moon changes gate about every ten hours, and the Sun changes line about once a day\\. The time on a birth certificate is best if you have it\\. An unknown time is fine too: the chart says plainly which parts depend on it\\.$"
+      ]
+    },
+    {
+      "id": "V-C",
+      "about": "10/22 verbatim read C: 'The chart zooms in with a tap or a click' (a computer has no tap); 'time zone' in two words; 'goes toward'; the terms' two exceptions as the privacy page names them, with 'I would rather' once; a Manifestor's 'keeps the impact from being a surprise'; the chart key's 'held consciously and unconsciously' (no capital AND), page and PDF",
+      "docs": "^(page|pdf) ",
+      "minus": [
+        "^Tap the chart to zoom in$",
+        "^Place and timezone data from GeoNames, CC BY 4\\.0\\.$",
+        "^Straight to the reading, or a step at a time — the total is identical either way\\. What you have already paid goes towards whatever you choose next, so nobody pays twice for the same thing\\.$",
+        "^All purchases are final\\. Your reading is made and sent the moment you ask for it, so there is nothing to send back — and I would rather say so plainly here than leave you to find out later\\. Two exceptions, and I would rather name the exceptions than have you wonder: ",
+        "^Your energy initiates, which means it arrives in other people's lives without warning\\. Saying what you are about to do is not permission-seeking; it is the thing that stops the impact being a surprise\\.$",
+        "^held consciously AND unconsciously$"
+      ],
+      "plus": [
+        "^The chart zooms in with a tap or a click$",
+        "^Place and time zone data from GeoNames, CC BY 4\\.0\\.$",
+        "^Straight to the reading, or a step at a time — the total is identical either way\\. What you have already paid goes toward whatever you choose next, so nobody pays twice for the same thing\\.$",
+        "^All purchases are final\\. Each one is made and sent the moment you ask for it, so there is nothing to send back — and I would rather say so plainly here than leave you to find out later\\. There are two exceptions: if something did not arrive, or did not work, that is mine to put right; and if (your|their) birth details went in wrong, write to ",
+        "^Your energy initiates, which means it arrives in other people's lives without warning\\. Saying what you are about to do is not permission-seeking; it is the thing that keeps the impact from being a surprise\\.$",
+        "^held consciously and unconsciously$",
+        "coordinates and the time zone that come with the choice\\.$"
+      ]
+    },
+    {
+      "id": "V-planet-numbers",
+      "about": "10/22 verbatim read C: one name for the twenty-six -- 'planet numbers', as the page and the PDF have always called them ('Technical values: your 26 planet numbers') -- in the reading's card, its upgrade lines on pages and emails, and the chart PDF's 'more than this chart' paragraph",
+      "docs": "^(page|pdf|email) ",
+      "minus": [
+        "^All twenty-six activations with the planet behind each, and the written interpretation\\.$",
+        "^(All twenty-six activations and the written reading\\.|Your bodygraph drawn, all twenty-six activations and the written reading\\.)$",
+        "^The chart, all twenty-six activations and the written reading\\. It stays on your link for a year, and the PDF is there whenever you want it\\.$",
+        "^The reading contains all twenty-six activations with the planet behind each, and the written interpretation\\. .+$"
+      ],
+      "plus": [
+        "^All twenty-six planet numbers, each with the planet that lit it, and the written interpretation\\.$",
+        "^(All twenty-six planet numbers and the written reading\\.|Your bodygraph drawn, all twenty-six planet numbers and the written reading\\.)$",
+        "^The chart, all twenty-six planet numbers and the written reading\\. It stays on your link for a year, and the PDF is there whenever you want it\\.$",
+        "^The reading contains all twenty-six planet numbers, each with the planet that lit it, and the written interpretation\\. .+$"
+      ],
+      "sections": [
+        {
+          "from": "^IF YOU WOULD LIKE MORE THAN THIS CHART$",
+          "to": "^Talk it through with Jeremy$"
+        }
+      ]
+    },
+    {
+      "id": "V-rig",
+      "about": "10/22 verbatim read, rig: the stand-in writer's four placeholder try-this lines say 'Rig stand-in:' after their tag (the checker refuses brackets there), so nobody reads them as real -- inside the try-this sections, which the v3-rig entry already claims",
+      "docs": "^(page|pdf) [a-zA-Z0-9]+-\\d-[a-z-]+-t2(-old\\d)?( p\\d+)?$",
+      "plus": [
+        "^(\\([^)]*\\) )?Rig stand-in: .+$"
+      ],
+      "sections": [
+        {
+          "from": "^(Things to experiment with|THINGS TO EXPERIMENT WITH)$",
+          "to": "^Talk it through with Jeremy$"
+        },
+        {
+          "from": "^(Something to try this week|SOMETHING TO TRY THIS WEEK)$",
+          "to": "^Below: "
+        }
+      ]
     }
   ]
 }

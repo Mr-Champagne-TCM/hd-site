@@ -404,9 +404,37 @@ test("a pending upgrade answers with its kept details and the chart it grew from
   assert.equal(body.pending, true);
   assert.equal(body.kept.birthLine, "July 22, 1991 · 5:40 PM · Denver, Colorado");
   assert.equal(body.grewFrom.chart, "Manifesting Generator · 2/4 · Sacral authority");
+  // A known birth time: nothing on the confirm screen is marked (B2).
+  assert.deepEqual(body.grewFrom.chartParts, [
+    { text: "Manifesting Generator", provisional: false },
+    { text: "2/4", provisional: false },
+    { text: "Sacral authority", provisional: false },
+  ]);
   assert.deepEqual(body.grewFrom.definedCenters, ["Sacral", "Throat"]);
   assert.equal(body.whose, "Alex");
   assert.equal(body.chartName, "Alex");
+});
+
+test("the confirm screen marks the values that change during an unknown birth day, as everywhere else (B2)", async () => {
+  const { chartParts } = await import("../netlify/lib/readingHandler.mjs");
+  const output = {
+    type: "Generator",
+    profile: "3/5",
+    authority: "Emotional",
+    timeKnown: false,
+    timeSpread: { ok: true, window: [0, 900], minutes: 1440, changes: ["profile", "authority"] },
+  };
+  assert.deepEqual(chartParts(output), [
+    { text: "Generator", provisional: false },
+    { text: "3/5", provisional: true },
+    { text: "Emotional authority", provisional: true },
+  ]);
+  // An older record with no spread: the engine's own list, as the page uses.
+  assert.deepEqual(
+    chartParts({ type: "Generator", profile: "3/5", authority: "Sacral", timeKnown: false, provisional: ["type"] }).map((p) => p.provisional),
+    [true, false, false],
+  );
+  assert.equal(chartParts(null), null);
 });
 
 test("a new chart for someone else starts with no name and no kept details", async () => {

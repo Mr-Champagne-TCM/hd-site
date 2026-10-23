@@ -974,7 +974,11 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
   /* ----------------------- 17. US spelling, and "shop" never to a buyer */
   if (on("us-spelling-no-shop")) {
     const c = add(check("us-spelling-no-shop", "rules", "US spelling everywhere, and \"shop\" never in customer copy", "Jeremy's rule: Center, colored. The shop is \"Human Design by The Champagne Method\" to a buyer."));
-    const UK = /\b(centre[sd]?|colour\w*|behaviour\w*|favourite\w*|honour\w*|organis(?:e|ed|es|ing|ation)\w*|recognis(?:e|ed|es|ing)\b|realis(?:e|ed|es|ing)\b|universalis\w*|analys(?:e|ed|ing)\b|programme\w*|travell\w+|labell\w+|catalogue\w*|grey\b|whilst|amongst|licence|defence|practis(?:e|ed|es|ing)\b|apologis\w+|emphasis(?:e|ed|es|ing)\b|minimis\w+|prioritis\w+|criticis(?:e|ed|es|ing)\b|summaris\w+|characteris\w+|energis\w+|judgement)/gi;
+    const UK = /\b(centre[sd]?|colour\w*|behaviour\w*|favourite\w*|honour\w*|organis(?:e|ed|es|ing|ation)\w*|recognis(?:e|ed|es|ing)\b|realis(?:e|ed|es|ing)\b|universalis\w*|analys(?:e|ed|ing)\b|programme\w*|travell\w+|labell\w+|catalogue\w*|grey\b|whilst|amongst|licence|defence|practis(?:e|ed|es|ing)\b|apologis\w+|emphasis(?:e|ed|es|ing)\b|minimis\w+|prioritis\w+|criticis(?:e|ed|es|ing)\b|summaris\w+|characteris\w+|energis\w+|judgement|pedall\w+|memoris\w*|towards|afterwards|\w+(?:al|or|il|on|im)is(?:e|ed|es|ing|ation|ations)\b|(?:cancell|modell|levell|signall|fuell|counsell|marvell|channell|tunnell|quarrell|diall)(?:ing|ed|er|ers)\b)/gi;
+    // 10/22 verbatim read: the website's "pedalling" and "memorise", the offer's "towards", privacy's
+    // "afterwards". The families are safe as patterns: no US word ends -alise, -orise, -ilise, -onise or
+    // -imise ("promise", "premise", "exercise", "surprise" are none of them), and the -ll- forms are
+    // named rather than "-lling" ("calling", "telling", "controlling" are US).
     const SHOP = /\bshop\b/gi;
     for (const d of custDocs) {
       c.saw(d.combo);
@@ -998,6 +1002,9 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
       if (d.tier === 0) for (const h of hits(d.text, /Below: your chart and its tables/)) c.fail(d.combo, d.where, "the summary says a chart drawing and tables follow (the summary has no drawing)", h.ctx);
       if (d.tier < 2) {
         for (const h of hits(d.text, /every word in your reading explained/i)) c.fail(d.combo, d.where, `"your reading" on a ${TIER[d.tier]}`, h.ctx);
+        // The fixed words a failure or a wait says on every tier (10/22 verbatim read, A5).
+        for (const h of hits(d.text, /Your reading is (?:safe|kept for a year)|Finding your reading|Opening your reading|Nothing has changed about your reading|nothing is wrong with your reading|Back to your reading/i))
+          c.fail(d.combo, d.where, `"your reading" on a ${TIER[d.tier]}`, h.ctx);
         if (d.kind === "email") for (const h of hits(d.text, /while you wait/i)) c.fail(d.combo, d.where, `"While you wait" in a ${TIER[d.tier]} email (nothing is being written)`, h.ctx);
       }
       if (d.kind === "pdf" && d.tier === 1) for (const h of hits(d.text, /HUMAN DESIGN INTERPRETATION/)) c.fail(d.combo, d.where, "the chart-only PDF is headed \"HUMAN DESIGN INTERPRETATION\"", h.ctx);

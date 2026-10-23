@@ -96,6 +96,28 @@ function pageWords(runs, page) {
     .sort();
 }
 
+/**
+ * SHARED WORDS CHANGED IN THE SHOP FIRST, FOR THE PHONE TO PORT (10/22
+ * verbatim read). Each pair is [the phone's words now, the shop's words now];
+ * the phone's page is read with them swapped, so only these sentences are
+ * excused, by name. It retires itself: once the phone prints the new words,
+ * the old ones are not there to swap.
+ */
+const TO_PORT = [
+  // Page 1's legend: "AND" was the only capitalized word in it.
+  ["held consciously AND unconsciously", "held consciously and unconsciously"],
+  // A Manifestor's type note (mechanics.mjs TYPE_NOTES): the US construction.
+  ["it is the thing that stops the impact being a surprise.", "it is the thing that keeps the impact from being a surprise."],
+];
+function phonePageWords(runs, page) {
+  const said = runs
+    .filter((r) => r.page === page)
+    .map((r) => r.text)
+    .join(" ")
+    .replace(/\s+/g, " ");
+  return words(TO_PORT.reduce((t, [was, now]) => t.split(was).join(now), said)).sort();
+}
+
 const heads = (runs, pages) =>
   Array.from({ length: pages }, (_, i) => {
     const r = runs.find((x) => x.page === i + 1 && x.size === 9.5 && x.bold && Math.abs(x.x - 54) < 0.1 && x.y > 61 && x.y < 64);
@@ -150,7 +172,7 @@ for (const [slug, name, b] of FIXTURES) {
     const s = await shop(slug, name, b);
     const p = phoneRuns(slug);
     for (let page = 1; page <= 4; page++) {
-      assert.deepEqual(pageWords(s.runs, page), pageWords(p, page), `${slug} page ${page}`);
+      assert.deepEqual(pageWords(s.runs, page), phonePageWords(p, page), `${slug} page ${page}`);
     }
   });
 

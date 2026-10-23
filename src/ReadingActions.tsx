@@ -118,7 +118,8 @@ export default function ReadingActions({
       {notes.length > 0 && (
         <section>
           <h2 className="font-display text-[20px] font-medium text-brand-paper">
-            What these three mean
+            {/* Named, not "these three" (10/22 verbatim read): the three lines above are Type, Authority and Profile. */}
+            What {notes.length === 1 ? notes[0][0] : `${notes.slice(0, -1).map(([l]) => l).join(", ")} and ${notes[notes.length - 1][0]}`} mean{notes.length === 1 ? "s" : ""}
           </h2>
           <div className="mt-4 space-y-5">
             {notes.map(([label, value, note]) => (
@@ -425,7 +426,7 @@ function Resend({ token }: { token: string }) {
           <MailtoText
             text={
               why ??
-              "That did not go through just now. Nothing has changed about your reading, and trying again usually works."
+              "That did not go through just now. Nothing has changed, and trying again usually works."
             }
           />
         </p>

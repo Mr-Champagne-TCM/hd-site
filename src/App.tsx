@@ -582,7 +582,7 @@ function PaidReturn() {
         {problem ? "Your purchase is safe" : "Payment received, thank you"}
       </h1>
       <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
-        {problem ? <MailtoText text={problem} /> : "Opening your reading…"}
+        {problem ? <MailtoText text={problem} /> : "Opening your page…"}
       </p>
     </div>
   );
@@ -676,7 +676,7 @@ function ReturningView({ token }: { token: string }) {
       <>
         <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
           <p className="max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">
-            That link could not be read just now, so the prices below are the full ones. Your reading is safe —
+            That link could not be read just now, so the prices below are the full ones. Nothing is lost —
             opening the link from your email again usually sorts it.
           </p>
         </section>
@@ -779,7 +779,7 @@ function ReturningView({ token }: { token: string }) {
               {data!.birthLine ? "Your birth details are kept, so there is nothing to type." : ""}
             </p>
             {data!.birthLine ? (
-              <KeptLine line={data!.birthLine} />
+              <KeptLine label={owned === 0 ? RETURNING.keptLabelSummary : RETURNING.keptLabel} line={data!.birthLine} />
             ) : (
               <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">{RETURNING.noKeptYet}</p>
             )}
@@ -799,7 +799,8 @@ function ReturningView({ token }: { token: string }) {
               </p>
             ))}
             <p className="mt-2 text-[15px] leading-snug text-brand-teal">
-              The {money(paid)} you paid for this {tierWord(owned)} comes off
+              {/* The sentence finished (10/22 verbatim read): it said "comes off" and stopped. */}
+              The {money(paid)} you paid for this {tierWord(owned)} comes off {ahead.length > 1 ? "both prices" : "the price"} above.
             </p>
           </ChoiceCard>
           <SomeoneNewCard onStart={startNew} />

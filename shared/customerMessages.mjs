@@ -61,7 +61,7 @@ export const MESSAGES = {
     act: false,
     heading: "Your purchase is safe",
     text:
-      `Your payment went through and your purchase is safe. Your reading page is still being set up on our side — ` +
+      `Your payment went through and your purchase is safe. Your page is still being set up on our side — ` +
       `Jeremy has been told, and your link will reach you by email. ${CONTACT} reaches him any time.`,
   },
 
@@ -125,11 +125,12 @@ export const MESSAGES = {
   },
 
   // --- the reading page -----------------------------------------------------
+  // Said on every tier, so no "your reading" (10/22 verbatim read): a summary or chart buyer reads these too.
   "reading-unavailable": {
     act: false,
-    heading: "Your reading is safe",
+    heading: "Nothing is lost",
     text:
-      "Your reading couldn't be fetched just now — that's on our side, and nothing is lost. " +
+      "This page couldn't load just now — that's on our side, and nothing is lost. " +
       "Reloading in a minute usually finds it.",
   },
   "reading-link-expired": {
@@ -138,17 +139,30 @@ export const MESSAGES = {
     text:
       "This link has expired — they last six days. Your reading is kept for a year, so it can be sent to you again.",
   },
+  // The same for the tier the link was signed for (forTier, below).
+  "reading-link-expired-summary": {
+    act: false,
+    heading: "This link has finished its six days",
+    text:
+      "This link has expired — they last six days. Your summary is kept for a year, so it can be sent to you again.",
+  },
+  "reading-link-expired-chart": {
+    act: false,
+    heading: "This link has finished its six days",
+    text:
+      "This link has expired — they last six days. Your chart is kept for a year, so it can be sent to you again.",
+  },
   "reading-link-bad": {
     act: false,
     heading: "That link could not be opened",
     text:
-      "That link could not be opened. Reading links are long, and some apps cut them short — " +
+      "That link could not be opened. Links are long, and some apps cut them short — " +
       "opening it again from the email it came in usually works.",
   },
   "reading-connection-dropped": {
     act: false,
-    heading: "Your reading is safe",
-    text: "The connection dropped before your reading arrived. Nothing is lost — reloading usually finds it.",
+    heading: "Nothing is lost",
+    text: "The connection dropped before this page finished loading. Nothing is lost — reloading usually finds it.",
   },
   // While Gemini writes (or retries). Unchanged words, kept here so the
   // taxonomy can name what a buyer sees when the writer is struggling.
@@ -166,9 +180,9 @@ export const MESSAGES = {
   // --- the PDF download -----------------------------------------------------
   "pdf-unavailable": {
     act: false,
-    heading: "Your reading is safe",
+    heading: "Nothing is lost",
     text:
-      "Your PDF didn't come together just now — that's on our side, and your reading is safe. " +
+      "Your PDF didn't come together just now — that's on our side, and nothing is lost. " +
       "Another try in a minute usually works.",
   },
   "pdf-link-expired": {
@@ -178,21 +192,28 @@ export const MESSAGES = {
       "This link has expired — they last six days. Your reading is kept for a year, and a fresh link " +
       "can be sent from your reading page.",
   },
+  "pdf-link-expired-chart": {
+    act: false,
+    heading: "This link has finished its six days",
+    text:
+      "This link has expired — they last six days. Your chart is kept for a year, and a fresh link " +
+      "can be sent from your page.",
+  },
   "pdf-not-ready": {
     act: false,
     heading: "Nothing to draw yet",
-    text: "Your birth details haven't been entered yet, so there is nothing to draw. Your reading page has the form.",
+    text: "Your birth details haven't been entered yet, so there is nothing to draw. Your page has the form.",
   },
 
   // --- sending the link again -----------------------------------------------
   "resend-unavailable": {
     act: false,
-    text: "That could not be sent just now. Nothing has changed about your reading — trying again usually works.",
+    text: "That could not be sent just now. Nothing has changed — trying again usually works.",
   },
   "resend-too-many": {
     act: false,
     text:
-      "That has been sent a few times just now. In a few minutes it will go through again — nothing is wrong with your reading.",
+      "That has been sent a few times just now. In a few minutes it will go through again — nothing is wrong.",
   },
   "resend-no-address": {
     act: false,
@@ -222,13 +243,13 @@ export const MESSAGES = {
     act: false,
     text:
       "Something on our side is slow right now, so your chart wasn't redone — nothing has changed, and the time " +
-      `you typed is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+      `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved": {
     act: false,
     text:
       "Your chart was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
-      `typed is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+      `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used": {
     act: false,
@@ -261,13 +282,13 @@ export const MESSAGES = {
     act: false,
     text:
       "Something on our side is slow right now, so your summary wasn't redone — nothing has changed, and the time " +
-      `you typed is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+      `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved-summary": {
     act: false,
     text:
       "Your summary was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
-      `typed is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
+      `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used-summary": {
     act: false,
@@ -302,4 +323,14 @@ export function customerText(key) {
 
 export function customerHeading(key) {
   return MESSAGES[key]?.heading ?? null;
+}
+
+/**
+ * THE TIER'S OWN WORD (10/22 verbatim read): a summary or chart buyer is not
+ * told about "your reading". The key's variant for the tier ("-summary",
+ * "-chart") when one is written; the key itself (a reading's words) otherwise.
+ */
+export function forTier(key, tier) {
+  const variant = tier === 0 ? `${key}-summary` : tier === 1 ? `${key}-chart` : null;
+  return variant && MESSAGES[variant] ? variant : key;
 }

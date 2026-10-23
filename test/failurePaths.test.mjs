@@ -493,13 +493,15 @@ async function readingCall({ s, token }) {
   return { res, seen: n.seen };
 }
 
-test("reading, the store does not answer: 'your reading is safe', not 'bad link'", async () => {
+test("reading, the store does not answer: 'nothing is lost', not 'bad link'", async () => {
   const s = store();
   const id = await saveReading(s, { tier: 1, output: null, ...BUYER, sku: "chart", purchasedAt: Date.now() });
   const { res, seen } = await readingCall({ s: broken(), token: mintReadingLink({ id, tier: 1 }, SECRET) });
   assert.equal(res.status, 503);
   assert.equal(parse(res).error.key, "reading-unavailable");
-  assert.equal(parse(res).error.heading, "Your reading is safe");
+  // Said on every tier, so never "your reading" (10/22 verbatim read): this is a chart.
+  assert.equal(parse(res).error.heading, "Nothing is lost");
+  assert.doesNotMatch(`${parse(res).error.heading} ${parse(res).error.message}`, /reading/i);
   assert.deepEqual(kinds(seen), ["reading-store-unavailable"]);
 });
 
@@ -510,10 +512,23 @@ test("reading, expired and forged links keep their answers, recorded as noise", 
   const a = await readingCall({ s, token: old });
   assert.equal(a.res.status, 410);
   assert.equal(parse(a.res).error.code, "link_expired");
+  // The tier's own word (10/22 verbatim read): a chart's expired link keeps "your chart".
+  assert.equal(parse(a.res).error.message, "This link has expired — they last six days. Your chart is kept for a year, so it can be sent to you again.");
   assert.deepEqual(kinds(a.seen), ["reading-link-expired"]);
   const b = await readingCall({ s, token: "forged.token" });
   assert.equal(b.res.status, 404);
   assert.deepEqual(kinds(b.seen), ["reading-link-bad"]);
+});
+
+test("reading, an expired link says the tier it was signed for: summary, chart, reading", async () => {
+  const s = store();
+  const said = [];
+  for (const tier of [0, 1, 2]) {
+    const id = await saveReading(s, { tier, output: null, ...BUYER, sku: ["summary", "chart", "reading"][tier], purchasedAt: Date.now() });
+    const { res } = await readingCall({ s, token: mintReadingLink({ id, tier, now: Date.now() - 30 * 86_400_000 }, SECRET) });
+    said.push(parse(res).error.message.match(/Your (\w+) is kept for a year/)?.[1]);
+  }
+  assert.deepEqual(said, ["summary", "chart", "reading"]);
 });
 
 // --- the PDF download --------------------------------------------------------------
@@ -566,6 +581,10 @@ test("pdf, expired / not ready / bad link: each its own page", async () => {
   const old = await pdfCall({ s, token: mintReadingLink({ id, tier: 1, now: Date.now() - 30 * 86_400_000 }, SECRET) });
   assert.equal(old.res.status, 410);
   assert.match(old.res.body, /fresh link/);
+  // A chart's PDF says chart, and goes back to the chart (10/22 verbatim read).
+  assert.match(old.res.body, /Your chart is kept for a year, and a fresh link can be sent from your page./);
+  assert.match(old.res.body, />Back to your chart</);
+  assert.doesNotMatch(old.res.body, /your reading/i);
   assert.deepEqual(kinds(old.seen), ["pdf-link-expired"]);
 
   const bad = await pdfCall({ s, token: "forged.token" });

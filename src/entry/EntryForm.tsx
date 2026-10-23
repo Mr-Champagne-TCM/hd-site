@@ -270,7 +270,7 @@ export default function EntryForm({
         (other ? "where they were born. " : "where you were born. ") +
         "Start typing the town, then pick it from the list — " +
         "the letters on their own are not enough, because the reading needs the " +
-        "coordinates and the timezone that come with the choice."
+        "coordinates and the time zone that come with the choice."
       );
     if (timeKnown !== false && !timeReady)
       return (
@@ -589,13 +589,16 @@ export default function EntryForm({
                 />
                 <span className="mt-1.5 block text-[14px] leading-snug text-brand-muted">
                   {/* Before a name is typed, not "the title of their chart: “Your Human Design”" (bug 19). */}
+                  {/* Left empty, the chart is titled with the name on the payment, so the hint says that title (10/22 verbatim read, A6). */}
                   {other && !cleanChartName(who)
                     ? "Their first name, if you add it, becomes the title of their chart."
                     : other
                       ? `It is the title of their chart: “${chartTitle(who)}”.`
-                      : correcting
-                        ? `It is the title of this chart: “${chartTitle(who)}”.`
-                        : `It is the title of this chart: “${chartTitle(who)}”. Change it if the chart is for someone else.`}
+                      : !cleanChartName(who) && cleanChartName(name)
+                        ? `Left empty, the chart is titled with the name on your payment: “${chartTitle(name)}”.`
+                        : correcting
+                          ? `It is the title of this chart: “${chartTitle(who)}”.`
+                          : `It is the title of this chart: “${chartTitle(who)}”. If the chart is for someone else, you’re welcome to change it.`}
                 </span>
               </label>
             </Changed>

@@ -1,4 +1,4 @@
-import { TIERS, priceFor, CHECKOUT_NEXT_STEP, checkoutNextStepKept } from "../../shared/pricing.mjs";
+import { TIERS, priceFor, CHECKOUT_NEXT_STEP, CHECKOUT_NEXT_STEP_THEIR, checkoutNextStepKept } from "../../shared/pricing.mjs";
 
 /**
  * What we ask Stripe for, worked out here so it can be tested without a network.
@@ -212,7 +212,7 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * whose details are kept is told so, not "about 2 minutes" of typing (fix 4,
      * 10/21: every upgrade said it).
      */
-    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level) : CHECKOUT_NEXT_STEP } },
+    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level) : fresh ? CHECKOUT_NEXT_STEP_THEIR : CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *

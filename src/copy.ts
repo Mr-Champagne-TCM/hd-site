@@ -273,7 +273,7 @@ export const TIERS_INTRO = {
  */
 export const LADDER_NOTE =
   "Straight to the reading, or a step at a time — the total is identical either way. " +
-  "What you have already paid goes towards whatever you choose next, so nobody pays twice " +
+  "What you have already paid goes toward whatever you choose next, so nobody pays twice " +
   "for the same thing.";
 
 export const ENTRY = {
@@ -301,14 +301,16 @@ export const ENTRY = {
   restart: "Start a new chart",
   /** Fix 15B (10/19): the fold-out under the time field. */
   whyTime: "Why the time matters",
+  // What a time really moves (10/22 verbatim read, B11): the Profile goes with the Suns, and more can change.
   whyTimeBody:
-    "The Moon moves fast, and it carries your profile with it. A few minutes either way can change " +
-    "it, so the time on a birth certificate is best if you have it. An unknown time is fine too: " +
-    "the chart says plainly which parts depend on it.",
+    "A different hour can change the gates, the Profile and sometimes the Authority or Type: the Moon " +
+    "changes gate about every ten hours, and the Sun changes line about once a day. The time on a birth " +
+    "certificate is best if you have it. An unknown time is fine too: the chart says plainly which parts " +
+    "depend on it.",
   timeUnknownLabel: "I don’t know my birth time",
   timeUnknownHelp:
-    "Most of a chart holds without one. The Moon is the fast mover, and it carries the Profile " +
-    "with it — so a chart without a time is genuinely useful and honestly incomplete.",
+    "Most of a chart holds without one, and the parts a time could change are marked as provisional — " +
+    "so a chart without a time is genuinely useful and honestly incomplete.",
 };
 
 /**
@@ -348,7 +350,8 @@ export function privacyFor(_tier?: number): string {
  */
 export const RETURNING = {
   question: "Your chart, a step further — or someone new?",
-  questionBody: "Both are welcome. Choose one, and the right details and the right price come with it.",
+  // Requests, not commands (10/22 verbatim read, B8).
+  questionBody: "Both are welcome. Whichever you choose, the right details and the right price come with it.",
   forMe: "For me",
   sameChart: "The same chart, a step further",
   someoneNewEyebrow: "Someone new",
@@ -360,12 +363,14 @@ export const RETURNING = {
   staysWithYours: "What you paid stays with your own chart.",
   theirDetailsLater: "Their birth details go in after checkout, on a page of their own.",
   keptLabel: "Kept from your chart",
+  // A summary's holder (10/22 verbatim read, B9), as the add-time form says it.
+  keptLabelSummary: "Kept from your summary",
   noKeptYet: "Your birth details are asked for once, after checkout — then they stay with your chart.",
   topBody:
     "You have the whole of it. And if there is someone whose chart you would love to see, theirs can " +
     "start whenever you like.",
   topCard:
-    "The chart, all twenty-six activations and the written reading. It stays on your link for a year, " +
+    "The chart, all twenty-six planet numbers and the written reading. It stays on your link for a year, " +
     "and the PDF is there whenever you want it.",
   confirmBody:
     "Payment received, thank you. Your birth details are kept, so there is nothing to type — just a " +
@@ -376,10 +381,12 @@ export const RETURNING = {
   confirmHelp:
     "Learned a more exact birth time? “Change a detail” corrects it, and your chart is cast from the " +
     "corrected details.",
+  // NEW (10/22 verbatim read, B2): the kept details have no birth time.
+  confirmHelpNoTime: "Found your birth time? “Change a detail” adds it, and your chart is cast from it.",
   correctTitle: "Change a detail",
   correctNote:
-    "Your details as they are kept now. Change only what needs correcting — your chart is then cast " +
-    "from the corrected details.",
+    "Your details as they are kept now. You’re welcome to change anything that needs correcting — your " +
+    "chart is then cast from the corrected details.",
   correctPrivacy:
     "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in " +
     "about them. They are never shown on your page, your PDF or in an email.",
@@ -403,7 +410,7 @@ export const MY_CHARTS = {
   lineLead: "Bought here before?",
   line: "Email me my charts",
   title: "Email me my charts",
-  body: "Type the email you used when you bought. A fresh link to every chart bought with it goes to that inbox.",
+  body: "The email you used when you bought is the one that works here. A fresh link to every chart bought with it goes to that inbox.",
   label: "Your email",
   button: "Email me my charts",
   nothingShown: "Nothing is shown on this page. The links only ever go to the inbox typed here.",
@@ -483,12 +490,13 @@ export const FOOTER = {
    * check audit, with #19 and W8): `terms("their")`.
    */
   terms: (whose: "your" | "their" = "your") =>
-    "All purchases are final. Your reading is made and sent the moment you ask for it, so there " +
+    // The two exceptions as the privacy page names them, and "I would rather" once (10/22 verbatim read).
+    "All purchases are final. Each one is made and sent the moment you ask for it, so there " +
     "is nothing to send back — and I would rather say so plainly here than leave you to find " +
-    "out later. Two exceptions, and I would rather name the exceptions than have you wonder: if " +
-    `something did not arrive, or did not work, that is mine to put right. And if ${whose} ` +
+    "out later. There are two exceptions: if " +
+    `something did not arrive, or did not work, that is mine to put right; and if ${whose} ` +
     "birth details went in wrong, write to hd-readings@thechampagnemethod.co — I read these " +
     "myself, and I will do what I can.",
-  attribution: "Place and timezone data from GeoNames, CC BY 4.0.",
+  attribution: "Place and time zone data from GeoNames, CC BY 4.0.",
   coaching: "thechampagnemethod.co",
 };

@@ -3,7 +3,7 @@ import { open as openSealed, seal } from "./sig.mjs";
 import { buildCorrection } from "./correction.mjs";
 import { check, record } from "./ratelimit.mjs";
 import { customerError, describe as describeKind, engineKind } from "./failures.mjs";
-import { MESSAGES } from "../../shared/customerMessages.mjs";
+import { MESSAGES, forTier } from "../../shared/customerMessages.mjs";
 import { summaryOnly } from "./handler.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
@@ -143,7 +143,7 @@ export async function handleAddTime({ body, ip, now = Date.now(), readings, coun
   } else {
     const link = readReadingLink(request?.token, secret, now);
     if (!link.ok) {
-      if (link.reason === "expired") return fail("reading-link-expired");
+      if (link.reason === "expired") return fail("reading-link-expired", { customer: forTier("reading-link-expired", link.tier) });
       if (link.reason === "misconfigured") return fail("addtime-misconfigured");
       return fail("addtime-link-bad");
     }

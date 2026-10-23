@@ -283,7 +283,7 @@ export function deliveryEmail({
     pending || top || !sellable(tier + 1)
       ? null
       : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.[their ? "theirBlurb" : "blurb"])} ` +
-        `It is offered on the page above, and what you have already paid comes off the price ` +
+        `It is offered on your page, and what you have already paid comes off the price ` +
         `there — nobody pays twice for the same thing.`;
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
@@ -312,7 +312,8 @@ export function deliveryEmail({
   ];
   const nextHead = kept ? "Next, one look" : "Next, about 2 minutes";
   const nextLine = kept
-    ? "Your birth details are kept from your chart, so there is nothing to type — only a look, " +
+    ? // Kept from a summary as often as from a chart, so neither is named (10/22 verbatim read, B9).
+      "Your birth details are already kept, so there is nothing to type — only a look, " +
       "to be sure they are right."
     : their
       ? "Their birth date, time and place. Their chart is made from them, and the time can be left " +
@@ -348,7 +349,7 @@ export function deliveryEmail({
           url,
           "",
         ]
-      : [ready.lead, "", "On one page:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", keptLine, ""]),
+      : [ready.lead, "", "In it:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", keptLine, ""]),
     `${resourcesHead.toUpperCase()}:`,
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),
@@ -385,7 +386,7 @@ export function deliveryEmail({
     : [
         row(esc(ready.lead), "0 0 18px", `font-size:19px;color:${PAPER}`),
         row(
-          `<div style="font-size:15px;color:${MUTED};padding-bottom:6px">On one page:</div>
+          `<div style="font-size:15px;color:${MUTED};padding-bottom:6px">In it:</div>
     <div style="font-size:16px;color:${PAPER};line-height:1.9">${ready.ticks.map((t) => `&#10003; ${esc(t)}`).join("<br>")}</div>`,
           "0 0 20px",
         ),

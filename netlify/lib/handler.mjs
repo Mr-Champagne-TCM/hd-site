@@ -332,7 +332,9 @@ export async function handleChart({
        */
       try {
         const source = await loadReading(readings, filling.grewFrom, now);
-        if (source?.correction) extra = { correction: source.correction };
+        // Not a birth time added to the chart it grew from (10/22 verbatim read): this chart
+        // is made with that time, so "now redone from it" would not be true of it.
+        if (source?.correction && source.correction.type !== "time-added") extra = { correction: source.correction };
       } catch {
         /* a note is a nicety; the chart is not held up for it */
       }

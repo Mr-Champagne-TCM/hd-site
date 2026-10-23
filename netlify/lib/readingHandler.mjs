@@ -5,8 +5,10 @@ import { buildReadingView } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
+import { forTier } from "../../shared/customerMessages.mjs";
 import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 import { addTimeState } from "./addTime.mjs";
+import { markedFields } from "../../shared/timeSpread.mjs";
 
 /** Page counts by reading and version, so a reload does not build the PDF again. */
 const PAGES = new Map();
@@ -89,7 +91,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     // a real person can act on. A forged signature and a reading that does not
     // exist must be indistinguishable, or the endpoint becomes a way to ask
     // whether a given reading exists.
-    if (link.reason === "expired") return fail("reading-link-expired", "link expired");
+    if (link.reason === "expired") return fail("reading-link-expired", "link expired", { customer: forTier("reading-link-expired", link.tier) });
     if (link.reason === "misconfigured") return fail("reading-misconfigured", "GRANT_SECRET unusable");
     return fail("reading-link-bad", `link ${link.reason ?? "bad"}`);
   }
@@ -184,6 +186,8 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
             tier: source.tier,
             label: TIERS[source.tier]?.label ?? null,
             chart: chartLine(source.output),
+            // The same three, each with whether it is PROVISIONAL (time unknown, the value changes that day), 10/22 B2.
+            chartParts: chartParts(source.output),
             definedCenters: source.output?.definedCenters ?? [],
           }
         : null,
@@ -330,6 +334,24 @@ function json(status, payload) {
 }
 
 /** "Manifesting Generator · 2/4 · Sacral authority": the chart in one line, for the confirm screen. */
+/**
+ * The confirm screen's "Your chart" line as its three values, each marked
+ * PROVISIONAL when it is one of the values that change during an unknown
+ * birth day (10/22 verbatim read, B2) -- as every other place they print.
+ */
+export function chartParts(output) {
+  if (!output) return null;
+  const marked = markedFields(output);
+  const parts = [
+    ["type", output.type],
+    ["profile", output.profile],
+    ["authority", output.authority ? `${output.authority} authority` : null],
+  ]
+    .map(([field, v]) => ({ text: typeof v === "string" ? v.trim() : "", provisional: marked.has(field) }))
+    .filter((p) => p.text);
+  return parts.length ? parts : null;
+}
+
 export function chartLine(output) {
   if (!output) return null;
   const parts = [output.type, output.profile, output.authority ? `${output.authority} authority` : null]

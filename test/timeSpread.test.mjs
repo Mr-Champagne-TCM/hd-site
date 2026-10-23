@@ -150,8 +150,9 @@ test("nothing moves: nothing changes, the window is the whole day, the line says
   assert.deepEqual(s.changes, []);
   assert.deepEqual(s.window, [0, 1439]);
   assert.equal(s.gates, "same");
-  assert.match(holdsLine(s).text, /Your chart is the same whatever time you were born\.$/);
-  assert.ok(!holdsLine(s).parts.some((p) => p.tag), "nothing marked");
+  // The gates stay marked with no birth time, so the line never says "the same whatever time" (B12).
+  assert.match(holdsLine(s).text, /It holds for a birth at any hour; only the lines marked PROVISIONAL may change\.$/);
+  assert.equal(holdsLine(s).parts.filter((p) => p.tag).length, 1, "the word is the tag, as in every other wording");
 });
 
 test("each change is found to the minute, and the window is the stretch holding noon", async () => {
@@ -307,6 +308,8 @@ test("the drawing is the bar only: the noon marker, the gold stretch, the clock,
   }
   const calm = spreadSvg({ ...s, changes: [], segments: {}, window: [0, 1439] }, { width: 640 }).svg;
   assert.match(calm, />the same all day</);
+  // The site's type, then sans fallbacks: never a serif when the web font is late (B1).
+  assert.match(calm, /font-family="Outfit, system-ui, [^"]*sans-serif"/);
   const paper = spreadSvg(s, { width: 504, palette: "paper", size: 7.5 });
   assert.ok(paper.height > 20 && paper.height < 60, `${paper.height}`);
 });

@@ -10,7 +10,7 @@ import { SITE } from "./copy";
 const KEY: ReadonlyArray<readonly [string, string, string, string?]> = [
   ["Personality", "conscious — what you know", "#F0F3F9"],
   ["Design", "unconscious — what the body knows", "#7C5BFF"],
-  ["Both", "held consciously AND unconsciously", "#F0F3F9", "#7C5BFF"],
+  ["Both", "held consciously and unconsciously", "#F0F3F9", "#7C5BFF"],
   ["Open", "not activated — open to others", "#1F3151"],
 ];
 

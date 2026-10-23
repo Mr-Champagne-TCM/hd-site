@@ -256,7 +256,7 @@ function addTimeScene(m) {
   m.editApi(after, (a) => void (a.addTime = "used"));
   Object.assign(up, { journey: "wren", step: upStep.id });
   // Seven days on, the page's own link has run out; the PDF's opens the form.
-  m.addPage({ id: "wren-2-add-time-t1-expired", kind: "addtime-link-expired", journey: "wren", step: step.id, tier: 1, clockDays: 7 }, "This link has finished its six days\n\nThis link has expired — they last six days. Your reading is kept for a year, so it can be sent to you again.\n");
+  m.addPage({ id: "wren-2-add-time-t1-expired", kind: "addtime-link-expired", journey: "wren", step: step.id, tier: 1, clockDays: 7 }, "This link has finished its six days\n\nThis link has expired — they last six days. Your chart is kept for a year, so it can be sent to you again.\n");
   m.addPage(
     { id: "wren-2-add-time-t1-form", kind: "addtime-form", journey: "wren", step: step.id, tier: 1, via: "pdf", buttons: [ADD_TIME.button(1)] },
     [ADD_TIME.title, "", ADD_TIME.intro(1), "", "KEPT FROM YOUR CHART", "", m.kept, "", "Time of birth", "Choose the time", "Open clock", "Why the time matters", ADD_TIME.button(1)].join("\n"),
@@ -290,6 +290,9 @@ const US = [
   [/whilst/gi, "while"], [/amongst/gi, "among"], [/licence/gi, "license"], [/defence/gi, "defense"], [/practis(e|ed|es|ing)\b/gi, "practic$1"],
   [/apologis/gi, "apologiz"], [/emphasis(e|ed|es|ing)\b/gi, "emphasiz$1"], [/minimis/gi, "minimiz"], [/prioritis/gi, "prioritiz"], [/criticis/gi, "criticiz"],
   [/summaris/gi, "summariz"], [/characteris/gi, "characteriz"], [/energis/gi, "energiz"], [/judgement/gi, "judgment"],
+  [/pedall/gi, "pedal"], [/memoris/gi, "memoriz"], [/\btowards\b/gi, "toward"], [/\bafterwards\b/gi, "afterward"],
+  [/(\w+(?:al|or|il|on|im))is(e|ed|es|ing|ation|ations)\b/gi, "$1iz$2"],
+  [/\b(cancel|model|level|signal|fuel|counsel|marvel|channel|tunnel|quarrel|dial)l(ing|ed|er|ers)\b/gi, "$1$2"],
 ];
 const usSpell = (t) => US.reduce((s, [re, to]) => s.replace(re, to), t);
 
@@ -819,11 +822,20 @@ export const CASES = [
       }
       // Right as they are: US words that look like UK ones, and "shop" inside an address.
       m.edit(m.pages[0], (t) => append(t, "Centered in practice: the analysis gave emphasis to travel, labeled and cataloged at the workshop. https://shop.example.org/shop"));
+      // US words the 10/22 patterns must leave alone.
+      m.edit(m.pages[1], (t) => append(t, "A promise, a premise, an exercise and a surprise: calling, telling and controlling toward it, pedaling and memorizing afterward."));
     },
     bad: [
       { name: "colour", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Some centers are colour-filled.")), expect: /UK spelling "colour/ },
       { name: "centre", plant: (m) => m.edit(m.pages[1], (t) => append(t, "Your Sacral centre is steady.")), expect: /UK spelling "centre"/ },
       { name: "shop in customer copy", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Thank you for visiting the shop.")), expect: /"shop" in customer copy/ },
+      // The 10/22 verbatim read's misses, and the families they belong to.
+      { name: "pedalling", plant: (m) => m.edit(m.pages[1], (t) => append(t, "It shows where you are pedalling.")), expect: /UK spelling "pedalling"/ },
+      { name: "memorise", plant: (m) => m.edit(m.pages[1], (t) => append(t, "You do not need to memorise any of it.")), expect: /UK spelling "memorise"/ },
+      { name: "towards", plant: (m) => m.edit(m.pages[0], (t) => append(t, "It goes towards whatever you choose next.")), expect: /UK spelling "towards"/ },
+      { name: "afterwards", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Ask before, not afterwards.")), expect: /UK spelling "afterwards"/ },
+      { name: "an -ise verb (stabilise)", plant: (m) => m.edit(m.pages[1], (t) => append(t, "It helps the week stabilise.")), expect: /UK spelling "stabilise"/ },
+      { name: "a doubled -ll- (signalled)", plant: (m) => m.edit(m.pages[0], (t) => append(t, "The change is signalled early.")), expect: /UK spelling "signalled"/ },
     ],
   },
 
@@ -858,6 +870,8 @@ export const CASES = [
       { name: "W2: the summary promises a chart and its tables", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Below: your chart and its tables.")), expect: /the summary says a chart drawing and tables follow/ },
       { name: "W3: your reading, to a summary buyer", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Every part of a chart, and every word in your reading explained.")), expect: /"your reading" on a summary/ },
       { name: "W3: your reading, to a chart buyer", plant: (m) => m.edit(m.pages[1], (t) => append(t, "Every part of a chart, and every word in your reading explained.")), expect: /"your reading" on a chart/ },
+      { name: "A5: an expired chart link says 'your reading'", plant: (m) => m.edit(m.pages[1], (t) => append(t, "This link has expired — they last six days. Your reading is kept for a year, so it can be sent to you again.")), expect: /"your reading" on a chart/ },
+      { name: "A5: a summary told its reading is safe", plant: (m) => m.edit(m.pages[0], (t) => append(t, "Your reading is safe")), expect: /"your reading" on a summary/ },
       { name: "W5: While you wait on a summary receipt", plant: (m) => m.editMail(m.mails((e) => e._step.tier === 0 && receipt(e))[0], (t) => append(t, "WHILE YOU WAIT, FREE IN THE LIBRARY:")), expect: /"While you wait" in a summary email/ },
       { name: "W12: the chart-only PDF headed INTERPRETATION", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === 0 ? `HUMAN DESIGN INTERPRETATION by THE CHAMPAGNE METHOD\n${t}` : t))), expect: /the chart-only PDF is headed "HUMAN DESIGN INTERPRETATION"/ },
       { name: "W12: the bodygraph guide given the library's address", plant: (m) => m.editPdf(m.pages[1], (pages) => pages.map((t, i) => (i === pages.length - 1 ? `${t}\nEvery word is explained in the free library, and the drawing on page 1 in “Reading your\nbodygraph.” Both are free, at thechampagnemethod.co/library/human-design.` : t))), expect: /names the bodygraph guide but prints only the library's address/ },

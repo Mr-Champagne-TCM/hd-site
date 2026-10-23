@@ -185,7 +185,7 @@ export function AddTimePage({ keyToken }: { keyToken: string }) {
   if (look.at === "loading") {
     return (
       <div className={shell}>
-        <p className="text-[17px] text-brand-muted">Finding your reading…</p>
+        <p className="text-[17px] text-brand-muted">Finding your chart…</p>
       </div>
     );
   }

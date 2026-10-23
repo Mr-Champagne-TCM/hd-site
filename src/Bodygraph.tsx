@@ -114,7 +114,8 @@ function Viewer({ svg, alt }: { svg: string; alt: string }) {
         {drawing}
       </button>
       <figcaption className="mt-2 text-center font-sans text-[13px] text-brand-muted">
-        Tap the chart to zoom in
+        {/* A tap on a phone, a click on a computer (10/22 verbatim read). */}
+        The chart zooms in with a tap or a click
       </figcaption>
       {open && <Zoom svg={svg} alt={alt} onClose={() => setOpen(false)} />}
     </figure>

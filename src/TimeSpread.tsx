@@ -43,7 +43,8 @@ function Day({ spread }: { spread: unknown }) {
     return () => ro.disconnect();
   }, []);
   // Our own markup from our own numbers; every word in it is escaped by spreadSvg.
-  const { svg } = spreadSvg(spread, { width: w });
+  // 13 px words, 12 px clock: the size of the page's small print, at a phone's width too (B1).
+  const { svg } = spreadSvg(spread, { width: w, size: 13 });
   return <div ref={box} className="mt-4" data-time-bar dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 

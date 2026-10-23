@@ -487,7 +487,8 @@ export function readReadingLink(token, secret, now = Date.now()) {
   const p = opened.payload;
   if (typeof p?.r !== "string" || !ID.test(p.r)) return { ok: false, reason: "malformed" };
   if (!Number.isInteger(p?.t) || p.t < 0 || p.t > 2) return { ok: false, reason: "malformed" };
-  if (typeof p?.x !== "number" || p.x * 1000 <= now) return { ok: false, reason: "expired" };
+  // An expired link still names its tier (signed), so its page says "summary" / "chart" / "reading" (10/22).
+  if (typeof p?.x !== "number" || p.x * 1000 <= now) return { ok: false, reason: "expired", tier: p.t };
 
   return { ok: true, id: p.r, tier: p.t };
 }

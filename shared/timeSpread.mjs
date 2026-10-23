@@ -126,7 +126,8 @@ const CAST = "Your birth time isn’t known, so this chart is cast at noon.";
 export function holdsLine(spread) {
   const parts = [];
   if (!spread.changes.length) {
-    parts.push({ t: `${CAST} Your chart is the same whatever time you were born.` });
+    // The gates are still marked with no birth time, so never "the same whatever time" (10/22 verbatim read, B12).
+    parts.push({ t: `${CAST} It holds for a birth at any hour; only the lines marked ` }, { tag: PROVISIONAL }, { t: " may change." });
   } else {
     const w = windowWords(spread);
     const just = (s) => /^just/.test(s ?? "");
@@ -198,11 +199,13 @@ export const ADD_TIME = {
   notNow: "Not now",
   /** "Kept from your chart" (the site's label), "Kept from your summary" on the summary tier. */
   kept: (tier) => (tier === 0 ? "Kept from your summary" : "Kept from your chart"),
-  /** "Change a detail"'s privacy line, said of a summary on the summary tier (a summary has no PDF). */
+  /**
+   * NEW (10/22 verbatim read): nothing earlier changes but "time unknown", so the
+   * line says that, not "Change a detail"'s "Your earlier details stay on file".
+   */
   privacy: (tier) =>
-    tier === 0
-      ? "Your earlier details stay on file with this summary, seen only by Jeremy, in case you ever write in about them. They are never shown on your page or in an email."
-      : "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in about them. They are never shown on your page, your PDF or in an email.",
+    `Nothing else on file changes. A note that the time was unknown before stays with this ${tier === 0 ? "summary" : "chart"}, ` +
+    "seen only by Jeremy, in case you ever write in about it.",
 };
 
 /* -------------------------------------------------------------- the drawing */
@@ -238,7 +241,10 @@ const n = (v) => Math.round(v * 10) / 10;
  * No rows, no percentages, no legend. `width` in px (or pt for the PDF);
  * returns { svg, width, height }.
  */
-export function spreadSvg(spread, { width = 640, palette = "dark", font = "Outfit", size = 11 } = {}) {
+/** The site's own type, then the same fallbacks as its pages: never a serif (10/22 verbatim read, B1). */
+export const BAR_FONT = "Outfit, system-ui, -apple-system, 'Segoe UI', sans-serif";
+
+export function spreadSvg(spread, { width = 640, palette = "dark", font = BAR_FONT, size = 11 } = {}) {
   const P = PALETTES[palette] ?? PALETTES.dark;
   const N = spread.minutes;
   const same = !spread.changes.length;

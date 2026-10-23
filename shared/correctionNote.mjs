@@ -133,12 +133,22 @@ export function correctionNote(c, { tier: pageTier } = {}) {
     if (!at) return null;
     const what = tier >= 2 ? "your chart and your reading are" : tier === 1 ? "your chart is" : "your summary is";
     const thing = tier >= 1 ? "chart" : "summary";
+    // Scoped to the three the note names (10/22 verbatim read), and the rest of the chart said too.
+    const scoped = moved.length
+      ? `Of your Type, Profile and Authority, ${moved.length === 1 ? "one" : moved.length === 2 ? "two" : "all three"} came out differently: ` +
+        list(moved.map((m) => `your ${FIELD_WORDS[m.field]} is now ${m.now} (it was ${m.was})`)) +
+        "."
+      : "";
+    const ALSO = { definition: "definition", incarnationCross: "incarnation cross", centers: "centers", channels: "channels" };
+    const also = (Array.isArray(c.also) ? c.also : []).filter((f) => ALSO[f]).map((f) => ALSO[f]);
+    const alsoSentence = also.length ? `Your ${list(also)} ${moved.length ? "changed too" : "came out differently"}.` : "";
+    const follows = moved.length || also.length ? `That follows from your birth time — nothing went wrong, and everything below is written for your ${thing} as it is now.` : "";
     return {
       eyebrow: "Your birth time",
       lead: `Birth time added: ${at} — ${what} now redone from it.`,
       body: moved.length
-        ? `${movedSentence} That follows from your birth time — nothing went wrong, and everything below is written for your ${thing} as it is now. ${sameSentence}`.trim()
-        : sameSentence,
+        ? [scoped, alsoSentence, follows, sameSentence].filter(Boolean).join(" ")
+        : [sameSentence, alsoSentence, follows].filter(Boolean).join(" "),
       learn,
     };
   }

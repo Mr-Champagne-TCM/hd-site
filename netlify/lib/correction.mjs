@@ -47,6 +47,22 @@ export function chartMoves(before, after) {
   return out;
 }
 
+/**
+ * The rest of the chart that moved (10/22 verbatim read: an added time moved a
+ * cross, a definition and a channel, and the note named only the Profile):
+ * "definition", "incarnationCross", "centers", "channels", in that order.
+ */
+export function alsoMoved(before, after) {
+  if (!before || !after) return [];
+  const same = (a, b) => JSON.stringify(Array.isArray(a) ? [...a].sort() : a ?? null) === JSON.stringify(Array.isArray(b) ? [...b].sort() : b ?? null);
+  const out = [];
+  if (!same(before.definition, after.definition)) out.push("definition");
+  if (!same(before.incarnationCross, after.incarnationCross)) out.push("incarnationCross");
+  if (["definedCenters", "undefinedCenters", "openCenters"].some((k) => !same(before[k], after[k]))) out.push("centers");
+  if (!same(before.channels, after.channels)) out.push("channels");
+  return out;
+}
+
 /** The few birth fields the note may name back to its own buyer. */
 function shown(b) {
   const r = birthRecord(b);
@@ -66,12 +82,15 @@ export function buildCorrection({ type = "correction", was = null, now = null, b
   const changed = details ? birthChanges(was, now) : [];
   const chart = chartMoves(before, after);
   if (!changed.length && !chart.length) return null;
+  // A time added also says what else moved (the correction note keeps its own words).
+  const also = type === "time-added" ? alsoMoved(before, after) : [];
   return {
     type,
     at: Math.floor(at / 1000),
     changed,
     ...(details ? { was: shown(was), now: shown(now) } : {}),
     chart,
+    ...(also.length ? { also } : {}),
   };
 }
 

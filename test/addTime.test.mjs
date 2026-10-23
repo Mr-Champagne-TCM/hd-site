@@ -193,7 +193,16 @@ test("ADDED FROM THE PAGE: cast once with the time known, at the tier bought; hi
   assert.equal(n.lead, "Birth time added: 3:10 PM — your chart is now redone from it.");
   assert.equal(
     n.body,
-    "One part came out differently: your Profile is now 3/6 (it was 3/5). That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now. Your Type and Authority are the same.",
+    "Of your Type, Profile and Authority, one came out differently: your Profile is now 3/6 (it was 3/5). That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now. Your Type and Authority are the same.",
+  );
+  // The rest of the chart that moved is said too (10/22 verbatim read).
+  assert.equal(
+    correctionNote({ ...r.correction, also: ["definition", "incarnationCross", "centers", "channels"] }, { tier: 1 }).body,
+    "Of your Type, Profile and Authority, one came out differently: your Profile is now 3/6 (it was 3/5). Your definition, incarnation cross, centers and channels changed too. That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now. Your Type and Authority are the same.",
+  );
+  assert.equal(
+    correctionNote({ ...r.correction, chart: [], also: ["channels"] }, { tier: 1 }).body,
+    "Your Type, Profile and Authority are the same. Your channels came out differently. That follows from your birth time — nothing went wrong, and everything below is written for your chart as it is now.",
   );
   assert.doesNotMatch(JSON.stringify(n), /correct/i);
   assert.equal(correctionNote(r.correction, { tier: 0 }).lead, "Birth time added: 3:10 PM — your summary is now redone from it.");

@@ -5,6 +5,7 @@ import { TIERS, money } from "../shared/pricing.mjs";
 import { correctionNote, grownNote } from "../shared/correctionNote.mjs";
 import MailtoText from "./MailtoText";
 import { customerText } from "../shared/customerMessages.mjs";
+import { Tag } from "./TimeSpread";
 
 /**
  * THE RETURNING BUYER (release 2), the pieces more than one page uses:
@@ -211,6 +212,8 @@ export function ConfirmKept({
   fromTier,
   birthLine,
   chart,
+  chartParts = null,
+  timeKnown = true,
   definedCenters,
   onChange,
 }: {
@@ -220,6 +223,9 @@ export function ConfirmKept({
   fromTier: number | null;
   birthLine: string | null;
   chart: string | null;
+  /** The same values, each marked when it changes during an unknown birth day (B2). */
+  chartParts?: { text: string; provisional: boolean }[] | null;
+  timeKnown?: boolean;
   definedCenters: string[];
   onChange: () => void;
 }) {
@@ -267,7 +273,22 @@ export function ConfirmKept({
           {chart && (
             <>
               <p className="mt-3 font-sans text-[12px] uppercase tracking-[0.14em] text-brand-muted/90">Your chart</p>
-              <p className="mt-1 text-[16px] leading-snug text-brand-paper">{chart}</p>
+              <p className="mt-1 text-[16px] leading-snug text-brand-paper">
+                {chartParts?.length
+                  ? chartParts.map((p, i) => (
+                      <span key={i}>
+                        {i > 0 && " · "}
+                        {p.text}
+                        {p.provisional && (
+                          <>
+                            {" "}
+                            <Tag />
+                          </>
+                        )}
+                      </span>
+                    ))
+                  : chart}
+              </p>
             </>
           )}
         </div>
@@ -288,7 +309,10 @@ export function ConfirmKept({
           <MailtoText text={state.message} />
         </p>
       )}
-      <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{RETURNING.confirmHelp}</p>
+      {/* No time to make "more exact": the line says how to add one (B2). */}
+      <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
+        {timeKnown ? RETURNING.confirmHelp : RETURNING.confirmHelpNoTime}
+      </p>
       <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {/* The one privacy sentence (copy.ts), here too. */}
         {PRIVACY_NOTE}

@@ -57,7 +57,7 @@ export const STRATEGY_NOTES = {
   "Wait to respond, then inform":
     "The response comes first, as with any Generator. The informing is the Manifestor half: telling people before you move, because your movement lands on them whether or not they were expecting it.",
   "Inform before acting":
-    "Your energy initiates, which means it arrives in other people's lives without warning. Saying what you are about to do is not permission-seeking; it is the thing that stops the impact being a surprise.",
+    "Your energy initiates, which means it arrives in other people's lives without warning. Saying what you are about to do is not permission-seeking; it is the thing that keeps the impact from being a surprise.",
   "Wait for the invitation":
     "Recognition is the mechanism. Being seen and asked is what lets your particular way of seeing land somewhere it can be used, rather than being offered where it was not wanted.",
   "Wait a lunar cycle":
@@ -73,6 +73,11 @@ export const AUTHORITY_NOTES = {
     "Your Spleen speaks once, quietly, and in the present tense. It does not repeat itself and it does not argue — which is why it is easy to talk yourself past, and why it is described as the quietest of the authorities.",
   Ego:
     "Your Heart center is defined and connected to the Throat. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should.",
+  // The engine names the two Ego authorities in full (10/22 verbatim read: they got no note).
+  "Ego Manifested":
+    "Your Heart center is defined and connected to the Throat. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should.",
+  "Ego Projected":
+    "Your Heart center is defined and connected to the G center. What is true for you here is what you actually have the will for, which is a question about wanting rather than about should.",
   "Self-Projected":
     "Your G center reaches your Throat, so your direction becomes clear when you hear yourself say it. Talking it out with somebody who will listen without steering is the mechanism, not a preference.",
   Mental:

@@ -16,7 +16,7 @@ import { handleResend } from "../netlify/lib/resendHandler.mjs";
 import { interpretOne } from "../netlify/lib/interpretJob.mjs";
 import { fillReading, loadReading, mintReadingLink, readReadingLink, saveReading } from "../netlify/lib/reading.mjs";
 import { buyerNameFor, chartTitle } from "../shared/chartName.mjs";
-import { CHECKOUT_NEXT_STEP, TIERS, money } from "../shared/pricing.mjs";
+import { CHECKOUT_NEXT_STEP, CHECKOUT_NEXT_STEP_THEIR, TIERS, money } from "../shared/pricing.mjs";
 import { BODYGRAPH_GUIDE } from "../shared/libraryLinks.mjs";
 import { COACH } from "../shared/readingCopy.mjs";
 import { syntheticReading } from "./support/syntheticReading.mjs";
@@ -174,7 +174,7 @@ test("#3 a known time marks nothing; a first thing to try is never marked", () =
 
 test("W2 THE SUMMARY HAS NO DRAWING, so the box does not promise one", () => {
   const summary = { type: "Projector", authority: "Self-Projected", profile: "4/1" };
-  assert.match(text(lines.render("default", { chart: summary })), /Below: your chart at a glance, and what these three mean\./);
+  assert.match(text(lines.render("default", { chart: summary })), /Below: your chart at a glance, and what Type, Strategy and Authority mean\./);
   assert.match(text(lines.render("default", { chart: THEO })), /Below: your chart and its tables\./);
 });
 
@@ -235,9 +235,9 @@ test("W8 the buyer's own cards are unchanged", () => {
 });
 
 test("UNDER 'Start a new chart for someone else' THE TERMS SPEAK OF THEIR BIRTH DETAILS (check audit, with #19 and W8)", () => {
-  assert.match(text(app.render("Footer", { their: true })), /And if their birth details went in wrong, write to/);
+  assert.match(text(app.render("Footer", { their: true })), /; and if their birth details went in wrong, write to/);
   assert.doesNotMatch(text(app.render("Footer", { their: true })), /if your birth details/);
-  assert.match(text(app.render("Footer", {})), /And if your birth details went in wrong, write to/);
+  assert.match(text(app.render("Footer", {})), /; and if your birth details went in wrong, write to/);
   const src = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
   assert.match(src, /<Footer their=\{Boolean\(failed \|\| showNew \|\| data\?\.pending\)\} \/>/, "the someone-new page's footer");
 });
@@ -276,7 +276,7 @@ test("#4 AN UPGRADE THAT KEEPS ITS DETAILS IS NOT TOLD 'about 2 minutes' of typi
   assert.equal(up(2).custom_text.submit.message, "Next: one look at your kept birth details, then your reading is written.");
   // A first purchase, someone new, and an older summary that kept nothing still type the details.
   assert.equal(sessionParams({ level: 1, origin: "https://x" }).custom_text.submit.message, CHECKOUT_NEXT_STEP);
-  assert.equal(sessionParams({ level: 1, origin: "https://x", fresh: true }).custom_text.submit.message, CHECKOUT_NEXT_STEP);
+  assert.equal(sessionParams({ level: 1, origin: "https://x", fresh: true }).custom_text.submit.message, CHECKOUT_NEXT_STEP_THEIR);
   assert.equal(sessionParams({ level: 1, origin: "https://x", upgrades: "abc", kept: false }).custom_text.submit.message, CHECKOUT_NEXT_STEP);
 });
 
@@ -395,6 +395,8 @@ test("#8 AN OLDER RECORD SAYS WHEN IT WAS BOUGHT, not 'Your reading · The readi
   // A record with its details keeps when and where.
   const kept = { ...old, birth: ALEX };
   assert.equal(chartCard(kept).line, "The reading · July 22, 1991 · Denver, Colorado");
+  // A nameless chart bought for someone else is "Their chart", as its ready email says (10/22).
+  assert.equal(chartCard({ tier: 1, pending: false, fresh: true, birth: { ...ALEX, name: undefined }, buyer: { name: "Alex Rivera" } }).title, "Their chart");
 });
 
 test("#8 TWO OLDER RECORDS BOUGHT ON ONE DAY SAY THE TIME TOO, so no two rows read the same", () => {
@@ -563,7 +565,7 @@ test("A CHART FOR SOMEONE ELSE NEVER CARRIES THE BUYER'S NAME, even with none ty
 
 test("the buyer's own emails are unchanged by any of this", () => {
   const m = mail({ tier: 0, chartName: "Alex" });
-  assert.match(m.text, /Your summary is ready\.\n\nOn one page:\n {2}✓ Type, Strategy, Authority and Profile\n {2}✓ Your definition and your centers/);
+  assert.match(m.text, /Your summary is ready\.\n\nIn it:\n {2}✓ Type, Strategy, Authority and Profile\n {2}✓ Your definition and your centers/);
   assert.match(m.text, /Open your summary:/);
 });
 
@@ -641,6 +643,18 @@ test("W15 A CORRECTED CHART'S NOTE TRAVELS WITH ITS UPGRADE ('Your correction' o
   const res = await chart(readings, { reading: mintReadingLink({ id: rd, tier: 2, now: NOW }, SECRET), kept: true });
   assert.equal(res.status, 200);
   assert.deepEqual((await loadReading(readings, rd, NOW)).correction, corrected.correction);
+});
+
+test("A CHART BOUGHT AFTER A BIRTH TIME WAS ADDED does not say it was 'now redone' (10/22 verbatim read)", async () => {
+  const readings = memoryStore();
+  const sum = await buy(readings, 0);
+  await chart(readings, { reading: mintReadingLink({ id: sum, tier: 0, now: NOW }, SECRET), birth: ALEX });
+  // The summary's note is a birth time added (as addTime.mjs writes it), straight into the stored record.
+  readings.m.set(sum, { ...readings.m.get(sum), correction: { type: "time-added", at: 1, changed: ["time"], was: {}, now: { time: "15:10", timeKnown: true }, chart: [] } });
+  assert.equal((await loadReading(readings, sum, NOW)).correction?.type, "time-added");
+  const ch = await buy(readings, 1, { upgrades: sum });
+  await chart(readings, { reading: mintReadingLink({ id: ch, tier: 1, now: NOW }, SECRET), kept: true });
+  assert.equal((await loadReading(readings, ch, NOW)).correction, null, "the chart was made with that time");
 });
 
 test("W15 an upgrade of a chart that was never corrected still has nothing to say", async () => {
