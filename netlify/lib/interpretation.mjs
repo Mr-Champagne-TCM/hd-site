@@ -440,6 +440,17 @@ export function spellingProblem(raw) {
 const SOFT_OPENER = /^(notice|watch|observe|pay attention)\b/i;
 // ", so the pause is familiar when ...", or as one approved line has it, ", which is practice for when ...".
 const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
+/**
+ * THE ENDING'S SIZE WORDS AND MONEY (10/22, read in two delivered v3j readings:
+ * "larger daily choices", "bigger commitments", "bigger relational crossroads",
+ * "important discussions", "when financial commitments arise"). Measured on
+ * every stored try-this line (1456): 405 endings carry one of these words, 13
+ * lines are set in money, every one what the prompt rules out. "heavier" is not
+ * judged: Jeremy's own home-page line ends "when a heavier choice appears".
+ * Shopping, purchases and "spending an evening" are everyday errands, not money.
+ */
+const TAIL_SIZE = /\b(?:bigger|biggest|larger|largest|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big)\b/i;
+const MONEY = /\b(?:money|finances?|financial(?:ly)?|budget(?:s|ing|ed)?|bills|debts?|loans?|savings|expenses?|salary|salaries|paychecks?|bank accounts?|taxes|mortgage)\b/i;
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
 // A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
 const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
@@ -477,6 +488,15 @@ export function takeawayProblem(raw) {
     if (ends < 2) return say(`does not end its second sentence with a period`);
     if (ends > 2) return say(`has ${ends} sentences, not two (the thing to try, then "Notice ...")`);
     if (!CALM_TAIL.test(body.slice(might + second))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
+    // The ending names the situation itself, never its size (10/22: "when bigger commitments
+    // arise", "before important discussions"; the prompt has said so since rev d).
+    const after = body.slice(might + second);
+    const size = TAIL_SIZE.exec(after.slice(CALM_TAIL.exec(after).index));
+    if (size) return say(`ends on the size of the situation ("${size[0]}") instead of naming the situation`);
+    // Everyday moments, never money (10/22: "when financial commitments arise", right above
+    // the disclaimer that this is not financial advice).
+    const money = MONEY.exec(body);
+    if (money) return say(`is set in money ("${money[0]}"); its moments are everyday ones the reading can know`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);

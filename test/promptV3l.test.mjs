@@ -13,6 +13,7 @@ import {
   draftProblem,
   provisionalValues,
   slipProblem,
+  takeawayProblem,
   themeCapProblem,
   themeSpellingProblem,
   voiceProblem,
@@ -275,4 +276,40 @@ test("SECTION D: the kinds of advice, where the reading names them, come in the 
   assert.match(adviceOrderProblem(intro("These are invitations to test, never medical, legal, financial, or psychological advice.")), /lists the kinds of advice in its own order in "Things to experiment with"; the disclaimer says "medical, psychological, legal or financial"/);
   assert.equal(adviceOrderProblem(intro("These are invitations to test, never medical, psychological, legal or financial advice.")), null);
   assert.equal(adviceOrderProblem(intro("Nothing here is medical or legal advice.")), null, "two kinds are not a list");
+});
+
+/* ---------------------------------------------- the try-this ending, and money (10/22, v3j R02 and R19) */
+
+const TWO_REST = [
+  "(Channel 20-34) The next time an easy chore gets a clear gut yes, you might start it straight away. Notice whether the energy feels absorbed or just busy, so you know the difference before a month-long project asks for it.",
+  "(Profile 4/1) Over the next few days, when a neighbor mentions something you have been reading about, you might share one thing you learned. Notice how it lands, which is practice for when a new neighbor asks what you do.",
+  "(Undefined Solar Plexus) Once or twice this week, as you leave somewhere lively but easy, you might name your mood in one word. Notice how much of it stayed behind, so the same check is within reach after a tense conversation.",
+];
+
+
+test("TRY-THIS ENDING: a size word instead of the situation is refused; the situation named passes", () => {
+  const line = (tail) => `(Sacral authority) This week, when a friend asks about a weekend errand, you might wait for your gut's sound before you answer. Notice which way it goes, ${tail}`;
+  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
+  for (const [tail, word] of [
+    ["so the pause is familiar when larger daily choices come.", "larger"],
+    ["so the pause is familiar when bigger commitments arise.", "bigger"],
+    ["so the pause is familiar before important discussions.", "important"],
+    ["so the pause is within reach before high-stakes decisions land.", "high-stakes"],
+  ]) {
+    const p = takeawayProblem(four(line(tail)));
+    assert.ok(p?.includes(`ends on the size of the situation ("${word}") instead of naming the situation`), `${tail} -> ${p}`);
+  }
+  assert.equal(takeawayProblem(four(line("so the pause is familiar when a job offer is on the table."))), null);
+  // Jeremy's own home-page line ends "when a heavier choice appears": "heavier" is not judged.
+  assert.equal(takeawayProblem(four(line("so the pause is familiar when a heavier choice appears."))), null);
+});
+
+test("TRY-THIS MONEY: a line set in money is refused; an errand with a purchase passes", () => {
+  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
+  const r19 = "(Emotional authority) This week, when an evening choice about dinner arises, you might wait until the morning before giving your final answer. Notice how your clarity shifts overnight, so letting your wave settle is familiar when financial commitments arise.";
+  assert.match(takeawayProblem(four(r19)), /is set in money \("financial"\); its moments are everyday ones the reading can know/);
+  const budget = "(Ego authority) This week, when organizing your budget at the kitchen table, you might sort the figures yourself. Notice how your will responds, so the habit is familiar when a friend asks for help.";
+  assert.match(takeawayProblem(four(budget)), /set in money \("budget"\)/);
+  const errand = "(Splenic authority) This week, when a small purchase catches your eye on an errand, you might wait until tomorrow before buying it. Notice how the pull shifts, so that pause is familiar when a friend proposes a trip.";
+  assert.equal(takeawayProblem(four(errand)), null);
 });

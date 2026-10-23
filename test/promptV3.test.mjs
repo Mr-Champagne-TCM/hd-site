@@ -36,7 +36,7 @@ const TWO = [
   HOME,
   "(Sacral authority) This week, when a friend asks whether you want to join a weekend errand, you might wait for your gut's first sound before you answer. Notice which way it goes, so that sound is easy to hear when a job offer is on the table.",
   "(Channel 20-34) The next time an easy chore gets a clear gut yes, you might start it straight away. Notice whether the energy feels absorbed or just busy, so you know the difference before a month-long project asks for it.",
-  "(Profile 4/1) Over the next few days, when a neighbor mentions something you have been reading about, you might share one thing you learned. Notice how it lands, which is practice for when a bigger opening comes.",
+  "(Profile 4/1) Over the next few days, when a neighbor mentions something you have been reading about, you might share one thing you learned. Notice how it lands, which is practice for when a new neighbor asks what you do.",
 ];
 
 test("TWO SENTENCES PASS: Jeremy's approved home-page line and three more in its shape", () => {
@@ -65,7 +65,7 @@ test("the calm tail belongs to the Notice sentence; one before it does not count
 });
 
 test("a time like '6 p.m.' or a quoted reply does not break the count", () => {
-  const pm = "(Sacral) This week, when dinner plans come up at 6 p.m. on a weekday, you might say \"not yet.\" Notice how the pause feels, so it is familiar when a bigger plan is on the table.";
+  const pm = "(Sacral) This week, when dinner plans come up at 6 p.m. on a weekday, you might say \"not yet.\" Notice how the pause feels, so it is familiar when a plan for the whole weekend is on the table.";
   assert.equal(takeawayProblem(block(TWO[0], pm, TWO[2], TWO[3])), null);
 });
 

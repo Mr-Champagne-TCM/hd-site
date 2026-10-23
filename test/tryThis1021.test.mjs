@@ -11,9 +11,9 @@ import { TAKEAWAYS, spellingProblem, takeawayProblem } from "../netlify/lib/inte
 
 const block = (...lines) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${lines.join("\n\n")}\n`;
 const A = [
-  "(Sacral authority) This week, on small asks like a quick call, you might wait for your gut's sound before you answer. Notice which one comes, so the sound is familiar by the time a bigger ask arrives.",
+  "(Sacral authority) This week, on small asks like a quick call, you might wait for your gut's sound before you answer. Notice which one comes, so the sound is familiar by the time a stranger asks you for a favor.",
   "(Channel 20-34) The next time an easy job gets a clear gut yes, you might go straight into it. Notice whether the energy feels absorbed or just busy, so you know the difference before more rides on it.",
-  "(Profile 4/1) Over the next few days, in an easy conversation with a friend, you might share one thing you have been reading about. Notice whether it opens a door, which is practice for when a bigger opening comes.",
+  "(Profile 4/1) Over the next few days, in an easy conversation with a friend, you might share one thing you have been reading about. Notice whether it opens a door, which is practice for when a new neighbor asks what you do.",
   "(Undefined Solar Plexus) Once or twice this week, as you leave somewhere lively but easy, you might name your mood in one word. Notice how much of it stayed behind, so the same check is within reach after a tense conversation.",
 ];
 
