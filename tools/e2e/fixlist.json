@@ -1164,6 +1164,17 @@
       "docs": "^page web-library-human-design$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "PICKS-D32",
+      "about": "Decision 32 (GO v3 p16, my pick, pending Jeremy; 10/23 read F8): the website's 'Reading your bodygraph' asked for one decision with 'real stakes and a short fuse'; the readings' try-this lines ask for small, easy choices. Now 'Something small with a short fuse.'",
+      "docs": "^page web-library-bodygraph$",
+      "minus": [
+        "^One decision\\. Not your career\\. Something with real stakes and a short fuse\\.$"
+      ],
+      "plus": [
+        "^One decision\\. Not your career\\. Something small with a short fuse\\.$"
+      ]
     }
   ]
 }
