@@ -693,14 +693,17 @@ function ReturningView({ token }: { token: string }) {
     );
   } else if (showNew || data!.pending) {
     // "Start a new chart for someone else": full price, fresh, plain words.
+    const backLabel = data!.pending ? `Back to ${whoseOf(whose)} chart` : "Back to your choices";
     body = (
       <>
         <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+          {/* Decision 14 (GO v3): the way back says where it goes. From the choices it goes back to
+              them ("your choices"); before the buyer's own details it goes to the chart's page. */}
           <a
             href={back}
             {...hint(
-              `Back to ${whoseOf(whose)} chart`,
-              data!.pending ? ownPageHint(whoseOf(whose), "chart") : `Opens the choices for ${whoseOf(whose)} chart`,
+              backLabel,
+              data!.pending ? ownPageHint(whoseOf(whose), "chart") : `Opens your choices for ${whoseOf(whose)} chart`,
             )}
             onClick={(e) => {
               if (data!.pending) return;
@@ -710,7 +713,7 @@ function ReturningView({ token }: { token: string }) {
             }}
             className="font-sans text-[15px] text-brand-teal"
           >
-            ← Back to {whoseOf(whose)} chart
+            ← {backLabel}
           </a>
           <h1 className={h1 + " mt-4"}>{RETURNING.startNew}</h1>
           <p className="mt-4 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">

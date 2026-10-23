@@ -1231,6 +1231,17 @@
         "on my side",
         "It couldn’t be confirmed right away on my side"
       ]
+    },
+    {
+      "id": "PICKS-D14",
+      "about": "Decision 14 (GO v3 p13, my pick, pending Jeremy; 10/23 read F7): on the someone-new price page the way back said '← Back to Sage Testwell’s chart' but went to the choices page. It says '← Back to your choices', its hover/label 'Opens your choices for … chart' (App.tsx backLabel). Before the buyer's own details are in, the link goes to the chart's page and still says 'Back to … chart'.",
+      "docs": "^page [a-zA-Z0-9]+-\\d-someone-new-t\\d-tiers$",
+      "minus": [
+        "^← Back to .+ chart$"
+      ],
+      "plus": [
+        "^← Back to your choices$"
+      ]
     }
   ]
 }

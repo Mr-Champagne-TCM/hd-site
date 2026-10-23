@@ -157,9 +157,10 @@ test("LINK LABELS the GO PDF named: the cut-short page's 'here', the way back fr
   const read = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
   // "The readings, and what each one includes, are here." -- "here" opens the readings' front page.
   assert.match(read("ReadingPage.tsx"), /href="\/"\s*\{\.\.\.hint\("here", HINT\.readings\)\}/);
-  // "← Back to your chart" goes to the CHOICE page (or, before the buyer's own details, their chart's page).
+  // The way back from someone new goes to the CHOICE page, and since decision 14 (picks-1023) says so,
+  // "← Back to your choices"; before the buyer's own details it goes to their chart's page.
   const app = read("App.tsx");
-  assert.match(app, /href=\{back\}\s*\{\.\.\.hint\(\s*`Back to \$\{whoseOf\(whose\)\} chart`,\s*data!\.pending \? ownPageHint\(whoseOf\(whose\), "chart"\) : `Opens the choices for \$\{whoseOf\(whose\)\} chart`,/);
+  assert.match(app, /href=\{back\}\s*\{\.\.\.hint\(\s*backLabel,\s*data!\.pending \? ownPageHint\(whoseOf\(whose\), "chart"\) : `Opens your choices for \$\{whoseOf\(whose\)\} chart`,/);
   // The header brand goes to the coaching home, and says so.
   assert.match(app, /<a href=\{SITE\.home\} \{\.\.\.hint\("Human Design by The Champagne Method", HINT\.home\)\}/);
 });
