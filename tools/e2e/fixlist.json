@@ -1175,6 +1175,15 @@
       "plus": [
         "^One decision\\. Not your career\\. Something small with a short fuse\\.$"
       ]
+    },
+    {
+      "id": "PICKS-D10",
+      "about": "Decision 10 (GO v3 p13, my pick, pending Jeremy; 10/23 read F9): the website's privacy page, in-person section, gains a row for the readings site's health log, read out of the code (hd-reading-app hosting recordIn: kind, time, an error name or count, and the first six characters of the link it was about; never a name, code, birth detail or time). Each record runs for fourteen days and the monthly clean-up clears them (sweepHealth, new on the same branch: Netlify Blobs has no expiry, so nothing deleted them before).",
+      "docs": "^page web-readings-privacy$",
+      "minus": [],
+      "plus": [
+        "^A record of what happens on that site, so a problem can be found and fixed What happened and when — a link that had expired or wasn’t complete, a code that didn’t match, a birth time added, a failure — with, where there is one, the first six characters of the link it was about\\. Never your name, your code, your birth details or a birth time\\. Each record runs for fourteen days, and a monthly clean-up clears the ones that have run out$"
+      ]
     }
   ]
 }
