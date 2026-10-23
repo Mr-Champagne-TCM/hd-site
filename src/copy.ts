@@ -259,9 +259,11 @@ export const TIERS_INTRO = {
   lead: "If you’d like to see your own",
   title: "Three ways in",
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
-  body:
-    "The price is here before anything is asked of you, and what you have already paid comes off " +
-    "what you pay next. Every route to the full reading costs the same in the end.",
+  // The credit idea is said ONCE on this page (Jeremy's GO PDF, 10/23: "Good, be consistent"): in
+  // LADDER_NOTE under the cards, beside the prices it is about. That note already says "the total is
+  // identical either way" and "goes toward whatever you choose next, so nobody pays twice", so this
+  // line no longer says "comes off what you pay next" or "costs the same in the end".
+  body: "The price is here before anything is asked of you.",
 };
 
 /**

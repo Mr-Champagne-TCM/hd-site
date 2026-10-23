@@ -866,6 +866,17 @@
           "to": "^Talk it through with Jeremy$"
         }
       ]
+    },
+    {
+      "id": "GO-credit-once",
+      "about": "Jeremy's GO PDF call (10/23), credit idea: 'Good, be consistent.' The offer page said it twice ('what you have already paid comes off what you pay next' and 'costs the same in the end' above the cards; 'the total is identical either way' and 'goes toward whatever you choose next' under them). It is said once now, in the note under the cards; the line above them keeps only the price.",
+      "docs": "^page offer$",
+      "minus": [
+        "^The price is here before anything is asked of you, and what you have already paid comes off what you pay next\\. Every route to the full reading costs the same in the end\\.$"
+      ],
+      "plus": [
+        "^The price is here before anything is asked of you\\.$"
+      ]
     }
   ]
 }
