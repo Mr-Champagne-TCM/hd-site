@@ -98,7 +98,7 @@ function privacyRow(links) {
     wonders what was kept.
   -->
   <tr><td style="padding:10px 0 0;font-size:13px;color:${MUTED}">
-    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline"${hintAttrs("What we keep, and for how long", HINT.privacy)}>What we keep, and for how long</a>
+    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline"${hintAttrs("What I keep, and for how long", HINT.privacy)}>What I keep, and for how long</a>
   </td></tr>`;
 }
 
@@ -112,7 +112,7 @@ function privacyRow(links) {
 export function emailFooter(option = "A", links, { coachColor = COACH_COLOR } = {}) {
   const shop = links.shop ?? SHOP;
   const home = links.home;
-  const privacyText = `What we keep, and for how long: ${links.privacy}`;
+  const privacyText = `What I keep, and for how long: ${links.privacy}`;
 
   switch (option) {
     case "E": {

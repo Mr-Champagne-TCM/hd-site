@@ -13,7 +13,7 @@ import { SITE } from "./copy";
  * not otherwise use would look like a mistake. The business name is the
  * lavender the email uses.
  *
- * `privacy` adds the "What we keep, and for how long" line under the two
+ * `privacy` adds the "What I keep, and for how long" line under the two
  * columns, for pages that have no other footer (the reading page and its
  * messages). The offer page's footer already lists Privacy in its link row.
  */

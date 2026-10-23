@@ -17,7 +17,7 @@ test("every option ends with the HD sign-off and the policy line", () => {
   for (const o of FOOTER_OPTIONS) {
     const { html, text } = emailFooter(o, SITE);
     assert.equal(text[0], SIGN_OFF, `${o} lost the sign-off`);
-    assert.equal(text.at(-1), `What we keep, and for how long: ${SITE.privacy}`, `${o} lost the policy`);
+    assert.equal(text.at(-1), `What I keep, and for how long: ${SITE.privacy}`, `${o} lost the policy`);
     assert.ok(html.includes(`href="${SITE.privacy}"`), `${o} lost the policy link`);
     assert.ok(html.includes(`>${HD_NAME}</a>`), `${o} lost the HD name`);
     assert.doesNotMatch(html + text.join("\n"), /Human Design By /, "'by' is always lowercase");

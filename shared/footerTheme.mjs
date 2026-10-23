@@ -36,7 +36,7 @@ export const COACH_URL = "https://thechampagnemethod.co";
 export const COACH_COLOR = "#a78bfa";
 
 /** The privacy link's words, the same wherever it appears. */
-export const PRIVACY_LABEL = "What we keep, and for how long";
+export const PRIVACY_LABEL = "What I keep, and for how long";
 
 /** The two columns, HD first. `hdColor` is the surface's own gold. */
 export function footerColumns(hdColor, coachColor = COACH_COLOR) {

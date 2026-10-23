@@ -424,7 +424,7 @@ function Credibility() {
       <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper">{PLAIN_ACCURACY}</p>
       <details className="mt-5 rounded-2xl border border-brand-teal/25 bg-white/[0.02] px-5 py-4">
         <summary className="cursor-pointer select-none font-sans text-[16px] font-semibold text-brand-teal">
-          How we check: the four numbers
+          How I check: the four numbers
         </summary>
         <dl className="mt-7 grid gap-4 sm:grid-cols-2">
           {CREDIBILITY.checks.map(([figure, what]) => (

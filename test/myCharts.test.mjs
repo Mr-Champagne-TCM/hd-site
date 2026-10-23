@@ -218,7 +218,7 @@ test("a send that fails is ours, said calmly -- the same way for both answers", 
   const ctx = setup();
   const res = await ask(ctx, "nobody@example.com", { send: async () => ({ ok: false, reason: "http_500" }) });
   assert.equal(res.status, 502);
-  assert.match(JSON.parse(res.body).error.message, /on our side/);
+  assert.match(JSON.parse(res.body).error.message, /on my side/);
 });
 
 // --- the two emails ---------------------------------------------------------------

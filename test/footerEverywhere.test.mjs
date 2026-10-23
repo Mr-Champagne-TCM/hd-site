@@ -24,7 +24,7 @@ test("the words are the accepted ones, 'by' lowercase, each name to its own home
   assert.equal(HD_URL, "https://humandesign.thechampagnemethod.co/");
   assert.equal(COACH_URL, SITE.home);
   assert.equal(COACH_COLOR, "#a78bfa");
-  assert.equal(PRIVACY_LABEL, "What we keep, and for how long");
+  assert.equal(PRIVACY_LABEL, "What I keep, and for how long");
   const [hd, coach] = footerColumns("#E8CBA0");
   assert.deepEqual([hd.color, coach.color], ["#E8CBA0", COACH_COLOR]);
 });

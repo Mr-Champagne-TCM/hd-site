@@ -9,7 +9,7 @@
  * THE RULES EVERY ENTRY KEEPS
  *
  *   Plain words. No codes, no "timezone name", no "HH:MM", no stack trace.
- *   Never blame. "That's on our side" when it is; nothing at all about whose
+ *   Never blame. "That's on my side" when it is; nothing at all about whose
  *     fault it is when it is the customer's typo.
  *   Invitations, not commands (his pillar). "Another try in a minute usually
  *     works", never "Try again".
@@ -44,7 +44,7 @@ export const MESSAGES = {
     act: false,
     heading: "Your purchase is safe",
     text:
-      `Your purchase couldn’t be confirmed just now — that’s on our side. If you were charged, it is safe: ` +
+      `Your purchase couldn’t be confirmed just now — that’s on my side. If you were charged, it is safe: ` +
       `reloading this page in a minute usually confirms it, and your link comes by email too. ` +
       `${CONTACT} reaches Jeremy.`,
   },
@@ -61,7 +61,7 @@ export const MESSAGES = {
     act: false,
     heading: "Your purchase is safe",
     text:
-      `Your payment went through and your purchase is safe. Your page is still being set up on our side — ` +
+      `Your payment went through and your purchase is safe. Your page is still being set up on my side — ` +
       `Jeremy has been told, and your link will reach you by email. ${CONTACT} reaches him any time.`,
   },
 
@@ -87,19 +87,19 @@ export const MESSAGES = {
   "chart-slow-free": {
     act: false,
     text:
-      "Something on our side is slow right now, so your chart didn’t come through. Nothing was charged, " +
+      "Something on my side is slow right now, so your chart didn’t come through. Nothing was charged, " +
       "and your details are still in the form — another try in a minute usually works.",
   },
   "chart-slow-paid": {
     act: false,
     text:
-      "Something on our side is slow right now. Your purchase is safe, and your details are still in the form — " +
+      "Something on my side is slow right now. Your purchase is safe, and your details are still in the form — " +
       `another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "chart-not-saved": {
     act: false,
     text:
-      "Your chart was drawn, but saving it didn’t finish on our side. Your purchase is safe and your details " +
+      "Your chart was drawn, but saving it didn’t finish on my side. Your purchase is safe and your details " +
       `are still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "chart-payment-required": {
@@ -115,7 +115,7 @@ export const MESSAGES = {
   "places-unavailable": {
     act: false,
     text:
-      "Town search isn’t answering just now — that’s on our side, not your spelling. " +
+      "Town search isn’t answering just now — that’s on my side, not your spelling. " +
       "It usually comes back within a minute, and everything else you’ve entered is kept.",
   },
   "places-too-many": {
@@ -130,7 +130,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      "This page couldn’t load just now — that’s on our side, and nothing is lost. " +
+      "This page couldn’t load just now — that’s on my side, and nothing is lost. " +
       "Reloading in a minute usually finds it.",
   },
   "reading-link-expired": {
@@ -182,7 +182,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      "Your PDF didn’t come together just now — that’s on our side, and nothing is lost. " +
+      "Your PDF didn’t come together just now — that’s on my side, and nothing is lost. " +
       "Another try in a minute usually works.",
   },
   "pdf-link-expired": {
@@ -223,7 +223,7 @@ export const MESSAGES = {
   // --- "Email me my charts" (release 2) ---------------------------------------
   "mycharts-unavailable": {
     act: false,
-    text: "That could not be sent just now — that’s on our side. Nothing is lost, and another try in a few minutes usually works.",
+    text: "That could not be sent just now — that’s on my side. Nothing is lost, and another try in a few minutes usually works.",
   },
   "mycharts-bad-email": {
     act: true,
@@ -242,13 +242,13 @@ export const MESSAGES = {
   "addtime-slow": {
     act: false,
     text:
-      "Something on our side is slow right now, so your chart wasn’t redone — nothing has changed, and the time " +
+      "Something on my side is slow right now, so your chart wasn’t redone — nothing has changed, and the time " +
       `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved": {
     act: false,
     text:
-      "Your chart was cast again, but saving it didn’t finish on our side, so nothing has changed yet. The time you " +
+      "Your chart was cast again, but saving it didn’t finish on my side, so nothing has changed yet. The time you " +
       `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used": {
@@ -281,13 +281,13 @@ export const MESSAGES = {
   "addtime-slow-summary": {
     act: false,
     text:
-      "Something on our side is slow right now, so your summary wasn’t redone — nothing has changed, and the time " +
+      "Something on my side is slow right now, so your summary wasn’t redone — nothing has changed, and the time " +
       `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved-summary": {
     act: false,
     text:
-      "Your summary was cast again, but saving it didn’t finish on our side, so nothing has changed yet. The time you " +
+      "Your summary was cast again, but saving it didn’t finish on my side, so nothing has changed yet. The time you " +
       `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used-summary": {
@@ -311,7 +311,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      `Something on our side didn’t work just now. Nothing is lost — another try in a minute usually works, ` +
+      `Something on my side didn’t work just now. Nothing is lost — another try in a minute usually works, ` +
       `and ${CONTACT} reaches Jeremy.`,
   },
 };

@@ -191,7 +191,7 @@ test("the alert tells Jeremy what the customer was shown, in their words", async
   const health = store();
   const sent = [];
   await noteFailure(health, "engine-timeout", { paid: true, detail: "tier 2, paid link: AbortError", send: async (m) => sent.push(m) });
-  assert.match(sent[0].text, /Something on our side is slow right now\. Your purchase is safe/);
+  assert.match(sent[0].text, /Something on my side is slow right now. Your purchase is safe/);
   assert.match(sent[0].text, /chart-slow-paid/);
 });
 
@@ -210,7 +210,7 @@ test("THE DIGEST GROUPS BY SEVERITY: what customers saw vs internal noise", () =
   assert.match(text, /INTERNAL ONLY/);
   assert.match(text, /2 x reading-link-expired/);
   assert.match(text, /WHAT CUSTOMERS WERE SHOWN/);
-  assert.match(text, /chart-slow-paid: "Something on our side is slow/);
+  assert.match(text, /chart-slow-paid: "Something on my side is slow/);
   assert.ok(text.indexOf("PAGED YOU") < text.indexOf("TO FOLLOW UP"));
   assert.ok(text.indexOf("TO FOLLOW UP") < text.indexOf("INTERNAL ONLY"));
 });

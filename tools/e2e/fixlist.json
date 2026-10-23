@@ -1210,6 +1210,27 @@
         "^Something on my side is slow right now, so your birth time didn’t reach Jeremy — ",
         "^It couldn’t be opened just now — that’s on my side, and your link is fine\\. "
       ]
+    },
+    {
+      "id": "PICKS-D26",
+      "about": "Decision 26 (GO v3 p16, my pick, pending Jeremy; 10/23 read F2): customer copy speaks as Jeremy, 'I/my'. The shop's footer privacy line on every page and email 'What we keep, and for how long' -> 'What I keep, and for how long' (footerTheme.mjs PRIVACY_LABEL, emailFooter.mjs, 404.html); the offer page's 'How we check: the four numbers' -> 'How I check: …'; every 'on our side' in the error lines (customerMessages.mjs) and in Jeremy's notes after an alert (alertNotes.mjs) -> 'on my side', and 'Our side couldn’t confirm it right away' -> 'It couldn’t be confirmed right away on my side'; the website's two wheel lines 'is ours' -> 'is mine'. The coaching home page's 'we' (Jeremy and a client) stays.",
+      "docs": "^(page |email )",
+      "minus": [
+        "^What we keep, and for how long(: https://thechampagnemethod\\.co/readings/privacy/)?$",
+        "^How we check: the four numbers$",
+        "^The wheel below is ours — drawn for this library, with its own words\\. It is yours to open, keep, print, or pass along\\.$",
+        "^This wheel is ours — drawn for this library, with its own words\\. Sharing it, printing it, or putting it on a wall is welcome\\.$",
+        "on our side",
+        "Our side couldn’t confirm it right away"
+      ],
+      "plus": [
+        "^What I keep, and for how long(: https://thechampagnemethod\\.co/readings/privacy/)?$",
+        "^How I check: the four numbers$",
+        "^The wheel below is mine — drawn for this library, with its own words\\. It is yours to open, keep, print, or pass along\\.$",
+        "^This wheel is mine — drawn for this library, with its own words\\. Sharing it, printing it, or putting it on a wall is welcome\\.$",
+        "on my side",
+        "It couldn’t be confirmed right away on my side"
+      ]
     }
   ]
 }
