@@ -1288,6 +1288,17 @@
       "plus": [
         "^Links like this one are long, and some apps cut them short\\. Opening the link again from your PDF usually works, or you’re welcome to write to \\S+ with your birth time\\.$"
       ]
+    },
+    {
+      "id": "PICKS-D29",
+      "about": "Decision 29 (GO v3 p16, my pick, pending Jeremy; 10/23 read F5): a phone reading's add-time line said '…once and free — your chart and your reading are redone from it.'; on the phone Jeremy redoes it by hand. The phone's PDF page 1 and Chart tab (AddTime.kt) and the readings site's form (addtime.mjs) now say '…once and free — Jeremy redoes your chart and your reading from it.' The shop's own line is unchanged. The rig does not drive the phone or the readings site's form, so the lines are claimed in case it ever does.",
+      "docs": "^page readings-site",
+      "minus": [
+        "^Once and free — your chart and your reading are redone from it\\. The date and place stay as they are\\.$"
+      ],
+      "plus": [
+        "^Once and free — Jeremy redoes your chart and your reading from it\\. The date and place stay as they are\\.$"
+      ]
     }
   ]
 }
