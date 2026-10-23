@@ -910,6 +910,57 @@
         "^\\[RIG PLACEHOLDER\\] No center is defined in this chart(, so it has( no( definition\\.)?)?)?$",
         "^(?:so )?(?:it )?(?:has )?(?:no )?definition\\.$"
       ]
+    },
+    {
+      "id": "GO-planet-numbers-web",
+      "about": "Jeremy's GO PDF call (10/23), 'Good, be consistent. I like planet numbers better', on the website (the-champagne-method release-1022 c109b24, and HD-Library-Work samples-1022 9ef81b4's markup.py v9 for the example charts): the reading card on /readings/ says 'All twenty-six planet numbers, each with the planet that lit it.' (the shop's own words), 'Reading your bodygraph' says 'Every planet number on this chart adds detail', and the gates example's banner says 'A reading lists all 26 planet numbers, each with the planet that lit it.' (V-website claims the old 'all 26 with the planet behind each' line it replaces)",
+      "docs": "^(page web-(readings|library-bodygraph)|sample /samples/charts/example-chart-gates\\.pdf\\.p[123])$",
+      "minus": [
+        "^All twenty-six activations, with the planet behind each one\\.$",
+        "^More is not better\\. Every activation on this chart adds detail, not value\\. "
+      ],
+      "plus": [
+        "^All twenty-six planet numbers, each with the planet that lit it\\.$",
+        "^More is not better\\. Every planet number on this chart adds detail, not value\\. ",
+        "^A reading lists all 26 planet numbers, each with the planet that lit it\\.$"
+      ]
+    },
+    {
+      "id": "GO-call1-privacy",
+      "about": "Jeremy's GO PDF call 1 = OPTION 2 (10/23): a phone reading made without a birth time gets an 'add it here' form on the readings site, so the privacy page's in-person section says what that site keeps (the-champagne-method 3d475c8 + 45a1848 'On that site:'): the link's own code and the date-and-place line, the time once with a one-off number, a scrambled IP for the try limit. Three new rows; 'Last updated' moves to the day they were written (masked as <today> on that day, W9)",
+      "docs": "^page web-readings-privacy$",
+      "minus": [],
+      "plus": [
+        "^If your reading was made without a birth time: the link in your PDF for adding it On that site: the link[’']s own code, the birth date and place the form shows you, ",
+        "^The birth time you add on that form Kept there once, with when it was sent and a one-off number that tells two quick sends apart, ",
+        "^A scrambled version of your IP address, when you use that form The times of your tries in the last day, under your IP address scrambled with a secret, ",
+        "^Last updated October 23, 2026\\.$"
+      ]
+    },
+    {
+      "id": "GO-bodygraph-voice",
+      "about": "Jeremy's GO PDF call (10/23), 'good, bring into our voice': 'Reading your bodygraph' asked in commands ('Do this with it', 'Pick the line that stung', 'Give it exactly one real decision', 'Bring your notes', 'tell us and we will recast it'); the same three steps are now requests and observations in 'I' (the-champagne-method c109b24): 'What you might do with it', '1. The line that stung', '2. Your Authority, once, on purpose', '3. A note of what happened', 'Going further … You're welcome to bring your notes.', and the footer 'you're welcome to let me know, and I'll recast it.'",
+      "docs": "^page web-library-bodygraph$",
+      "minus": [
+        "^Do this with it$",
+        "^1\\. Pick the line that stung$",
+        "^2\\. Run your Authority once, on purpose$",
+        "^Your reading names an Authority\\. Give it exactly one real decision this week and actually follow it\\. ",
+        "^3\\. Write down what happened$",
+        "^Two lines is enough\\. What you decided, and how it landed\\. Do that for a week and you will have something ",
+        "^Then go further\\. One week tells you whether this is real for you\\. .* Bring your notes\\.$",
+        "^Your chart was cast for your exact birth moment\\. .* tell us and we will recast it\\.$"
+      ],
+      "plus": [
+        "^What you might do with it$",
+        "^1\\. The line that stung$",
+        "^2\\. Your Authority, once, on purpose$",
+        "^Your reading names an Authority\\. I[’']d invite you to give it exactly one real decision this week and actually follow it\\. ",
+        "^3\\. A note of what happened$",
+        "^Two lines is enough\\. What you decided, and how it landed\\. A week of those gives you something ",
+        "^Going further\\. One week tells you whether this is real for you\\. .* You[’']re welcome to bring your notes\\.$",
+        "^Your chart was cast for your exact birth moment\\. .* you[’']re welcome to let me know, and I[’']ll recast it\\.$"
+      ]
     }
   ]
 }
