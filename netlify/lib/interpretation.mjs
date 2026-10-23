@@ -341,11 +341,24 @@ const SLIPS = [
   /\bmust ride out\b/i,
   // An authority is not "defined" (centers are); 10/22 round, 2 drafts, both slips.
   /\bauthority\s+(?:is|are)\s+defined\b/i,
+  // 10/22 verbatim read of the rig's stored readings (section D), each measured on
+  // every stored draft with no false hit: a definition explained by its own name
+  // ("Your Split definition means your defined centers are split", 7 drafts); one
+  // stem said twice across a clause ("without needing bridges ... to bridge gaps",
+  // 5; "bypassing the mind entirely. ... allows you to bypass", within three
+  // sentences, 8).
+  /\b(single|split|triple split|quadruple split)\s+definition\b[^.]*?\b(?:means|shows|tells you)\b[^.]*?\b(?:is|are|stay|stays|remain|remains)\s+(?:\w+\s+)?\1\b/i,
+  /\bbridges?\b[^.!?]{0,160}\bto bridge\b/i,
+  /\bbypass\w*\b[^.!?]*[.!?](?:\s+[^.!?]*[.!?])?\s+[^.!?]*\bbypass\w*\b/i,
   /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i,
 ];
 
 export function slipProblem(raw) {
-  for (const [where, text] of writtenText(raw)) {
+  let last = null;
+  for (const [where, line] of writtenText(raw)) {
+    // A slip across two sentences may run from a section's lede into its first paragraph.
+    const text = last?.[0] === where ? `${last[1]} ${line}` : line;
+    last = [where, line];
     for (const re of SLIPS) {
       const m = re.exec(text);
       if (m) return `The reading says "${m[0]}" in ${where}, a known slip: "${quoteAt(text, m.index, m[0].length)}"`;
@@ -810,6 +823,56 @@ export function voiceProblem(raw) {
       if (VOICE_DENIED.test(before) || VOICE_DESCRIBED.test(before)) continue;
       return `The reading tells the reader "you ${(m[1] ?? m[2]).toLowerCase()}" in ${where}; it asks, it never tells: "${quoteAt(text, at, 4 + (m[1] ?? m[2]).length)}"`;
     }
+    // A rule set for the reader (10/22 verbatim read): "you can never rush into
+    // commitments", "you are never designed to make spontaneous decisions". A
+    // description passes ("you can never be pinned down", "you could never have
+    // made it"). 4 drafts of all stored, every one a rule.
+    const r = RULE_AT_READER.exec(text);
+    if (r) return `The reading sets the reader a rule, "${r[0].trim().toLowerCase()}", in ${where}; it describes the design, it never rules: "${quoteAt(text, r.index, r[0].length)}"`;
+  }
+  return null;
+}
+const RULE_AT_READER = /\byou\s+(?:can|will|should|must)\s+never\s+(?!be\b|have\b)|\byou\s+(?:are|were)\s+(?:never|not)\s+(?:designed|meant|built|made|supposed|wired)\s+to\b/i;
+
+/**
+ * A FEELING WORD OR "STRATEGY" CAPITALIZED MID-SENTENCE (10/22 verbatim read:
+ * "deep Satisfaction ... heavy Frustration", "your Strategy of waiting"). The
+ * page writes them lower case in a sentence. A list of the chart's names
+ * ("your Type, Strategy, and Authority") passes. 31 drafts of all stored, no
+ * false hit.
+ */
+const THEME_CAP = /\b([A-Za-z][A-Za-z'-]*)(,?)\s+(Satisfaction|Satisfied|Frustration|Frustrated|Success|Successful|Bitterness|Bitter|Peace|Peaceful|Anger|Angry|Surprise|Surprised|Disappointment|Disappointed|Strategy|Strategies)\b/g;
+export function themeCapProblem(raw) {
+  for (const [where, text] of proseOf(raw)) {
+    // A try-this line's "(Your Strategy)" is its tag, a label: title case is right there.
+    const tag = where === `"${TAKEAWAYS}"` ? (/^\([^)]*\)/.exec(text)?.[0].length ?? 0) : 0;
+    for (const m of text.matchAll(THEME_CAP)) {
+      if (m.index < tag) continue;
+      if (m[2] === "," && /^[A-Z]/.test(m[1])) continue;
+      const at = m.index + m[0].length - m[3].length;
+      return `The reading capitalizes "${m[3]}" mid-sentence in ${where}; in a sentence it is lower case: "${quoteAt(text, at, m[3].length)}"`;
+    }
+  }
+  return null;
+}
+
+/**
+ * THE ADVICE LIST IN THE DISCLAIMER'S ORDER (10/22 verbatim read: "medical,
+ * legal, financial, or psychological" written by the model beside the page's
+ * "medical, psychological, legal or financial"). Where the model names three
+ * or more of the kinds, in any paragraph, they come in the disclaimer's order.
+ * 34 drafts of all stored, every one the prompt's old order.
+ */
+const ADVICE_KINDS = ["medical", "psychological", "legal", "financial"];
+const ADVICE_LIST = /\b(?:medical|psychological|legal|financial)\b(?:[\s,]+(?:or\s+|and\s+)?\b(?:medical|psychological|legal|financial)\b){2,}/gi;
+export function adviceOrderProblem(raw) {
+  for (const [where, text] of writtenText(raw)) {
+    if (where === "a takeaway's tag") continue;
+    for (const m of text.matchAll(ADVICE_LIST)) {
+      const said = m[0].toLowerCase().match(/medical|psychological|legal|financial/g);
+      if (said.join() === ADVICE_KINDS.filter((k) => said.includes(k)).join()) continue;
+      return `The reading lists the kinds of advice in its own order in ${where}; the disclaimer says "medical, psychological, legal or financial": "${quoteAt(text, m.index, m[0].length)}"`;
+    }
   }
   return null;
 }
@@ -886,7 +949,9 @@ export function draftProblem(raw, output) {
     borrowedWordProblem(raw, output) ??
     voiceProblem(raw) ??
     doubledWordProblem(raw) ??
-    themeSpellingProblem(raw)
+    themeSpellingProblem(raw) ??
+    themeCapProblem(raw) ??
+    adviceOrderProblem(raw)
   );
 }
 
