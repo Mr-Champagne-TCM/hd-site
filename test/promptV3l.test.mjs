@@ -119,7 +119,7 @@ const unknown = (type, changes, more = {}) => ({ type, profile: "4/6", timeKnown
 test("THE NOTE carries the measured list, and only it (Jeremy 10/22: not 'so much info tied to the uncertainty')", () => {
   const n = birthTimeNote(unknown("Projector", ["profile", "definedCenters", "undefinedCenters", "channels"]), { form: true });
   assert.match(n, /^NOTE: birth time was not known and the chart was cast at noon\. Measured across the whole birth day, these values can change with the birth time: Profile, the centers' states \(defined, undefined or open\) and Channels\. Every other value above holds at any birth time\./);
-  assert.match(n, /at most once, in plain words, as those values being provisional\. Never call any other value uncertain/);
+  assert.match(n, /at most once, in plain words, naming every one of those values as provisional\. Never call any other value uncertain/);
   assert.doesNotMatch(n, /Type|Authority|cannot be confirmed/);
   // Nothing changes: nothing to say.
   assert.match(birthTimeNote(unknown("Generator", [])), /every value above holds at any birth time; the page already says so\. Do not mention the birth time/);
@@ -143,11 +143,11 @@ test("BIRTH TIME: a value the birth day does not change, called uncertain, is re
   assert.match(birthTimeProblem(energy("Your exact Type, Strategy, and Authority cannot be strictly confirmed without a birth time."), projector), /the Type uncertain/);
   assert.match(birthTimeProblem(energy("Because your birth time was not known, your exact chart configuration cannot be confirmed."), projector), /calls the whole chart uncertain/);
   // What the NOTE lists may be said, once, plainly; a denial is not a claim.
-  assert.equal(birthTimeProblem(energy("Your birth time isn't known, so your Profile and the states of your centers are provisional."), projector), null);
-  assert.equal(birthTimeProblem(energy("Your birth time isn't known; your Type and Authority are not provisional, and your Profile is."), projector), null);
+  assert.equal(birthTimeProblem(energy("Your birth time isn't known, so your Profile, the states of your centers and your Channels are provisional."), projector), null);
+  assert.equal(birthTimeProblem(energy("Your birth time isn't known; your Type and Authority are not provisional, and your Profile, centers and channels are."), projector), null);
   // A Generator whose Type, Authority and Profile all change that day: the same sentence is true.
   const generator = unknown("Generator", ["type", "strategy", "authority", "profile", "channels"]);
-  assert.equal(birthTimeProblem(energy("Because your birth time was not known, your Profile, Type and Authority cannot be confirmed."), generator), null);
+  assert.equal(birthTimeProblem(energy("Because your birth time was not known, your Profile, Type, Strategy, Authority and Channels cannot be confirmed."), generator), null);
   // Without a birth-time sentence, ordinary words are ordinary: "may change how you think".
   assert.equal(birthTimeProblem(energy("Your open Head center may change how you think from day to day."), unknown("Generator", [])), null);
   // Nothing changes: any caveat about the birth time is one too many.
@@ -158,7 +158,7 @@ test("BIRTH TIME: a value the birth day does not change, called uncertain, is re
 
 test("BIRTH TIME: said once at most, and never in the summary lines (stored drafts said it up to four times)", () => {
   const g = unknown("Generator", ["type", "authority", "profile"]);
-  const twice = `${INTERPRETATION[0]}\n\nYour birth time isn't known, so your Profile is provisional. Your birth time also shapes your gates.\n`;
+  const twice = `${INTERPRETATION[0]}\n\nYour birth time isn't known, so your Type, Authority and Profile are provisional. Your birth time also shapes your gates.\n`;
   assert.match(birthTimeProblem(twice, g), /mentions the birth time 2 times \("Your energy, and how it starts"\); once at most/);
   const row = "IN SHORT\n\nType: Because birth time was not known, your Type is provisional.\n\n";
   assert.match(birthTimeProblem(row, g), /mentions the birth time in the "Type" line; the page says it beside the chart/);
@@ -377,4 +377,104 @@ test("READ IN THE v3s READINGS (10/23): the same word twice in a row, 'acknowled
   assert.equal(spellingProblem(section("You trust your own judgment and welcome acknowledgment.")), null);
   assert.match(slipProblem(four("(Profile 4/6) The next time when greeting neighbors at the front gate, you might watch. Notice the flow, so it is familiar when a friend visits.")), /says "The next time when" in "Things to experiment with", a known slip/);
   assert.equal(slipProblem(four("(Profile 4/6) The next time you greet neighbors at the front gate, you might watch. Notice the flow, so it is familiar when a friend visits.")), null);
+});
+
+/* ------------------------------------------- chart facts the prose states (10/23, after the v3s read) */
+
+const R24 = { type: "Projector", definition: "Split", channels: ["47-64 (Abstraction)", "23-43 (Structuring)", "25-51 (Initiation)"], definedCenters: ["Head", "Ajna", "Throat", "G", "Heart"] };
+const R23 = { type: "Projector", definition: "Split", channels: ["11-56 (Curiosity)", "25-51 (Initiation)"], definedCenters: ["Ajna", "Throat", "G", "Heart"] };
+const R35 = { type: "Manifesting Generator", definition: "Single", channels: ["7-31 (The Alpha)", "29-46 (Discovery)"], definedCenters: ["Throat", "G", "Sacral"] };
+const decide = (p) => section(p, INTERPRETATION[1]);
+
+test("CONNECTIONS: a channel joins its own two centers, and two centers connect only through this chart's channels", async () => {
+  const { connectionProblem } = await import("../netlify/lib/interpretation.mjs");
+  assert.match(
+    connectionProblem(decide("Because your Heart center connects to your Throat center through the 25-51 channel, your voice carries the direct force of your personal will."), R24),
+    /says Channel 25-51 joins the Heart and the Throat in "How you decide"; it joins the G and the Heart: "/,
+  );
+  assert.match(
+    connectionProblem(decide("Because your Throat center connects directly to the Heart center, your spoken words carry the exact commitments you can sustain."), R23),
+    /says the Throat and the Heart connect directly in "How you decide", but no channel of this chart joins them/,
+  );
+  assert.match(connectionProblem(decide("Because your Throat center is defined and connected to your Heart, your truth emerges."), R24), /the Throat and the Heart connect in "How you decide", but no channel of this chart links them/);
+  assert.match(connectionProblem(decide("Your Sacral connects to your Throat through Channel 20-34, so you speak as you work."), R35), /through Channel 20-34 in "How you decide", a channel this chart does not have/);
+  assert.match(connectionProblem(decide("Your Throat connects directly to your Sacral, so you speak as you work."), R35), /connect directly/);
+  for (const p of [
+    "Channel 25-51 links your G center to your Heart, so your will follows your direction.",
+    "Your Heart does not connect to your Throat; it reaches your G through Channel 25-51.",
+    "Because your Ajna and Throat link directly through Channel 23-43, your thoughts find words.",
+  ]) assert.equal(connectionProblem(decide(p), R24), null, p);
+  // Joined through the G on a Single chart: "connected" is true, "directly" is not claimed.
+  assert.equal(connectionProblem(decide("Because your Throat and Sacral centers are connected, your vitality finds a voice."), R35), null);
+});
+
+test("MOTORS: only the Sacral, Root, Solar Plexus and Heart; 'no defined motor' is refused when one is defined", async () => {
+  const { motorProblem } = await import("../netlify/lib/interpretation.mjs");
+  const energy = (p) => section(p, INTERPRETATION[0]);
+  assert.match(motorProblem(energy("Your defined Throat center acts as a powerful motor and expression point."), R35), /calls the Throat a motor in "Your energy, and how it starts"; the motors are the Sacral, Root, Solar Plexus and Heart/);
+  const r20 = { type: "Projector", definedCenters: ["Solar Plexus", "Root"] };
+  assert.match(motorProblem("IN SHORT\n\nType: You move through the world as a Projector without a defined motor to drive constant output.\n", r20), /no defined motor in the "Type" line, but its Solar Plexus and Root are defined motors/);
+  assert.match(motorProblem(energy("Without a defined motor for sustainable labor, you thrive when you are seen."), R23), /but its Heart is a defined motor/);
+  assert.equal(motorProblem(energy("Your design lacks a defined motor connected to the Throat, so you guide rather than push."), r20), null);
+  assert.equal(motorProblem(energy("Your Throat is not a motor; it is where energy becomes words."), r20), null);
+  assert.equal(motorProblem(energy("Because you lack a defined motor, your vitality is borrowed."), { type: "Reflector", definedCenters: [] }), null);
+});
+
+test("A SPLIT LOOKS FOR A BRIDGE: 'this separation creates a bridge' is refused in Your definition, on a split chart", async () => {
+  const { splitBridgeProblem } = await import("../netlify/lib/interpretation.mjs");
+  const definition = (p) => section(p, MECHANICS[1]);
+  assert.match(
+    splitBridgeProblem(definition("Your split definition means two areas do not connect directly. This separation creates an inner bridge where you seek out others."), R24),
+    /says the split creates a bridge in "Your definition"; a split definition looks for a bridge, it does not make one: "/,
+  );
+  assert.match(splitBridgeProblem(definition("Your split definition creates a natural bridge within your bodygraph."), { definition: "Triple Split" }), /a split definition looks for a bridge/);
+  assert.equal(splitBridgeProblem(definition("This split creates a natural bridge-seeking tendency in how you meet people."), R24), null);
+  assert.equal(splitBridgeProblem(definition("Your single definition creates an unbroken bridge across your centers."), R35), null);
+  assert.equal(splitBridgeProblem(section("Your Channel 6-59 creates an energetic bridge between two centers.", MECHANICS[2]), R24), null);
+});
+
+test("A REFLECTOR'S EMPTY FACTS ARE SENTENCES, and reading the label out is a known slip", () => {
+  const reflector = { type: "Reflector", definition: "None", definedCenters: [], undefinedCenters: ["Head", "Ajna"], openCenters: [], channels: [] };
+  const facts = chartFactsOnly(reflector, { form: true });
+  assert.match(facts, /\nDefinition: No center is defined in this chart, so it has no definition\.\n/);
+  assert.match(facts, /\nDefined centers: No center is defined in this chart\.\n/);
+  assert.match(facts, /\nOpen centers \(not colored in, with no gates at all\): No center in this chart is open\.\n/);
+  assert.match(facts, /\nChannels: No channel is defined in this chart\.\n/);
+  assert.doesNotMatch(facts, /: none\b/i);
+  assert.match(chartFactsOnly({ type: "Generator", definedCenters: ["Sacral"], undefinedCenters: [], openCenters: ["Head"], channels: ["3-60 (Mutation)"] }), /\nUndefined centers \(not colored in, but carrying gates\): No center in this chart is undefined\.\n/);
+  const definition = (p) => section(p, MECHANICS[1]);
+  for (const [p, said] of [
+    ["Your chart shows none, meaning your defined centers count is zero.", "chart shows none"],
+    ["None definition means zero defined centers exist in your chart.", "None definition"],
+    ["Because your defined centers are none, you have no rigid consistency.", "defined centers are none"],
+    ["Because your defined centers section is absent entirely, you hold zero fixed definitions.", "defined centers section"],
+  ]) assert.match(slipProblem(definition(p)), new RegExp(`says "${said}" in "Your definition", a known slip`), p);
+  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
+  assert.match(slipProblem(four("(Defined centers: none) Once or twice this week, when walking through a park, you might watch the moods. Notice them, so it is familiar when a friend visits.")), /"Defined centers: none"/);
+  for (const p of ["None of your centers is defined, so every one of them takes in the room.", "Your chart has no defined centers, and that openness is the design."]) assert.equal(slipProblem(definition(p)), null, p);
+});
+
+test("STATES: an undefined center called open is refused, as R27 delivered it", async () => {
+  const { centreStateProblem } = await import("../netlify/lib/interpretation.mjs");
+  const r27 = "Your Head center is undefined, meaning your focus shifts with the room. Your defined Ajna is steady, while your open Head takes in inspiration.";
+  assert.match(centreStateProblem(decide(r27), ["Ajna", "Throat"], ["Head", "G"], ["Spleen"]), /calls the Head center "open", but on this chart it is undefined/);
+  assert.match(centreStateProblem(decide("Your undefined Spleen takes in fear."), ["Ajna", "Throat"], ["Head", "G"], ["Spleen"]), /calls the Spleen center "undefined", but on this chart it is open/);
+  assert.equal(centreStateProblem(decide("Your undefined Head and your open Spleen take in the room."), ["Ajna", "Throat"], ["Head", "G"], ["Spleen"]), null);
+});
+
+test("THE NOTE'S LIST, WHOLE: provisional values are named, every measured one (R34, R35 delivered)", () => {
+  const manifestor = unknown("Manifestor", ["profile", "definition", "definedCenters", "undefinedCenters", "openCenters", "channels"]);
+  const where = (p) => section(p, "What is consistently yours");
+  assert.match(
+    birthTimeProblem(where("Note that these values are provisional because your birth time was not known. Your Root is defined."), manifestor),
+    /says values are provisional in "What is consistently yours" without naming them; measured across the birth day, these can change: Profile, Definition, center states, Channels: "/,
+  );
+  const mg = unknown("Manifesting Generator", ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "channels"], { signature: "Satisfaction", notSelfTheme: "Frustration" });
+  assert.match(
+    birthTimeProblem(section("Because your birth time was not known, your Type, Strategy, Inner Authority, Profile, Definition, and centers' states are provisional.", INTERPRETATION[0]), mg),
+    /birth-time note in "Your energy, and how it starts" leaves out Incarnation Cross, Channels, the on-track and off-track feelings/,
+  );
+  assert.equal(birthTimeProblem(section("Because your birth time was not known, your Type, Strategy, Inner Authority, Profile, Definition, feeling words, Incarnation Cross, center states, and Channels are provisional values.", INTERPRETATION[0]), mg), null);
+  assert.equal(birthTimeProblem(where("Your birth time was not known, so your Profile, Definition, centers and channels come from a noon chart. These values are provisional."), manifestor), null);
+  assert.equal(birthTimeProblem(where("Your Root center is defined and steady."), manifestor), null, "no mention, nothing to judge");
 });
