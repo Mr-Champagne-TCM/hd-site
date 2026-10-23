@@ -131,6 +131,27 @@ test("AN UPGRADE CARRIES THE KEPT DETAILS, and the old record is marked as grown
   assert.ok(!JSON.stringify(list).includes("alex@"));
 });
 
+test("THE RECEIPT SAYS THE CHART'S OWN TITLE (Jeremy 10/23, option 1): an upgrade of a chart titled Robin’s", async () => {
+  const { deliveryEmail } = await import("../netlify/lib/deliveryEmail.mjs");
+  const { SITE } = await import("../netlify/lib/siteLinks.mjs");
+  const readings = memoryStore();
+  // Alex Rivera buys a summary and titles the chart "Robin" (a chart for his partner, bought for himself).
+  const id = randomBytes(16).toString("hex");
+  const first = await recordPurchase({ readings, id, level: 0, session: session(0), secret: SECRET, now: NOW });
+  assert.equal(first.chartName, null, "a brand-new chart has no title typed yet");
+  assert.equal((await chart(readings, { reading: mintReadingLink({ id, tier: 0, now: NOW }, SECRET), birth: { ...ALEX, name: "Robin" } })).status, 200);
+  // Then takes that chart to the reading: the purchase knows the chart's name...
+  const up = randomBytes(16).toString("hex");
+  const rec = await recordPurchase({ readings, id: up, level: 2, session: session(2, { upgrades: id }), secret: SECRET, now: NOW });
+  assert.equal(rec.chartName, "Robin");
+  // ...and the receipt says the chart's title, not the payer's name.
+  // (Prices from shared/pricing.mjs only: P-1.)
+  const { money } = await import("../shared/pricing.mjs");
+  const upgradeCents = TIERS[2].cents - TIERS[0].cents;
+  const receipt = deliveryEmail({ tier: 2, name: "Alex Rivera", chartName: rec.chartName, url: "https://x.test/r/a.b", links: SITE, pending: true, kept: rec.kept, amountCents: upgradeCents });
+  assert.equal(receipt.subject, `Receipt: Robin’s Human Design reading, ${money(upgradeCents)}`);
+});
+
 test("SOMEONE NEW is marked fresh and is its own person", async () => {
   const readings = memoryStore();
   const id = randomBytes(16).toString("hex");

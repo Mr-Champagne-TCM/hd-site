@@ -2,6 +2,7 @@ import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
+import { chartTitle } from "../../shared/chartName.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -223,10 +224,16 @@ export function deliveryEmail({
    * THE CHART'S NAME IS IN THE SUBJECT, and it is not decoration: every buyer
    * once got the identical subject, Gmail collapsed every purchase into one
    * conversation, and a buyer could follow a link to somebody else's chart.
-   * The receipt names the buyer (nothing has been typed for the chart yet);
-   * the ready email names the chart.
+   * Every subject still carries a name, so that still holds.
+   *
+   * THE RECEIPT SAYS THE CHART'S OWN TITLE (Jeremy 10/23, option 1), as the
+   * ready email does: a chart titled "Robin’s Human Design" gives "Receipt:
+   * Robin’s Human Design reading, <price>". `chartName` is the name the chart
+   * is titled with (its kept details carry it on an upgrade); a brand-new
+   * chart has had nothing typed for it yet, so its title is the one it has
+   * until then, the name on the payment -- what the receipt said before.
+   * A chart bought for someone else keeps its own receipt (below).
    */
-  const buyerWhose = name ? `${name}’s` : "Your";
   const forChart = chartName || (their ? null : name);
   const chartWhose = forChart ? `${forChart}’s` : "Your";
   /** Whose chart, mid-sentence: "Quinn’s", else "their" or "your". */
@@ -243,7 +250,7 @@ export function deliveryEmail({
    */
   const receiptWhat = their
     ? `${name ? `${name}, a` : "A"} Human Design ${word} for someone else`
-    : `${buyerWhose} Human Design ${word}`;
+    : `${chartTitle(forChart)} ${word}`;
   const subject = pending
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink

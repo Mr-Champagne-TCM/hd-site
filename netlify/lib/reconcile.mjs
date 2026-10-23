@@ -176,6 +176,8 @@ export async function reconcile({
         url,
         tier: level,
         kept: Boolean(recorded?.kept),
+        // The receipt says the chart's own title (10/23, option 1): an upgrade's chart keeps its name.
+        chartName: recorded?.chartName ?? null,
         amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
         paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
         // As the claim's receipt: a chart bought for someone new says "their" (bug 16).

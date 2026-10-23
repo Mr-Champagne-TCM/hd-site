@@ -23,7 +23,9 @@ import { SITE } from "../netlify/lib/siteLinks.mjs";
  *   - "sure, don't mix curly/straight apostrophes": curly, everywhere a buyer
  *     reads the shop's own words;
  *   - "Good, lets add link labels (hover hints?)": every link that leaves the
- *     page says where it goes.
+ *     page says where it goes;
+ *   - and in chat the same day, the receipt's subject, option 1: the chart's
+ *     own title.
  */
 
 const copy = await importTs("src", "copy.ts");
@@ -186,4 +188,41 @@ test("LINK LABELS on the server's pages and in the emails: every link, title + a
       assert.ok(aria.endsWith(`(${title})`), `${name}: "${a.words}" aria-label does not name where it goes`);
     }
   }
+});
+
+/* ------------------------------------------------- receipt subject = the chart's own title */
+// Jeremy 10/23, option 1: "Receipt: Robin’s Human Design reading, <price>" when the chart is
+// titled "Robin’s Human Design". Gifts keep "…for someone else". (Prices from pricing.mjs only: P-1.)
+
+test("RECEIPT SUBJECT: the chart's own title; a new chart's is the name on the payment; gifts unchanged", () => {
+  const receipt = (o) => deliveryEmail({ url: "https://x.test/r/a.b", links: SITE, pending: true, ...o }).subject;
+  const [s, c, r] = PRICING.TIERS.map((t) => t.cents);
+  const $ = PRICING.money;
+  // An upgrade of a chart titled "Robin’s Human Design", paid by Alex Rivera.
+  assert.equal(receipt({ tier: 2, name: "Alex Rivera", chartName: "Robin", amountCents: r }), `Receipt: Robin’s Human Design reading, ${$(r)}`);
+  // A brand-new chart: nothing typed for it yet, so its title is the name on the payment (as before).
+  assert.equal(receipt({ tier: 1, name: "Alex Rivera", amountCents: c }), `Receipt: Alex Rivera’s Human Design chart, ${$(c)}`);
+  // No name anywhere: the chart is "Your Human Design".
+  assert.equal(receipt({ tier: 0, name: null, amountCents: s }), `Receipt: Your Human Design summary, ${$(s)}`);
+  // A chart for someone else keeps its own receipt, the buyer's name and "for someone else".
+  assert.equal(
+    receipt({ tier: 1, name: "Emery Testwell", chartName: "Quinn", someoneNew: true, amountCents: c }),
+    `Receipt: Emery Testwell, a Human Design chart for someone else, ${$(c)}`,
+  );
+  // The ready email already said the chart's title; the receipt and it now agree on whose chart it is.
+  assert.equal(deliveryEmail({ tier: 2, name: "Alex Rivera", chartName: "Robin", url: "https://x.test/r/a.b", links: SITE }).subject, "Robin’s Human Design reading is ready");
+});
+
+test("RECEIPT SUBJECT: both paths that send a receipt pass the chart's name from the purchase record", () => {
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+  assert.match(read("netlify/lib/charts.mjs"), /chartName: source\?\.birth\?\.name \?\? null/);
+  const claim = read("netlify/lib/claimHandler.mjs");
+  assert.match(claim, /chartName = recorded\?\.chartName \?\? null;/);
+  assert.match(claim, /pending: true,\s*kept,\s*\/\/[^\n]*\n\s*chartName,/);
+  assert.match(read("netlify/lib/reconcile.mjs"), /chartName: recorded\?\.chartName \?\? null,/);
+  assert.match(read("netlify/functions/reconcile.mjs"), /deliveryEmail\(\{ tier, name, chartName, url,/);
+  // The re-sent receipt already passed it (resendHandler: reading.birth?.name).
+  assert.match(read("netlify/lib/resendHandler.mjs"), /chartName: reading\.birth\?\.name \?\? null,/);
+  // The Gmail-threading reason still holds and still says so: every subject carries a name.
+  assert.match(read("netlify/lib/deliveryEmail.mjs"), /Every subject still carries a name, so that still holds\./);
 });

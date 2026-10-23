@@ -105,6 +105,8 @@ export async function handleClaim({
   let alreadyThere = false;
   /** An upgrade whose chart's details were carried over: nothing to type, only to confirm. */
   let kept = false;
+  /** The name the chart is titled with, when it grew from one that has it: the receipt's subject (10/23). */
+  let chartName = null;
   let lastError = null;
   const id = readingIdForSession(id0, grantSecret);
   // WHICH purchase, for an alert: ids only (10/16). No tier until a reading
@@ -137,6 +139,7 @@ export async function handleClaim({
           note: (kind, detail) => note(kind, { detail, ref: { ...ref, tier: level } }),
         });
         kept = Boolean(recorded?.kept);
+        chartName = recorded?.chartName ?? null;
       }
       url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
     } catch (e) {
@@ -171,6 +174,8 @@ export async function handleClaim({
       // RECEIPT (fix 4A, 10/19): what was paid and when, from Stripe itself.
       pending: true,
       kept,
+      // The receipt says the chart's own title (Jeremy 10/23, option 1): "Receipt: Robin’s Human Design reading, …".
+      chartName,
       amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
       paidAt: typeof session?.created === "number" ? session.created * 1000 : now,
       // A chart bought for someone new says "their" (bug 16, 10/21).

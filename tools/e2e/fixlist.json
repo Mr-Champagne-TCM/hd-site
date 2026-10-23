@@ -891,6 +891,13 @@
       "docs": "^(page|email) ",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "GO-receipt-title",
+      "about": "Jeremy 10/23, receipt subject option 1: the receipt says the chart's own title, as the ready email does -- a chart titled 'Robin’s Human Design' gives 'Receipt: Robin’s Human Design reading, <price>'. Only an upgrade's receipt changes (its chart already has a title; a brand-new chart's is still the name on the payment, and a chart for someone else keeps 'Receipt: <buyer>, a Human Design <tier> for someone else, <price>'). The subject is the email's document name, so a changed one is a new document and the old one is gone.",
+      "docs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: ",
+      "addsDocs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: [^,’]+’s Human Design (chart|reading)(, \\$\\d+\\.\\d{2})?$",
+      "dropsDocs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: [^,’ ]+ [^,’]+’s Human Design (chart|reading)(, \\$\\d+\\.\\d{2})?$"
     }
   ]
 }

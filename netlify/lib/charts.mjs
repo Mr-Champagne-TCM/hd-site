@@ -208,7 +208,8 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
       await note("chart-index-not-saved", `${e?.name ?? "Error"}`);
     }
   }
-  return { grewFrom: source?.id ?? null, kept: Boolean(source?.birth) };
+  // `chartName`: the name the grown chart is titled with, for the receipt's subject (10/23, option 1).
+  return { grewFrom: source?.id ?? null, kept: Boolean(source?.birth), chartName: source?.birth?.name ?? null };
 }
 
 /** The values that say "this is the same chart", for grouping older records. */
