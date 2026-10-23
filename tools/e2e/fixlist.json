@@ -898,6 +898,18 @@
       "docs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: ",
       "addsDocs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: [^,’]+’s Human Design (chart|reading)(, \\$\\d+\\.\\d{2})?$",
       "dropsDocs": "^email [a-zA-Z0-9]+-\\d-upgrade-t\\d \\| Receipt: [^,’ ]+ [^,’]+’s Human Design (chart|reading)(, \\$\\d+\\.\\d{2})?$"
+    },
+    {
+      "id": "v3-rig-none",
+      "about": "the rig's stand-in writer after the prompt-v3 merge (10/23): the checker now refuses a Reflector's 'definition is None' as a known slip, so the placeholder reading says it in the facts' own sentence, 'No center is defined in this chart, so it has no definition.' -- rig words, never a buyer's (on a PDF the line may wrap)",
+      "docs": "^(page|pdf) ",
+      "minus": [
+        "^\\[RIG PLACEHOLDER\\] Your definition is None\\.$"
+      ],
+      "plus": [
+        "^\\[RIG PLACEHOLDER\\] No center is defined in this chart(, so it has( no( definition\\.)?)?)?$",
+        "^(?:so )?(?:it )?(?:has )?(?:no )?definition\\.$"
+      ]
     }
   ]
 }

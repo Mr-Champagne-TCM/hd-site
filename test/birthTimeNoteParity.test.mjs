@@ -11,14 +11,17 @@ import { birthTimeNote, chartFactsOnly } from "../netlify/lib/interpretation.mjs
  * Reading.birthTimeNote). Its wording code is copied by
  * tools/phone-parity-sync.mjs into test/fixtures/phone-parity/birthTimeNote.kt.txt;
  * this test reads the phone's words out of it and holds the shop's NOTE, as the
- * model gets it, to them.
+ * model gets it, to them. (Re-synced 10/23 from hd-reading-app release-1022
+ * ccc7ee2, the phone's prompt-v3 merge: "naming every one of those values as
+ * provisional", the same words the shop's prompt-v3 merge brings.)
  *
  * The shop asks in form mode (the live prompt fills the JSON form), so the
  * on-track / off-track names are the form's, as the phone's always are.
  */
 
 const kt = readFileSync(new URL("./fixtures/phone-parity/birthTimeNote.kt.txt", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-const joinLiterals = (expr) => expr.replace(/"\s*\+\s*\n\s*"/g, "");
+// "…" +\n "…", with any whole-line // comments between the two (the phone's 10/23 NOTE has one).
+const joinLiterals = (expr) => expr.replace(/"\s*\+\s*\n(?:[ \t]*\/\/[^\n]*\n)*\s*"/g, "");
 const centers = /val centers = "([^"]+)"/.exec(kt)[1];
 const NAMES = Object.fromEntries([...kt.matchAll(/"(\w+)" to (?:"([^"]+)"|(centers))/g)].map((m) => [m[1], m[2] ?? centers]));
 const HEAD = /val head = "([^"]+)"/.exec(kt)[1];

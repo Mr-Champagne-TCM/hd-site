@@ -19,6 +19,8 @@
         }
         return "$head ${if (p.measured) "Measured across the whole birth day, these" else "These"} values can change with the birth time: " +
             "${provisionalNames(p.fields)}. Every other value above holds at any birth time. The page already says so; " +
-            "mention it at most once, in plain words, as those values being provisional. Never call any other value uncertain, " +
+            // 10/23 (= hd-site): "as those values being provisional" came back as "these values are provisional"
+            // with none named; the reader is told which.
+            "mention it at most once, in plain words, naming every one of those values as provisional. Never call any other value uncertain, " +
             "and add no other caveat about the birth time."
     }

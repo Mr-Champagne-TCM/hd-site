@@ -132,7 +132,10 @@ export function placeholderForm(f) {
       notSelf: `[RIG PLACEHOLDER] Off track, the feeling is ${f.notSelf.toLowerCase()}.`,
     },
     incarnationCross: `[RIG PLACEHOLDER] Your cross is the ${f.cross}. ${para("cross")}`,
-    definition: `[RIG PLACEHOLDER] Your definition is ${f.definition}.`,
+    // A Reflector's "None" in the checker's own sentence (prompt v3, 10/23: "definition is None" is a known slip).
+    definition: /^none$/i.test(String(f.definition ?? "").trim())
+      ? "[RIG PLACEHOLDER] No center is defined in this chart, so it has no definition."
+      : `[RIG PLACEHOLDER] Your definition is ${f.definition}.`,
     channels: f.channels.map((c) => ({ channel: c.split(" ")[0], sentence: `[RIG PLACEHOLDER] The sentence for channel ${c.split(" ")[0]}.` })),
     profileLines: [
       { line: Number(a), sentence: `[RIG PLACEHOLDER] Line ${a} (${LINE_NAMES[a]}) is your conscious line.` },
