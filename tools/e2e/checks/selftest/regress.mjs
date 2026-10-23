@@ -11,6 +11,9 @@
  *   - known-bad: a real word change riding along with a quote change is
  *     still a change no fix claims; so is a straight ' put back where the
  *     baseline was curly AND a word changed.
+ *   - moves (10/23 rig): a line moved to another page of the same PDF and
+ *     curled on the way is claimed by the fix whose `moves` names the pages;
+ *     a moved line that also changed a word is not.
  * Words are short and made up.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -30,6 +33,14 @@ const CURLED = [
 ];
 /** Read back through loadFixList, so the quote-blind matcher it builds is the one tested. */
 const FIX = { id: "W-lantern", docs: "^page ", minus: ["^The lantern stays lit\\.$"], plus: ["^Wren's lantern stays lit\\.$"] };
+
+/** A two-page PDF whose second line on page 2 moves up to page 1 (straight quotes, as the 10/21 baseline was). */
+const PDF_BASE = {
+  "pdf wren-2-upgrade-t2 p1": ["Wren's chart", "Kept as is."],
+  "pdf wren-2-upgrade-t2 p2": ["The page after.", "The lantern's glow is yours."],
+};
+const pdfPage = (n, lines) => ({ kind: "pdf", page: { id: "wren-2-upgrade-t2" }, pdfPage: n, text: lines.join("\n") });
+const MOVE = { id: "W-move", about: "a closing line pulled up a page", docs: "^pdf wren-", minus: [], plus: [], moves: "^pdf wren-2-upgrade-t2 p\\d+$" };
 
 export const REGRESS_CASES = [
   {
@@ -63,6 +74,27 @@ export const REGRESS_CASES = [
     fixes: [],
     want: (d, c) => (c.status === "fail" && d.added.length === 1 && d.gone.length === 1 ? null : `status ${c.status}, added ${d.added.length}, gone ${d.gone.length}`),
   },
+  // A line MOVED to another page of the same PDF and curled on the way (10/23 rig: Theo's
+  // Start here lines, page 4 to page 3) is claimed by the fix whose `moves` names those pages.
+  {
+    kind: "good",
+    name: "a line moved to the page before and curled on the way is claimed as moved",
+    base: PDF_BASE,
+    docs: [pdfPage(1, ["Wren’s chart", "The lantern’s glow is yours.", "Kept as is."]), pdfPage(2, ["The page after."])],
+    fixes: [MOVE],
+    want: (d, c) => (c.status === "pass" && c.claimed["W-move"] === 2 ? null : `status ${c.status}, claimed ${JSON.stringify(c.claimed)}: ${c.findings.map((f) => f.evidence).join(" | ")}`),
+  },
+  {
+    kind: "bad",
+    name: "a moved line that also changed a word is still a change",
+    base: PDF_BASE,
+    docs: [pdfPage(1, ["Wren’s chart", "The lantern’s light is yours.", "Kept as is."]), pdfPage(2, ["The page after."])],
+    fixes: [MOVE],
+    want: (d, c) =>
+      c.status === "fail" && c.findings.some((f) => f.evidence === "The lantern’s light is yours.") && c.findings.some((f) => f.evidence === "The lantern's glow is yours.")
+        ? null
+        : `status ${c.status}: ${c.findings.map((f) => f.evidence).join(" | ") || "no findings"}`,
+  },
 ];
 
 /** Runs each case; returns results in selftest.mjs's shape. */
@@ -72,13 +104,14 @@ export async function regressCases(tmp, loadFixList) {
   for (const k of REGRESS_CASES) {
     const dir = join(tmp, `regress-${++i}`);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "text.json"), JSON.stringify({ commit: "selftest", at: "2026-10-23", docs: BASE }));
+    const base = k.base ?? BASE;
+    writeFileSync(join(dir, "text.json"), JSON.stringify({ commit: "selftest", at: "2026-10-23", docs: base }));
     const r = { check: "changes-on-fix-list", item: "regression", kind: k.kind, name: k.name, ok: false, why: "", items: [], findings: [] };
     try {
       const fixFile = join(dir, "fixlist.json");
       writeFileSync(fixFile, JSON.stringify({ fixes: k.fixes }));
       const diff = baselineDiff({ baselineDir: dir, docs: k.docs });
-      const c = regressCheck(diff, loadFixList(fixFile), BASE);
+      const c = regressCheck(diff, loadFixList(fixFile), base);
       r.findings = c.findings;
       const why = k.want(diff, c);
       if (why) r.why = why;

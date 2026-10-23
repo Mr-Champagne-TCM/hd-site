@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateReading } from "../netlify/lib/gemini.mjs";
-import { STAND_IN_ROWS, fakeGemini, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
+import { STAND_IN_ROWS, facts, fakeGemini, placeholderForm, redraft } from "../tools/e2e/harness/fakeGemini.mjs";
 import { chartFactsOnly } from "../netlify/lib/interpretation.mjs";
 import { structuredFacts } from "../netlify/lib/structured.mjs";
 import { parseReading } from "../netlify/lib/interpretation.mjs";
@@ -62,6 +62,9 @@ for (const [slug, output] of CHARTS) {
         for (const t of take) assert.equal(t.replace(/^\([^)]*\)\s*/, "").split(/(?<=[.!?])\s+(?=[A-Z])/).length, 2, t);
         // Marked in words, since brackets are refused there (10/22 verbatim read: they read as real).
         for (const t of take) assert.match(t, /^\([^)]*\) Rig stand-in: /, t);
+        // An empty value read back as empty, not as a center or a definition called "No center ..." (10/23 rig).
+        assert.doesNotMatch(r.text, /Your No (center|channel)\b|definition is No center/);
+        if (/^none$/i.test(output.definition)) assert.match(r.text, /No center is defined in this chart, so it has no definition\./);
       } finally {
         w.done();
       }
@@ -119,6 +122,30 @@ for (const [slug, output] of CHARTS) {
     const rows = r.text.split("\n").filter((l) => Object.values(STAND_IN_ROWS).some((x) => l.includes(x)));
     assert.ok(rows.length >= 2, `${rows.length} rows written again`);
     assert.equal(new Set(rows).size, rows.length);
+  });
+}
+
+/**
+ * THE FACTS ON THE WIRE, READ BACK (10/23 rig). Since prompt v3 an empty value is a
+ * sentence ("No center in this chart is open.", interpretation.mjs EMPTY_FACT), not
+ * "none". The fake model reads the chart back from those facts; read as a list, a
+ * chart with no open center had one called "No center in this chart is open.", the
+ * checker asked every stored reading to name it, and Maya's stored reading fell to
+ * the placeholder for the whole run.
+ */
+for (const [slug, output] of CHARTS) {
+  test(`${slug}: the fake model reads the facts' lists and definition back as the chart has them`, () => {
+    const f = facts(factsFor(output));
+    for (const [k, v] of [["defined", "definedCenters"], ["undefined", "undefinedCenters"], ["open", "openCenters"], ["channels", "channels"]]) assert.deepEqual(f[k], output[v], k);
+    assert.equal(f.definition, output.definition);
+  });
+  test(`${slug}: a stored reading's next draft, from the facts on the wire, keeps the model's words`, () => {
+    // Built from the chart's true values, as a real stored reading is; read back from the wire, as the rig does.
+    const stored = JSON.parse(JSON.stringify(placeholderForm(factsOf(output))).replaceAll("[RIG PLACEHOLDER] ", ""));
+    stored.working.paragraphs[0] += " Your signature emerges as a quiet sense of success when the day lands.";
+    const form = redraft(stored, facts(factsFor(output)), { instruction: PROMPT, facts: factsFor(output) });
+    assert.doesNotMatch(JSON.stringify(form.energy), /RIG PLACEHOLDER/, "fell to the placeholder");
+    assert.doesNotMatch(JSON.stringify(form.working), /Your signature emerges/);
   });
 }
 

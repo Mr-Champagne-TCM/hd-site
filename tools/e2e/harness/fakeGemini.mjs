@@ -87,18 +87,28 @@ export function formFromWritten(written) {
   return json;
 }
 
-function facts(text) {
+/**
+ * An empty value, as the facts say it since prompt v3 (10/23, interpretation.mjs
+ * EMPTY_FACT): a plain sentence ("No center in this chart is open.") where they
+ * used to say "none". Read back as the engine's own value -- an empty list, a
+ * Reflector's "None" -- or the rig's chart has one open center called "No center
+ * in this chart is open.", the shop's checker asks every stored reading to name
+ * it, and a stored reading falls to the placeholder (10/23 rig: Maya's did).
+ */
+const EMPTY_SENTENCE = /^No (center|channel)\b.*\.$/;
+export function facts(text) {
   const get = (label) => (text.match(new RegExp(`^${label}: (.*)$`, "m"))?.[1] ?? "").trim();
   const list = (label) => {
     const v = get(label);
-    return !v || v === "none" ? [] : v.split(", ").map((x) => x.trim());
+    return !v || v === "none" || EMPTY_SENTENCE.test(v) ? [] : v.split(", ").map((x) => x.trim());
   };
+  const definition = get("Definition");
   return {
     type: get("Type"),
     strategy: get("Strategy"),
     authority: get("Inner Authority"),
     profile: get("Profile"),
-    definition: get("Definition"),
+    definition: EMPTY_SENTENCE.test(definition) ? "None" : definition,
     signature: get("When it's on track, the feeling is") || get("Signature"),
     notSelf: get("When it's off track, the feeling is") || get("Not-Self Theme"),
     cross: get("Incarnation Cross"),

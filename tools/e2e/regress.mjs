@@ -23,7 +23,7 @@
  * after it to another page, and the diff is page by page. A line gone from one
  * page of a PDF and new on another page of the SAME PDF (or from a page that is
  * gone) is claimed as moved by the fix whose `moves` names those pages: the
- * words are exactly the same, only where they fall changed. Nothing else is:
+ * words are exactly the same (quote marks folded, below), only where they fall changed. Nothing else is:
  * a changed word on a moved page still needs its own claim.
  *
  * A SECTION REWRITTEN WHOLE (`sections`, 10/21 try-this). The try-this lines
@@ -87,7 +87,12 @@ function baselineDocs(dir = BASELINE) {
 /** "pdf theo-2-upgrade-t2 p4" -> "pdf theo-2-upgrade-t2": the PDF a page belongs to. */
 const pdfOf = (doc) => doc.replace(/ p\d+$/, "");
 
-/** For each fix with `moves`: the lines gone from, and new on, its pages, PDF by PDF. */
+/**
+ * For each fix with `moves`: the lines gone from, and new on, its pages, PDF by PDF.
+ * Kept quote-folded, like every other comparison here (10/23 rig: Theo's two Start
+ * here lines moved from page 4 to page 3 AND curled, and a move held to the exact
+ * marks called the curled one new).
+ */
 function movedLines(diff, fixes, base) {
   const out = new Map();
   for (const f of fixes.filter((f) => f.movesRe)) {
@@ -95,7 +100,7 @@ function movedLines(diff, fixes, base) {
     const added = new Map();
     const put = (m, doc, lines) => {
       const s = m.get(pdfOf(doc)) ?? new Set();
-      for (const l of lines) s.add(l);
+      for (const l of lines) s.add(foldQuotes(l));
       m.set(pdfOf(doc), s);
     };
     for (const ch of diff.changed) {
@@ -171,7 +176,7 @@ export function regressCheck(diff, fixes = loadFixList(), base = baselineDocs())
   const moved = movedLines(diff, fixes, base);
   // Gone from this page and new on another page of the same PDF, or the other way round.
   const movedBy = (doc, side, line) =>
-    fixes.find((f) => f.movesRe?.test(doc) && moved.get(f)[side === "minus" ? "added" : "gone"].get(pdfOf(doc))?.has(line));
+    fixes.find((f) => f.movesRe?.test(doc) && moved.get(f)[side === "minus" ? "added" : "gone"].get(pdfOf(doc))?.has(foldQuotes(line)));
   const sections = sectionLines(diff, fixes, base);
   const inSection = (doc, side, line) => fixes.find((f) => sections.get(f)?.[side].has(`${doc}\u0000${line}`));
   for (const ch of diff.changed) {
