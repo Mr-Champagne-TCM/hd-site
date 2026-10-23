@@ -5,6 +5,7 @@ import Linked from "./Linked";
 import CoachCard from "./CoachCard";
 import { marginFields, markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
+import { curly } from "../shared/curlyQuotes.mjs";
 
 /**
  * The written interpretation, on the page.
@@ -94,7 +95,7 @@ export default function WrittenReading({
           <div className="mt-6 space-y-7">
             {mechanics.map((s) => (
               <div key={s.heading}>
-                <Label>{s.heading}</Label>
+                <Label>{curly(s.heading)}</Label>
                 <div className="mt-2 space-y-3">
                   {s.paragraphs.map((p, i) =>
                     s.heading === MECHANICS[2] || s.heading === MECHANICS[3] ? (
@@ -129,7 +130,7 @@ export default function WrittenReading({
                 */
                 className="border-l-2 border-brand-gold/40 pl-5"
               >
-                <Label>{s.heading}</Label>
+                <Label>{curly(s.heading)}</Label>
                 {s.lede && (
                   <p className="mt-2 text-[19px] font-medium leading-snug text-brand-paper">
                     {s.lede}
@@ -249,7 +250,7 @@ export function ReadingInOrder({
         <div className="mt-6 space-y-10">
           {v.reading.map((s) => (
             <article key={s.heading} className="border-l-2 border-brand-gold/40 pl-5">
-              <Label>{s.heading}</Label>
+              <Label>{curly(s.heading)}</Label>
               {s.lede && (
                 <p className="mt-2 text-[19px] font-semibold leading-snug text-brand-paper">
                   <Linked text={s.lede} chart={chart} />

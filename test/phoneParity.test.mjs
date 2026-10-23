@@ -180,12 +180,16 @@ for (const [slug, name, b] of FIXTURES) {
     const p = phoneRuns(slug);
     const order = (runs) =>
       runs.filter((r) => r.size === 9 && r.bold && Math.abs(r.x - 54) < 0.1 && r.color.toUpperCase().endsWith("8A6D0F")).map((r) => r.text);
-    assert.deepEqual(order(s.runs), order(p));
+    // UNTIL THE PHONE'S COPY IS CURLED: the shop prints its headings with curly
+    // apostrophes (Jeremy's GO PDF, 10/23), the phone still draws straight ones,
+    // so the two sides are compared with ’ = ' and “ ” = " (as `words` does).
+    const fold = (list) => list.map((t) => words(t).join(" "));
+    assert.deepEqual(fold(order(s.runs)), fold(order(p)));
     assert.deepEqual(order(s.runs), [
       "HOW YOU DECIDE",
       "YOUR ENERGY, AND HOW IT STARTS",
       "HOW YOU MEET THE WORLD",
-      "WHEN IT'S ON TRACK, AND WHEN IT'S OFF TRACK",
+      "WHEN IT’S ON TRACK, AND WHEN IT’S OFF TRACK",
       "YOUR INCARNATION CROSS",
       "YOUR DEFINITION",
       "WHAT IS CONSISTENTLY YOURS",

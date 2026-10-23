@@ -12,10 +12,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { curly } from "../shared/curlyQuotes.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const LIB = join(process.argv[2] ?? join(root, "..", "HD-Library-Work"), "content");
-const OUT = join(root, "shared", "libraryGlance.mjs");
+const OUT = process.env.LIBRARY_GLANCE_OUT ?? join(root, "shared", "libraryGlance.mjs");
 
 // The centers' glance is CTR_LINE in the library mock (centers.json says so).
 const CTR_LINE = {
@@ -30,8 +31,12 @@ const CTR_LINE = {
   Root: "Drive and pressure to get going.",
 };
 
-/** [label](#anchor) -> label; whitespace collapsed. */
-const plain = (s) => s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\s+/g, " ").trim();
+/**
+ * [label](#anchor) -> label; whitespace collapsed; quotes curled (Jeremy's GO
+ * PDF, 10/23: one style, curly, in everything a buyer reads -- a no-op once the
+ * library's own content is curly).
+ */
+const plain = (s) => curly(s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\s+/g, " ").trim());
 
 function firstSentence(s) {
   const p = plain(s.split("\n")[0]);

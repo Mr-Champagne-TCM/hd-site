@@ -26,6 +26,8 @@ import { E2E, HOME, RUNS } from "../harness/paths.mjs";
 import { runChecks } from "./index.mjs";
 import { CASES, STRICT } from "./selftest/cases.mjs";
 import { Mini, loadBase } from "./selftest/mini.mjs";
+import { regressCases } from "./selftest/regress.mjs";
+import { loadFixList } from "../regress.mjs";
 
 const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=") ?? (process.argv.includes(`--${name}`) ? true : null);
 const say = (m) => process.stdout.write(m + "\n");
@@ -95,6 +97,14 @@ const t0 = Date.now();
 for (const c of CASES.filter((c) => !only || only.includes(c.check))) {
   await variant(c, "corrected document passes", "good", null);
   for (const b of c.bad) await variant(c, b.name, "bad", b.plant, b.expect, b.count);
+}
+// changes-on-fix-list: run.mjs adds it after the checks above (regress.mjs), so its cases run on their own.
+ids.push("changes-on-fix-list");
+if (!only || only.includes("changes-on-fix-list")) {
+  for (const r of await regressCases(tmp, loadFixList)) {
+    results.push(r);
+    say(`  ${r.ok ? "ok  " : "FAIL"}  ${r.check.padEnd(22)} ${r.kind.padEnd(4)}  ${r.name}${r.ok ? "" : `\n          ${r.why}`}`);
+  }
 }
 if (!keep) {
   rmSync(tmp, { recursive: true, force: true });

@@ -53,8 +53,8 @@ export default function Glance({ data, says = null, showActivations = false }: P
     ["Strategy", data.strategy, "Strategy", typeLink(data.type), "strategy"],
     ["Authority", data.authority, "Authority", AUTHORITY, "authority"],
     ["Profile", profileWithNames(String(data.profile)), "Profile", profileLink(data.profile), "profile"],
-    ["When it's on track", data.signature ? `The feeling is ${String(data.signature).toLowerCase()}` : "", "Signature", typeLink(data.type), "signature"],
-    ["When it's off track", data.notSelfTheme ? `The feeling is ${String(data.notSelfTheme).toLowerCase()}` : "", "Not-self", typeLink(data.type), "notSelfTheme"],
+    ["When it’s on track", data.signature ? `The feeling is ${String(data.signature).toLowerCase()}` : "", "Signature", typeLink(data.type), "signature"],
+    ["When it’s off track", data.notSelfTheme ? `The feeling is ${String(data.notSelfTheme).toLowerCase()}` : "", "Not-self", typeLink(data.type), "notSelfTheme"],
   ];
 
   const list = (v: string[] | undefined, none: string) => (v && v.length ? v.join(", ") : none);

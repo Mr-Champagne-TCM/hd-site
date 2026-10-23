@@ -60,9 +60,15 @@ test("the one-liners are the phone's LibraryGlance, word for word", () => {
     }
     return out;
   };
+  // UNTIL THE PHONE'S COPY IS CURLED: the shop's one-liners are curly (Jeremy's
+  // GO PDF, 10/23: "don't mix curly/straight apostrophes"), the phone's table is
+  // still straight, so the words are compared with ’ ‘ = ' and “ ” = ".
+  const fold = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, String(v).replace(/[‘’]/g, "'").replace(/[“”]/g, '"')]));
   for (const name of ["CENTER_WHAT", "CENTER_DEFINED", "CENTER_UNDEFINED", "CENTER_OPEN", "CHANNEL", "PROFILE_LINE"]) {
     const phone = block(name);
     assert.ok(Object.keys(phone).length >= 6, `${name} did not parse`);
-    assert.deepEqual({ ...G[name] }, phone, name);
+    assert.deepEqual(fold({ ...G[name] }), fold(phone), name);
+    // The shop's side is the curly one: no straight quote left in what a buyer reads.
+    for (const [k, v] of Object.entries(G[name])) assert.doesNotMatch(String(v), /['"]/, `${name}.${k} has a straight quote`);
   }
 });

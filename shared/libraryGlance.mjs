@@ -20,7 +20,7 @@ export const CENTER_DEFINED = Object.freeze({
   "Head": "You have a steady way of being inspired, and your own set of questions you keep coming back to.",
   "Ajna": "You have a fixed way of processing: logical, abstract or insight-led, and it stays the same.",
   "Throat": "You have a consistent voice.",
-  "G": "You have a steady sense of who you are and where you're heading.",
+  "G": "You have a steady sense of who you are and where you’re heading.",
   "Heart": "You have steady willpower.",
   "Spleen": "You have a steady sense of well-being and a reliable instinct.",
   "Sacral": "You have steady, renewable energy for things you respond to.",
@@ -31,24 +31,24 @@ export const CENTER_DEFINED = Object.freeze({
 /** First sentence of each center's "undefined" text. */
 export const CENTER_UNDEFINED = Object.freeze({
   "Head": "You pick up the questions in the room, and they can feel louder in you than in the person who brought them.",
-  "Ajna": "You can see many sides of a question and take on other people's ways of thinking.",
+  "Ajna": "You can see many sides of a question and take on other people’s ways of thinking.",
   "Throat": "Your voice changes with the people around you.",
   "G": "Your sense of self shifts with the people and places around you.",
   "Heart": "You can feel the willpower of people around you, and it may push you to prove yourself.",
-  "Spleen": "You're sensitive to how others feel, physically and emotionally.",
-  "Sacral": "You don't have steady work energy of your own.",
-  "Solar Plexus": "You feel other people's emotions, often more strongly than they do.",
+  "Spleen": "You’re sensitive to how others feel, physically and emotionally.",
+  "Sacral": "You don’t have steady work energy of your own.",
+  "Solar Plexus": "You feel other people’s emotions, often more strongly than they do.",
   "Root": "You feel pressure from people and situations around you, often more than they do."
 });
 
 /** First sentence of each center's "open" text. */
 export const CENTER_OPEN = Object.freeze({
   "Head": "Nothing here is fixed, so you take in whatever people around you are thinking about.",
-  "Ajna": "Your mind is very flexible and doesn't hold one fixed view.",
-  "Throat": "You can sound like the people you're with, and your voice can be very flexible.",
-  "G": "You may often ask \"Who am I?\" or \"Where am I going?\" The answer changes with your surroundings, and that's how you're built.",
+  "Ajna": "Your mind is very flexible and doesn’t hold one fixed view.",
+  "Throat": "You can sound like the people you’re with, and your voice can be very flexible.",
+  "G": "You may often ask “Who am I?” or “Where am I going?” The answer changes with your surroundings, and that’s how you’re built.",
   "Heart": "You have no steady willpower, so pushing yourself on will alone rarely works.",
-  "Spleen": "You can be very sensitive to other people's health and fears.",
+  "Spleen": "You can be very sensitive to other people’s health and fears.",
   "Sacral": "You take in the energy of people around you, sometimes more than they have themselves.",
   "Solar Plexus": "You take in every emotion in the room and can feel it strongly.",
   "Root": "You take in all the pressure around you and can feel it strongly."
@@ -56,7 +56,7 @@ export const CENTER_OPEN = Object.freeze({
 
 /** Each channel's glance, keyed lower gate first ("25-51"). */
 export const CHANNEL = Object.freeze({
-  "1-8": "Showing what's possible just by being openly, creatively yourself.",
+  "1-8": "Showing what’s possible just by being openly, creatively yourself.",
   "2-14": "A strong sense of direction, with the energy and resources to follow it.",
   "3-60": "Energy for change that switches on in its own time.",
   "4-63": "A mind that doubts, questions, and tests answers until they make sense.",
@@ -69,11 +69,11 @@ export const CHANNEL = Object.freeze({
   "10-57": "An instinct for how to live and move with grace.",
   "11-56": "A curious mind that turns ideas and experiences into stories.",
   "12-22": "Expressing feelings with grace, when the mood is right.",
-  "13-33": "The listener who remembers, then tells the story when it's time.",
+  "13-33": "The listener who remembers, then tells the story when it’s time.",
   "16-48": "Talent that becomes mastery through depth and practice.",
   "17-62": "Organizing details into clear opinions others can follow.",
   "18-58": "Seeing what could be better, and the drive to fix it.",
-  "19-49": "Sensing what people need, and what's fair between them.",
+  "19-49": "Sensing what people need, and what’s fair between them.",
   "20-34": "Energy that goes straight into action, right now.",
   "20-57": "Knowing in the moment, and saying it out loud.",
   "21-45": "Managing resources and taking charge of the material side of life.",
@@ -107,8 +107,8 @@ export const PROFILE_LINE = Object.freeze({
 /** Each type's glance (the library's one-liner). */
 export const TYPE_GLANCE = Object.freeze({
   "Generator": "Steady, renewable energy. Works best answering what shows up.",
-  "Manifesting Generator": "The Generator's motor, with a faster, many-paths streak.",
-  "Projector": "Built to see and guide other people's energy, not to outwork it.",
+  "Manifesting Generator": "The Generator’s motor, with a faster, many-paths streak.",
+  "Projector": "Built to see and guide other people’s energy, not to outwork it.",
   "Manifestor": "Starts things. Works best letting people know before moving.",
   "Reflector": "No steady hubs of its own. Reflects the people and places around it."
 });
@@ -137,5 +137,5 @@ export const AUTHORITY_GLANCE = Object.freeze({
   "Ego": "What you really want, heard in what you say or do.",
   "Self-Projected": "Hearing yourself talk it through, and noticing what rings true.",
   "Mental": "Clarity through talking with trusted people in the right place.",
-  "Lunar": "About a month: letting the Moon's cycle show the answer."
+  "Lunar": "About a month: letting the Moon’s cycle show the answer."
 });

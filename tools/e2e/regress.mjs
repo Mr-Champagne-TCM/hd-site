@@ -38,7 +38,28 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BASELINE, E2E } from "./harness/paths.mjs";
 
-const rx = (s) => (s ? new RegExp(s) : null);
+/**
+ * QUOTE STYLE IS NOT A CHANGE (Jeremy's GO PDF, 10/23: "sure, don't mix
+ * curly/straight apostrophes"). The shop's words went curly in one sweep (’ ‘
+ * “ ” for ' and "), which would otherwise mark hundreds of lines changed and
+ * drown the few real changes in the list Jeremy reads. So, when matching the
+ * baseline, ’ and ‘ count as ', and “ and ” as ":
+ *   - checks/baseline.mjs compares lines (and document names, an email's
+ *     subject among them) folded this way; a line that differs ONLY in its
+ *     quote marks is not a changed line (it is counted, as `quoteOnly`);
+ *   - a fix-list pattern matches a line either as written or with both folded,
+ *     so a pattern written with a straight ' still claims its curled line.
+ * Any other change on the same line is still a change and still needs a claim.
+ */
+export const foldQuotes = (s) => String(s ?? "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+
+/** A fix-list pattern, blind to quote style (see above). Same `.test` as a RegExp. */
+const rx = (s) => {
+  if (!s) return null;
+  const raw = new RegExp(s);
+  const folded = new RegExp(foldQuotes(s));
+  return { source: s, test: (t) => raw.test(t) || folded.test(foldQuotes(t)) };
+};
 
 export function loadFixList(file = join(E2E, "fixlist.json")) {
   if (!existsSync(file)) return [];
@@ -144,6 +165,9 @@ export function regressCheck(diff, fixes = loadFixList(), base = baselineDocs())
     return c;
   }
   const claim = (f) => (c.claimed[f.id] = (c.claimed[f.id] ?? 0) + 1);
+  // A document whose name changed only in its quote marks (an email subject) is the same document.
+  for (const ch of diff.changed) if (ch.baseDoc && ch.baseDoc !== ch.doc && !(ch.doc in base)) base = { ...base, [ch.doc]: base[ch.baseDoc] };
+  c.quoteOnly = diff.quoteOnly ?? 0;
   const moved = movedLines(diff, fixes, base);
   // Gone from this page and new on another page of the same PDF, or the other way round.
   const movedBy = (doc, side, line) =>

@@ -249,7 +249,7 @@ test("the sentences the document draws are the approved ones", async () => {
   // be read back. This at least catches the copy going missing or drifting
   // from the page's own version.
   const { TYPE_NOTES, describe } = await import("../netlify/lib/mechanics.mjs");
-  assert.match(describe(TYPE_NOTES, "Manifesting Generator"), /Manifestor's directness/);
+  assert.match(describe(TYPE_NOTES, "Manifesting Generator"), /Manifestor’s directness/);
   assert.equal(describe(TYPE_NOTES, "Not A Type"), null, "an unknown type must draw nothing");
 });
 

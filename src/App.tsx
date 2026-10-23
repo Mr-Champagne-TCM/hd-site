@@ -93,7 +93,7 @@ export function Nav() {
  */
 const AI_LINE =
   `Your chart is calculated, not written by AI. The written part of the ${money(READING.cents)} reading is ` +
-  "drafted by Google's Gemini AI from your chart's values only — no name, no birth date, no place — " +
+  "drafted by Google’s Gemini AI from your chart’s values only — no name, no birth date, no place — " +
   "and checked before it reaches you.";
 
 const linkCls =

@@ -40,11 +40,11 @@ export const TYPE_NOTES: Record<string, string> = {
   Generator:
     "Your Sacral center is defined, which means you carry a consistent, renewable kind of energy — the sort that builds over a day rather than arriving in bursts. It responds to what is already in front of you rather than initiating from nothing.",
   "Manifesting Generator":
-    "You have a Generator's consistent Sacral energy with a Manifestor's directness attached to it. That combination tends to move in several directions at once and to skip steps other people take in order.",
+    "You have a Generator’s consistent Sacral energy with a Manifestor’s directness attached to it. That combination tends to move in several directions at once and to skip steps other people take in order.",
   Manifestor:
     "Your energy initiates. It arrives in its own time rather than building steadily, and it is designed to start things rather than to respond to them — which is why it affects the people around you before they have been told.",
   Projector:
-    "You have no defined Sacral, so your energy is not the consistent kind. What you have instead is the ability to see how other people's energy actually works, which is a different capacity and not a smaller one.",
+    "You have no defined Sacral, so your energy is not the consistent kind. What you have instead is the ability to see how other people’s energy actually works, which is a different capacity and not a smaller one.",
   Reflector:
     "None of your centers is defined, which is rare. You take on and reflect back the energy of whatever room you are in, so what you experience shifts with your company and your surroundings rather than staying fixed.",
 };
@@ -55,7 +55,7 @@ export const STRATEGY_NOTES: Record<string, string> = {
   "Wait to respond, then inform":
     "The response comes first, as with any Generator. The informing is the Manifestor half: telling people before you move, because your movement lands on them whether or not they were expecting it.",
   "Inform before acting":
-    "Your energy initiates, which means it arrives in other people's lives without warning. Saying what you are about to do is not permission-seeking; it is the thing that keeps the impact from being a surprise.",
+    "Your energy initiates, which means it arrives in other people’s lives without warning. Saying what you are about to do is not permission-seeking; it is the thing that keeps the impact from being a surprise.",
   "Wait for the invitation":
     "Recognition is the mechanism. Being seen and asked is what lets your particular way of seeing land somewhere it can be used, rather than being offered where it was not wanted.",
   "Wait a lunar cycle":
@@ -106,7 +106,7 @@ export const PROFILE_NOTES: Record<string, string> = {
 };
 
 export const SIGNATURE_NOTES: Record<string, string> = {
-  Satisfaction: "The sense that the day's energy went somewhere it belonged. It is a bodily settling rather than a thought about how things went.",
+  Satisfaction: "The sense that the day’s energy went somewhere it belonged. It is a bodily settling rather than a thought about how things went.",
   Peace: "A quiet that arrives when nothing is being pushed against. Not achievement — the absence of resistance.",
   Success: "The feeling of having been seen and used well. It follows recognition rather than effort, which is why it cannot be manufactured by working harder.",
   Surprise: "Delight at what a day turned out to hold. For a design with nothing defined, no two days are the same, and that is the point rather than the problem.",

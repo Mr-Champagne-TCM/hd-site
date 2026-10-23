@@ -113,9 +113,9 @@ test("the ready-made notes say the tier the incident names, and name nothing whe
   assert.match(said("safe-link", 2), /^Your purchase went through and your reading is safe\./);
   assert.match(said("safe-link", undefined), /^Your purchase went through and is safe\./);
   assert.match(said("link-again", 1), /^Here is your chart link: /);
-  assert.match(said("pdf", 1), /^Your chart is safe\. The PDF couldn't be made just now/);
+  assert.match(said("pdf", 1), /^Your chart is safe\. The PDF couldn’t be made just now/);
   assert.match(said("time-again", 0), /^Your summary is safe and unchanged\./);
-  assert.match(said("chart-again", 0), /Your summary couldn't be made just now/);
+  assert.match(said("chart-again", 0), /Your summary couldn’t be made just now/);
   // A summary or a chart never hears "your reading"; the words for an unknown tier name nothing.
   for (const key of ["safe-link", "setting-up", "confirm-later", "chart-again", "reading-page", "time-again", "pdf", "link-again"]) {
     for (const tier of [0, 1, undefined]) assert.doesNotMatch(said(key, tier).replace("[their reading link]", ""), /your reading/i, `${key} tier ${tier}`);

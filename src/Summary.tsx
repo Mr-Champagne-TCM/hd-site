@@ -52,8 +52,8 @@ const ROWS: ReadonlyArray<readonly [string, keyof SummaryData]> = [
   ["Profile", "profile"],
   ["Definition", "definition"],
   // On track / off track (Jeremy 10/5, option C): on track first, as a feeling.
-  ["When it's on track", "signature"],
-  ["When it's off track", "notSelfTheme"],
+  ["When it’s on track", "signature"],
+  ["When it’s off track", "notSelfTheme"],
   ["Incarnation Cross", "incarnationCross"],
 ];
 

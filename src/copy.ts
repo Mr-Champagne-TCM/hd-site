@@ -151,9 +151,9 @@ export const CREDIBILITY = {
         "chart can come out wrong with it. Human Design calculators do not all agree on those " +
         "places, ",
     },
-    { text: "and this one doesn't copy any of them!", emphasis: true },
+    { text: "and this one doesn’t copy any of them!", emphasis: true },
   ] as ReadonlyArray<{ text: string; emphasis?: boolean }>,
-  standout: "It is checked against NASA's own record of where everything actually was.",
+  standout: "It is checked against NASA’s own record of where everything actually was.",
 
   checks: [
     [
@@ -166,7 +166,7 @@ export const CREDIBILITY = {
       // charts, not the 24 it said.
       // The Sun is NOT corrected; it is the same as in every release since August.
       "14 seconds",
-      "how closely this engine typically follows the Sun, checked against NASA's record across " +
+      "how closely this engine typically follows the Sun, checked against NASA’s record across " +
         "1,000 test charts and counted in birth time. The Sun sets your profile. A birth time " +
         "written to the nearest minute can already be up to 30 seconds out, so the calculation " +
         "adds less doubt than the birth record imposed",
@@ -184,7 +184,7 @@ export const CREDIBILITY = {
       // No "too" after "record": the Sun is checked against NASA, not corrected.
       "2.6 million",
       "planet positions worked out and checked, across 100,000 test charts. The five slowest " +
-        "planets, Jupiter to Pluto, are now corrected against NASA's record, and this engine " +
+        "planets, Jupiter to Pluto, are now corrected against NASA’s record, and this engine " +
         "places them even more precisely than it places the Sun",
     ],
     [
@@ -212,7 +212,7 @@ export const CREDIBILITY = {
       // sky. It is NOT "other calculators disagree with each other": that pair
       // includes this engine, hence "over the rules themselves".
       "1 in 3,000",
-      "roughly how often this engine's profile could differ from NASA's record, and only when the " +
+      "roughly how often this engine’s profile could differ from NASA’s record, and only when the " +
         "Sun sits right on the border between two profiles. Calculators disagree over the rules " +
         "themselves on about 6 charts in every 1,000",
     ],
@@ -239,7 +239,7 @@ export const CREDIBILITY = {
 export const EXAMPLE = {
   title: "What the summary looks like",
   caption:
-    "An example: Jeremy Champagne's own chart — September 17, 1983, Wichita Falls, Texas. " +
+    "An example: Jeremy Champagne’s own chart — September 17, 1983, Wichita Falls, Texas. " +
     "Yours would be your own, and would say so if the time were missing.",
 };
 

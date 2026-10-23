@@ -35,7 +35,7 @@ export const SUMMARY = {
   /** On Stripe's checkout (fix 14B, 10/19): the product's own name and a plain line. */
   checkoutName: "Human Design summary",
   // Neutral (10/22 verbatim read): one Stripe product per tier, so the same words show for a chart bought for someone else.
-  checkoutDescription: "The chart's key facts: type, strategy, authority, profile, centers, channels and activated gates.",
+  checkoutDescription: "The chart’s key facts: type, strategy, authority, profile, centers, channels and activated gates.",
   blurb: "Type, Strategy, Authority, Profile, Definition, your centers, your channels and activated gates, your incarnation cross.",
   /** The same, to a buyer starting a chart for someone else (W8, 10/21): THEIR centers. */
   theirBlurb: "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.",
@@ -48,7 +48,7 @@ export const CHART = {
   cents: 1111,
   label: "The chart",
   checkoutName: "Human Design chart",
-  checkoutDescription: "The bodygraph drawn, the chart's values, and a PDF to keep.",
+  checkoutDescription: "The bodygraph drawn, the chart’s values, and a PDF to keep.",
   blurb: CHART_CARD,
   theirBlurb: CHART_CARD_THEIR,
   /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */

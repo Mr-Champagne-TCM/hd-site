@@ -12,7 +12,7 @@ import { messagePage } from "./messagePage.mjs";
  */
 export function notFoundPage() {
   return messagePage({
-    heading: "This page isn't here",
+    heading: "This page isn’t here",
     message:
       "The address may have been cut short or typed with a small slip. The readings, and what each " +
       "one includes, are on the front page. If this came with a purchase, hd-readings@thechampagnemethod.co reaches Jeremy.",

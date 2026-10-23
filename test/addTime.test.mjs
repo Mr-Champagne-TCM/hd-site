@@ -546,7 +546,7 @@ test("THE SUMMARY IS SAID AS A SUMMARY: used, known, the slow answer; the form's
   const s = await seeded(0, { output: (({ bodygraphSvg, ...o }) => o)(NOON) });
   const down = await run(s, { token: s.token, time: "15:10" }, { engine: fakeEngine({ fail: "throw" }) });
   assert.equal(down.body.error.key, "addtime-slow-summary");
-  assert.match(down.body.error.message, /so your summary wasn't redone/);
+  assert.match(down.body.error.message, /so your summary wasn’t redone/);
   await run(s, { token: s.token, time: "15:10" });
   const again = await run(s, { token: s.token, time: "15:10" });
   assert.equal(again.body.error.key, "addtime-used-summary");

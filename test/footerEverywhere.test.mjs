@@ -71,7 +71,8 @@ test("the plain message page (e.g. a PDF that could not be made) ends with the t
 test("the shop's 404 is the shop's own page, with the theme (was Netlify's)", () => {
   assert.equal(read("public/404.html"), notFoundPage() + "\n", "stale: run node tools/write-404.mjs");
   const html = notFoundPage();
-  assert.match(html, /<h1>This page isn't here<\/h1>/);
+  assert.match(html, /<h1>This page isn’t here<\/h1>/);
+  assert.match(html, /<title>This page isn’t here — /);
   assert.match(html, /<a class="back" href="\/">The readings<\/a>/);
   assert.match(html, /<footer class="tf">/);
   assert.doesNotMatch(html, /netlify/i);

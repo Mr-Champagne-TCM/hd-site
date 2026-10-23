@@ -17,6 +17,7 @@ import {
 } from "./mechanics.mjs";
 import { buildReadingView, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
+import { curly } from "../../shared/curlyQuotes.mjs";
 import { chartTitle } from "../../shared/chartName.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
@@ -857,8 +858,8 @@ function glancePage(d, { output, tier, reading }) {
     ["AUTHORITY", c.authority],
     ["PROFILE", `${c.profile ?? ""}${words ? ` — ${words}` : ""}`],
     // On track / off track (Jeremy 10/5, option C), said as a feeling.
-    ["WHEN IT'S ON TRACK", c.signature ? `The feeling is ${String(c.signature).toLowerCase()}` : ""],
-    ["WHEN IT'S OFF TRACK", c.notSelfTheme ? `The feeling is ${String(c.notSelfTheme).toLowerCase()}` : ""],
+    ["WHEN IT’S ON TRACK", c.signature ? `The feeling is ${String(c.signature).toLowerCase()}` : ""],
+    ["WHEN IT’S OFF TRACK", c.notSelfTheme ? `The feeling is ${String(c.notSelfTheme).toLowerCase()}` : ""],
   ];
   const labelPaint = paint(7.5, GOLD, true, 0.12);
   const valuePaint = paint(10.5, INK);
@@ -1276,7 +1277,8 @@ function readingPages(d, c, v) {
 
   for (const section of v.reading) {
     const h = section.heading;
-    const head = d.L(h.toUpperCase(), paint(9, GOLD, true, 0.16), BODY_W);
+    // The heading is the checker's fixed text (straight quote); curled for print only (GO PDF, 10/23).
+    const head = d.L(curly(h).toUpperCase(), paint(9, GOLD, true, 0.16), BODY_W);
     const ledeL = section.lede ? d.L(section.lede, paint(13, INK, true), BODY_W) : null;
     const bodyLs = section.paragraphs.map((p) => d.L(p, paint(10.5, INK), BODY_W));
 

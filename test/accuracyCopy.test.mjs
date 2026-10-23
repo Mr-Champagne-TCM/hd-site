@@ -47,7 +47,8 @@ test("card 2: the slow planets are said to be PLACED more precisely, not FOLLOWE
   // Jupiter-Pluto are 0.08-0.10″ against the Sun's 0.58″ in position, but in
   // birth-time seconds they are 22 s to 8 min. Card 1 defines "follows" in
   // birth time, so card 2 must not reuse it.
-  assert.match(card(1), /Jupiter to Pluto, are now corrected against NASA's record, and this engine places them even more precisely than it places the Sun/);
+  // Curly apostrophe (Jeremy's GO PDF, 10/23: "don't mix curly/straight apostrophes").
+  assert.match(card(1), /Jupiter to Pluto, are now corrected against NASA’s record, and this engine places them even more precisely than it places the Sun/);
   assert.ok(!/follows them/.test(card(1)));
   assert.ok(!/record too/.test(card(1)), "\"too\" would imply the Sun is corrected");
 });
@@ -81,9 +82,10 @@ test("retired claims stay retired", () => {
 
 test("Jeremy's emphasis (10/16): the bold-italic clause and the NASA line on its own", () => {
   const emphasised = CREDIBILITY.body.filter((p) => p.emphasis).map((p) => p.text);
-  assert.deepEqual(emphasised, ["and this one doesn't copy any of them!"]);
-  assert.match(bodyText(), /do not all agree on those places, and this one doesn't copy any of them!$/);
-  assert.equal(CREDIBILITY.standout, "It is checked against NASA's own record of where everything actually was.");
+  // Curly apostrophes since Jeremy's GO PDF call (10/23).
+  assert.deepEqual(emphasised, ["and this one doesn’t copy any of them!"]);
+  assert.match(bodyText(), /do not all agree on those places, and this one doesn’t copy any of them!$/);
+  assert.equal(CREDIBILITY.standout, "It is checked against NASA’s own record of where everything actually was.");
   assert.ok(!bodyText().includes("NASA"), "the NASA sentence lives only in the standout line");
 });
 
@@ -91,5 +93,7 @@ test("the link preview speaks plainly: no 'ephemeris', NASA's record in words", 
   const { readFile } = await import("node:fs/promises");
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.doesNotMatch(html, /ephemeris/i);
-  assert.match(html, /Checked against NASA's own record of where the planets were\./);
+  assert.match(html, /Checked against NASA’s own record of where the planets were\./);
+  // One quote style in what a reader sees (Jeremy's GO PDF, 10/23): no straight apostrophe in a preview line.
+  for (const m of html.matchAll(/content="([^"]*)"/g)) assert.doesNotMatch(m[1], /'/, `straight apostrophe in: ${m[1]}`);
 });

@@ -119,6 +119,7 @@ ${
   !diff.baseline
     ? `<p>${esc(diff.note ?? "No baseline.")}</p>`
     : `<p class="sub">Against the baseline from ${esc(diff.baseline.commit)} (${esc(diff.baseline.at)}). Only these lines need reading.</p>
+${diff.quoteOnly ? `<p class="sub">Not listed: ${diff.quoteOnly} line${diff.quoteOnly === 1 ? "" : "s"} that changed only their quote marks (’ for ', “ ” for ").</p>` : ""}
 ${diff.changed.length ? "" : "<p>No words changed.</p>"}
 ${diff.changed
   .slice(0, 120)

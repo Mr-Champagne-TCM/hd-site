@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadRun } from "./load.mjs";
+import { foldQuotes } from "../regress.mjs";
 
 const MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
 const today = () => {
@@ -54,21 +55,29 @@ export function baselineDiff({ baselineDir, docs }) {
   const base = JSON.parse(readFileSync(file, "utf8"));
   const changed = [];
   const added = [];
+  // Quote style is not a change (regress.mjs foldQuotes, 10/23): lines and document names match folded.
+  const baseKey = new Map(Object.keys(base.docs).map((k) => [foldQuotes(k), k]));
+  const matched = new Set();
+  let quoteOnly = 0;
   for (const [k, lines] of Object.entries(now)) {
-    const old = base.docs[k];
+    const bk = k in base.docs ? k : baseKey.get(foldQuotes(k));
+    const old = bk ? base.docs[bk] : null;
     if (!old) {
       added.push({ doc: k, lines: lines.length, text: lines });
       continue;
     }
-    const was = new Set(old);
-    const is = new Set(lines);
-    const plus = lines.filter((l) => !was.has(l));
-    const minus = old.filter((l) => !is.has(l));
+    matched.add(bk);
+    const was = new Set(old.map(foldQuotes));
+    const is = new Set(lines.map(foldQuotes));
+    const plus = lines.filter((l) => !was.has(foldQuotes(l)));
+    const minus = old.filter((l) => !is.has(foldQuotes(l)));
+    const wasRaw = new Set(old);
+    quoteOnly += lines.filter((l) => !wasRaw.has(l) && was.has(foldQuotes(l))).length;
     // The document as it is now rides along, so a fix can claim lines by where they sit (regress.mjs sections).
-    if (plus.length || minus.length) changed.push({ doc: k, plus: [...new Set(plus)], minus: [...new Set(minus)], lines });
+    if (plus.length || minus.length) changed.push({ doc: k, baseDoc: bk, plus: [...new Set(plus)], minus: [...new Set(minus)], lines });
   }
-  const gone = Object.keys(base.docs).filter((k) => !now[k]);
-  return { baseline: { commit: base.commit, at: base.at }, changed, added, gone };
+  const gone = Object.keys(base.docs).filter((k) => !matched.has(k));
+  return { baseline: { commit: base.commit, at: base.at }, changed, added, gone, quoteOnly };
 }
 
 export function saveBaseline({ runDir, baselineDir, commit }) {

@@ -35,7 +35,7 @@ import { customerText } from "../../shared/customerMessages.mjs";
  *
  * Server-side only. These are never shown on a page.
  */
-const KEPT = " It's kept for a year, so it can be sent again whenever you need it.";
+const KEPT = " It’s kept for a year, so it can be sent again whenever you need it.";
 
 export const NOTES = {
   "safe-link": "Your purchase went through and is safe. Here is your link: {link}" + KEPT,
@@ -51,48 +51,48 @@ export const NOTES = {
   "setting-up-reading":
     "Your purchase went through and your reading is safe with me. Your link is being set up now and will be in your inbox shortly. Thank you for your patience.",
   "confirm-later":
-    "Your payment came through and is safe. Our side couldn't confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
+    "Your payment came through and is safe. Our side couldn’t confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
   "confirm-later-summary":
-    "Your payment came through and your summary is safe. Our side couldn't confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
+    "Your payment came through and your summary is safe. Our side couldn’t confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
   "confirm-later-chart":
-    "Your payment came through and your chart is safe. Our side couldn't confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
+    "Your payment came through and your chart is safe. Our side couldn’t confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
   "confirm-later-reading":
-    "Your payment came through and your reading is safe. Our side couldn't confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
+    "Your payment came through and your reading is safe. Our side couldn’t confirm it right away, so your link is on its way to you by email. Thank you for your patience.",
   "chart-again":
-    "Your purchase went through and is safe. Your chart couldn't be drawn just now, which was on our side, and it's working again. Whenever you're ready, your link opens the same page: {link}",
+    "Your purchase went through and is safe. Your chart couldn’t be drawn just now, which was on our side, and it’s working again. Whenever you’re ready, your link opens the same page: {link}",
   "chart-again-summary":
-    "Your purchase went through and is safe. Your summary couldn't be made just now, which was on our side, and it's working again. Whenever you're ready, your link opens the same page: {link}",
+    "Your purchase went through and is safe. Your summary couldn’t be made just now, which was on our side, and it’s working again. Whenever you’re ready, your link opens the same page: {link}",
   "writing":
-    "Your chart is in and your reading is being written. It's taking longer than it should today, which is on our side. It will arrive in your inbox the moment it's ready, with nothing more needed from you.",
+    "Your chart is in and your reading is being written. It’s taking longer than it should today, which is on our side. It will arrive in your inbox the moment it’s ready, with nothing more needed from you.",
   "reading-page":
-    "Your purchase is safe and your link is fine. The page couldn't be opened for a little while, which was on our side, and it's back now: {link}",
+    "Your purchase is safe and your link is fine. The page couldn’t be opened for a little while, which was on our side, and it’s back now: {link}",
   "reading-page-summary":
-    "Your summary is safe and your link is fine. The page couldn't be opened for a little while, which was on our side, and it's back now: {link}",
+    "Your summary is safe and your link is fine. The page couldn’t be opened for a little while, which was on our side, and it’s back now: {link}",
   "reading-page-chart":
-    "Your chart is safe and your link is fine. The page couldn't be opened for a little while, which was on our side, and it's back now: {link}",
+    "Your chart is safe and your link is fine. The page couldn’t be opened for a little while, which was on our side, and it’s back now: {link}",
   "reading-page-reading":
-    "Your reading is safe and your link is fine. The page couldn't be opened for a little while, which was on our side, and it's back now: {link}",
+    "Your reading is safe and your link is fine. The page couldn’t be opened for a little while, which was on our side, and it’s back now: {link}",
   // NEW (10/22, add a found birth time): for an add that did not go through.
   "time-again":
-    "Your chart is safe and unchanged. Adding your birth time didn't go through just now, which was on our side, and it's working again. Whenever you're ready, your link opens the same page, and the time can still be added there: {link}",
+    "Your chart is safe and unchanged. Adding your birth time didn’t go through just now, which was on our side, and it’s working again. Whenever you’re ready, your link opens the same page, and the time can still be added there: {link}",
   "time-again-summary":
-    "Your summary is safe and unchanged. Adding your birth time didn't go through just now, which was on our side, and it's working again. Whenever you're ready, your link opens the same page, and the time can still be added there: {link}",
+    "Your summary is safe and unchanged. Adding your birth time didn’t go through just now, which was on our side, and it’s working again. Whenever you’re ready, your link opens the same page, and the time can still be added there: {link}",
   "pdf":
-    "Your purchase is safe. The PDF couldn't be made just now, which was on our side. Everything is at your link, and the download is there whenever you'd like it: {link}",
+    "Your purchase is safe. The PDF couldn’t be made just now, which was on our side. Everything is at your link, and the download is there whenever you’d like it: {link}",
   "pdf-chart":
-    "Your chart is safe. The PDF couldn't be made just now, which was on our side. Your chart is at your link, and the download is there whenever you'd like it: {link}",
+    "Your chart is safe. The PDF couldn’t be made just now, which was on our side. Your chart is at your link, and the download is there whenever you’d like it: {link}",
   "pdf-reading":
-    "Your reading is safe. The PDF couldn't be made just now, which was on our side. Your reading is at your link, and the download is there whenever you'd like it: {link}",
+    "Your reading is safe. The PDF couldn’t be made just now, which was on our side. Your reading is at your link, and the download is there whenever you’d like it: {link}",
   "link-again": "Here is your link: {link}" + KEPT,
   "link-again-summary": "Here is your summary link: {link}" + KEPT,
   "link-again-chart": "Here is your chart link: {link}" + KEPT,
   "link-again-reading": "Here is your reading link: {link}" + KEPT,
   "checkout-down":
-    "Thank you for stopping by for a reading. The checkout wasn't working on our side for a little while, and nothing was charged. It's working again now, whenever you'd like to come back to Human Design readings: {readings}",
+    "Thank you for stopping by for a reading. The checkout wasn’t working on our side for a little while, and nothing was charged. It’s working again now, whenever you’d like to come back to Human Design readings: {readings}",
   "charts-down":
-    "Thank you for asking for your charts. The page that emails them wasn't working on our side for a little while, and it's back now, whenever you'd like it: {readings}/charts/",
+    "Thank you for asking for your charts. The page that emails them wasn’t working on our side for a little while, and it’s back now, whenever you’d like it: {readings}/charts/",
   "places-down":
-    "The birthplace search wasn't working on our side for a little while. It's back now, and your link opens the same page whenever you're ready: {link}",
+    "The birthplace search wasn’t working on our side for a little while. It’s back now, and your link opens the same page whenever you’re ready: {link}",
 };
 
 export const SIGN_OFF = Object.freeze({

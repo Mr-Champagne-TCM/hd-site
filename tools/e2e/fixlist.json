@@ -877,6 +877,13 @@
       "plus": [
         "^The price is here before anything is asked of you\\.$"
       ]
+    },
+    {
+      "id": "GO-curly",
+      "about": "Jeremy's GO PDF call (10/23): 'sure, don't mix curly/straight apostrophes'. The shop's own words went curly in one sweep (’ for ', “ ” for \"): messages, ready-made notes, the 404 page, the link preview, page labels, the reading's headings (curled for display; the checker's text stays straight), the library one-liners. A line whose ONLY change is its quote marks is not a changed line (regress.mjs foldQuotes; the report counts them as 'changed only their quote marks'), so this entry claims nothing by design: it is here so the sweep is on the list. Any other word changed on such a line still needs its own entry.",
+      "docs": "^(page|pdf|email|sample) ",
+      "minus": [],
+      "plus": []
     }
   ]
 }

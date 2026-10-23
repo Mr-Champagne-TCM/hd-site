@@ -28,11 +28,11 @@ export const MESSAGES = {
   // --- buying ---------------------------------------------------------------
   "checkout-unavailable": {
     act: false,
-    text: "The payment page didn't open just now. Nothing was charged, and another try in a minute usually works.",
+    text: "The payment page didn’t open just now. Nothing was charged, and another try in a minute usually works.",
   },
   "checkout-not-offered": {
     act: false,
-    text: "That one isn't on offer, so nothing was charged. The readings that are on offer are on the home page whenever you'd like them.",
+    text: "That one isn’t on offer, so nothing was charged. The readings that are on offer are on the home page whenever you’d like them.",
   },
   "checkout-not-yet": {
     act: false,
@@ -44,18 +44,18 @@ export const MESSAGES = {
     act: false,
     heading: "Your purchase is safe",
     text:
-      `Your purchase couldn't be confirmed just now — that's on our side. If you were charged, it is safe: ` +
+      `Your purchase couldn’t be confirmed just now — that’s on our side. If you were charged, it is safe: ` +
       `reloading this page in a minute usually confirms it, and your link comes by email too. ` +
       `${CONTACT} reaches Jeremy.`,
   },
   "claim-not-found": {
     act: false,
     heading: "Your purchase is safe",
-    text: `That purchase couldn't be found from this page. If you were charged, ${CONTACT} reaches Jeremy and he'll sort it out.`,
+    text: `That purchase couldn’t be found from this page. If you were charged, ${CONTACT} reaches Jeremy and he’ll sort it out.`,
   },
   "claim-not-paid": {
     act: false,
-    text: "That purchase hasn't completed, so nothing was charged. The readings are on the home page whenever you'd like them.",
+    text: "That purchase hasn’t completed, so nothing was charged. The readings are on the home page whenever you’d like them.",
   },
   "purchase-safe-setup-pending": {
     act: false,
@@ -68,26 +68,26 @@ export const MESSAGES = {
   // --- the birth-details form -----------------------------------------------
   "chart-check-date": {
     act: true,
-    text: "That birth date doesn't look quite right. Could you check the day, month and year? Everything else can stay as it is.",
+    text: "That birth date doesn’t look quite right. Could you check the day, month and year? Everything else can stay as it is.",
   },
   "chart-check-time": {
     act: true,
     text:
-      "That birth time doesn't look quite right. Could you check it? If the time isn't known, " +
-      "“I don't know my birth time” is a perfectly good answer.",
+      "That birth time doesn’t look quite right. Could you check it? If the time isn’t known, " +
+      "“I don’t know my birth time” is a perfectly good answer.",
   },
   "chart-check-place": {
     act: true,
-    text: "That birth place didn't come through. Could you pick the town from the list once more?",
+    text: "That birth place didn’t come through. Could you pick the town from the list once more?",
   },
   "chart-form-unreadable": {
     act: false,
-    text: "That didn't come through properly. Nothing was charged, and another try usually works.",
+    text: "That didn’t come through properly. Nothing was charged, and another try usually works.",
   },
   "chart-slow-free": {
     act: false,
     text:
-      "Something on our side is slow right now, so your chart didn't come through. Nothing was charged, " +
+      "Something on our side is slow right now, so your chart didn’t come through. Nothing was charged, " +
       "and your details are still in the form — another try in a minute usually works.",
   },
   "chart-slow-paid": {
@@ -99,14 +99,14 @@ export const MESSAGES = {
   "chart-not-saved": {
     act: false,
     text:
-      "Your chart was drawn, but saving it didn't finish on our side. Your purchase is safe and your details " +
+      "Your chart was drawn, but saving it didn’t finish on our side. Your purchase is safe and your details " +
       `are still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "chart-payment-required": {
     act: false,
     text:
       "This one needs to be paid for first. Nothing was charged just now, and your birth details were not stored. " +
-      "The readings, and what each one includes, are on the home page whenever you'd like them.",
+      "The readings, and what each one includes, are on the home page whenever you’d like them.",
   },
   // The text is written by ratelimit.mjs (it names the wait); this is the key.
   "chart-too-many": { act: false, text: null },
@@ -115,8 +115,8 @@ export const MESSAGES = {
   "places-unavailable": {
     act: false,
     text:
-      "Town search isn't answering just now — that's on our side, not your spelling. " +
-      "It usually comes back within a minute, and everything else you've entered is kept.",
+      "Town search isn’t answering just now — that’s on our side, not your spelling. " +
+      "It usually comes back within a minute, and everything else you’ve entered is kept.",
   },
   "places-too-many": {
     act: false,
@@ -130,7 +130,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      "This page couldn't load just now — that's on our side, and nothing is lost. " +
+      "This page couldn’t load just now — that’s on our side, and nothing is lost. " +
       "Reloading in a minute usually finds it.",
   },
   "reading-link-expired": {
@@ -182,7 +182,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      "Your PDF didn't come together just now — that's on our side, and nothing is lost. " +
+      "Your PDF didn’t come together just now — that’s on our side, and nothing is lost. " +
       "Another try in a minute usually works.",
   },
   "pdf-link-expired": {
@@ -202,7 +202,7 @@ export const MESSAGES = {
   "pdf-not-ready": {
     act: false,
     heading: "Nothing to draw yet",
-    text: "Your birth details haven't been entered yet, so there is nothing to draw. Your page has the form.",
+    text: "Your birth details haven’t been entered yet, so there is nothing to draw. Your page has the form.",
   },
 
   // --- sending the link again -----------------------------------------------
@@ -223,11 +223,11 @@ export const MESSAGES = {
   // --- "Email me my charts" (release 2) ---------------------------------------
   "mycharts-unavailable": {
     act: false,
-    text: "That could not be sent just now — that's on our side. Nothing is lost, and another try in a few minutes usually works.",
+    text: "That could not be sent just now — that’s on our side. Nothing is lost, and another try in a few minutes usually works.",
   },
   "mycharts-bad-email": {
     act: true,
-    text: "That doesn't look like a whole email address yet. The one you used when you bought is the one that works here, whenever you're ready.",
+    text: "That doesn’t look like a whole email address yet. The one you used when you bought is the one that works here, whenever you’re ready.",
   },
   "mycharts-too-many": {
     act: false,
@@ -237,18 +237,18 @@ export const MESSAGES = {
   // --- adding a birth time found later (10/22) -------------------------------
   "addtime-check-time": {
     act: true,
-    text: "That birth time doesn't look quite right. Could you check it?",
+    text: "That birth time doesn’t look quite right. Could you check it?",
   },
   "addtime-slow": {
     act: false,
     text:
-      "Something on our side is slow right now, so your chart wasn't redone — nothing has changed, and the time " +
+      "Something on our side is slow right now, so your chart wasn’t redone — nothing has changed, and the time " +
       `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved": {
     act: false,
     text:
-      "Your chart was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
+      "Your chart was cast again, but saving it didn’t finish on our side, so nothing has changed yet. The time you " +
       `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used": {
@@ -264,12 +264,12 @@ export const MESSAGES = {
   "addtime-gone": {
     act: false,
     heading: "This chart is no longer kept",
-    text: `Charts are kept for a year from the day they were bought, and this one has passed its year. ${CONTACT} reaches Jeremy, whenever you'd like to ask about it.`,
+    text: `Charts are kept for a year from the day they were bought, and this one has passed its year. ${CONTACT} reaches Jeremy, whenever you’d like to ask about it.`,
   },
   "addtime-none": {
     act: false,
-    heading: "A birth time can't be added here",
-    text: `This chart was made before birth details were kept with it, so a time can't be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
+    heading: "A birth time can’t be added here",
+    text: `This chart was made before birth details were kept with it, so a time can’t be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
   },
   // The PDF's link cut short (it came from the PDF, not from an email).
   "addtime-key-bad": {
@@ -281,13 +281,13 @@ export const MESSAGES = {
   "addtime-slow-summary": {
     act: false,
     text:
-      "Something on our side is slow right now, so your summary wasn't redone — nothing has changed, and the time " +
+      "Something on our side is slow right now, so your summary wasn’t redone — nothing has changed, and the time " +
       `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-not-saved-summary": {
     act: false,
     text:
-      "Your summary was cast again, but saving it didn't finish on our side, so nothing has changed yet. The time you " +
+      "Your summary was cast again, but saving it didn’t finish on our side, so nothing has changed yet. The time you " +
       `chose is still in the form — another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
   "addtime-used-summary": {
@@ -302,8 +302,8 @@ export const MESSAGES = {
   },
   "addtime-none-summary": {
     act: false,
-    heading: "A birth time can't be added here",
-    text: `This summary was made before birth details were kept with it, so a time can't be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
+    heading: "A birth time can’t be added here",
+    text: `This summary was made before birth details were kept with it, so a time can’t be added on this page. ${CONTACT} reaches Jeremy, and he can help.`,
   },
 
   // --- the net under everything ---------------------------------------------
@@ -311,7 +311,7 @@ export const MESSAGES = {
     act: false,
     heading: "Nothing is lost",
     text:
-      `Something on our side didn't work just now. Nothing is lost — another try in a minute usually works, ` +
+      `Something on our side didn’t work just now. Nothing is lost — another try in a minute usually works, ` +
       `and ${CONTACT} reaches Jeremy.`,
   },
 };
