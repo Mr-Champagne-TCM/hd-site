@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
-import { checkFailureRate } from "../lib/health.mjs";
+import { checkFailureRate, sweepIncidents } from "../lib/health.mjs";
 import { alertSender } from "../lib/failures.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
@@ -55,6 +55,14 @@ export default async () => {
     if (rate.alarmed) console.log(`sweep: failure-rate alarm (${rate.count} in the hour)`);
   } catch (e) {
     console.log(`sweep: could not check the failure rate (${e.message})`);
+  }
+
+  // The failure records past their fourteen days (the privacy page says so; extra, picks-1023).
+  try {
+    const gone = await sweepIncidents(getStore({ name: "health", consistency: "strong" }));
+    if (gone.deleted || gone.failed) console.log(`sweep: health records past 14 days: ${gone.deleted} deleted, ${gone.failed} failed`);
+  } catch (e) {
+    console.log(`sweep: could not clear old health records (${e.message})`);
   }
   return new Response(null, { status: 204 });
 };

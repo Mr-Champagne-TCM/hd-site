@@ -299,8 +299,10 @@ export async function record(store, { kind, detail, excerpt, now = Date.now(), s
   try {
     await store.setJSON(key, entry, {
       metadata: { kind: entry.kind },
-      // Netlify expires this for us, so nothing here needs a sweeper -- and a
-      // retention rule nobody has to remember is the only kind that holds.
+      // NOT an expiry (10/23, picks-1023): @netlify/blobs 8.x takes metadata
+      // only and drops this, so nothing ever removed these records. The
+      // fifteen-minute sweep deletes them past INCIDENT_TTL_SECONDS
+      // (sweepIncidents, below), which is what the privacy page promises.
       expiration: new Date(now + INCIDENT_TTL_SECONDS * 1000),
     });
   } catch {
@@ -379,6 +381,41 @@ export async function checkFailureRate(
     site,
   }).catch(() => ({ alerted: false }));
   return { count, alarmed: true, alerted: Boolean(r?.alerted) };
+}
+
+/**
+ * THE FOURTEEN DAYS, KEPT (extra, picks-1023, pending Jeremy). The privacy page
+ * says "A record of a technical failure, so it can be fixed: Fourteen days".
+ * Netlify Blobs keeps a blob until something deletes it -- the `expiration`
+ * handed to setJSON is not an option it has -- so this deletes every
+ * "incident/<at>-<n>" record older than INCIDENT_TTL_SECONDS. The time is in
+ * the key, so nothing is read; a key this site did not write is left alone.
+ * Returns counts; never throws. Run by the fifteen-minute sweep.
+ */
+export async function sweepIncidents(store, { now = Date.now(), keepMs = INCIDENT_TTL_SECONDS * 1000 } = {}) {
+  const counts = { listed: 0, deleted: 0, kept: 0, failed: 0 };
+  let keys = [];
+  try {
+    keys = ((await store.list({ prefix: "incident/" }))?.blobs ?? []).map((b) => b.key);
+  } catch {
+    counts.failed++;
+    return counts;
+  }
+  counts.listed = keys.length;
+  for (const key of keys) {
+    const at = Number(/^incident\/(\d+)-/.exec(key)?.[1]);
+    if (!Number.isFinite(at) || now - at <= keepMs) {
+      counts.kept++;
+      continue;
+    }
+    try {
+      await store.delete(key);
+      counts.deleted++;
+    } catch {
+      counts.failed++;
+    }
+  }
+  return counts;
 }
 
 /** Everything still on file, newest first. */
