@@ -127,7 +127,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
     ? "Did not ask? Nothing to do — nothing was shown to anyone."
     : "Did not ask for this? Nothing to do — these links only ever come to this inbox.";
   const fresh =
-    "Each link is new and works for 6 days. Open it after that and it sends you a fresh one, or ask again on the Email me my charts page.";
+    "Each link is new and works for six days. Open it after that and it sends you a fresh one, or ask again on the Email me my charts page.";
   const askLine = `If anything here is unclear, ${links.contact} reaches Jeremy directly.`;
 
   const text = [

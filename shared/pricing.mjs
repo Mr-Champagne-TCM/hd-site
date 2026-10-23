@@ -81,9 +81,9 @@ export const TIERS = [SUMMARY, CHART, READING];
  * Under Stripe's Pay button (fix 14B, 10/19): what comes next, so the step
  * after paying is no surprise.
  */
-export const CHECKOUT_NEXT_STEP = "Next: your birth date, time and place (about 2 minutes).";
+export const CHECKOUT_NEXT_STEP = "Next: your birth date, time and place (about two minutes).";
 /** The same line for a chart bought for someone else (10/22 verbatim read): their details come next. */
-export const CHECKOUT_NEXT_STEP_THEIR = "Next: their birth date, time and place (about 2 minutes).";
+export const CHECKOUT_NEXT_STEP_THEIR = "Next: their birth date, time and place (about two minutes).";
 
 /** The same line on an upgrade whose chart keeps its birth details: nothing to type (fix 4, 10/21). */
 export const checkoutNextStepKept = (level) =>

@@ -78,7 +78,7 @@ test("A REAL RECEIPT: what, the amount, the date, and the next step (fix 4A)", a
     assert.ok(body.includes(money(READING.cents)));
     assert.match(body, /October 17, 2026/);
     assert.match(body, /Paid by card through/);
-    assert.match(body, /Next, about 2 minutes|NEXT, ABOUT 2 MINUTES/);
+    assert.match(body, /Next, about two minutes|NEXT, ABOUT TWO MINUTES/);
     assert.match(body, /Your birth date, time and place/);
   }
   // A 100%-off code: nothing charged, and no card was used.
@@ -236,13 +236,13 @@ test("THE SIX DAYS ARE ABSENT FROM THE FIRST EMAIL (the receipt)", () => {
 
 test("and present once there is something to come back TO", () => {
   const { text } = build(1, "J");
-  assert.match(text, /This link works for 6 days/);
+  assert.match(text, /This link works for six days/);
   // THE REASSURANCE COMES FIRST NOW, not after. Jeremy asked "are we still
   // doing that?" about the six days, which is what a limit reads as when it
   // leads: a countdown. The year leads instead, and the six days is a fact
   // about one link rather than about the purchase.
   const year = text.indexOf("kept for a year");
-  const six = text.indexOf("works for 6 days");
+  const six = text.indexOf("works for six days");
   assert.ok(year >= 0 && six > year, "the six-day line still leads");
   assert.match(text, /sends you a fresh one/);
 });

@@ -308,7 +308,7 @@ export function deliveryEmail({
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
   const keptLine =
-    `${their ? WhoseLead : "Your"} ${word} is kept for a year. This link works for 6 days; open it after that and it ` +
+    `${their ? WhoseLead : "Your"} ${word} is kept for a year. This link works for six days; open it after that and it ` +
     "sends you a fresh one, as often as you need.";
 
   const own = READY[tier] ?? READY[2];
@@ -330,7 +330,7 @@ export function deliveryEmail({
     ...(on ? [["Date", on]] : []),
     [amountCents === 0 ? "Paid through" : "Paid by card through", "Stripe"],
   ];
-  const nextHead = kept ? "Next, one look" : "Next, about 2 minutes";
+  const nextHead = kept ? "Next, one look" : "Next, about two minutes";
   const nextLine = kept
     ? // Kept from a summary as often as from a chart, so neither is named (10/22 verbatim read, B9).
       "Your birth details are already kept, so there is nothing to type — only a look, " +

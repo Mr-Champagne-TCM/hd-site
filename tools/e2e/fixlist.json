@@ -1308,6 +1308,33 @@
       "plus": [
         "^(January|February|March|April|May|June|July|August|September|October|November|December) \\d{1,2}, \\d{4} · (\\d{1,2}:\\d{2} [AP]M · |Time unknown \\(charted at noon\\) · )?[^·]*’[^·]*$"
       ]
+    },
+    {
+      "id": "PICKS-D19-D25",
+      "about": "Decisions 19 + 25 (GO v3 p14/p16, my pick 'spell out', pending Jeremy; 10/23 read F1): numbers in words in customer copy, as the rest of it says them. 'Technical values: your 26 planet numbers' -> 'your twenty-six planet numbers' (page, PDF page 2; = the phone's ReadingCopy.kt); the ready emails' 'This link works for 6 days' and the my-charts email's 'works for 6 days' -> 'six days'; the receipt's 'Next, about 2 minutes' and Stripe's 'Next: your birth date, time and place (about 2 minutes).' -> 'about two minutes'; the coaching card's link 'A free 30-minute conversation' -> 'A free thirty-minute conversation' (its own sentence says 'thirty minutes'; pages, PDFs, the website's sample PDFs); the gates example's banner 'A reading lists all 26 planet numbers' -> 'all twenty-six planet numbers' (HD-Library-Work markup.py v12). Left as numerals on purpose: data (gates, degrees, dates, prices, times), PDF page counts on the download button, the library's live counts.",
+      "docs": "^(page |pdf |email |sample )",
+      "minus": [
+        "^Technical values: your 26 planet numbers \\(for the curious\\)(PROVISIONAL)?$",
+        "^TECHNICAL VALUES: YOUR 26 PLANET NUMBERS \\(FOR THE CURIOUS\\)( PROVISIONAL)?$",
+        "^.+ is kept for a year\\. This link works for 6 days; open it after that and it sends you a fresh one, as often as you need\\.$",
+        "^Each link is new and works for 6 days\\. Open it after that and it sends you a fresh one, or ask again on the Email me my charts page\\.$",
+        "^NEXT, ABOUT 2 MINUTES$",
+        "^Next, about 2 minutes$",
+        "^A free 30-minute conversation →( thechampagnemethod\\.co/#connect)?$",
+        "^A reading lists all 26 planet numbers, each with the planet that lit it\\.$"
+      ],
+      "plus": [
+        "^Technical values: your twenty-six planet numbers \\(for the curious\\)(PROVISIONAL)?$",
+        "^TECHNICAL VALUES: YOUR TWENTY-SIX PLANET NUMBERS \\(FOR THE CURIOUS\\)( PROVISIONAL)?$",
+        "^.+ is kept for a year\\. This link works for six days; open it after that and it sends you a fresh one, as often as you need\\.$",
+        "^Each link is new and works for six days\\. Open it after that and it sends you a fresh one, or ask again on the Email me my charts page\\.$",
+        "^NEXT, ABOUT TWO MINUTES$",
+        "^Next, about two minutes$",
+        "^A free thirty-minute conversation →( thechampagnemethod\\.co/#connect)?$",
+        "^A reading lists all twenty-six planet numbers, each with the planet that lit it\\.$",
+        "^A reading lists all twenty-six planet numbers, each with the planet that lit$",
+        "^(it\\.|that lit it\\.|planet that lit it\\.)$"
+      ]
     }
   ]
 }

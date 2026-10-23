@@ -99,7 +99,7 @@ test("no phone number is asked for (fix 14B, 10/19), and consent is not assumed"
 test("under Pay: what comes next (fix 14B), on every tier", () => {
   for (const level of [0, 1, 2]) {
     const p = sessionParams({ level, origin: "https://x" });
-    assert.equal(p.custom_text.submit.message, "Next: your birth date, time and place (about 2 minutes).");
+    assert.equal(p.custom_text.submit.message, "Next: your birth date, time and place (about two minutes).");
   }
 });
 

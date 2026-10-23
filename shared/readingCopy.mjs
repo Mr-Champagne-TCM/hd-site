@@ -8,7 +8,9 @@
  * FIX 6A: the planet-number grid, folded closed on the page and named and
  * explained in the PDF (a PDF cannot fold). Mock words, as approved.
  */
-export const techTitle = (n = 26) => `Technical values: your ${n} planet numbers`;
+/** Numbers in words, as the rest of the copy says them (decision 25, 10/23): 26 is "twenty-six". */
+const COUNT_WORDS = Object.freeze({ 26: "twenty-six" });
+export const techTitle = (n = 26) => `Technical values: your ${COUNT_WORDS[n] ?? n} planet numbers`;
 export const TECH_TITLE_NOTE = "(for the curious)";
 export const TECH_HOW =
   "How to read them: 21.5 is gate 21, line 5. The planet beside each number is the one that lit " +
@@ -23,7 +25,7 @@ export const TECH_HOW =
 export const COACH = Object.freeze({
   head: "Talk it through with Jeremy",
   body: "If something in here stirred a question, Jeremy offers thirty minutes, free, with no pitch at the end.",
-  link: "A free 30-minute conversation",
+  link: "A free thirty-minute conversation",
   url: "https://thechampagnemethod.co/#connect",
   shown: "thechampagnemethod.co/#connect",
 });
