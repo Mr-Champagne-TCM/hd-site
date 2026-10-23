@@ -195,14 +195,14 @@ test("LINK LABELS on the server's pages and in the emails: every link, title + a
 // Jeremy 10/23, option 1: "Receipt: Robin’s Human Design reading, <price>" when the chart is
 // titled "Robin’s Human Design". Gifts keep "…for someone else". (Prices from pricing.mjs only: P-1.)
 
-test("RECEIPT SUBJECT: the chart's own title; a new chart's is the name on the payment; gifts unchanged", () => {
+test("RECEIPT SUBJECT: the chart's own title; a new chart's is the first name the form starts with; gifts unchanged", () => {
   const receipt = (o) => deliveryEmail({ url: "https://x.test/r/a.b", links: SITE, pending: true, ...o }).subject;
   const [s, c, r] = PRICING.TIERS.map((t) => t.cents);
   const $ = PRICING.money;
   // An upgrade of a chart titled "Robin’s Human Design", paid by Alex Rivera.
   assert.equal(receipt({ tier: 2, name: "Alex Rivera", chartName: "Robin", amountCents: r }), `Receipt: Robin’s Human Design reading, ${$(r)}`);
-  // A brand-new chart: nothing typed for it yet, so its title is the name on the payment (as before).
-  assert.equal(receipt({ tier: 1, name: "Alex Rivera", amountCents: c }), `Receipt: Alex Rivera’s Human Design chart, ${$(c)}`);
+  // A brand-new chart: nothing typed for it yet; the form starts its name with the first name on the payment (decision 15).
+  assert.equal(receipt({ tier: 1, name: "Alex Rivera", amountCents: c }), `Receipt: Alex’s Human Design chart, ${$(c)}`);
   // No name anywhere: the chart is "Your Human Design".
   assert.equal(receipt({ tier: 0, name: null, amountCents: s }), `Receipt: Your Human Design summary, ${$(s)}`);
   // A chart for someone else keeps its own receipt, the buyer's name and "for someone else".

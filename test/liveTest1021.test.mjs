@@ -536,8 +536,8 @@ test("THE GIFT RECEIPT'S SUBJECT (Jeremy 10/22, call 5): the buyer's name, then 
   // The tier word and the price vary; a buyer with no name on file gets no name.
   assert.equal(mail({ tier: 2, name: "Emery Testwell", pending: true, someoneNew: true, amountCents: TIERS[2].cents }).subject, `Receipt: Emery Testwell, a Human Design reading for someone else, ${price(2)}`);
   assert.equal(mail({ tier: 0, name: null, pending: true, someoneNew: true, amountCents: TIERS[0].cents }).subject, `Receipt: A Human Design summary for someone else, ${price(0)}`);
-  // The buyer's own chart keeps its receipt as it was.
-  assert.equal(mail({ tier: 1, name: "Emery Testwell", pending: true, amountCents: TIERS[1].cents }).subject, `Receipt: Emery Testwell’s Human Design chart, ${price(1)}`);
+  // The buyer's own new chart: the first name its form starts with (decision 15).
+  assert.equal(mail({ tier: 1, name: "Emery Testwell", pending: true, amountCents: TIERS[1].cents }).subject, `Receipt: Emery’s Human Design chart, ${price(1)}`);
 });
 
 test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their centers, their cross", () => {

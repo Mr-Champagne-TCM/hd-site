@@ -2,7 +2,7 @@ import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
-import { chartTitle } from "../../shared/chartName.mjs";
+import { chartTitle, firstName } from "../../shared/chartName.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -248,9 +248,18 @@ export function deliveryEmail({
    * conversation in Gmail (above) -- but no longer reads as the buyer's chart:
    * "Receipt: Emery Testwell, a Human Design chart for someone else, <price>".
    */
+  /**
+   * A BRAND-NEW CHART'S RECEIPT (decision 15, GO v3, pending Jeremy): nothing is
+   * typed for it yet, and the form starts its "Name for this chart" with the
+   * buyer's first name (chartName.mjs firstName), so that is the name the chart
+   * comes out with: "Receipt: Robin’s Human Design chart, <price>", not the full
+   * name on the payment ("Robin Testwell’s"), which no page then shows. An
+   * upgrade's receipt says its chart's title, as before.
+   */
+  const receiptFor = chartName || (their ? null : firstName(name) || null);
   const receiptWhat = their
     ? `${name ? `${name}, a` : "A"} Human Design ${word} for someone else`
-    : `${chartTitle(forChart)} ${word}`;
+    : `${chartTitle(receiptFor)} ${word}`;
   const subject = pending
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink

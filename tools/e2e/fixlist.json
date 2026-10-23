@@ -1242,6 +1242,13 @@
       "plus": [
         "^← Back to your choices$"
       ]
+    },
+    {
+      "id": "PICKS-D15",
+      "about": "Decision 15 (GO v3 p14, my pick, pending Jeremy; 10/23 read F7, B10): a brand-new chart's receipt named the full name on the payment ('Receipt: Robin Testwell’s Human Design chart, <price>') while the chart is then titled 'Robin’s Human Design'. It now names the chart the way it will be titled, the first name its form starts with (deliveryEmail.mjs receiptFor = chartName.mjs firstName), as an upgrade's receipt says its chart's title (GO-receipt-title). A chart for someone else keeps 'Receipt: <buyer>, a Human Design … for someone else'. The subject is the email's document name in the rig, so the receipt is a new document and the old one is gone.",
+      "docs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: ",
+      "addsDocs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: [^ ,’]+’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$",
+      "dropsDocs": "^email [a-zA-Z0-9]+-\\d-buy-t\\d \\| Receipt: [^,’ ]+ [^,’]+’s Human Design (summary|chart|reading)(, \\$\\d+\\.\\d{2})?$"
     }
   ]
 }
