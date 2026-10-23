@@ -1,6 +1,7 @@
 import { AUTHORITY_GLANCE, PROFILE_GLANCE, TYPE_GLANCE } from "../shared/libraryGlance.mjs";
 import { markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
+import { mockMode } from "./mockRepeat";
 
 /**
  * FIX 1A (Jeremy 10/19): "Your chart in three lines", a plain way in at the
@@ -37,12 +38,14 @@ export const firstExperiment = (takeaways: string[] | undefined | null) => {
 
 export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeaways?: string[] | null }) {
   const profile = String(chart.profile ?? "").replace(/\s/g, "");
-  const experiment = firstExperiment(takeaways);
+  // MOCK (10/23): B = the profile one-liner on every tier; A = the line kept, label "Something to try".
+  const mode = mockMode();
+  const experiment = mode === "b" ? null : firstExperiment(takeaways);
   const rows: Array<[string, string, string | null]> = [
     ["Your energy", chart.type ?? "", GLANCE_TYPE[chart.type ?? ""] ?? null],
     ["How you decide", chart.authority ?? "", authorityGlance(chart.authority ?? "")],
     experiment
-      ? ["Something to try this week", "", experiment]
+      ? [mode === "a" ? "Something to try" : "Something to try this week", "", experiment]
       : ["How you meet the world", profile ? `Profile ${profile}` : "", GLANCE_PROFILE[profile] ?? null],
   ];
   const shown = rows.filter(([, , line]) => line);
@@ -70,7 +73,7 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
       </h2>
       <ol className="mt-3 space-y-3">
         {shown.map(([label, value, line], i) => (
-          <li key={label} className="flex gap-3">
+          <li key={label} className="flex gap-3" data-mock={i === 2 ? "box-row-3" : undefined}>
             <span className="mt-[2px] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-teal font-sans text-[13px] font-semibold text-[#0d1b1a]">
               {i + 1}
             </span>

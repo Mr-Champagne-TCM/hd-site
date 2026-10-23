@@ -5,6 +5,7 @@ import Linked from "./Linked";
 import CoachCard from "./CoachCard";
 import { marginFields, markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
+import { mockMode } from "./mockRepeat";
 
 /**
  * The written interpretation, on the page.
@@ -239,7 +240,11 @@ export function ReadingInOrder({
   chart: { type?: string; profile?: string; incarnationCross?: string; channels?: string[] };
 }) {
   const feature = /^\((.+?)\)\s*([\s\S]+)$/;
-  const [intro, ...items] = v.takeaways;
+  const [intro, ...all] = v.takeaways;
+  // MOCK (10/23), option A: the line the box at the top shows (ThreeLines' firstExperiment) leaves this list.
+  const mode = mockMode();
+  const inBox = mode === "a" ? v.takeaways.findIndex((s) => /^\(/.test(s)) : -1;
+  const items = inBox > 0 ? all.filter((_, i) => i + 1 !== inBox) : all;
   return (
     <div className="space-y-12">
       <section aria-labelledby="your-reading">
@@ -301,11 +306,21 @@ export function ReadingInOrder({
               <Linked text={intro} chart={chart} />
             </p>
           )}
-          <ul className="mt-4 space-y-4">
+          {inBox > 0 && (
+            // MOCK (10/23), option A: DRAFT WORDS, for Jeremy to change.
+            <p data-mock="lead-in" className="mt-3 text-[16px] leading-relaxed text-brand-muted">
+              The first one is at the top of this page, in{" "}
+              <a href="#three-lines" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+                “Your chart in three lines.”
+              </a>{" "}
+              Here are the other three.
+            </p>
+          )}
+          <ul className="mt-4 space-y-4" data-mock="try-list">
             {items.map((p, i) => {
               const m = feature.exec(p);
               return (
-                <li key={i} className="relative pl-6">
+                <li key={i} className="relative pl-6" data-mock={i === 0 ? "try-first" : undefined}>
                   <span aria-hidden className="absolute left-0 top-[0.8em] h-[2px] w-3 bg-brand-gold" />
                   {m && <p className="text-[17px] font-semibold text-brand-gold">{m[1]}</p>}
                   <p className="text-[17px] leading-relaxed text-brand-paper/90">
