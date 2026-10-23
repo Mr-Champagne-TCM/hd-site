@@ -1,5 +1,6 @@
 import { CONTACT } from "../../shared/customerMessages.mjs";
 import { footerColumns, PRIVACY_LABEL } from "../../shared/footerTheme.mjs";
+import { HINT, hintAttrs } from "../../shared/linkHints.mjs";
 import { SITE } from "./siteLinks.mjs";
 
 /**
@@ -15,6 +16,9 @@ import { SITE } from "./siteLinks.mjs";
  *
  * `back` is a same-site path (the reading page); `backLabel` names it.
  */
+/** The way back's label: "Back to your reading" opens your reading; "/" is the readings' front page. */
+const backHint = (back, label) => (back === "/" ? HINT.readings : `Opens ${label.replace(/^Back to /, "")}`);
+
 export function messagePage({ heading, message, back = null, backLabel = "Back to your reading" }) {
   const esc = (s) =>
     String(s ?? "")
@@ -23,7 +27,7 @@ export function messagePage({ heading, message, back = null, backLabel = "Back t
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   // The readings address becomes a mailto link wherever a sentence names it.
-  const body = esc(message).split(CONTACT).join(`<a href="mailto:${CONTACT}">${CONTACT}</a>`);
+  const body = esc(message).split(CONTACT).join(`<a href="mailto:${CONTACT}"${hintAttrs(CONTACT, HINT.mail)}>${CONTACT}</a>`);
   const safeBack = typeof back === "string" && back.startsWith("/") && !back.startsWith("//") ? back : null;
   return `<!doctype html>
 <html lang="en">
@@ -57,7 +61,7 @@ export function messagePage({ heading, message, back = null, backLabel = "Back t
   <p class="mark">HUMAN DESIGN by THE CHAMPAGNE METHOD COACHING AND CONSULTING</p>
   <h1>${esc(heading || "Nothing is lost")}</h1>
   <p class="panel">${body}</p>
-  ${safeBack ? `<a class="back" href="${esc(safeBack)}">${esc(backLabel)}</a>` : ""}
+  ${safeBack ? `<a class="back" href="${esc(safeBack)}"${hintAttrs(backLabel, backHint(safeBack, backLabel))}>${esc(backLabel)}</a>` : ""}
   ${pageEnd()}
 </main>
 </html>`;
@@ -86,10 +90,10 @@ export function pageEnd() {
     return `rgba(${[0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(",")},0.55)`;
   };
   const cols = footerColumns("#E8CBA0")
-    .map((c) => `<div style="border-color:${tint(c.color)}"><a href="${c.href}" style="color:${c.color}">${c.name}</a><p>${c.line}</p></div>`)
+    .map((c) => `<div style="border-color:${tint(c.color)}"><a href="${c.href}" style="color:${c.color}"${hintAttrs(c.name, c.hint)}>${c.name}</a><p>${c.line}</p></div>`)
     .join("\n    ");
   return `<footer class="tf">
     ${cols}
   </footer>
-  <p class="pv"><a href="${SITE.privacy}">${PRIVACY_LABEL}</a></p>`;
+  <p class="pv"><a href="${SITE.privacy}"${hintAttrs(PRIVACY_LABEL, HINT.privacy)}>${PRIVACY_LABEL}</a></p>`;
 }

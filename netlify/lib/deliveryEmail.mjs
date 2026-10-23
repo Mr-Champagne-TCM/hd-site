@@ -1,6 +1,7 @@
 import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
+import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -98,9 +99,10 @@ const PANEL = "#241a4e";
  * clients, which is exactly what this email was trying to stop being.
  */
 function button(href, text) {
+  const where = actionHint(text);
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px">
   <tr><td align="center" bgcolor="${TEAL}" style="border-radius:999px">
-    <a href="${esc(href)}" style="display:inline-block;padding:15px 30px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:17px;font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px">${esc(text)}</a>
+    <a href="${esc(href)}" style="display:inline-block;padding:15px 30px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:17px;font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px"${hintAttrs(text, where)}>${esc(text)}</a>
   </td></tr>
 </table>`;
 }
@@ -406,7 +408,7 @@ export function deliveryEmail({
   ${row(esc(resourcesHead), "0 0 10px", small)}
   ${RESOURCES.map(
     ([href, title, blurb]) => `<tr><td style="padding:0 0 16px">
-    <a href="${esc(href)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:none">${esc(title)}</a>
+    <a href="${esc(href)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:none"${hintAttrs(title, href === links.bodygraph ? HINT.bodygraph : HINT.library)}>${esc(title)}</a>
     <div style="font-size:15px;color:${MUTED};padding-top:2px">${esc(blurb)}</div>
   </td></tr>`,
   ).join("\n  ")}
@@ -421,7 +423,7 @@ export function deliveryEmail({
 
   <!-- The address is a mailto link (link audit, 10/16): one tap opens a reply. -->
   <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">If anything here is unclear,
-    <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline">${esc(links.contact)}</a>
+    <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline"${hintAttrs(links.contact, HINT.mail)}>${esc(links.contact)}</a>
     reaches Jeremy directly.</td></tr>
 
   ${end.html}

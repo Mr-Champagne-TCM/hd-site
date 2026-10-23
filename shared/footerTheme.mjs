@@ -1,4 +1,5 @@
 import { SHOP } from "./libraryLinks.mjs";
+import { HINT } from "./linkHints.mjs";
 
 /**
  * THE FOOTER THEME, the words and links in one place (Jeremy 10/16-17).
@@ -40,7 +41,8 @@ export const PRIVACY_LABEL = "What we keep, and for how long";
 /** The two columns, HD first. `hdColor` is the surface's own gold. */
 export function footerColumns(hdColor, coachColor = COACH_COLOR) {
   return [
-    { href: HD_URL, name: HD_NAME, line: HD_LINE, color: hdColor },
-    { href: COACH_URL, name: BUSINESS_NAME, line: COACH_LINE, color: coachColor },
+    // `hint`: the link label (title + aria-label) saying where each name goes (10/23).
+    { href: HD_URL, name: HD_NAME, line: HD_LINE, color: hdColor, hint: HINT.readings },
+    { href: COACH_URL, name: BUSINESS_NAME, line: COACH_LINE, color: coachColor, hint: HINT.home },
   ];
 }

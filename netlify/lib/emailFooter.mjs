@@ -1,5 +1,6 @@
 import { SHOP } from "../../shared/libraryLinks.mjs";
 import { HD_NAME, BUSINESS_NAME, HD_LINE, COACH_LINE, COACH_COLOR } from "../../shared/footerTheme.mjs";
+import { HINT, hintAttrs } from "../../shared/linkHints.mjs";
 
 // The words and the lavender live in shared/footerTheme.mjs (10/17), so the shop
 // pages carry exactly what the email does. Re-exported for the tests and callers.
@@ -45,8 +46,8 @@ export { HD_NAME, BUSINESS_NAME, HD_LINE, COACH_COLOR };
  * Each column is the name, then one line under it.
  */
 export const COLUMNS = (links, coachColor = COACH_COLOR) => [
-  { href: links.shop ?? SHOP, name: HD_NAME, line: HD_LINE, color: "#c9a227" },
-  { href: links.home, name: BUSINESS_NAME, line: COACHING_LINES[1], color: coachColor },
+  { href: links.shop ?? SHOP, name: HD_NAME, line: HD_LINE, color: "#c9a227", hint: HINT.readings },
+  { href: links.home, name: BUSINESS_NAME, line: COACHING_LINES[1], color: coachColor, hint: HINT.home },
 ];
 
 /** "#3fe0c5" -> "rgba(63,224,197,0.55)" for the thin bar beside each column. */
@@ -78,9 +79,9 @@ const esc = (s) =>
 const RULE = "border-top:1px solid rgba(201,162,39,0.25);padding:18px 0 0;font-size:15px";
 
 const hdLink = (href) =>
-  `<a href="${esc(href)}" style="color:${GOLD};font-weight:600;text-decoration:none">${esc(HD_NAME)}</a>`;
+  `<a href="${esc(href)}" style="color:${GOLD};font-weight:600;text-decoration:none"${hintAttrs(HD_NAME, HINT.readings)}>${esc(HD_NAME)}</a>`;
 const bizLink = (href) =>
-  `<a href="${esc(href)}" style="color:${PAPER};font-weight:600;text-decoration:none">${esc(BUSINESS_NAME)}</a>`;
+  `<a href="${esc(href)}" style="color:${PAPER};font-weight:600;text-decoration:none"${hintAttrs(BUSINESS_NAME, HINT.home)}>${esc(BUSINESS_NAME)}</a>`;
 const under = (words) => `<div style="font-size:14px;color:${MUTED};padding-top:2px">${esc(words)}</div>`;
 
 /**
@@ -97,7 +98,7 @@ function privacyRow(links) {
     wonders what was kept.
   -->
   <tr><td style="padding:10px 0 0;font-size:13px;color:${MUTED}">
-    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline">What we keep, and for how long</a>
+    <a href="${esc(links.privacy)}" style="color:${MUTED};text-decoration:underline"${hintAttrs("What we keep, and for how long", HINT.privacy)}>What we keep, and for how long</a>
   </td></tr>`;
 }
 
@@ -125,10 +126,10 @@ export function emailFooter(option = "A", links, { coachColor = COACH_COLOR } = 
         between two inline blocks would leave.
       */
       const cols = COLUMNS(links, coachColor);
-      const block = ({ href, name, line, color }) =>
+      const block = ({ href, name, line, color, hint }) =>
         `<div style="display:inline-block;vertical-align:top;width:100%;max-width:268px;font-size:15px">
       <div style="border-left:2px solid ${tint(color, 0.55)};padding:0 14px 0 12px;margin:0 0 14px">
-        <a href="${esc(href)}" style="color:${color};font-weight:600;text-decoration:none">${esc(name)}</a>
+        <a href="${esc(href)}" style="color:${color};font-weight:600;text-decoration:none"${hintAttrs(name, hint)}>${esc(name)}</a>
         ${under(line)}
       </div>
     </div>`;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SITE } from "./copy";
+import { HINT, hint } from "../shared/linkHints.mjs";
 import { startCheckout } from "./purchase";
 import MailtoText from "./MailtoText";
 import { PageEnd } from "./FooterTheme";
@@ -290,7 +291,7 @@ export default function ReadingActions({
               navigates to; building the file in the page and handing it to a
               synthetic anchor is more moving parts and it breaks on a phone.
             */
-            <a href={`/api/pdf?t=${encodeURIComponent(token)}`} className={`mt-4 ${PDF_BUTTON}`}>
+            <a href={`/api/pdf?t=${encodeURIComponent(token)}`} {...hint(pdfLabel(tier, pdfPages), HINT.pdf)} className={`mt-4 ${PDF_BUTTON}`}>
               {pdfLabel(tier, pdfPages)}
             </a>
           )}
@@ -347,6 +348,7 @@ function Resource({
     <p>
       <a
         href={href}
+        {...hint(title, href === SITE.bodygraph ? HINT.bodygraph : HINT.library)}
         rel="noreferrer"
         className="font-sans text-[17px] font-semibold text-brand-teal underline decoration-brand-teal/30 underline-offset-4"
       >

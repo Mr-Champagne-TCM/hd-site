@@ -4,6 +4,7 @@ import { Footer, Nav } from "./App";
 import MailtoText from "./MailtoText";
 import { customerText } from "../shared/customerMessages.mjs";
 import { btn, h1 } from "./Returning";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * "EMAIL ME MY CHARTS" (release 2, Jeremy 10/20 "3B"), at /charts/.
@@ -89,7 +90,7 @@ export default function MyChartsPage() {
             </form>
           )}
           <p className="mt-10 text-[15px]">
-            <a href="/" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+            <a href="/" {...hint(MY_CHARTS.back, HINT.readings)} className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
               ← {MY_CHARTS.back}
             </a>
           </p>

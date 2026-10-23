@@ -1,4 +1,5 @@
 import { CENTERS, channelLink, lineLink } from "../shared/libraryLinks.mjs";
+import { hint, libraryHint } from "../shared/linkHints.mjs";
 import Linked, { type ChartFacts } from "./Linked";
 import { markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
@@ -61,7 +62,7 @@ function List({ items, dim, href }: { items: Item[]; dim: boolean; href: (it: It
       {items.map((it) => (
         <li key={it.title + it.name} className="py-3">
           <p className={dim ? "text-[15px]" : "text-[16px]"}>
-            <a href={href(it)} rel="noreferrer" className="font-semibold transition-colors hover:text-brand-teal">
+            <a href={href(it)} {...hint(it.title, libraryHint(it.title))} rel="noreferrer" className="font-semibold transition-colors hover:text-brand-teal">
               <span className={dim ? "text-brand-muted" : "text-brand-gold"}>{it.title}</span>
               {!dim && it.name && it.name !== it.title && <span className="text-brand-paper"> {it.name}</span>}
             </a>

@@ -6,6 +6,7 @@ import CoachCard from "./CoachCard";
 import { marginFields, markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
 import { curly } from "../shared/curlyQuotes.mjs";
+import { HINT, hint, libraryHint } from "../shared/linkHints.mjs";
 
 /**
  * The written interpretation, on the page.
@@ -191,6 +192,7 @@ export default function WrittenReading({
         Every word in it is explained in{" "}
         <a
           href={SITE.hd101}
+          {...hint("The Human Design library", HINT.library)}
           rel="noreferrer"
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
         >
@@ -273,7 +275,7 @@ export function ReadingInOrder({
                       <div key={k}>
                         <dt className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-gold/90">
                           {href ? (
-                            <a href={href} rel="noreferrer" className="transition-colors hover:text-brand-teal">
+                            <a href={href} {...hint(label, libraryHint(label))} rel="noreferrer" className="transition-colors hover:text-brand-teal">
                               {label}
                             </a>
                           ) : (
@@ -327,11 +329,11 @@ export function ReadingInOrder({
       {/* The PDFs' onward note: both free pages, as an invitation. */}
       <p className="text-[15px] leading-relaxed text-brand-muted">
         Every word above is explained in{" "}
-        <a href={LIBRARY} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+        <a href={LIBRARY} {...hint("The Human Design library", HINT.library)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
           The Human Design library
         </a>
         , and the drawing at the top in{" "}
-        <a href={SITE.bodygraph} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+        <a href={SITE.bodygraph} {...hint("Reading your bodygraph", HINT.bodygraph)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
           “Reading your bodygraph.”
         </a>{" "}
         Both are free.

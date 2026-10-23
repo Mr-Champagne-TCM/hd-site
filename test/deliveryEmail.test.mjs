@@ -54,10 +54,17 @@ test("THE RECEIPT'S BUTTON IS JEREMY'S OWN WORDS: 'Enter your birth details'", (
 test("the action is what the button links to, in both emails", () => {
   for (const pending of [true, false]) {
     const { html } = deliveryEmail({ tier: 1, name: "J", url: URL_, links: LINKS, pending });
-    const btn = html.match(/<a href="([^"]+)"[^>]*border-radius:999px">([^<]+)</);
+    const btn = html.match(/<a href="([^"]+)"[^>]*border-radius:999px"( title="[^"]*" aria-label="[^"]*")?>([^<]+)</);
     assert.ok(btn, "no button found");
     assert.equal(btn[1], URL_);
-    assert.equal(btn[2], pending ? "Enter your birth details" : "Open your chart");
+    assert.equal(btn[3], pending ? "Enter your birth details" : "Open your chart");
+    // The link label says where it goes (Jeremy's GO PDF, 10/23: "link labels (hover hints?)").
+    assert.equal(
+      btn[2],
+      pending
+        ? ' title="Opens the page to enter your birth details" aria-label="Enter your birth details (Opens the page to enter your birth details)"'
+        : ' title="Opens your chart" aria-label="Open your chart (Opens your chart)"',
+    );
   }
 });
 
@@ -183,7 +190,9 @@ test("NOTHING IS ATTACHED - the email is a door, not the product", () => {
   for (const body of [html, text]) {
     assert.doesNotMatch(body, /<svg|base64|attachment/i, "the product travelled in the email");
   }
-  assert.ok(html.length < 6000, `html is ${html.length} bytes -- too big to be only a door`);
+  // 7000, was 6000: the link labels (10/23) add a title and an aria-label to each of the email's
+  // eight links, about 0.7 KB. Still far under anything that could carry a chart.
+  assert.ok(html.length < 7000, `html is ${html.length} bytes -- too big to be only a door`);
 });
 
 // --- the voice -------------------------------------------------------------

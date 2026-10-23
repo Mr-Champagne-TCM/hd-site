@@ -1,4 +1,5 @@
 import { footerColumns, PRIVACY_LABEL } from "../shared/footerTheme.mjs";
+import { HINT, hint } from "../shared/linkHints.mjs";
 import { SITE } from "./copy";
 
 /**
@@ -26,7 +27,7 @@ function tint(hex: string, a: number) {
 }
 
 export default function FooterTheme({ privacy = false }: { privacy?: boolean }) {
-  const cols = footerColumns(GOLD) as { href: string; name: string; line: string; color: string }[];
+  const cols = footerColumns(GOLD) as { href: string; name: string; line: string; color: string; hint: string }[];
   return (
     <div data-footer-theme="">
       <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
@@ -34,6 +35,7 @@ export default function FooterTheme({ privacy = false }: { privacy?: boolean }) 
           <div key={c.href} className="pl-3" style={{ borderLeft: `2px solid ${tint(c.color, 0.55)}` }}>
             <a
               href={c.href}
+              {...hint(c.name, c.hint)}
               className="font-sans text-[16px] font-semibold leading-snug no-underline hover:underline"
               style={{ color: c.color }}
             >
@@ -47,6 +49,7 @@ export default function FooterTheme({ privacy = false }: { privacy?: boolean }) 
         <p className="mt-5 text-[14px]">
           <a
             href={SITE.privacy}
+            {...hint(PRIVACY_LABEL, HINT.privacy)}
             className="text-brand-muted underline decoration-brand-muted/40 underline-offset-4 hover:text-brand-teal"
           >
             {PRIVACY_LABEL}

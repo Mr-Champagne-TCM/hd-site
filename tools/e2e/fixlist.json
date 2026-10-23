@@ -884,6 +884,13 @@
       "docs": "^(page|pdf|email|sample) ",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "GO-link-labels",
+      "about": "Jeremy's GO PDF call (10/23): 'Good, lets add link labels (hover hints?)'. Every link that leaves the page (shop pages, the server's message and 404 pages, the emails) has a title and an aria-label in the website's 'Opens …' style (shared/linkHints.mjs): the cut-short page's 'here' says 'Opens Human Design readings'; the someone-new page's '← Back to your chart' says 'Opens the choices for your chart'; the header brand says 'Opens The Champagne Method home page'. No words a reader sees changed, so this entry claims no line: hover text and accessible names are not in the captured page text.",
+      "docs": "^(page|email) ",
+      "minus": [],
+      "plus": []
     }
   ]
 }

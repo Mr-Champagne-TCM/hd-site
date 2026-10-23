@@ -25,6 +25,7 @@ import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
 import { customerText } from "../shared/customerMessages.mjs";
+import { HINT, hint, ownPageHint } from "../shared/linkHints.mjs";
 
 /**
  * The offer page.
@@ -44,7 +45,7 @@ import { customerText } from "../shared/customerMessages.mjs";
  */
 function Wordmark() {
   return (
-    <a href={SITE.home} className="group whitespace-nowrap leading-none">
+    <a href={SITE.home} {...hint("Human Design by The Champagne Method", HINT.home)} className="group whitespace-nowrap leading-none">
       <span className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]">
         Human Design <span className="normal-case">by</span>
       </span>
@@ -69,6 +70,7 @@ export function Nav() {
         <div className="flex w-full shrink-0 items-center gap-5 sm:w-auto">
           <a
             href={SITE.hd101}
+            {...hint(NAV.library, HINT.library)}
             className="whitespace-nowrap font-sans text-[14px] text-brand-muted transition-colors hover:text-brand-teal sm:text-[15px]"
           >
             <span className="sm:hidden">{NAV.libraryShort}</span>
@@ -76,6 +78,7 @@ export function Nav() {
           </a>
           <a
             href={SITE.connect}
+            {...hint(NAV.toCoaching, HINT.connect)}
             className="whitespace-nowrap font-sans text-[14px] text-brand-muted transition-colors hover:text-brand-teal sm:text-[15px]"
           >
             {NAV.toCoaching}
@@ -120,10 +123,10 @@ function WhoMakesThis() {
             {AI_LINE}
           </p>
           <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
-            <a href={WHO_MAKES.myStory} className={linkCls}>
+            <a href={WHO_MAKES.myStory} {...hint("My story", HINT.myStory)} className={linkCls}>
               My story
             </a>
-            <a href={SITE.privacy} className={linkCls}>
+            <a href={SITE.privacy} {...hint("What is sent, and to whom", HINT.privacy)} className={linkCls}>
               What is sent, and to whom
             </a>
           </p>
@@ -176,6 +179,7 @@ function Example() {
         Every word in it is explained in{" "}
         <a
           href={SITE.hd101}
+          {...hint("The Human Design library", HINT.library)}
           className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
         >
           The Human Design library
@@ -225,7 +229,7 @@ function LibraryNote({ sku }: { sku: string }) {
   return (
     <p className="mb-2 mt-2 text-[14px] leading-snug text-brand-teal/90">
       {before}
-      <a href={SITE.hd101} className={linkCls}>
+      <a href={SITE.hd101} {...hint(link, HINT.library)} className={linkCls}>
         {link}
       </a>
       {after}
@@ -243,7 +247,7 @@ function RealLine() {
       </blockquote>
       <figcaption className="mt-2 text-[14px] text-brand-muted">
         {CARDS.stripCaption}{" "}
-        <a href={SITE.readings} className={linkCls}>
+        <a href={SITE.readings} {...hint(CARDS.stripMore, HINT.examples)} className={linkCls}>
           {CARDS.stripMore}
         </a>
       </figcaption>
@@ -366,7 +370,7 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
         the upgrade page; Jeremy 10/20 "4A", fixed here).
       */}
       <p className="mt-4 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
-        <a href={SITE.readings} className={linkCls}>
+        <a href={SITE.readings} {...hint("What each one actually is", HINT.examples)} className={linkCls}>
           What each one actually is
         </a>
         , shown with a real example chart — the summary in full, the bodygraph drawn, and the PDF exactly as it
@@ -380,7 +384,7 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
       {!fresh && (
         <p className="mt-4 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
           {MY_CHARTS.lineLead}{" "}
-          <a href="/charts/" className={linkCls}>
+          <a href="/charts/" {...hint(MY_CHARTS.line, HINT.myCharts)} className={linkCls}>
             {MY_CHARTS.line}
           </a>
         </p>
@@ -454,6 +458,7 @@ export function Resources() {
           <a
             key={item.href}
             href={item.href}
+            {...hint(item.title, item.href === SITE.bodygraph ? HINT.bodygraph : HINT.library)}
             className="group rounded-2xl border border-brand-gold/20 bg-white/[0.03] p-5 transition-colors hover:border-brand-teal/50"
           >
             <span className="inline-block rounded-full border border-brand-teal/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-teal">
@@ -522,6 +527,7 @@ export function Footer({ their = false }: { their?: boolean } = {}) {
             <a
               key={href}
               href={href}
+              {...hint(label, href === SITE.hd101 ? HINT.library : href === SITE.bodygraph ? HINT.bodygraph : href === SITE.connect ? HINT.connect : HINT.privacy)}
               className="text-[15px] text-brand-muted transition-colors hover:text-brand-teal"
             >
               {label}
@@ -690,6 +696,10 @@ function ReturningView({ token }: { token: string }) {
         <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
           <a
             href={back}
+            {...hint(
+              `Back to ${whoseOf(whose)} chart`,
+              data!.pending ? ownPageHint(whoseOf(whose), "chart") : `Opens the choices for ${whoseOf(whose)} chart`,
+            )}
             onClick={(e) => {
               if (data!.pending) return;
               e.preventDefault();
@@ -726,7 +736,11 @@ function ReturningView({ token }: { token: string }) {
             eyebrow={RETURNING.forMe}
             title={`${whoseOf(whose, true)} ${tierWord(data!.tier)}`}
             action={
-              <a href={`/r/${encodeURIComponent(token)}`} className={btn}>
+              <a
+                href={`/r/${encodeURIComponent(token)}`}
+                {...hint(`Open ${whoseOf(whose)} ${tierWord(data!.tier)}`, ownPageHint(whoseOf(whose), tierWord(data!.tier)))}
+                className={btn}
+              >
                 Open {whoseOf(whose)} {tierWord(data!.tier)} →
               </a>
             }
@@ -807,7 +821,7 @@ function ReturningView({ token }: { token: string }) {
         </div>
         {/* "What each one actually is", ONCE on this page (release-1 bug: it was here twice). */}
         <p className="mt-8 max-w-[62ch] text-[16px] leading-relaxed text-brand-paper/85">
-          <a href={SITE.readings} className={linkCls}>
+          <a href={SITE.readings} {...hint("What each one actually is", HINT.examples)} className={linkCls}>
             What each one actually is
           </a>
           , shown with a real example chart.

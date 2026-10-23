@@ -1,4 +1,5 @@
 import { SITE } from "./copy";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * THE KEY UNDER THE CHART, as both PDFs print it (Jeremy 10/16): the four
@@ -37,6 +38,7 @@ export default function ChartKey() {
       <p className="mt-3 border-t border-brand-gold/20 pt-2 text-right text-[14px] text-brand-muted">
         <a
           href={SITE.bodygraph}
+          {...hint("How to read your bodygraph", HINT.bodygraph)}
           rel="noreferrer"
           className="transition-colors hover:text-brand-teal"
         >

@@ -1,4 +1,5 @@
 import { CONTACT } from "./copy";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * A sentence that names the readings address, with the address as a real
@@ -19,6 +20,7 @@ export default function MailtoText({ text, className }: { text: string; classNam
           {i < parts.length - 1 && (
             <a
               href={`mailto:${address}`}
+              {...hint(address, HINT.mail)}
               className={
                 className ?? "text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
               }

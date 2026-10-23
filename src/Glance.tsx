@@ -14,6 +14,7 @@ import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs"
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 import { gateList } from "../shared/gateList.mjs";
+import { hint, libraryHint } from "../shared/linkHints.mjs";
 import { markedFields } from "../shared/timeSpread.mjs";
 import { GatesNote, Tag, measuredSpread } from "./TimeSpread";
 
@@ -118,7 +119,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
               }
             >
               <dt className="flex flex-wrap content-start items-baseline self-start gap-x-2 gap-y-1 pt-[3px] font-sans text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-gold">
-                <a href={href} rel="noreferrer" className={link}>
+                <a href={href} {...hint(label, libraryHint(key))} rel="noreferrer" className={link}>
                   {label}
                 </a>
                 {marked?.has(field) && <Tag className="font-normal" />}
@@ -151,7 +152,7 @@ export default function Glance({ data, says = null, showActivations = false }: P
         {values.map(([label, value, href]) => (
           <div key={label} className="grid gap-1 border-b border-white/[0.06] py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
             <dt className="flex flex-wrap content-start items-baseline self-start gap-x-2 gap-y-1 pt-[3px] font-sans text-[13px] uppercase tracking-[0.1em] text-brand-muted">
-              <a href={href} rel="noreferrer" className={link}>
+              <a href={href} {...hint(label, libraryHint(label))} rel="noreferrer" className={link}>
                 {label}
               </a>
               {marked?.has(valueField[label]) && <Tag />}

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { sep } from "node:path";
 import { importTs } from "./support/ts.mjs";
 import { curly } from "../shared/curlyQuotes.mjs";
 import { MESSAGES } from "../shared/customerMessages.mjs";
@@ -9,13 +10,20 @@ import * as PRICING from "../shared/pricing.mjs";
 import * as GLANCE from "../shared/libraryGlance.mjs";
 import * as SERVER_MECHANICS from "../netlify/lib/mechanics.mjs";
 import { notFoundPage } from "../netlify/lib/notFoundPage.mjs";
+import { HINT, hint, actionHint, libraryHint } from "../shared/linkHints.mjs";
+import { messagePage } from "../netlify/lib/messagePage.mjs";
+import { deliveryEmail } from "../netlify/lib/deliveryEmail.mjs";
+import { myChartsEmail } from "../netlify/lib/myChartsEmail.mjs";
+import { SITE } from "../netlify/lib/siteLinks.mjs";
 
 /**
  * Jeremy's calls on the GO PDF (10/23), round 2 of release-1022:
  *   - "credit idea? - Good, be consistent": the price page says the credit
  *     idea once, not twice;
  *   - "sure, don't mix curly/straight apostrophes": curly, everywhere a buyer
- *     reads the shop's own words.
+ *     reads the shop's own words;
+ *   - "Good, lets add link labels (hover hints?)": every link that leaves the
+ *     page says where it goes.
  */
 
 const copy = await importTs("src", "copy.ts");
@@ -101,5 +109,81 @@ test("the reading's headings stay straight where the checker reads them, curly w
   for (const f of ["../src/WrittenReading.tsx", "../netlify/lib/readingPdf.mjs"]) {
     const s = readFileSync(new URL(f, import.meta.url), "utf8");
     assert.match(s, /curly\((s|h)(\.heading)?\)/, `${f} prints a heading without curly()`);
+  }
+});
+
+/* ---------------------------------------------------------- link labels */
+// Jeremy's GO PDF (10/23): "Good, lets add link labels (hover hints?)". Every link that
+// leaves the page carries a title and an aria-label in the website's "Opens …" style.
+
+test("LINK LABELS: the words, the website's for the destinations both sites name", () => {
+  // Word for word as the website's src/site/linkHints.ts names them (release-1022, 10/23).
+  assert.equal(HINT.readings, "Opens Human Design readings");
+  assert.equal(HINT.home, "Opens The Champagne Method home page");
+  assert.equal(HINT.connect, "Opens the contact section on the home page");
+  assert.deepEqual(hint("here", HINT.readings), { title: "Opens Human Design readings", "aria-label": "here (Opens Human Design readings)" });
+  assert.equal(actionHint("Open your reading"), "Opens your reading");
+  assert.equal(actionHint("Enter their birth details"), "Opens the page to enter their birth details");
+  assert.equal(libraryHint("Sacral"), "Opens Sacral in the Human Design library");
+  for (const [k, v] of Object.entries(HINT)) {
+    assert.match(v, /^(Opens|Downloads) /, `${k} is not in the "Opens …" style`);
+    assert.doesNotMatch(v, /\.$/, `${k} ends with a full stop (the website's do not)`);
+    assert.ok(!straight(v), `${k} has a straight quote`);
+  }
+});
+
+test("LINK LABELS on every link in the page's source that leaves the page", () => {
+  const dir = new URL("../src/", import.meta.url);
+  const files = readdirSync(dir, { recursive: true }).filter((f) => /\.tsx$/.test(f));
+  const bare = [];
+  let seen = 0;
+  for (const f of files) {
+    const src = readFileSync(new URL(f.split(sep).join("/"), dir), "utf8");
+    for (const m of src.matchAll(/<a\b[\s\S]*?<\/a>/g)) {
+      seen += 1;
+      const tag = m[0];
+      // Links that stay on the page (#start-here, #add-time) do not leave it.
+      if (/href="#|href=\{ADD_TIME_HASH\}/.test(tag)) continue;
+      if (!/\{\.\.\.hint\(/.test(tag)) bare.push(`${f}: ${tag.slice(0, 120).replace(/\s+/g, " ")}`);
+    }
+  }
+  assert.ok(seen >= 40, `only ${seen} links found: the scan stopped finding them`);
+  assert.deepEqual(bare, []);
+});
+
+test("LINK LABELS the GO PDF named: the cut-short page's 'here', the way back from someone new, the header brand", () => {
+  const read = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
+  // "The readings, and what each one includes, are here." -- "here" opens the readings' front page.
+  assert.match(read("ReadingPage.tsx"), /href="\/"\s*\{\.\.\.hint\("here", HINT\.readings\)\}/);
+  // "← Back to your chart" goes to the CHOICE page (or, before the buyer's own details, their chart's page).
+  const app = read("App.tsx");
+  assert.match(app, /href=\{back\}\s*\{\.\.\.hint\(\s*`Back to \$\{whoseOf\(whose\)\} chart`,\s*data!\.pending \? ownPageHint\(whoseOf\(whose\), "chart"\) : `Opens the choices for \$\{whoseOf\(whose\)\} chart`,/);
+  // The header brand goes to the coaching home, and says so.
+  assert.match(app, /<a href=\{SITE\.home\} \{\.\.\.hint\("Human Design by The Champagne Method", HINT\.home\)\}/);
+});
+
+/** Every <a> in an HTML string: its attributes and its words. */
+const anchors = (html) =>
+  [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].map((m) => ({ attrs: m[1], words: m[2].replace(/<[^>]+>/g, "").trim() }));
+
+test("LINK LABELS on the server's pages and in the emails: every link, title + aria-label starting with its words", () => {
+  const docs = {
+    "404": notFoundPage(),
+    "message page": messagePage({ heading: "x", message: `y ${SITE.contact} z`, back: "/r/abc" }),
+    "ready email": deliveryEmail({ tier: 2, name: "J", url: "https://x.test/r/a.b", links: SITE }).html,
+    "receipt email": deliveryEmail({ tier: 1, name: "J", url: "https://x.test/r/a.b", links: SITE, pending: true, amountCents: 1111, paidAt: Date.UTC(2026, 9, 17) }).html,
+    "someone-else email": deliveryEmail({ tier: 0, name: "J", chartName: "Quinn", url: "https://x.test/r/a.b", links: SITE, someoneNew: true, pending: true }).html,
+    "my charts email (none)": myChartsEmail({ charts: [], links: SITE, origin: "https://x.test" }).html,
+  };
+  for (const [name, html] of Object.entries(docs)) {
+    const list = anchors(html);
+    assert.ok(list.length >= 3, `${name}: only ${list.length} links`);
+    for (const a of list) {
+      const title = /\btitle="([^"]*)"/.exec(a.attrs)?.[1];
+      const aria = /\baria-label="([^"]*)"/.exec(a.attrs)?.[1];
+      assert.ok(title && /^(Opens|Downloads) /.test(title), `${name}: "${a.words}" has no "Opens …" title`);
+      assert.ok(aria && aria.startsWith(a.words), `${name}: "${a.words}" aria-label does not start with its words: ${aria}`);
+      assert.ok(aria.endsWith(`(${title})`), `${name}: "${a.words}" aria-label does not name where it goes`);
+    }
   }
 });

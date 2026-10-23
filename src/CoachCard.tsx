@@ -1,4 +1,5 @@
 import { COACH } from "../shared/readingCopy.mjs";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * FIX 10B (Jeremy 10/19): the coaching card at the end of the reading, on the
@@ -21,6 +22,7 @@ export default function CoachCard() {
         <p className="mt-1 max-w-[52ch] text-[16px] leading-relaxed text-brand-paper/85">{COACH.body}</p>
         <a
           href={COACH.url}
+          {...hint(COACH.link, HINT.connect)}
           className="mt-4 inline-block rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] shadow-lg shadow-brand-teal/25 transition-all duration-200 hover:-translate-y-0.5"
         >
           {COACH.link} →

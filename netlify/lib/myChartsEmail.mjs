@@ -3,6 +3,7 @@ import { emailFooter } from "./emailFooter.mjs";
 import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
 import { receiptDate } from "./deliveryEmail.mjs";
+import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
 
 /**
  * THE "EMAIL ME MY CHARTS" EMAIL (release 2, Jeremy 10/20), two ways:
@@ -33,12 +34,12 @@ const PANEL = "#241a4e";
 const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function button(href, text, { small = false } = {}) {
+function button(href, text, { small = false, where = actionHint(text) } = {}) {
   const pad = small ? "11px 24px" : "15px 30px";
   const size = small ? "16px" : "17px";
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0">
   <tr><td align="center" bgcolor="${TEAL}" style="border-radius:999px">
-    <a href="${esc(href)}" style="display:inline-block;padding:${pad};font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:${size};font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px">${esc(text)}</a>
+    <a href="${esc(href)}" style="display:inline-block;padding:${pad};font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:${size};font-weight:700;color:#0d1b1a;text-decoration:none;border-radius:999px"${hintAttrs(text, where)}>${esc(text)}</a>
   </td></tr>
 </table>`;
 }
@@ -147,7 +148,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
   ${lead.map((l) => row(esc(l), "0 0 16px", `font-size:17px;color:${PAPER}`)).join("\n  ")}
   ${
     none
-      ? row(button(askPage, "Email me my charts"), "0 0 26px")
+      ? row(button(askPage, "Email me my charts", { where: HINT.myCharts }), "0 0 26px")
       : cards
           .map(
             (c) => `<tr><td style="padding:0 0 12px">
@@ -159,16 +160,16 @@ export function myChartsEmail({ charts = [], links, origin }) {
   </td></tr>`,
           )
           .join("\n  ") +
-        `\n  ${row(`${esc(fresh.replace(/ or ask again on the Email me my charts page\.$/, ""))} or ask again on the <a href="${esc(askPage)}" style="color:${TEAL};text-decoration:underline">Email me my charts</a> page.`, "4px 0 22px", `font-size:15px;color:${MUTED}`)}`
+        `\n  ${row(`${esc(fresh.replace(/ or ask again on the Email me my charts page\.$/, ""))} or ask again on the <a href="${esc(askPage)}" style="color:${TEAL};text-decoration:underline"${hintAttrs("Email me my charts", HINT.myCharts)}>Email me my charts</a> page.`, "4px 0 22px", `font-size:15px;color:${MUTED}`)}`
   }
 
   ${row("Start a new chart", "0 0 6px", small)}
   ${row(esc(startLine), "0 0 10px", `font-size:16px;color:${PAPER}`)}
-  ${row(`<a href="${esc(startNew)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:underline">Start a new chart</a>`, "0 0 24px")}
+  ${row(`<a href="${esc(startNew)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:underline"${hintAttrs("Start a new chart", HINT.readings)}>Start a new chart</a>`, "0 0 24px")}
 
   ${row(esc(keep), "0 0 14px", `font-size:15px;color:${MUTED}`)}
   <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">If anything here is unclear,
-    <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline">${esc(links.contact)}</a>
+    <a href="mailto:${esc(links.contact)}" style="color:${TEAL};text-decoration:underline"${hintAttrs(links.contact, HINT.mail)}>${esc(links.contact)}</a>
     reaches Jeremy directly.</td></tr>
 
   ${end.html}

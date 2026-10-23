@@ -62,9 +62,12 @@ test("the reading page ends with the theme and the privacy line, in every state"
 
 test("the plain message page (e.g. a PDF that could not be made) ends with the theme", () => {
   const html = messagePage({ heading: "x", message: "y", back: "/r/abc" });
-  assert.ok(html.includes(`<a href="${HD_URL}" style="color:#E8CBA0">${HD_NAME}</a>`));
-  assert.ok(html.includes(`<a href="${COACH_URL}" style="color:${COACH_COLOR}">${BUSINESS_NAME}</a>`));
-  assert.ok(html.includes(`<a href="${SITE.privacy}">${PRIVACY_LABEL}</a>`));
+  // Each link with its label (Jeremy's GO PDF, 10/23: "link labels (hover hints?)").
+  const label = (name, where) => ` title="${where}" aria-label="${name} (${where})"`;
+  assert.ok(html.includes(`<a href="${HD_URL}" style="color:#E8CBA0"${label(HD_NAME, "Opens Human Design readings")}>${HD_NAME}</a>`));
+  assert.ok(html.includes(`<a href="${COACH_URL}" style="color:${COACH_COLOR}"${label(BUSINESS_NAME, "Opens The Champagne Method home page")}>${BUSINESS_NAME}</a>`));
+  assert.ok(html.includes(`<a href="${SITE.privacy}"${label(PRIVACY_LABEL, "Opens the privacy page")}>${PRIVACY_LABEL}</a>`));
+  assert.ok(html.includes(`<a class="back" href="/r/abc"${label("Back to your reading", "Opens your reading")}>Back to your reading</a>`));
   assert.ok(html.indexOf("<footer") > html.indexOf('class="back"'), "the footer comes after the way back");
 });
 
@@ -73,7 +76,7 @@ test("the shop's 404 is the shop's own page, with the theme (was Netlify's)", ()
   const html = notFoundPage();
   assert.match(html, /<h1>This page isn’t here<\/h1>/);
   assert.match(html, /<title>This page isn’t here — /);
-  assert.match(html, /<a class="back" href="\/">The readings<\/a>/);
+  assert.match(html, /<a class="back" href="\/" title="Opens Human Design readings" aria-label="The readings \(Opens Human Design readings\)">The readings<\/a>/);
   assert.match(html, /<footer class="tf">/);
   assert.doesNotMatch(html, /netlify/i);
 });

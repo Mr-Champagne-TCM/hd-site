@@ -19,6 +19,7 @@ import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
 import { ConfirmKept, ReadingNotes } from "./Returning";
 import { TimeNote } from "./TimeSpread";
 import { AddTimeForm, AddTimeNotice, useAddTimeHash } from "./AddTime";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * What a delivery link opens.
@@ -272,6 +273,7 @@ export default function ReadingPage({ token }: { token: string }) {
               If it still does not appear,{" "}
               <a
                 href={`mailto:${CONTACT}`}
+                {...hint(CONTACT, HINT.mail)}
                 className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
               >
                 {CONTACT}
@@ -286,6 +288,7 @@ export default function ReadingPage({ token }: { token: string }) {
               If this link came with a purchase,{" "}
               <a
                 href={`mailto:${CONTACT}`}
+                {...hint(CONTACT, HINT.mail)}
                 className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
               >
                 {CONTACT}
@@ -296,6 +299,7 @@ export default function ReadingPage({ token }: { token: string }) {
               The readings, and what each one includes, are{" "}
               <a
                 href="/"
+                {...hint("here", HINT.readings)}
                 className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
               >
                 here
@@ -318,6 +322,7 @@ export default function ReadingPage({ token }: { token: string }) {
               If that does not reach you,{" "}
               <a
                 href={`mailto:${CONTACT}`}
+                {...hint(CONTACT, HINT.mail)}
                 className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
               >
                 {CONTACT}
@@ -449,7 +454,11 @@ export default function ReadingPage({ token }: { token: string }) {
       */}
       {reading.tier >= 1 && !reading.writing && (
         <div className="mt-6">
-          <a href={`/api/pdf?t=${encodeURIComponent(token)}`} className={`block w-full sm:w-auto ${PDF_BUTTON}`}>
+          <a
+            href={`/api/pdf?t=${encodeURIComponent(token)}`}
+            {...hint(pdfLabel(reading.tier, reading.pdfPages), HINT.pdf)}
+            className={`block w-full sm:w-auto ${PDF_BUTTON}`}
+          >
             {pdfLabel(reading.tier, reading.pdfPages)}
           </a>
           <p className="mt-2 text-[14px] text-brand-muted">

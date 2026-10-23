@@ -6,6 +6,7 @@ import { correctionNote, grownNote } from "../shared/correctionNote.mjs";
 import MailtoText from "./MailtoText";
 import { customerText } from "../shared/customerMessages.mjs";
 import { Tag } from "./TimeSpread";
+import { HINT, hint } from "../shared/linkHints.mjs";
 
 /**
  * THE RETURNING BUYER (release 2), the pieces more than one page uses:
@@ -167,7 +168,7 @@ export function CalmNote({
       {body && <p className="mt-3 text-[16px] leading-relaxed text-brand-paper/90">{body}</p>}
       {learn && (
         <p className="mt-3 text-[15px]">
-          <a href={learn.href} rel="noreferrer" className={linkCls}>
+          <a href={learn.href} {...hint(learn.label, HINT.library)} rel="noreferrer" className={linkCls}>
             {learn.label}
           </a>
         </p>
@@ -300,7 +301,7 @@ export function ConfirmKept({
         <button type="button" onClick={onChange} className={btnQuiet}>
           {RETURNING.changeDetail}
         </button>
-        <a href={`/u/${encodeURIComponent(token)}#new`} className={btnQuiet}>
+        <a href={`/u/${encodeURIComponent(token)}#new`} {...hint(RETURNING.startNew, HINT.someoneNew)} className={btnQuiet}>
           {RETURNING.startNew}
         </a>
       </div>
@@ -327,7 +328,7 @@ export function SomeoneElseSection({ token }: { token: string }) {
     <section>
       <h2 className="font-display text-[20px] font-medium text-brand-paper">{RETURNING.someoneElseHeading}</h2>
       <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">{RETURNING.someoneElseBody}</p>
-      <a href={`/u/${encodeURIComponent(token)}#new`} className={"mt-4 " + btnQuiet}>
+      <a href={`/u/${encodeURIComponent(token)}#new`} {...hint(RETURNING.startNew, HINT.someoneNew)} className={"mt-4 " + btnQuiet}>
         {RETURNING.startNew}
       </a>
     </section>

@@ -1,4 +1,5 @@
 import { linkedRuns } from "../shared/readingTerms.mjs";
+import { hint, libraryHint } from "../shared/linkHints.mjs";
 
 /**
  * FIX 7 (Jeremy 10/19): "make the words clickable and they land in the right
@@ -25,6 +26,7 @@ export default function Linked({ text, chart }: { text: string; chart: ChartFact
           <a
             key={i}
             href={r.href}
+            {...hint(r.text, libraryHint(r.text))}
             rel="noreferrer"
             className="underline decoration-brand-teal/50 decoration-1 underline-offset-[3px] transition-colors hover:text-brand-teal hover:decoration-brand-teal"
           >
