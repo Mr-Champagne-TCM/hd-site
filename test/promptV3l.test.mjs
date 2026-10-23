@@ -201,19 +201,19 @@ test("PLACEHOLDERS: re-asked like a refusal, and filed as its own kind so health
 
 /* ---------------------------------------------------------- every node of the form */
 
-test("THE FORM: every object, list, number and text slot says in rules what goes in it; no 'never these' notes", () => {
+test("THE FORM (10/23 live A/B): notes on the text slots only, none on an object, list or number; the try-this note keeps 'Words of your own, never these.'", () => {
+  const noted = [];
   const bare = [];
   const walk = (o, path) => {
-    if (!o?.description) bare.push(path || "(root)");
+    if (o.type === "STRING" ? !o.description : o.description) (o.type === "STRING" ? bare : noted).push(path || "(root)");
     if (o.type === "OBJECT") for (const [k, v] of Object.entries(o.properties)) walk(v, path ? `${path}.${k}` : k);
     if (o.type === "ARRAY") walk(o.items, `${path}[]`);
   };
   walk(READING_SCHEMA, "");
-  assert.deepEqual(bare, []);
-  for (const note of schemaNotes()) {
-    assert.doesNotMatch(note, /never these|of your own|never wording|e\.g\. "\(/i, note);
-    assert.doesNotMatch(note, /\b(?:You|Your)\b [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+/, `a sentence to copy: ${note}`);
-  }
+  assert.deepEqual(noted, [], "a note on an object, list or number brought the \"string\" forms back (4 of 6 asks)");
+  assert.deepEqual(bare, [], "every text slot says what goes in it");
+  assert.match(READING_SCHEMA.properties.takeaways.items.description, /Words of your own, never these\.$/);
+  for (const note of schemaNotes()) assert.doesNotMatch(note, /\b(?:You|Your)\b [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+/, `a sentence to copy: ${note}`);
 });
 
 /* -------------------------------------------------------------- all of it, in gemini.mjs */
@@ -332,4 +332,49 @@ test("TRY-THIS MONEY: a line set in money is refused; an errand with a purchase 
   assert.match(takeawayProblem(four(budget)), /set in money \("budget"\)/);
   const errand = "(Splenic authority) This week, when a small purchase catches your eye on an errand, you might wait until tomorrow before buying it. Notice how the pull shifts, so that pause is familiar when a friend proposes a trip.";
   assert.equal(takeawayProblem(four(errand)), null);
+});
+
+/* ------------------------------------------------------------- the 10/23 live rounds */
+
+test("ROUND 10/23: the facts name the other types' words in every form; 'successfully' is not a feeling; the strategy label is not a phrase", async () => {
+  const { structuredFacts } = await import("../netlify/lib/structured.mjs");
+  const { nearMissProblem } = await import("../netlify/lib/interpretation.mjs");
+  assert.match(structuredFacts({ type: "Manifestor" }), /must not appear anywhere in this reading, in any form: satisfaction, satisfied, satisfying; frustration, frustrated, frustrating; success, successful; bitterness, bitter; surprise, surprised, surprising; disappointment, disappointed, disappointing\./);
+  assert.match(structuredFacts({ type: "Generator" }), /in any form: peace, peaceful; anger, angry; success, successful;/);
+  const track = (p) => `${INTERPRETATION[5]}\n\n${p}\n`;
+  assert.equal(nearMissProblem(track("Your on-track feeling of peace arrives whenever your clear communications successfully remove friction."), "Manifestor"), null);
+  assert.match(nearMissProblem(track("You feel successful when your plans land."), "Manifestor"), /a form of another type's word Success/);
+  assert.match(slipProblem(section("Because your strategy is wait to respond, you thrive.")), /says "strategy is wait" in "How you meet the world", a known slip/);
+  assert.match(slipProblem(section("Your strategy of wait for the invitation guides you.")), /"strategy of wait"/);
+  assert.equal(slipProblem(section("Your strategy is to inform before acting, and waiting to respond is a Generator's.")), null);
+});
+
+test("ROUND 10/23: a particle, contrasting modifiers, an and / or pairing and a type name are not a word said twice; money words named in the facts", async () => {
+  const { structuredFacts } = await import("../netlify/lib/structured.mjs");
+  for (const p of [
+    "Your inner compass shows whether you are on track or off track today.",
+    "Every emotional wave brings high points and low points that color your view.",
+    "You process mental concepts and conceptual frameworks by absorbing what others think.",
+    "Meeting the world as a Projector involves projecting your focused awareness outward.",
+  ]) assert.equal(doubledWordProblem(section(p)), null, p);
+  assert.match(doubledWordProblem(section("You bring a resilient resilience to hard days.")), /a slip/);
+  assert.match(structuredFacts({ type: "Generator" }), /\nNever in a try-this line, in any form: money, finances, financial, budget, bills, expenses\.\n/);
+});
+
+test("READ IN THE v3s READINGS (10/23): the same word twice in a row, 'acknowledgement', 'The next time when' are refused", async () => {
+  const { spellingProblem } = await import("../netlify/lib/interpretation.mjs");
+  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
+  assert.match(doubledWordProblem(section("Your Mental authority processes choices through talking things out with trusted trusted environments.")), /says a word twice in "How you meet the world", a slip: "\.\.\.[^"]*with trusted trusted environments/);
+  assert.match(doubledWordProblem(four("(Profile Profile 6/2) The next time you retreat at home, you might rest. Notice what returns, so the habit is familiar when a friend calls.")), /"\(Profile Profile 6\/2\)/);
+  assert.match(doubledWordProblem(four("(Sacral center center) This week, when a friend calls, you might wait for your gut. Notice the sound, so it is familiar when plans change.")), /a slip/);
+  for (const p of [
+    "Notice which physical sensations tell you you have done enough.",
+    "You notice that that pause helps.",
+    "By evening you had had enough of the noise.",
+  ]) assert.equal(doubledWordProblem(section(p)), null, p);
+  assert.match(spellingProblem(section("Bitterness shows up when forcing action without proper acknowledgement.")), /spells "acknowledgement" the UK way/);
+  assert.match(spellingProblem(section("You trust your own judgement.")), /"judgement"/);
+  assert.equal(spellingProblem(section("You trust your own judgment and welcome acknowledgment.")), null);
+  assert.match(slipProblem(four("(Profile 4/6) The next time when greeting neighbors at the front gate, you might watch. Notice the flow, so it is familiar when a friend visits.")), /says "The next time when" in "Things to experiment with", a known slip/);
+  assert.equal(slipProblem(four("(Profile 4/6) The next time you greet neighbors at the front gate, you might watch. Notice the flow, so it is familiar when a friend visits.")), null);
 });
