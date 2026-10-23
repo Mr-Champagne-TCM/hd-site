@@ -985,6 +985,167 @@
       "docs": "^(page|pdf|email) ",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "CF1023-S1",
+      "about": "10/23 verbatim read S1: the 'Open' buttons in 'Your Human Design charts, with fresh links' (myChartsEmail.mjs) carried title 'Opens the page to open' (actionHint read the bare word 'Open'). Each now names the page it opens, in the card's own words: 'Opens Uma’s reading', 'Opens their chart', 'Opens your summary' (title + aria-label only; the words a reader sees are unchanged, so this entry claims no line).",
+      "docs": "^email my-charts \\| ",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "CF1023-S2",
+      "about": "10/23 verbatim read S2: the add-time form said only 'A note that the time was unknown before stays with this chart'; retimeReading (reading.mjs) keeps the details as they were, the chart made from them and, on the reading tier, its written reading. The line now says exactly that, per tier (timeSpread.mjs ADD_TIME.privacy), as the privacy page's 'Earlier details' row does.",
+      "docs": "^page [a-zA-Z0-9]+-\\d-add-time-t\\d(-[a-z0-9-]+)?$",
+      "minus": [],
+      "plus": [
+        "^Your earlier details, and the (summary|chart|chart and reading) made from them, stay with this (summary|chart), seen only by Jeremy, in case you ever write in about them\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-N1",
+      "about": "10/23 verbatim read N1: the 'Birth time added' note said what stayed the same after its closing sentence ('...written for your chart as it is now. Your Type and Authority are the same.'). It now says it beside what moved, before the close (correctionNote.mjs, time-added only).",
+      "docs": "^page add[A-Za-z]+-\\d-[a-z-]+-t\\d(-[a-z0-9-]+)?$",
+      "minus": [],
+      "plus": [
+        "^Of your Type, Profile and Authority, (one|two) came out differently: .+\\. Your (Type|Profile|Authority)( and (Type|Profile|Authority))? (is|are) the same\\.( Your [a-z, ]+ changed too\\.)? That follows from your birth time — nothing went wrong, and everything below is written for your (chart|summary) as it is now\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-S4",
+      "about": "10/23 verbatim read S4 (Jeremy on the credit idea: 'Good, be consistent'): one sentence everywhere, 'What you have already paid comes off what you pay next — nobody pays twice for the same thing.' The offer page's note said 'goes toward whatever you choose next, so nobody pays twice…'; the ready emails 'comes off the price there — …'; the chart PDF's page 3 'comes off the price, and the link in your email is what proves it — … Nobody pays twice…'; the website's readings page '…, and the link in your email is what proves it'. The emails, page 3 and the website keep their second sentence (the link proves it). With N29: a gift's ready email offers the next step 'on the chart’s page', not 'on your page' under 'Open their chart'. The chart and summary pages already said it this way. Page 3's paragraph re-wraps (section); the website's sample PDFs carry page 3 too.",
+      "docs": "^(page (offer|web-readings)|email .*|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t[012] p\\d+|sample /samples/(the-chart|charts/example-chart-[a-z]+)\\.pdf\\.p[123])$",
+      "minus": [
+        "^Start with the summary and move up later, or go straight to the reading: the total is identical either way\\. What you have already paid comes off what you pay next, and the link in your email is what proves it — so opening the next step from there means the credit is already on the price\\.$"
+      ],
+      "plus": [
+        "^Straight to the reading, or a step at a time — the total is identical either way\\. What you have already paid comes off what you pay next — nobody pays twice for the same thing\\.$",
+        "^The (chart|reading) contains .+ It is offered on (your page|the chart’s page), and what you have already paid comes off what you pay next — nobody pays twice for the same thing\\.$",
+        "^Start with the summary and move up later, or go straight to the reading: the total is identical either way\\. What you have already paid comes off what you pay next — nobody pays twice for the same thing\\. The link in your email is what proves it, so opening the next step from there means the credit is already on the price\\.$"
+      ],
+      "sections": [
+        {
+          "from": "^IF YOU WOULD LIKE MORE THAN THIS (SUMMARY|CHART)$",
+          "to": "^(Talk it through with Jeremy$|The Champagne Method Coaching and Consulting · )"
+        }
+      ]
+    },
+    {
+      "id": "CF1023-S5",
+      "about": "10/23 verbatim read S5: the offer page and the someone-new price page said 'comes close to a full reading' on two cards. It stays on the summary's card; the chart's card says 'Every word on it is explained in the free Human Design library.' (the site's own words for the library link).",
+      "docs": "^page (offer|[a-zA-Z0-9]+-\\d-someone-new-t\\d-tiers)$",
+      "minus": [
+        "^Read alongside the free Human Design library, it comes close to a full reading\\.$"
+      ],
+      "plus": [
+        "^Every word on it is explained in the free Human Design library\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-N3-N4-N5-N6",
+      "about": "10/23 verbatim read nits on the shop's fixed words: N3 the error lines say the readings are 'on the front page' (as the 404 does; 'home page' is the coaching site's hover word); N4 the privacy sentence drops 'entered here' (the upgrade's check page shows it, and nothing is typed there); N5 the choice page's chart line 'Your bodygraph drawn, and its PDF to keep.' punctuated as the reading's 'Your bodygraph drawn, all twenty-six…'; N6 the form says 'Three things' twice, not three times ('All that’s needed is the date, the place and the time if it is known.'), one comma style.",
+      "docs": "^page ",
+      "minus": [
+        "^The name and birth details entered here are kept with this chart for a year, so it can show whose chart it is and when and where they were born — and so going a step further later never means typing them again\\. Your email always brings you back to it\\.$",
+        "^Three things are needed: the date, the place, and the time if it is known\\. An unknown time is welcome — "
+      ],
+      "plus": [
+        "are on the front page whenever you’d like them\\.$",
+        "^The name and birth details are kept with this chart for a year, so it can show whose chart it is and when and where they were born — and so going a step further later never means typing them again\\. Your email always brings you back to it\\.$",
+        "^Your bodygraph drawn, and its PDF to keep\\.$",
+        "^All that’s needed is the date, the place and the time if it is known\\. An unknown time is welcome — "
+      ]
+    },
+    {
+      "id": "CF1023-N9",
+      "about": "10/23 verbatim read N9: 'explained in The Human Design library' (a capital The mid-sentence) on the pages, the PDF's onward note (shop readingPdf.mjs and the phone's PdfExport.kt, word for word) and the website's samples. Now 'the Human Design library'; the PDF's link covers the words as printed. A narrower t may move the note's line break, so its continuation lines are named too.",
+      "docs": "^(page [a-zA-Z0-9-]+|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t[012] p\\d+|sample /samples/(the-chart|charts/example-chart-[a-z]+)\\.pdf\\.p[123])$",
+      "minus": [
+        "^Every word in it is explained in The Human Design library, free\\.$",
+        "^Every word above is explained in The Human Design library, and the drawing at the top in “Reading your bodygraph\\.” Both are free\\.$",
+        "^Every word (above|on page 2) is explained in The Human Design library, and the drawing on page 1 in “Reading your( bodygraph\\.” Both are)?$"
+      ],
+      "plus": [
+        "^Every word in it is explained in the Human Design library, free\\.$",
+        "^Every word above is explained in the Human Design library, and the drawing at the top in “Reading your bodygraph\\.” Both are free\\.$",
+        "^Every word (above|on page 2) is explained in the Human Design library, and the drawing on page 1 in “Reading your( bodygraph\\.”( Both are( free:)?)?)?$",
+        "^(bodygraph\\.” )?(Both are )?free: thechampagnemethod\\.co/library/human-design( and thechampagnemethod\\.co/library/bodygraph\\.)?$",
+        "^(and )?thechampagnemethod\\.co/library/bodygraph\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-N11",
+      "about": "10/23 verbatim read N11: an undefined Spleen's one-liner said 'sensitive to how others feel, physically and emotionally' ('emotionally' is the Solar Plexus). HD-Library-Work content/centers.json now says 'in body and health'; the website's data.ts, the shop's libraryGlance.mjs (regenerated) and the phone's LibraryGlance.kt follow, word for word.",
+      "docs": "^(page [a-zA-Z0-9-]+|pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t[012] p\\d+|sample /samples/(the-chart|charts/example-chart-[a-z]+)\\.pdf\\.p[123])$",
+      "minus": [
+        "^You’re sensitive to how others feel, physically and emotionally\\.( You can sense when someone is unwell\\.)?$"
+      ],
+      "plus": [
+        "^You’re sensitive to how others feel, in body and health\\.( You can sense when someone is unwell\\.)?$"
+      ]
+    },
+    {
+      "id": "CF1023-N13",
+      "about": "10/23 verbatim read N13: the library's Manifesting Generator summary said 'a colored-in Sacral linked to the Throat by a motor' (the Sacral is itself a motor). HD-Library-Work content/types.json and data.ts now say 'a colored-in Sacral and a motor connected to the Throat', parallel to the Manifestor's 'a motor connected to the Throat but no colored-in Sacral'.",
+      "docs": "^page web-library-human-design$",
+      "minus": [
+        "^Manifesting Generators have a colored-in Sacral linked to the Throat by a motor\\. "
+      ],
+      "plus": [
+        "^Manifesting Generators have a colored-in Sacral and a motor connected to the Throat\\. "
+      ]
+    },
+    {
+      "id": "CF1023-S3-S7",
+      "about": "10/23 verbatim read S3 + S7, the website's privacy page: the lead names the fourth change, adding a birth time later (October 23, 2026), and the callout says it plainly with the first three (what retimeReading keeps, seen only by Jeremy); 'After a year your reading is gone. If you want to keep it, download the PDF' (a command, and a summary has no PDF) now says the chart and the reading come with a PDF that is yours to keep. 'Last updated October 23, 2026.' stays (GO-call1-privacy). On release day the rig masks the new date as <today>, as it does the 'Last updated' line (W9).",
+      "docs": "^page web-readings-privacy$",
+      "minus": [
+        "^After a year your reading is gone\\. If you want to keep it, download the PDF — that copy is yours and lives on your own device\\.$"
+      ],
+      "plus": [
+        "^The birth details changed on October 16, 2026, the name for the chart on October 19, 2026, the summary keeping them too on October 20, 2026, and adding a birth time later on (October 23, 2026|<today>), so they come first\\. Everything below is the ordinary detail\\.$",
+        "^If your chart was made without a birth time, you’re welcome to add it later, once and free\\. Your earlier details, and the chart \\(and reading\\) made from them, stay with your chart for its year, seen only by Jeremy\\.$",
+        "^After a year your chart is gone from here\\. The chart and the reading come with a PDF that is yours to keep — that copy lives on your own device\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-S6",
+      "about": "10/23 verbatim read S6 + N9, the website's 'Reading your bodygraph': 'Going further' named 'the readings that go deeper than one page' and left the notes with nowhere to go. Now '…the experiments, the library, and the readings — starts with the Human Design library. You’re welcome to bring your notes to a free conversation.', the last words a link to the home page's contact section.",
+      "docs": "^page web-library-bodygraph$",
+      "minus": [],
+      "plus": [
+        "^Going further\\. One week tells you whether this is real for you\\. If it is, the rest of the work — the experiments, the library, and the readings — starts with the Human Design library\\. You’re welcome to bring your notes to a free conversation\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-S8",
+      "about": "10/23 verbatim read S8 (10/22 read B8, 'Commands at the reader'; Jeremy's GO PDF: 'good, bring into our voice'): the Human Design library's 'How this works' step 2 ended 'A reading names yours. Get yours!' (locked call 9). It ends 'A reading names yours, if you’d like it.', the link on 'A reading'. The ledger (HD-Library-Locked-Calls.md) records call 9 as changed.",
+      "docs": "^page web-library-human-design$",
+      "minus": [
+        "^You have one type, one profile, a handful of channels\\. A reading names yours\\. Get yours!$"
+      ],
+      "plus": [
+        "^You have one type, one profile, a handful of channels\\. A reading names yours, if you’d like it\\.$"
+      ]
+    },
+    {
+      "id": "CF1023-readings-site",
+      "about": "10/23 verbatim read N2 + N17, the readings site's add-time form (hd-reading-app hosting/netlify/lib/addtime.mjs): 'A short pause' said 'pausing for a few minutes' where the day's cap of 20 tries can mean hours ('for a while' now); the time box had no visible label ('Time of birth' over it now, as the shop's form has). The rig drives only the readings site's unknown-link page, so these lines are claimed in case it ever captures the form.",
+      "docs": "^page readings-site",
+      "minus": [
+        "^There have been a few tries from here in a short time, so this page is pausing for a few minutes\\. "
+      ],
+      "plus": [
+        "^Time of birth$",
+        "^There have been a few tries from here in a short time, so this page is pausing for a while\\. "
+      ]
+    },
+    {
+      "id": "CF1023-N19",
+      "about": "10/23 verbatim read N19: on a phone, the three-lines box could open a line with a lone '·' before 'Profile 6/2'. A no-break space now keeps the dot behind the label (or its PROVISIONAL tag); the value stays whole. Spacing only: no line's words change, so this entry claims none.",
+      "docs": "^page ",
+      "minus": [],
+      "plus": []
     }
   ]
 }
