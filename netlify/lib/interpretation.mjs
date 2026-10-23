@@ -448,6 +448,33 @@ export function spellingProblem(raw) {
 const SOFT_OPENER = /^(notice|watch|observe|pay attention)\b/i;
 // ", so the pause is familiar when ...", or as one approved line has it, ", which is practice for when ...".
 const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
+/**
+ * THE FOUR ENDINGS VARY, AND EACH NAMES A REAL SITUATION (10/23). A size word is
+ * Jeremy's own shape -- his locked tail is "so it is within reach when a
+ * decision is heavier", his home-page line ends "when a heavier choice appears",
+ * his approved lines "a bigger ask", "a bigger opening" -- so it is not refused.
+ * What went wrong was monotony: 104 of 536 stored v2 endings were "when a
+ * heavier moment arrives". So these are refused:
+ *   - the same size word in two of a reading's four endings;
+ *   - an ending whose size word sizes nothing real: "a heavier moment", "bigger
+ *     moments", "when things get bigger", "the bigger version of this";
+ *   - the v2 round's worn tails, each used 4+ times there, word for word.
+ * And a line set in money (10/22, "when financial commitments arise", right
+ * above the disclaimer that this is not financial advice): money joins the
+ * settings the reading does not know. Shopping, purchases and "spending an
+ * evening" are everyday errands, not money.
+ */
+const TAIL_SIZE = /\b(?:bigger|biggest|larger|largest|heavier|heaviest|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)\b/gi;
+const SIZE_WORD = "(?:bigger|biggest|larger|largest|heavier|heaviest|higher|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)";
+const TAIL_BARE = new RegExp(
+  `\\b${SIZE_WORD}\\s+(?:moments?|times?|situations?|occasions?|days?|ones?|things?|stuff|versions?|stakes)\\b` +
+    `|\\b(?:things|it|life)\\s+(?:gets?|feels?|becomes?|grows?|turns?|is|are)\\s+(?:\\w+\\s+)?${SIZE_WORD}\\b` +
+    `|\\bthe\\s+(?:stakes|pressure)\\s+(?:is|are|gets?|grows?|feels?)\\s+(?:\\w+\\s+)?${SIZE_WORD}\\b`,
+  "i",
+);
+const TAIL_WORN = /\b(?:when|before|by the time)\s+(?:a heavier moment (?:arrives|arises)|the pressure is heavier|the stakes are heavier|the wave is high|larger commitments are on the table|decisions arise)\s*[.!?]?$/i;
+const sizeKey = (w) => w.toLowerCase().replace(/\s+/g, "-");
+const MONEY = /\b(?:money|finances?|financial(?:ly)?|budget(?:s|ing|ed)?|bills|debts?|loans?|savings|expenses?|salary|salaries|paychecks?|bank accounts?|taxes|mortgage)\b/i;
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
 // A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
 const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
@@ -458,6 +485,7 @@ export function takeawayProblem(raw) {
   // Every paragraph after the one that introduces them is a try-this line.
   const lines = (section?.paragraphs ?? []).slice(1);
   const starts = new Set();
+  const sized = new Set();
   for (const line of lines) {
     const body = line.replace(/^\([^)]+\)\s*/, "");
     const say = (why) => `A takeaway ${why}: "${body.slice(0, 90)}${body.length > 90 ? "..." : ""}"`;
@@ -485,9 +513,25 @@ export function takeawayProblem(raw) {
     if (ends < 2) return say(`does not end its second sentence with a period`);
     if (ends > 2) return say(`has ${ends} sentences, not two (the thing to try, then "Notice ...")`);
     if (!CALM_TAIL.test(body.slice(might + second))) return say(`has no ", so ... is familiar when ..." (why it starts small)`);
+    // The four endings vary, and each names a real situation (10/23, above).
+    const after = body.slice(might + second);
+    const ending = after.slice(CALM_TAIL.exec(after).index);
+    const bare = TAIL_BARE.exec(ending);
+    if (bare) return say(`ends on "${bare[0]}", which names no real situation`);
+    const worn = TAIL_WORN.exec(ending);
+    if (worn) return say(`ends on a worn tail ("${worn[0].replace(/[.!?]$/, "").trim()}"); each ending names its own situation`);
+    // Everyday moments, never money (10/22: "when financial commitments arise", right above
+    // the disclaimer that this is not financial advice).
+    const money = MONEY.exec(body);
+    if (money) return say(`is set in money ("${money[0]}"); its moments are everyday ones the reading can know`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);
+    // Not the same size word in two of the four endings (10/23, above).
+    const words = [...ending.matchAll(TAIL_SIZE)].map((m) => m[0]);
+    const again = words.find((w) => sized.has(sizeKey(w)));
+    if (again) return say(`ends on "${again}" again, as another ending does; the four end on four different situations`);
+    for (const w of words) sized.add(sizeKey(w));
   }
   return null;
 }
