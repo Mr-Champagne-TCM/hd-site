@@ -961,6 +961,23 @@
         "^Going further\\. One week tells you whether this is real for you\\. .* You[’']re welcome to bring your notes\\.$",
         "^Your chart was cast for your exact birth moment\\. .* you[’']re welcome to let me know, and I[’']ll recast it\\.$"
       ]
+    },
+    {
+      "id": "GO-samples-rebuilt",
+      "about": "the website's sample chart PDF and its eight marked examples, rebuilt (10/23, the-champagne-method 2241a2a + HD-Library-Work samples-1022 e8695ca markup.py v10) from the shop's final release-1022 chart PDF, so they carry the shop's own claimed changes, which the shop's entries name for its 'pdf' documents only: the chart key's 'held consciously and unconsciously' (V-C) and the 'IF YOU WOULD LIKE MORE THAN THIS CHART' paragraph's planet numbers (V-planet-numbers; it re-wraps), the section ending at the page footer too, since the older PDF had no coaching card after it and the example's banner follows on the same page. Curly apostrophes are not changes (GO-curly). NOT claimed: the channels and gates banners' '20-34', whose text layer now holds a soft hyphen (U+00AD) for the hyphen -- written up for the website",
+      "docs": "^sample /samples/(the-chart|charts/example-chart-[a-z]+)\\.pdf\\.p[123]$",
+      "minus": [
+        "^held consciously AND unconsciously$"
+      ],
+      "plus": [
+        "^held consciously and unconsciously$"
+      ],
+      "sections": [
+        {
+          "from": "^IF YOU WOULD LIKE MORE THAN THIS CHART$",
+          "to": "^(Talk it through with Jeremy$|The Champagne Method Coaching and Consulting · )"
+        }
+      ]
     }
   ]
 }
