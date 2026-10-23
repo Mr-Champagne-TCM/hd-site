@@ -97,18 +97,32 @@ export const SUMMARY_KEYS = ["Type", "Strategy", "Authority", "Profile", "Signat
  * `summaryRows` does not read as a label, so a copied one would be refused as a
  * missing row. Same values either way: what goes over the wire is unchanged.
  */
+/**
+ * NO BARE "none" TO QUOTE (10/23). A Reflector's facts said "Definition: None" and "Defined centers: none", and
+ * the readings read the label out: "Your chart shows none", "None definition means zero defined centers", "Because
+ * your defined centers are none", a tag "(Defined centers: none)" -- 31 stored drafts, 12 that passed every check.
+ * An empty value is a plain sentence instead, which reads as English wherever it is repeated.
+ */
+const EMPTY_FACT = {
+  definition: "No center is defined in this chart, so it has no definition.",
+  defined: "No center is defined in this chart.",
+  undefined: "No center in this chart is undefined.",
+  open: "No center in this chart is open.",
+  channels: "No channel is defined in this chart.",
+};
 export function chartFactsOnly(output, { form = false } = {}) {
-  const list = (v) => (Array.isArray(v) && v.length ? v.join(", ") : "none");
+  const list = (v, empty) => (Array.isArray(v) && v.length ? v.join(", ") : empty);
   const acts = (v) =>
     Array.isArray(v)
       ? v.map((a) => `${String(a.planet ?? "").toLowerCase()} ${a.gate}.${a.line}`).join(", ")
       : "";
+  const definition = String(output?.definition ?? "");
   const lines = [
     `Type: ${output?.type ?? ""}`,
     `Strategy: ${output?.strategy ?? ""}`,
     `Inner Authority: ${output?.authority ?? ""}`,
     `Profile: ${output?.profile ?? ""}`,
-    `Definition: ${output?.definition ?? ""}`,
+    `Definition: ${/^none$/i.test(definition.trim()) ? EMPTY_FACT.definition : definition}`,
     form
       ? `When it's on track, the feeling is: ${output?.signature ?? ""}`
       : `Signature: ${output?.signature ?? ""}`,
@@ -117,10 +131,10 @@ export function chartFactsOnly(output, { form = false } = {}) {
       : `Not-Self Theme: ${output?.notSelfTheme ?? ""}`,
     // The engine's own name ("Cross of the ..." since engine 0.6.0, W14), so the model's words match the tables.
     `Incarnation Cross: ${output?.incarnationCross ?? ""}`,
-    `Defined centers: ${list(output?.definedCenters)}`,
-    `Undefined centers (not colored in, but carrying gates): ${list(output?.undefinedCenters)}`,
-    `Open centers (not colored in, with no gates at all): ${list(output?.openCenters)}`,
-    `Channels: ${list(output?.channels)}`,
+    `Defined centers: ${list(output?.definedCenters, EMPTY_FACT.defined)}`,
+    `Undefined centers (not colored in, but carrying gates): ${list(output?.undefinedCenters, EMPTY_FACT.undefined)}`,
+    `Open centers (not colored in, with no gates at all): ${list(output?.openCenters, EMPTY_FACT.open)}`,
+    `Channels: ${list(output?.channels, EMPTY_FACT.channels)}`,
     `Personality activations: ${acts(output?.personality)}`,
     `Design activations: ${acts(output?.design)}`,
   ];
@@ -355,6 +369,13 @@ const SLIPS = [
   // A try-this time phrase run into its moment (10/23): "The next time when greeting neighbors" -- 6 stored drafts,
   // every one a slip (2 delivered in v3s).
   /\bthe next time when\b/i,
+  // A Reflector's empty facts read out as a label (10/23; the facts now say it in a sentence, chartFactsOnly):
+  // "Your chart shows none", "None definition", "your defined centers are none", "(Defined centers: none)",
+  // "your defined centers count is zero" -- 53 hits in 31 stored drafts, every one a Reflector's label.
+  /\bnone\s+(?:definition|defined|cent(?:er|re)s?\s+defined)\b/i,
+  /\b(?:definition|defined\s+cent(?:er|re)s?|chart|bodygraph)(?:\s+(?:list|section|state|value|field))?\s+(?:shows|has|have|contains|lists|reads|is|are|of)\s+none\b(?!\s+of)/i,
+  /\bdefined\s+cent(?:er|re)s?:\s*none\b/i,
+  /\bdefined\s+cent(?:er|re)s?\s+(?:list|section|count|field|value)\b/i,
   /\bbypass\w*\b[^.!?]*[.!?](?:\s+[^.!?]*[.!?])?\s+[^.!?]*\bbypass\w*\b/i,
   /\bgates? (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)\b/i,
 ];
@@ -468,10 +489,20 @@ const CALM_TAIL = /,\s*(?:so\b|which is practice\b|as practice\b)/i;
  *   - an ending whose size word sizes nothing real: "a heavier moment", "bigger
  *     moments", "when things get bigger", "the bigger version of this";
  *   - the v2 round's worn tails, each used 4+ times there, word for word.
- * And a line set in money (10/22, "when financial commitments arise", right
- * above the disclaimer that this is not financial advice): money joins the
- * settings the reading does not know. Shopping, purchases and "spending an
- * evening" are everyday errands, not money.
+ * And a line set in financial matters (10/22, "when financial commitments
+ * arise", right above the disclaimer that this is not financial advice).
+ * NARROWED 10/23, Jeremy on the GO PDF: "work and purchases are OK. PPL work and
+ * buy stuff." Only the topics of financial advice are refused now: finances,
+ * a budget (not "budget your energy"), debt, loans (not "loan a friend"),
+ * taxes, a mortgage, investments, savings, bank accounts, credit cards,
+ * interest rates, the stock market. Money itself, bills, expenses, salary,
+ * prices, shopping, purchases, a desk, a meeting, a project at work: everyday
+ * moments, and they pass. Measured on all 2,752 stored try-this lines: 41 of
+ * the old rule's 43 lines stay refused (37 say "financial", 7 a budget, 3 both); the 2
+ * that pass are household expenses ("when bigger expenses approach", "a
+ * household expense"); 1 new hit, a real one ("when evaluating a major
+ * investment", v3p R15, not delivered). Jeremy's approved lines: 0 hits. Work
+ * words are in 653 stored lines, purchases in 161; no rule ever judged them.
  */
 const TAIL_SIZE = /\b(?:bigger|biggest|larger|largest|heavier|heaviest|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)\b/gi;
 const SIZE_WORD = "(?:bigger|biggest|larger|largest|heavier|heaviest|higher|major|important|high[- ]stakes|higher[- ]stakes|weightier|significant|crucial|critical|big|large|heavy|greater)";
@@ -483,7 +514,15 @@ const TAIL_BARE = new RegExp(
 );
 const TAIL_WORN = /\b(?:when|before|by the time)\s+(?:a heavier moment (?:arrives|arises)|the pressure is heavier|the stakes are heavier|the wave is high|larger commitments are on the table|decisions arise)\s*[.!?]?$/i;
 const sizeKey = (w) => w.toLowerCase().replace(/\s+/g, "-");
-const MONEY = /\b(?:money|finances?|financial(?:ly)?|budget(?:s|ing|ed)?|bills|debts?|loans?|savings|expenses?|salary|salaries|paychecks?|bank accounts?|taxes|mortgage)\b/i;
+export const FINANCE = new RegExp(
+  String.raw`\b(?:financ(?:e|es|ial|ially)` +
+    String.raw`|(?<!\b(?:energy|time|attention)\s)budget(?:s|ing|ed)?\b(?!\s+(?:of\s+|for\s+|your\s+|their\s+)?(?:energy|time|attention|effort)\b)` +
+    String.raw`|debts?|loans?\b(?!\s+(?:a|an|the|your|them|him|her|me|us|it)\b)` +
+    String.raw`|taxes|tax\s+(?:returns?|forms?|bills?|refunds?)` +
+    String.raw`|mortgages?|investments?|invest(?:s|ed|ing)?\s+(?:money|savings|funds)` +
+    String.raw`|savings|bank\s+(?:accounts?|balances?|statements?)|credit\s+(?:cards?|scores?)|interest\s+rates?|stock\s+market)\b`,
+  "i",
+);
 const WHEN = /\b(the next time|next time|when|whenever|this week|this weekend|over the next|in the next|once or twice|as you|before you|after you|while|each time|every time|today|tomorrow|tonight)\b/i;
 // A sentence ends at . ! or ? (and any closing quote or bracket) before a capital, or at the end.
 const SENTENCE_END = /[.!?]["'”’)]*(?=\s+["'“‘(]?[A-Z]|\s*$)/g;
@@ -529,10 +568,10 @@ export function takeawayProblem(raw) {
     if (bare) return say(`ends on "${bare[0]}", which names no real situation`);
     const worn = TAIL_WORN.exec(ending);
     if (worn) return say(`ends on a worn tail ("${worn[0].replace(/[.!?]$/, "").trim()}"); each ending names its own situation`);
-    // Everyday moments, never money (10/22: "when financial commitments arise", right above
-    // the disclaimer that this is not financial advice).
-    const money = MONEY.exec(body);
-    if (money) return say(`is set in money ("${money[0]}"); its moments are everyday ones the reading can know`);
+    // Everyday moments, work and purchases included, never financial matters (10/22: "when
+    // financial commitments arise", right above the disclaimer; narrowed 10/23, above).
+    const money = FINANCE.exec(body);
+    if (money) return say(`is set in financial matters ("${money[0]}"), the advice the page disclaims; everyday moments, work and purchases included, are fine`);
     const start = body.split(/\s+/).slice(0, 3).join(" ").toLowerCase();
     if (starts.has(start)) return say(`begins the same way as another ("${start}")`);
     starts.add(start);
@@ -681,7 +720,9 @@ export function birthTimeNote(output, { form = false } = {}) {
   return (
     `${head} ${p.measured ? "Measured across the whole birth day, these" : "These"} values can change with the birth time: ` +
     `${provisionalNames(p.fields, form)}. Every other value above holds at any birth time. The page already says so; ` +
-    "mention it at most once, in plain words, as those values being provisional. Never call any other value uncertain, and add no other caveat about the birth time."
+    // 10/23: "as those values being provisional" came back as "these values are provisional" with none named (18
+    // drafts in rounds v3p-v3s, noteListProblem); the reader is told which.
+    "mention it at most once, in plain words, naming every one of those values as provisional. Never call any other value uncertain, and add no other caveat about the birth time."
   );
 }
 
@@ -761,7 +802,57 @@ export function birthTimeProblem(raw, output) {
   const row = said.find(([where]) => where.endsWith(" line"));
   if (row) return `The reading mentions the birth time in ${row[0]}; the page says it beside the chart, and the reading at most once, in its energy section: "${row[1].slice(0, 120)}"`;
   if (said.length > 1) return `The reading mentions the birth time ${said.length} times (${[...new Set(said.map(([w]) => w))].join(", ")}); once at most: "${said[1][1].slice(0, 120)}"`;
-  return null;
+  return noteListProblem(prose, p, output);
+}
+
+/**
+ * THE NOTE'S LIST, WHOLE (10/23, v3s R34 and R35, delivered). birthTimeProblem
+ * refuses a value called uncertain that the birth day does not change; the round
+ * also delivered the other half: "Note that these values are provisional because
+ * your birth time was not known" (which values?) and a note that named six of the
+ * nine measured ones. A reading that says values are provisional names the
+ * measured ones, every one, in that sentence or the one beside it. A reading that
+ * does not mention the birth time at all is not judged here (the NOTE says "at
+ * most once").
+ */
+const NOTE_FEELINGS = ["the on-track and off-track feelings", ["signature", "notSelfTheme"], /\bfeelings?\b|\bfeeling\s+words?\b|\bsignature\b|\bnot[- ]self\b|\b(?:on|off)[- ]track\b/i];
+function noteListProblem(prose, p, output) {
+  if (!p.fields.length) return null;
+  const own = [output?.signature, output?.notSelfTheme].filter((w) => /^[A-Za-z]+$/.test(String(w ?? "")));
+  const groups = [
+    ...VALUE_NAMED,
+    [NOTE_FEELINGS[0], NOTE_FEELINGS[1], own.length ? new RegExp(`${NOTE_FEELINGS[2].source}|\\b(?:${own.join("|")})\\b`, "i") : NOTE_FEELINGS[2]],
+  ];
+  const wanted = groups.filter(([, fields]) => fields.some((f) => p.fields.includes(f)));
+  const namedIn = (s) => groups.filter(([, , re]) => re.test(String(s ?? "")));
+  const named = new Set();
+  let first = null;
+  for (const [where, text] of prose) {
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    for (let i = 0; i < sentences.length; i++) {
+      const s = sentences[i];
+      const claim = [...s.matchAll(UNSURE_STRONG), ...(BIRTH_TIME.test(s) ? s.matchAll(UNSURE_WEAK) : [])].find(
+        (m) => !negatedAt(s, m.index, m.index + m[0].length),
+      );
+      if (!claim) continue;
+      const beside = [sentences[i - 1], sentences[i + 1]];
+      if (!BIRTH_TIME.test(s) && !beside.some((b) => BIRTH_TIME.test(String(b ?? "")))) continue;
+      // The sentence beside counts when it is about the birth time too ("Your Type and Profile were cast at noon.
+      // These values are provisional."), not for a centre it happens to name.
+      let here = namedIn(s);
+      if (!here.length) here = beside.filter((b) => BIRTH_TIME.test(String(b ?? ""))).flatMap(namedIn);
+      if (!here.length) {
+        return `The reading says values are provisional in ${where} without naming them; measured across the birth day, these can change: ${wanted.map(([n]) => n).join(", ")}: "${quoteAt(s, claim.index, claim[0].length)}"`;
+      }
+      for (const g of here) named.add(g[0]);
+      first ??= [where, s, claim];
+    }
+  }
+  if (!first) return null;
+  const missing = wanted.filter(([n]) => !named.has(n)).map(([n]) => n);
+  if (!missing.length) return null;
+  const [where, s, claim] = first;
+  return `The reading's birth-time note in ${where} leaves out ${missing.join(", ")}; measured across the birth day, these can change: ${wanted.map(([n]) => n).join(", ")}: "${quoteAt(s, claim.index, claim[0].length)}"`;
 }
 
 /**
@@ -1016,6 +1107,9 @@ export function draftProblem(raw, output) {
     timeClaimProblem(raw, output) ??
     birthTimeProblem(raw, output) ??
     borrowedWordProblem(raw, output) ??
+    connectionProblem(raw, output) ??
+    motorProblem(raw, output) ??
+    splitBridgeProblem(raw, output) ??
     voiceProblem(raw) ??
     doubledWordProblem(raw) ??
     themeSpellingProblem(raw) ??
@@ -1936,12 +2030,13 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
   const judge = (claimed, centre) => {
     const truth = actual.get(centre);
     if (!truth || truth === claimed) return null;
-    // "open" and "undefined" are both white on the drawing, and a reading that
-    // calls an undefined centre open is loose rather than wrong -- it is the
-    // DEFINED/not-defined confusion that misinforms. Only that is refused.
-    // Measured across 144 state-claims in 14 delivered readings: that looser
-    // confusion has never once occurred, so tolerating it costs nothing.
-    if (claimed !== "defined" && truth !== "defined") return null;
+    // "open" and "undefined" are both white on the drawing, and this used to let
+    // one stand for the other: measured across 144 state-claims in 14 delivered
+    // readings, the confusion had never occurred. It has now (10/23, v3s R27,
+    // delivered): "Your Head center is undefined" and, in the same paragraph,
+    // "your open Head takes in inspiration". The engine draws the line on
+    // purpose (an undefined centre carries gates, an open one none), so the
+    // state said must be the chart's.
     return `The reading calls the ${centre} center "${claimed}", but on this chart it is ${truth}.`;
   };
 
@@ -1968,6 +2063,181 @@ export function centreStateProblem(raw, definedCenters, undefinedCenters, openCe
     if (claim) {
       return `The reading describes undefined centers ("${claim[0].trim()}"), but this chart has none.`;
     }
+  }
+  return null;
+}
+
+/**
+ * WHAT THE PROSE SAYS CONNECTS, AND WHAT IT CALLS A MOTOR (10/23, read in the
+ * v3s deliveries). The checks above read which state a reading gives a centre;
+ * nothing read the wiring, and the round delivered it wrong: "Because your Heart
+ * center connects to your Throat center through the 25-51 channel" (25-51 joins
+ * the G and the Heart), "Because your Throat center connects directly to the
+ * Heart center" on an Ego Projected chart (a Heart wired to the Throat would make
+ * a Manifestor), "Your defined Throat center acts as a powerful motor", and "a
+ * Projector without a defined motor" with the Solar Plexus and Root defined.
+ *
+ * The gate table is the engine's own (hd-engine BodyGraph.kt), so a channel's
+ * two centres here are the two the bodygraph draws. A claim is judged only in
+ * the shapes measured on every stored draft (537): a centre, a joining verb
+ * ("connects", "links", "joins", "bridges", "ties", "spans", "unites") and a
+ * second centre, in either order; with a channel number in the sentence the
+ * number must join those two, without one they must be wired on this chart
+ * (directly, when the sentence says "directly"; through the chart's channels
+ * otherwise). A denial in the clause ("do not connect", "no outside bridges to
+ * connect") is not a claim. Measured: 1,290 claims pass, 5 refused, every one
+ * wrong.
+ */
+const GATE_CENTER = Object.fromEntries(
+  Object.entries({
+    Head: [64, 61, 63],
+    Ajna: [47, 24, 4, 17, 43, 11],
+    Throat: [62, 23, 56, 35, 12, 45, 33, 8, 31, 16, 20],
+    G: [1, 13, 25, 46, 2, 15, 10, 7],
+    Heart: [21, 40, 26, 51],
+    Sacral: [34, 5, 14, 29, 59, 9, 3, 42, 27],
+    Spleen: [48, 57, 44, 50, 32, 28, 18],
+    "Solar Plexus": [36, 22, 37, 6, 49, 55, 30],
+    Root: [53, 60, 52, 19, 39, 41, 58, 38, 54],
+  }).flatMap(([centre, gates]) => gates.map((g) => [g, centre])),
+);
+const channelKey = (a, b) => `${Math.min(a, b)}-${Math.max(a, b)}`;
+const CHANNEL_CENTRES = new Map(
+  [[64, 47], [61, 24], [63, 4], [17, 62], [43, 23], [11, 56], [1, 8], [13, 33], [7, 31], [10, 20], [21, 45], [16, 48],
+    [20, 57], [20, 34], [35, 36], [12, 22], [25, 51], [2, 14], [5, 15], [29, 46], [10, 34], [10, 57], [37, 40], [26, 44],
+    [34, 57], [27, 50], [6, 59], [3, 60], [42, 53], [9, 52], [32, 54], [28, 38], [18, 58], [19, 49], [39, 55], [30, 41]]
+    .map(([a, b]) => [channelKey(a, b), [GATE_CENTER[Math.min(a, b)], GATE_CENTER[Math.max(a, b)]]]),
+);
+export const MOTOR_CENTRES = ["Sacral", "Root", "Solar Plexus", "Heart"];
+
+/** The chart's wiring: which centres a channel joins directly, and which are joined at all. */
+function chartWiring(output) {
+  const direct = new Set();
+  const parent = {};
+  const find = (x) => (parent[x] === undefined || parent[x] === x ? (parent[x] = x) : (parent[x] = find(parent[x])));
+  const own = new Set();
+  for (const ch of Array.isArray(output?.channels) ? output.channels : []) {
+    const m = /^(\d{1,2})\s*-\s*(\d{1,2})/.exec(String(ch));
+    const pair = m && CHANNEL_CENTRES.get(channelKey(+m[1], +m[2]));
+    if (!pair) continue;
+    own.add(channelKey(+m[1], +m[2]));
+    direct.add([...pair].sort().join("|"));
+    parent[find(pair[0])] = find(pair[1]);
+  }
+  return {
+    own,
+    direct: (a, b) => direct.has([a, b].sort().join("|")),
+    joined: (a, b) => parent[a] !== undefined && parent[b] !== undefined && find(a) === find(b),
+  };
+}
+
+const WIRE_NAME = String.raw`(?:(Solar Plexus|Head|Ajna|Throat|Heart|Sacral|Spleen|Root|G)\b(?:\s+cent(?:er|re)s?\b)?|(solar plexus|head|ajna|throat|heart|sacral|spleen|root)\s+cent(?:er|re)s?\b)`;
+const WIRE_POSS = String.raw`(?:(?:the|your|its)\s+)?(?:(?:own|defined|undefined|open)\s+)?`;
+const WIRE_VERB = String.raw`(?:connect(?:s|ed|ing)?|link(?:s|ed|ing)?|join(?:s|ed|ing)?|bridg(?:e|es|ed|ing)|ti(?:e|es|ed)|wir(?:e|es|ed)|span(?:s|ned|ning)?|unit(?:e|es|ed|ing)|fus(?:e|es|ed))`;
+const WIRE_SHAPES = [
+  // "your Heart center connects (directly) to your Throat", "the Heart center connected to your Throat"
+  String.raw`${WIRE_NAME}[^.,;:!?]{0,40}?\b${WIRE_VERB}\b(?:\s+(?:directly|straight|up|together))?\s+(?:to|with|into)\s+${WIRE_POSS}${WIRE_NAME}`,
+  // "links your Heart to your Throat", "bridges your G center and your Throat"
+  String.raw`\b${WIRE_VERB}\b\s+(?:directly\s+)?${WIRE_POSS}${WIRE_NAME}\s+(?:and|to|with|into)\s+${WIRE_POSS}${WIRE_NAME}`,
+  // "your Throat and Sacral centers are connected", "your Ajna and Throat link together directly"
+  String.raw`${WIRE_NAME}\s+and\s+${WIRE_POSS}${WIRE_NAME}(?:\s+cent(?:er|re)s)?\s+(?:are\s+|is\s+)?(?:directly\s+)?\b${WIRE_VERB}\b`,
+  // "spans from your Root center to your Solar Plexus"
+  String.raw`\b${WIRE_VERB}\b[^.,;:!?]{0,20}?\bfrom\s+${WIRE_POSS}${WIRE_NAME}\s+to\s+${WIRE_POSS}${WIRE_NAME}`,
+].map((s) => new RegExp(s, "g"));
+const WIRE_DENIED = /\b(?:not|never|no|without|rather\s+than|instead\s+of|neither|nor|cannot)\b|n['’]t\b/i;
+const titleCentre = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+const wireCentres = (m) => {
+  const out = [];
+  for (let i = 1; i < m.length; i += 2) {
+    const c = m[i] ?? (m[i + 1] ? titleCentre(m[i + 1]) : null);
+    if (c) out.push(c);
+  }
+  return out;
+};
+
+export function connectionProblem(raw, output) {
+  if (!Array.isArray(output?.channels)) return null;
+  const wiring = chartWiring(output);
+  for (const [where, text] of proseOf(raw)) {
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+      const numbers = [...sentence.matchAll(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/g)]
+        .map((n) => channelKey(+n[1], +n[2]))
+        .filter((k) => CHANNEL_CENTRES.has(k));
+      for (const re of WIRE_SHAPES) {
+        for (const m of sentence.matchAll(re)) {
+          const [a, b] = wireCentres(m);
+          if (!a || !b || a === b) continue;
+          if (WIRE_DENIED.test(sentence.slice(0, m.index).split(/[,;:]/).at(-1) + m[0])) continue;
+          const quote = `"${quoteAt(sentence, m.index, m[0].length)}"`;
+          if (numbers.length) {
+            const joins = numbers.filter((k) => CHANNEL_CENTRES.get(k).includes(a) && CHANNEL_CENTRES.get(k).includes(b));
+            if (!joins.length) {
+              const [x, y] = CHANNEL_CENTRES.get(numbers[0]);
+              return `The reading says Channel ${numbers[0]} joins the ${a} and the ${b} in ${where}; it joins the ${x} and the ${y}: ${quote}`;
+            }
+            if (!joins.some((k) => wiring.own.has(k))) return `The reading wires the ${a} and the ${b} through Channel ${joins[0]} in ${where}, a channel this chart does not have: ${quote}`;
+            continue;
+          }
+          const directly = /\bdirect(?:ly)?\b/i.test(m[0]);
+          if (directly ? !wiring.direct(a, b) : !wiring.joined(a, b)) {
+            return `The reading says the ${a} and the ${b} connect${directly ? " directly" : ""} in ${where}, but ${directly ? "no channel of this chart joins them" : "no channel of this chart links them"}: ${quote}`;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * THE MOTORS ARE THE SACRAL, ROOT, SOLAR PLEXUS AND HEART (engine Center.isMotor).
+ * Refused: another centre called a motor ("Your Throat center remains consistently
+ * active as a reliable motor"), and "no defined motor" on a chart with one
+ * defined -- unless it is the Projector's "no defined motor connected to the
+ * Throat", which is true. Measured on every stored draft: 6 refused, every one
+ * wrong (two say "without a defined motor for sustainable labor" on a chart whose
+ * Heart is defined: the Sacral is meant, and the Heart is still a defined motor).
+ */
+const NOT_MOTOR = new RegExp(
+  String.raw`\b(Head|Ajna|Throat|G|Spleen)(?:\s+cent(?:er|re))?\b[^.;:!?]{0,40}?\b(?:is|acts\s+as|serves\s+as|works\s+as|operates\s+as|functions\s+as|becomes|as)\s+(?:a|an|your)\s+(?:[a-z-]+\s+){0,2}motor\b`,
+  "gi",
+);
+const NO_MOTOR = /\b(?:without|no|lacks?|lacking|lack\s+of|absence\s+of|(?:does|do)\s+not\s+(?:have|carry|hold)|(?:doesn|don)['’]t\s+(?:have|carry|hold))\s+(?:a\s+|any\s+)?(?:single\s+)?defined\s+motors?\b(?:\s+cent(?:er|re)s?)?/gi;
+const TO_THE_THROAT = /^[^.;:!?]{0,40}?\b(?:to|into|with)\s+(?:the\s+|your\s+)?throat\b/i;
+
+export function motorProblem(raw, output) {
+  const motors = (Array.isArray(output?.definedCenters) ? output.definedCenters : []).filter((c) => MOTOR_CENTRES.includes(c));
+  for (const [where, text] of proseOf(raw)) {
+    for (const m of text.matchAll(NOT_MOTOR)) {
+      if (/\bnot\b|n['’]t\b|\bnever\b/i.test(m[0])) continue;
+      return `The reading calls the ${m[1]} a motor in ${where}; the motors are the Sacral, Root, Solar Plexus and Heart: "${quoteAt(text, m.index, m[0].length)}"`;
+    }
+    if (!motors.length) continue;
+    for (const m of text.matchAll(NO_MOTOR)) {
+      if (TO_THE_THROAT.test(text.slice(m.index + m[0].length))) continue;
+      const list = motors.length < 2 ? motors[0] : `${motors.slice(0, -1).join(", ")} and ${motors.at(-1)}`;
+      return `The reading says this chart has no defined motor in ${where}, but its ${list} ${motors.length < 2 ? "is a defined motor" : "are defined motors"}: "${quoteAt(text, m.index, m[0].length)}"`;
+    }
+  }
+  return null;
+}
+
+/**
+ * A SPLIT NEEDS A BRIDGE; IT DOES NOT MAKE ONE (10/23). "This separation creates an
+ * inner bridge where you naturally seek out connections" says the opposite of the
+ * mechanics: the parts of a split are joined from outside (another person's gate,
+ * a transit). In "Your definition", on a split chart; "a bridge-seeking tendency"
+ * (the split creates the SEEKING) passes. Measured on every stored draft: 74 hits,
+ * every one this slip; a channel that "creates a bridge" between two centres, and
+ * a strategy that creates one between people, are elsewhere and pass.
+ */
+const SPLIT_BRIDGE = /\bcreates?\s+(?:a|an)\s+(?:[a-z-]+\s+){0,2}bridges?\b(?![-‐‑](?:seeking|building))/i;
+export function splitBridgeProblem(raw, output) {
+  if (!/split/i.test(String(output?.definition ?? ""))) return null;
+  for (const [where, text] of proseOf(raw)) {
+    if (where !== `"${MECHANICS[1]}"`) continue;
+    const m = SPLIT_BRIDGE.exec(text);
+    if (m) return `The reading says the split creates a bridge in ${where}; a split definition looks for a bridge, it does not make one: "${quoteAt(text, m.index, m[0].length)}"`;
   }
   return null;
 }

@@ -220,13 +220,21 @@ export function structuredFacts(output) {
   }
   // 10/23 rounds: endings set in money ("when financial commitments arise") 20 times in three rounds,
   // the prompt's own rule notwithstanding; named here, per reading, as the other types' words are.
+  // Narrowed the same day to the topics of financial advice (Jeremy: "work and purchases are OK"),
+  // as interpretation.mjs FINANCE is.
   lines.push(`Never in a try-this line, in any form: ${MONEY_WORDS}.`);
+  // 10/23: "This separation creates an inner bridge" in "Your definition" on 74 stored drafts of split
+  // charts (31 delivered at run time; splitBridgeProblem). Said per chart, as the money words are.
+  if (/split/i.test(String(output?.definition ?? ""))) lines.push(SPLIT_FACT);
   if (Array.isArray(output?.channelLines) && output.channelLines.length) {
     lines.push(`Channel lines (printed for you, write only the sentence): ${output.channelLines.join("; ")}`);
   }
   return lines.length ? "\n" + lines.join("\n") + "\n" : "";
 }
-const MONEY_WORDS = "money, finances, financial, budget, bills, expenses";
+const MONEY_WORDS = "finances, financial, budget, debt, loans, taxes, mortgage, investments, savings, bank accounts";
+const SPLIT_FACT =
+  "This chart's definition is split: its defined centers form separate groups that no channel of this chart joins, " +
+  "and other people's gates or the transits are what join them. Never write that the split creates, forms or builds a bridge.";
 
 /**
  * #4 / F45, Jeremy's ruling (option C, 2026-09-09): look for the Projector's

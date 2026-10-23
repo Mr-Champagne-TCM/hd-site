@@ -210,11 +210,11 @@ test("N-01: truthful prose about the same centers passes", () => {
   assert.equal(check(reading({ "What is consistently yours": prose }), CHART), null);
 });
 
-test("N-01: open and undefined are not held against each other", () => {
-  // Both are white on the drawing; only the defined/not-defined confusion
-  // misinforms, and refusing the looser word would cost the buyer a retry.
+test("N-01 (10/23): open and undefined are the chart's own -- an undefined Heart called open is refused", () => {
+  // Both are white on the drawing, and this used to pass. v3s R27 delivered "Your Head center is undefined" and
+  // "your open Head" in one paragraph; an undefined centre carries gates, an open one none.
   const prose = "Your open Heart takes in the willpower around you.";
-  assert.equal(check(reading(inS5(prose)), CHART), null);
+  assert.match(check(reading(inS5(prose)), CHART), /calls the Heart center "open", but on this chart it is undefined/);
 });
 
 // Nothing undefined at all: seven defined, two open.
