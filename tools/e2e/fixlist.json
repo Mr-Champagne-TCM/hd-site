@@ -1196,6 +1196,20 @@
         "^Nine centers on the chart\\. Each one is colored in, or not\\.$",
         "^The nine shapes — squares, triangles, diamonds\\. Each one governs a different kind of energy\\.$"
       ]
+    },
+    {
+      "id": "PICKS-D5",
+      "about": "Decision 5 (GO v3 p13, my pick, pending Jeremy): the readings site (hd-reading-app hosting) says 'I/my', like the website. The privacy line under every footer 'What we keep, and for how long' -> 'What I keep, and for how long'; 'Something on our side is slow right now' (add-time form) and 'that’s on our side' (store not answering) -> 'on my side'; Jeremy's notes to clients 'which was on our side' -> 'which was on my side'. The rig captures only the unknown-link page, so the other lines are claimed in case it ever captures them.",
+      "docs": "^page readings-site",
+      "minus": [
+        "^What we keep, and for how long$",
+        "on our side"
+      ],
+      "plus": [
+        "^What I keep, and for how long$",
+        "^Something on my side is slow right now, so your birth time didn’t reach Jeremy — ",
+        "^It couldn’t be opened just now — that’s on my side, and your link is fine\\. "
+      ]
     }
   ]
 }
