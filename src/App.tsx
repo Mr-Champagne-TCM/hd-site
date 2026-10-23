@@ -302,7 +302,8 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
           <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
             {TIERS_INTRO.lead}
           </h2>
-          <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">{TIERS_INTRO.body}</p>
+          {/* text-pretty: the shorter line (credit said once, 10/23) left "you." alone on a phone's second line. */}
+          <p className="mt-3 max-w-[62ch] text-pretty text-[17px] leading-relaxed text-brand-paper/85">{TIERS_INTRO.body}</p>
         </>
       )}
 
@@ -458,7 +459,8 @@ export function Resources() {
           <a
             key={item.href}
             href={item.href}
-            {...hint(item.title, item.href === SITE.bodygraph ? HINT.bodygraph : HINT.library)}
+            /* The whole card is the link: its accessible name keeps every word on it, then where it goes. */
+            {...hint(`${item.tag}. ${item.title}. ${item.blurb}`, item.href === SITE.bodygraph ? HINT.bodygraph : HINT.library)}
             className="group rounded-2xl border border-brand-gold/20 bg-white/[0.03] p-5 transition-colors hover:border-brand-teal/50"
           >
             <span className="inline-block rounded-full border border-brand-teal/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-teal">

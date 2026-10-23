@@ -333,7 +333,7 @@ export function ReadingInOrder({
           The Human Design library
         </a>
         , and the drawing at the top in{" "}
-        <a href={SITE.bodygraph} {...hint("Reading your bodygraph", HINT.bodygraph)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
+        <a href={SITE.bodygraph} {...hint("“Reading your bodygraph.”", HINT.bodygraph)} rel="noreferrer" className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4">
           “Reading your bodygraph.”
         </a>{" "}
         Both are free.
