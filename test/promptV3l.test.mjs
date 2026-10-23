@@ -287,21 +287,41 @@ const TWO_REST = [
 ];
 
 
-test("TRY-THIS ENDING: a size word instead of the situation is refused; the situation named passes", () => {
+test("TRY-THIS ENDINGS (rev o): a size word is fine on a real situation; the same one twice, a bare ending, a worn v2 tail are refused", () => {
   const line = (tail) => `(Sacral authority) This week, when a friend asks about a weekend errand, you might wait for your gut's sound before you answer. Notice which way it goes, ${tail}`;
-  const four = (first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[first, ...TWO_REST].join("\n\n")}\n`;
-  for (const [tail, word] of [
-    ["so the pause is familiar when larger daily choices come.", "larger"],
-    ["so the pause is familiar when bigger commitments arise.", "bigger"],
-    ["so the pause is familiar before important discussions.", "important"],
-    ["so the pause is within reach before high-stakes decisions land.", "high-stakes"],
+  const four = (...first) => `${TAKEAWAYS}\n\nThese are invitations to test, not instructions.\n\n${[...first, ...TWO_REST.slice(first.length - 1)].join("\n\n")}\n`;
+  // A size word on a real situation passes (Jeremy's own "a heavier choice", "a bigger ask"; v3j R02's endings).
+  for (const tail of [
+    "so the pause is familiar when a heavier choice appears.",
+    "so the pause is familiar when larger daily choices arrive.",
+    "so the pause is familiar when bigger commitments arise.",
+    "so the pause is familiar when a job offer is on the table.",
+    "so it is within reach when a decision is heavier.",
+  ]) assert.equal(takeawayProblem(four(line(tail))), null, tail);
+  // A bare ending: the size word sizes nothing real.
+  for (const [tail, said] of [
+    ["so the pause is familiar when a heavier moment arrives.", "heavier moment"],
+    ["so the pause is familiar when bigger moments come.", "bigger moments"],
+    ["so the pause is familiar when things get bigger.", "things get bigger"],
+    ["so the pause is ready for the bigger version of this.", "bigger version"],
+    ["so the pause is familiar when the stakes are higher.", "the stakes are higher"],
   ]) {
     const p = takeawayProblem(four(line(tail)));
-    assert.ok(p?.includes(`ends on the size of the situation ("${word}") instead of naming the situation`), `${tail} -> ${p}`);
+    assert.ok(p?.includes(`ends on "${said}", which names no real situation`), `${tail} -> ${p}`);
   }
-  assert.equal(takeawayProblem(four(line("so the pause is familiar when a job offer is on the table."))), null);
-  // Jeremy's own home-page line ends "when a heavier choice appears": "heavier" is not judged.
-  assert.equal(takeawayProblem(four(line("so the pause is familiar when a heavier choice appears."))), null);
+  // The v2 round's worn tails, word for word.
+  for (const [tail, said] of [
+    ["so the pause is familiar when the wave is high.", "when the wave is high"],
+    ["so the pause is familiar when larger commitments are on the table.", "when larger commitments are on the table"],
+  ]) {
+    const p = takeawayProblem(four(line(tail)));
+    assert.ok(p?.includes(`ends on a worn tail ("${said}"); each ending names its own situation`), `${tail} -> ${p}`);
+  }
+  // The same size word in two of the four endings.
+  const second = "(Channel 20-34) The next time an easy chore gets a clear gut yes, you might start it straight away. Notice whether the energy feels absorbed or just busy, so you know the difference when a bigger project comes up.";
+  const p = takeawayProblem(four(line("so the pause is familiar when bigger commitments arise."), second));
+  assert.ok(p?.includes(`ends on "bigger" again, as another ending does; the four end on four different situations`), p);
+  assert.equal(takeawayProblem(four(line("so the pause is familiar when a heavier choice appears."), second)), null, "two different words pass");
 });
 
 test("TRY-THIS MONEY: a line set in money is refused; an errand with a purchase passes", () => {
