@@ -1466,6 +1466,14 @@
       "plus": [
         "^(.*\\. )?Birth place changed from [^—]*’[^—]* — your chart is cast from the corrected details\\.$"
       ]
+    },
+    {
+      "id": "BATCH1024-8-page-fill",
+      "about": "Rig 10/24 (runs/2026-10-24T06-00-21-2deb1ba, pdf-page-fill): in addUp-2-upgrade-t2, page 3 of 9 was 12% filled -- only the technical values ('TECHNICAL VALUES: YOUR TWENTY-SIX PLANET NUMBERS ...') and the onward note. An unknown birth time (PROVISIONAL tags and the Moon note), six channels and two-line glance rows left page 2 about two lines of room, so the block's heading went over and took the whole block with it; the 6B rule only caught the note alone or under a stray row. Jeremy's option 1, 'let page 2 hold the table': readingPdf.mjs now counts the whole block going over (its heading pushed to a new page, not by keepClosing) as a closing block alone, and page 2's white space gives way the measured 6B way. The most it gives is now half (NOTE_MOST 0.5, was 0.6: 0.6 left this case 10pt short); the gentlest of 0.9, 0.8, 0.7, 0.6, 0.55 that fits is still chosen. White space only, never text leading; the footer line holds; when even half is not enough the block goes over whole with its note, as before. Phone (hd-reading-app PdfExport.kt): its spill rule already covered the block going over, its ladder now runs 0.9 .. 0.5 (= shop). Lines only move between pages of the reading PDFs (one page fewer where it applies), so this entry claims them as moved. Tests: test/batch1024-page-fill.test.mjs; hd-reading-app Batch1024PageFillTest. Renders: hd-e2e/batch-1024/renders-pagefill.",
+      "docs": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$",
+      "moves": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$",
+      "minus": [],
+      "plus": []
     }
   ]
 }
