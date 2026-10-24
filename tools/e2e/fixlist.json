@@ -1399,6 +1399,13 @@
       "plus": [
         "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*’[^·]*$"
       ]
+    },
+    {
+      "id": "BATCH1024-6-places-town-first",
+      "about": "Live retest 10/23 (batch-1024 item 6): typing 'Denver' in the town search listed Copenhagen, Århus, Odense and Aalborg (and Henderson) after Denver. The engine (hd-engine CityIndex.search, its own service, untouched) fills a short list with near-misses on ANY word of a row, and 'denver' is two letters from 'denmar(k)'. New netlify/lib/placeRank.mjs orders the engine's rows in the places function (every way out: miss, blob cache hit, memory) before they are cached or sent: 0 the town's name starts with the first word typed, 1 a later word of the town's name does, 2 the town's name holds it, 3 the town's name is a near-miss (Henderson), 4 only the state or country matched (the Danish towns). Stable inside a class, so the engine's order stands there: Denver stays first, a whole-word town prefix beats a country prefix ('Den' -> Denton, Denver before Copenhagen), and Portland, Coeur d'Alene, Boise, Hartford and a whole-state fallback read as before. Same rows, same count. The places list is not a captured document line set, so this entry claims nothing by design. Test: test/batch1024-places-rank.test.mjs (the classes, the reported list, the four towns, and /api/places end to end with the engine and the blob store faked).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }
