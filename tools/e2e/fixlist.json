@@ -1388,6 +1388,17 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-5-email-place",
+      "about": "Live retest 10/23 (batch-1024 item 5): the 'Email me my charts' email showed 'Coeur d'Alene' with a straight apostrophe. Decision 8 curled place names where they are shown (shared/birthLine.mjs: the PDF and the pages); myChartsEmail.mjs chartCard() now curls the kept place for its row the same way (curly(), HTML and text alike), so a row reads 'The chart · January 2, 1990 · Coeur d’Alene, Idaho'. The kept place is unchanged. No other email prints a birth place (the ready, receipt and add-time emails do not; the add-time page's kept line already goes through birthLine). Test: test/batch1024-email-place.test.mjs.",
+      "docs": "^email ",
+      "minus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*'[^·]*$"
+      ],
+      "plus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*’[^·]*$"
+      ]
     }
   ]
 }
