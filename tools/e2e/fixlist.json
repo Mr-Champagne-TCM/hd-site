@@ -1381,6 +1381,13 @@
       "plus": [
         "^That didn’t reach me — the connection dropped, so nothing has changed\\. The time you chose is still in the form; another try usually works\\.$"
       ]
+    },
+    {
+      "id": "BATCH1024-4-draft-no-page",
+      "about": "10/23 21:47 (batch-1024 item 4): every deploy shares the live blob stores, and a draft deployed with no secrets filed a 'places-misconfigured' incident, severity page-jeremy, into the live health store. New netlify/lib/deployContext.mjs: the deploy context comes from the context object a v2 function is handed (context.deploy.context; guard() and the scheduled functions sweep, watch, reconcile and retry-code pass it on), then Netlify's global Netlify.context, then process.env.CONTEXT (a build variable, likely absent at runtime, as DEPLOY_ID was on 9/8). Anything but 'production' never files a page-jeremy incident and never alerts: noteFailure() and reportFailure() log one line ('<kind>: not filed and no alert -- deploy context \"<ctx>\" is not production') and stop; the sweep's rate alarm goes through reportFailure; watch sends no digest. Lower-severity incidents are still kept, unalerted. Nothing known (tests, the local rig) behaves as production did, so a monitor never goes quiet for not knowing where it runs. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-draft-health.test.mjs (both contexts, three sources, guard, the rate alarm, watch, and the places function with no secrets end to end through a recorded fetch).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }

@@ -3,6 +3,7 @@ import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { checkFailureRate, sweepIncidents } from "../lib/health.mjs";
 import { sweepCounters } from "../lib/ratelimit.mjs";
 import { alertSender } from "../lib/failures.mjs";
+import { noteDeployContext } from "../lib/deployContext.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
 /**
@@ -32,7 +33,9 @@ import { SITE } from "../lib/siteLinks.mjs";
  * 23, 10/23): the writer this rings passes over any reading whose "writing"
  * lock is live (interpretJob.mjs, writingLock.mjs), and says so in its log.
  */
-export default async () => {
+export default async (request, context) => {
+  // Which deploy this is: the rate alarm pages only from production (batch-1024 item 4).
+  noteDeployContext(context);
   const secret = process.env.GRANT_SECRET;
   const origin = process.env.URL;
   const token = triggerToken(secret);
