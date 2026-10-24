@@ -1372,6 +1372,13 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "CLAUDE-writer-words",
+      "about": "Claude writer (Jeremy 10/23: \"This is the new approach\"), WORDS PENDING HIS GO: the home page's AI line names Anthropic’s Claude as the writer and Google’s Gemini as the backup (src/App.tsx AI_LINE). Ships with claude-writer-1024.",
+      "docs": "^page offer$",
+      "minus": ["drafted by Google’s Gemini AI from your chart’s values only"],
+      "plus": ["drafted by Anthropic’s Claude AI \\(Google’s Gemini steps in if Claude can’t\\) from your chart’s values only"]
     }
   ]
 }
