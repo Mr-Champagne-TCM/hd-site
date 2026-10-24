@@ -92,8 +92,8 @@ async function call(path, key, { method = "GET", params, idempotencyKey, fetchIm
 }
 
 /** Create a Checkout Session and return it. */
-export function createSession(key, params) {
-  return call("/checkout/sessions", key, { method: "POST", params });
+export function createSession(key, params, { fetchImpl } = {}) {
+  return call("/checkout/sessions", key, { method: "POST", params, fetchImpl });
 }
 
 /**

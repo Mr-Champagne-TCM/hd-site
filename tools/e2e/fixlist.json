@@ -1365,6 +1365,13 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-2-checkout-email",
+      "about": "Live retest 10/23 (batch-1024 item 2): the upgrades (summary to chart, chart to reading) and the someone-new purchase made from an owned chart's page opened Stripe Checkout with an empty email box, so the buyer typed the address the shop already had. checkout.mjs checkoutEmail() reads the chart the signed link names (the newest record of its chain, as the credit does) and sessionParams() passes its receipt email as customer_email, which only fills the box (the buyer can change it). The someone-new cards on /u/<token>#new now send the link with someoneNew (purchase.ts, App.tsx Tiers `from`), for the email only: checkoutCredit still returns no credit for someone new. The receipt, the claim and the purchase watcher still read the email from the paid Stripe session (customer_details); the address is never logged. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-checkout-email.test.mjs (Stripe mocked through createSession's fetchImpl).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }
