@@ -1372,6 +1372,15 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-3-addtime-dropped",
+      "about": "Live retest 10/23 (batch-1024 item 3): on the add-time page (src/AddTime.tsx), when fetch itself failed (the connection dropped, nothing reached the server) the catch branch showed 'addtime-slow', which says 'Jeremy has been told' -- untrue, since nobody was. The catch branch now shows its own line, 'addtime-connection-dropped' (shared/customerMessages.mjs, act false, one entry for chart and summary alike): 'That didn’t reach me — the connection dropped, so nothing has changed. The time you chose is still in the form; another try usually works.' A server that answered keeps its words: its own message, or 'addtime-slow' / 'addtime-slow-summary' when the answer had none (unchanged). Shown only after a dropped connection, so no baseline page should carry it; the plus line is here so a render that does is allowed. Test: test/batch1024-addtime-dropped.test.mjs (the form's own onSubmit run with fetch stubbed to throw, to answer 503 with words, and 502 without).",
+      "docs": "^page ",
+      "minus": [],
+      "plus": [
+        "^That didn’t reach me — the connection dropped, so nothing has changed\\. The time you chose is still in the form; another try usually works\\.$"
+      ]
     }
   ]
 }

@@ -100,7 +100,9 @@ export function AddTimeForm({
       const t = body.token ?? token;
       window.location.replace(`/r/${encodeURIComponent(t)}`);
     } catch {
-      setState({ at: "failed", message: sayText("addtime-slow", tier) });
+      // Nothing reached the server (the connection dropped, or the request never left), so nobody was told:
+      // its own honest line, not "addtime-slow" (batch-1024 item 3). A server that answered keeps its words above.
+      setState({ at: "failed", message: sayText("addtime-connection-dropped", tier) });
     }
   }
 
