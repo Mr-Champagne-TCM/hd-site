@@ -1428,6 +1428,24 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-1-phone-note-spacing",
+      "about": "The phone's side of batch-1024 item 1 (= BATCH1024-1-note-spacing, hd-site 59f32ec): the phone's reading PDF (hd-reading-app PdfExport.kt) laid its margin notes out with the body's spacing (x1.08 + 3pt), so a wrapped value ('Answered once, quietly, in / the present.', 'Right Angle Cross of / Eden (11/12 | 6/36)') stepped 14pt while its label stepped 10pt onto it, and a label that breaks ('ON TRACK, / THE FEELING IS') stepped 14pt too. The notes' labels and values now lay out with NOTE_LINE_GAP = 0 (no added room, multiplier 1: every line of a note steps 10pt, as the shop's do); 9pt between notes and the body's 17pt are unchanged. linkLayout pads a box less above and below when its lines sit close (= the shop's), so a broken label's two link boxes touch and do not overlap. Positions only; no line of text changes. The rig does not drive the phone's PDF, so this entry claims nothing by design. Test: hd-reading-app Batch1024NotesTest (the four test clients: every wrapped note line steps the label step, 9pt between notes, two link boxes per broken label without overlap, body 17pt; 2x renders before/after in hd-e2e/batch-1024/renders-phone).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-7-correction-place",
+      "about": "Batch-1024 leftover (10/24): the correction note's 'Birth place changed from X to Y' (shared/correctionNote.mjs detailSentences, the buyer's own page after 'Change a detail') printed both places as kept, so 'Coeur d'Alene' showed a straight apostrophe beside the curled birth line (decision 8, shared/birthLine.mjs). Both places are now curled where the sentence is built (curly()), for display only; the record's correction keeps the places as typed. The phone has no correction note, so there is no phone side. No rig birth has a place with an apostrophe, so no line changes today; a correction lead with a curled place is claimed in case one does. Test: test/batch1024-correction-place.test.mjs.",
+      "docs": "^page ",
+      "minus": [
+        "^(.*\\. )?Birth place changed from [^—]*'[^—]* — your chart is cast from the corrected details\\.$"
+      ],
+      "plus": [
+        "^(.*\\. )?Birth place changed from [^—]*’[^—]* — your chart is cast from the corrected details\\.$"
+      ]
     }
   ]
 }
