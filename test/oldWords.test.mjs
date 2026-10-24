@@ -114,9 +114,17 @@ const ENGLISH = [
   "On track, the feeling is satisfaction; off track, it is frustration.",
 ];
 
+// 10/23 (S9): as a track ROW, this one only repeats its label and its feeling, and that row is refused for
+// that (trackRowProblem), never for an old word; everywhere else it passes.
+const ECHO = "On track, the feeling is satisfaction; off track, it is frustration.";
 for (const sentence of ENGLISH) {
   for (const where of ["on", "off", S6, MEET, "takeaway"]) {
     test(`passes: ${JSON.stringify(sentence)} in ${where}`, () => {
+      if (sentence === ECHO && (where === "on" || where === "off")) {
+        assert.match(check(placed(where, sentence), CHART), /line only repeats its label and its feeling/);
+        assert.equal(oldWordProblem(placed(where, sentence)), null);
+        return;
+      }
       assert.equal(check(placed(where, sentence), CHART), null);
     });
   }

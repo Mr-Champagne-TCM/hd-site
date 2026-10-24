@@ -31,17 +31,20 @@ const app = join(phone, "app");
 
 copyFileSync(join(app, "src/main/kotlin/co/thechampagnemethod/hdreadings/LibraryGlance.kt"), join(pub, "LibraryGlance.kt.txt"));
 
-// The reading facts' NOTE for an unknown birth time (10/22), as the phone builds
-// it: provisionalNames and birthTimeNote from Reading.kt. Only the code that
-// words the NOTE (it is in this public repo's interpretation.mjs already), so
-// test/birthTimeNoteParity.test.mjs can hold the shop's NOTE to it byte for byte.
+// The reading facts' NOTE for an unknown birth time, as the phone builds it:
+// BIRTH_TIME_NOTE and birthTimeNote from Reading.kt (10/23, M2: one NOTE that
+// asks for silence; before, provisionalNames and a NOTE listing the values).
+// Only the code that words the NOTE (it is in this public repo's
+// interpretation.mjs already), so test/birthTimeNoteParity.test.mjs can hold the
+// shop's NOTE to it byte for byte.
 {
   const src = readFileSync(join(app, "src/main/kotlin/co/thechampagnemethod/hdreadings/Reading.kt"), "utf8").replace(/\r\n/g, "\n");
-  const from = src.indexOf("    private fun provisionalNames(");
+  const from = src.indexOf("    const val BIRTH_TIME_NOTE =");
   const fn = src.indexOf("    fun birthTimeNote(", from);
-  const to = src.indexOf("\n    }\n", fn);
-  if (from < 0 || fn < 0 || to < 0) throw new Error("Reading.kt: provisionalNames / birthTimeNote not found");
-  writeFileSync(join(pub, "birthTimeNote.kt.txt"), src.slice(from, to + 7));
+  const end = "BIRTH_TIME_NOTE\n";
+  const to = src.indexOf(end, fn);
+  if (from < 0 || fn < 0 || to < 0) throw new Error("Reading.kt: BIRTH_TIME_NOTE / birthTimeNote not found");
+  writeFileSync(join(pub, "birthTimeNote.kt.txt"), src.slice(from, to + end.length));
 }
 copyFileSync(join(app, "build/pdf-links/library-targets.txt"), join(pub, "phone-library-targets.txt"));
 

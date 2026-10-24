@@ -308,6 +308,8 @@ export function structuredFacts(output, { cards = FACT_CARDS } = {}) {
   // 10/23: "This separation creates an inner bridge" in "Your definition" on 74 stored drafts of split
   // charts (31 delivered at run time; splitBridgeProblem). Said per chart, as the money words are.
   if (/split/i.test(String(output?.definition ?? ""))) lines.push(SPLIT_FACT);
+  // 10/23 word-for-word read (N22): a Reflector's reading said "wait twenty-four hours" for Lunar authority.
+  if (/^lunar$/i.test(String(output?.authority ?? "").trim())) lines.push(LUNAR_FACT);
   if (Array.isArray(output?.channelLines) && output.channelLines.length) {
     lines.push(`Channel lines (printed for you, write only the sentence): ${output.channelLines.join("; ")}`);
   }
@@ -318,6 +320,8 @@ const MONEY_WORDS = "finances, financial, budget, debt, loans, taxes, mortgage, 
 const SPLIT_FACT =
   "This chart's definition is split: its defined centers form separate groups that no channel of this chart joins, " +
   "and other people's gates or the transits are what join them. Never write that the split creates, forms or builds a bridge.";
+export const LUNAR_FACT =
+  "Lunar authority: a big decision waits out a full lunar cycle, about a month (29 and a half days), never twenty-four hours or a single day.";
 
 /**
  * #4 / F45, Jeremy's ruling (option C, 2026-09-09): look for the Projector's

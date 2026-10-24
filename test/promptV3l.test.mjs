@@ -5,6 +5,7 @@ import {
   MECHANICS,
   TAKEAWAYS,
   adviceOrderProblem,
+  BIRTH_TIME_NOTE,
   birthTimeNote,
   birthTimeProblem,
   borrowedWordProblem,
@@ -116,16 +117,20 @@ test("SLIPS: a word said twice (R19 and others), a misspelled feeling word (R20)
 const SPREAD = (changes) => ({ v: 1, ok: true, minutes: 1440, noon: 720, window: [600, 900], changes, segments: {}, clock: [[0, 0]], gates: "change" });
 const unknown = (type, changes, more = {}) => ({ type, profile: "4/6", timeKnown: false, timeSpread: SPREAD(changes), ...more });
 
-test("THE NOTE carries the measured list, and only it (Jeremy 10/22: not 'so much info tied to the uncertainty')", () => {
+test("THE NOTE asks for silence, the same for every unknown-time chart (10/23 word-for-word read, M2; was: the measured list)", () => {
+  const SILENCE =
+    "NOTE: the birth time was not known. The page already shows, beside the chart, which values can change with it. " +
+    "Do not mention the birth time anywhere in the reading, and never call any value provisional, uncertain or unconfirmed.";
   const n = birthTimeNote(unknown("Projector", ["profile", "definedCenters", "undefinedCenters", "channels"]), { form: true });
-  assert.match(n, /^NOTE: birth time was not known and the chart was cast at noon\. Measured across the whole birth day, these values can change with the birth time: Profile, the centers' states \(defined, undefined or open\) and Channels\. Every other value above holds at any birth time\./);
-  assert.match(n, /at most once, in plain words, naming every one of those values as provisional\. Never call any other value uncertain/);
-  assert.doesNotMatch(n, /Type|Authority|cannot be confirmed/);
-  // Nothing changes: nothing to say.
-  assert.match(birthTimeNote(unknown("Generator", [])), /every value above holds at any birth time; the page already says so\. Do not mention the birth time/);
-  // No usable spread (an older record, or one not ok): the engine's own list, then the old three.
+  assert.equal(n, SILENCE);
+  assert.equal(BIRTH_TIME_NOTE, SILENCE);
+  // No list to name, no noon to repeat: the reading has nothing to say about it.
+  assert.doesNotMatch(n, /Profile|Type|Authority|cast at noon|cannot be confirmed|at most once/);
+  // Nothing changes, or no usable spread: the same NOTE.
+  assert.equal(birthTimeNote(unknown("Generator", [])), SILENCE);
   const old = { type: "Generator", timeKnown: false, provisional: ["type", "strategy", "authority", "profile", "notSelfTheme", "signature"] };
-  assert.match(birthTimeNote(old, { form: true }), /^NOTE: [^]*These values can change with the birth time: Type, Strategy, Inner Authority, Profile, the off-track feeling and the on-track feeling\./);
+  assert.equal(birthTimeNote(old, { form: true }), SILENCE);
+  // The values the page tags are still measured as before (the value-uncertain check reads them).
   assert.deepEqual(provisionalValues({ ...old, timeSpread: { ...SPREAD([]), ok: false } }).fields, old.provisional);
   assert.deepEqual(provisionalValues({ type: "Generator", timeKnown: false }), { measured: false, fields: ["type", "authority", "profile"] });
   assert.equal(birthTimeNote({ type: "Generator", timeKnown: true }), null);
@@ -142,12 +147,11 @@ test("BIRTH TIME: a value the birth day does not change, called uncertain, is re
   );
   assert.match(birthTimeProblem(energy("Your exact Type, Strategy, and Authority cannot be strictly confirmed without a birth time."), projector), /the Type uncertain/);
   assert.match(birthTimeProblem(energy("Because your birth time was not known, your exact chart configuration cannot be confirmed."), projector), /calls the whole chart uncertain/);
-  // What the NOTE lists may be said, once, plainly; a denial is not a claim.
-  assert.equal(birthTimeProblem(energy("Your birth time isn't known, so your Profile, the states of your centers and your Channels are provisional."), projector), null);
-  assert.equal(birthTimeProblem(energy("Your birth time isn't known; your Type and Authority are not provisional, and your Profile, centers and channels are."), projector), null);
-  // A Generator whose Type, Authority and Profile all change that day: the same sentence is true.
+  // 10/23 (M2): what the day does change is not said either -- the page tags it; the value-uncertain message stays first.
+  assert.match(birthTimeProblem(energy("Your birth time isn't known, so your Profile, the states of your centers and your Channels are provisional."), projector), /mentions the birth time in "Your energy, and how it starts"; the page already shows/);
+  assert.match(birthTimeProblem(energy("Your birth time isn't known; your Type and Authority are not provisional, and your Profile, centers and channels are."), projector), /mentions the birth time/);
   const generator = unknown("Generator", ["type", "strategy", "authority", "profile", "channels"]);
-  assert.equal(birthTimeProblem(energy("Because your birth time was not known, your Profile, Type, Strategy, Authority and Channels cannot be confirmed."), generator), null);
+  assert.match(birthTimeProblem(energy("Because your birth time was not known, your Profile, Type, Strategy, Authority and Channels cannot be confirmed."), generator), /mentions the birth time/);
   // Without a birth-time sentence, ordinary words are ordinary: "may change how you think".
   assert.equal(birthTimeProblem(energy("Your open Head center may change how you think from day to day."), unknown("Generator", [])), null);
   // Nothing changes: any caveat about the birth time is one too many.
@@ -156,12 +160,30 @@ test("BIRTH TIME: a value the birth day does not change, called uncertain, is re
   assert.equal(birthTimeProblem(energy("Your Type cannot be confirmed."), { type: "Generator", timeKnown: true }), null);
 });
 
-test("BIRTH TIME: said once at most, and never in the summary lines (stored drafts said it up to four times)", () => {
+test("BIRTH TIME: never mentioned, nothing called provisional (10/23 word-for-word read, M2; was: once at most)", () => {
   const g = unknown("Generator", ["type", "authority", "profile"]);
-  const twice = `${INTERPRETATION[0]}\n\nYour birth time isn't known, so your Type, Authority and Profile are provisional. Your birth time also shapes your gates.\n`;
-  assert.match(birthTimeProblem(twice, g), /mentions the birth time 2 times \("Your energy, and how it starts"\); once at most/);
-  const row = "IN SHORT\n\nType: Because birth time was not known, your Type is provisional.\n\n";
-  assert.match(birthTimeProblem(row, g), /mentions the birth time in the "Type" line; the page says it beside the chart/);
+  const said = (p, heading = INTERPRETATION[0]) => birthTimeProblem(section(p, heading), g);
+  // rk-a3's forced sentences, as delivered (R36, R32). R36's day changes every value it names; on a chart whose
+  // day does not, the kept value-uncertain check answers first.
+  const r36 = unknown("Reflector", ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "openCenters", "channels"]);
+  const forced = "Your energy reflects the room because your Type, Strategy, Inner Authority, Profile, Definition, on-track feeling, off-track feeling, center states, and Channels are provisional since the birth time was not known.";
+  assert.match(birthTimeProblem(section(forced, INTERPRETATION[0]), r36), /^The reading calls something "provisional" in "Your energy, and how it starts"; the page already shows beside the chart which values can change with the birth time, so the reading never mentions it: "/);
+  assert.match(said(forced), /^The reading calls the center states uncertain/);
+  assert.match(said("Please note that birth time was provisional and can change.", "What you take in from others"), /^The reading mentions the birth time in "What you take in from others"/);
+  // Once is too many now, and so is a summary line, a noon chart, a midday placeholder or the word alone.
+  assert.match(birthTimeProblem("IN SHORT\n\nType: Because birth time was not known, your Type is provisional.\n\n", g), /mentions the birth time in the "Type" line/);
+  assert.match(said("Your chart was cast at noon, so read it as a sketch."), /mentions the birth time/);
+  assert.match(said("Because your chart is cast from a midday placeholder, read it lightly."), /mentions the birth time/);
+  assert.match(said("This provisional pairing means you alternate between solitude and your network."), /calls something "provisional"/);
+  // Not about the birth time: ordinary words pass; a reading that never mentions it passes.
+  assert.equal(said("Endings naturally give birth to fresh starts, and you meet them a day at a time."), null);
+  assert.equal(said("Your Root center is defined and steady, so pressure comes in bursts you can count on."), null);
+  // A known time is timeClaimProblem's, not this check's.
+  assert.equal(birthTimeProblem(section("This provisional pairing passes here."), { type: "Generator", timeKnown: true }), null);
+  // A try-this tag is the page's label: Jeremy's approved 10/21 line passes where the day changes the authority.
+  const approved = "(Emotional authority, provisional) This week, on a small plan like a weekend outing, you might sleep on it for two nights. Notice whether your third-day answer matches your first, so the wait is familiar before a heavier choice, and you learn whether this authority fits you.";
+  assert.equal(birthTimeProblem(section(approved, TAKEAWAYS), g), null);
+  assert.match(birthTimeProblem(section("(Emotional authority) This week, you might sleep on a provisional plan.", TAKEAWAYS), g), /calls something "provisional" in "Things to experiment with"/);
 });
 
 /* --------------------------------------------------------- placeholders, not writing */
@@ -496,19 +518,10 @@ test("STATES: an undefined center called open is refused, as R27 delivered it", 
   assert.equal(centreStateProblem(decide("Your undefined Head and your open Spleen take in the room."), ["Ajna", "Throat"], ["Head", "G"], ["Spleen"]), null);
 });
 
-test("THE NOTE'S LIST, WHOLE: provisional values are named, every measured one (R34, R35 delivered)", () => {
+test("THE NOTE'S LIST is gone with the mention (10/23, M2): a list of provisional values is refused, named in full or not", () => {
   const manifestor = unknown("Manifestor", ["profile", "definition", "definedCenters", "undefinedCenters", "openCenters", "channels"]);
   const where = (p) => section(p, "What is consistently yours");
-  assert.match(
-    birthTimeProblem(where("Note that these values are provisional because your birth time was not known. Your Root is defined."), manifestor),
-    /says values are provisional in "What is consistently yours" without naming them; measured across the birth day, these can change: Profile, Definition, center states, Channels: "/,
-  );
-  const mg = unknown("Manifesting Generator", ["type", "strategy", "authority", "profile", "definition", "signature", "notSelfTheme", "incarnationCross", "definedCenters", "undefinedCenters", "channels"], { signature: "Satisfaction", notSelfTheme: "Frustration" });
-  assert.match(
-    birthTimeProblem(section("Because your birth time was not known, your Type, Strategy, Inner Authority, Profile, Definition, and centers' states are provisional.", INTERPRETATION[0]), mg),
-    /birth-time note in "Your energy, and how it starts" leaves out Incarnation Cross, Channels, the on-track and off-track feelings/,
-  );
-  assert.equal(birthTimeProblem(section("Because your birth time was not known, your Type, Strategy, Inner Authority, Profile, Definition, feeling words, Incarnation Cross, center states, and Channels are provisional values.", INTERPRETATION[0]), mg), null);
-  assert.equal(birthTimeProblem(where("Your birth time was not known, so your Profile, Definition, centers and channels come from a noon chart. These values are provisional."), manifestor), null);
+  assert.match(birthTimeProblem(where("Note that these values are provisional because your birth time was not known. Your Root is defined."), manifestor), /calls something "provisional" in "What is consistently yours"/);
+  assert.match(birthTimeProblem(where("Your birth time was not known, so your Profile, Definition, centers and channels come from a noon chart. These values are provisional."), manifestor), /mentions the birth time in "What is consistently yours"/);
   assert.equal(birthTimeProblem(where("Your Root center is defined and steady."), manifestor), null, "no mention, nothing to judge");
 });

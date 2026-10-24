@@ -140,8 +140,9 @@ export function placeholderForm(f) {
       strategy: `[RIG PLACEHOLDER] Your strategy is to ${f.strategy.toLowerCase()}.`,
       authority: `[RIG PLACEHOLDER] Your ${f.authority} authority is how you decide.`,
       profile: `[RIG PLACEHOLDER] Your profile is ${f.profile}.`,
-      signature: `[RIG PLACEHOLDER] On track, the feeling is ${f.signature.toLowerCase()}.`,
-      notSelf: `[RIG PLACEHOLDER] Off track, the feeling is ${f.notSelf.toLowerCase()}.`,
+      // 10/23 (S9, trackEcho): a row that only repeats its label and feeling is refused, so each says what it stands in for.
+      signature: `[RIG PLACEHOLDER] On track, the feeling is ${f.signature.toLowerCase()}; a stand-in sentence holds this row.`,
+      notSelf: `[RIG PLACEHOLDER] Off track, the feeling is ${f.notSelf.toLowerCase()}, and the rig wrote this row in place of one.`,
     },
     incarnationCross: `[RIG PLACEHOLDER] Your cross is the ${f.cross}. ${para("cross")}`,
     // A Reflector's "None" in the checker's own sentence (prompt v3, 10/23: "definition is None" is a known slip).
@@ -317,8 +318,9 @@ export function outputFromFacts(f, text) {
     channels: f.channels,
     timeKnown: !f.timeUnknown,
   };
-  const note = /^NOTE: birth time was not known.*$/m.exec(text)?.[0] ?? "";
-  if (!note) return out;
+  const note = /^NOTE: (?:the )?birth time was not known.*$/m.exec(text)?.[0] ?? "";
+  // 10/23 (M2): the NOTE no longer lists the values (the page tags them); the shop's own fallback reads the rest.
+  if (!note || !/values can change with the birth time: |every value above holds at any birth time/.test(note)) return out;
   if (/every value above holds at any birth time/.test(note)) return { ...out, timeSpread: { ok: true, window: [0, 1439], changes: [] } };
   const list = /values can change with the birth time: (.*?)\. Every other value/.exec(note)?.[1] ?? "";
   // Each name the NOTE can say, found in its list ("Profile, the centers' states (defined, undefined or open) and Channels").
