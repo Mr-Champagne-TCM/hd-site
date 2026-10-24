@@ -41,7 +41,7 @@ import {
   profileLink,
   typeLink,
 } from "../../shared/libraryLinks.mjs";
-import { Layout, drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
+import { FONT_ASC, FONT_DESC, Layout, drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
 
 /**
  * THE CLIENT PDF -- the SAME DOCUMENT the phone app makes (Jeremy 10/16: "All
@@ -128,6 +128,20 @@ const BODY_W = 352;
 const RULE_X = MARGIN + 366;
 const NOTE_X = MARGIN + 382;
 const NOTE_W = 122;
+const NOTE_SIZE = 8.5;
+/**
+ * BATCH-1024 ITEM 1 (live retest 10/23): a margin note that wraps ("Decided
+ * over time, not in / the moment.", "Right Angle Cross of Eden / (36/6 |
+ * 11/12)") had a gap between its lines that read as two notes. The body's
+ * spacing (x1.08 + 3pt) adds a fixed 3pt: right at 10.5pt, loose at 8.5pt,
+ * and a wrapped value stepped 14pt while its label stepped 10pt onto it. Scaling
+ * the body's room to 8.5pt gave 13pt, and the 2x render still showed the gap,
+ * so a note's lines now step by the type's own line height (10pt), the step
+ * its label already takes onto its value: one note, one block. The 9pt between
+ * notes keeps them apart. Labels that break ("ON TRACK, / THE FEELING IS")
+ * step the same way.
+ */
+export const NOTE_LINE_GAP = 0;
 
 const INK = "#0E1A2B";
 const GOLD = "#8A6D0F"; // darkened for contrast on white
@@ -354,10 +368,17 @@ class Doc {
 
   /** Link every line of `l`, drawn with its top-left at (x, top). */
   linkLayout(l, x, top, uri) {
+    // Lines set closer than usual (the margin notes, batch-1024 item 1) get
+    // less room above and below their boxes, so one line's box never covers
+    // the next; at the usual spacing this is the usual 1.5pt.
+    const pad = 1.5;
+    const glyph = (FONT_ASC + FONT_DESC) * l.paint.size;
+    const vpad = l.lineCount > 1 ? Math.max(0, Math.min(pad, (l.m.h + l.m.extra - glyph) / 2)) : pad;
     l.lines.forEach((line, i) => {
       if (!line.text) return;
       const base = top + l.baseline(i);
-      this.link(textBox(this.pdf, line.text, x, base, l.paint), uri);
+      const r = textBox(this.pdf, line.text, x, base, l.paint);
+      this.link({ left: r.left - pad, top: r.top - vpad, right: r.right + pad, bottom: r.bottom + vpad }, uri, 0);
     });
   }
 
@@ -480,8 +501,8 @@ class Doc {
     this.open = false;
   }
 
-  L(text, p, width = CONTENT_W) {
-    return layout(this.pdf, text, p, width);
+  L(text, p, width = CONTENT_W, opts = {}) {
+    return layout(this.pdf, text, p, width, opts);
   }
 }
 
@@ -1295,8 +1316,8 @@ function readingPages(d, c, v) {
     // Chart facts for the margin, always from the chart; beside the FIRST
     // part of the section only.
     const noteLs = (notes[h] ?? []).map(([k, val]) => [
-      k ? d.L(k, paint(8.5, GOLD, true, 0.09), NOTE_W) : null,
-      d.L(String(val ?? ""), paint(8.5, DIM), NOTE_W),
+      k ? d.L(k, paint(NOTE_SIZE, GOLD, true, 0.09), NOTE_W, { extra: NOTE_LINE_GAP }) : null,
+      d.L(String(val ?? ""), paint(NOTE_SIZE, DIM), NOTE_W, { extra: NOTE_LINE_GAP }),
       k,
     ]);
     const notesH = noteLs.reduce((n, [kl, vl, k]) => n + (kl?.height ?? 0) + (tagged(k) ? NOTE_TAG_H : 0) + vl.height + 9, 0);

@@ -1,4 +1,4 @@
-import { checkoutCredit, checkoutProduct, sessionParams } from "../lib/checkout.mjs";
+import { checkoutCredit, checkoutEmail, checkoutProduct, sessionParams } from "../lib/checkout.mjs";
 import { createSession, ensureProduct } from "../lib/stripe.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
 import { chainHead } from "../lib/charts.mjs";
@@ -89,6 +89,9 @@ export default guard("checkout", async (request) => {
     readLink: readReadingLink,
   });
 
+  // The email the chart's receipt went to, already in Stripe's box (batch-1024 item 2). A prefill only.
+  const email = await checkoutEmail({ body, secret: grantSecret, head: (id) => chainHead(readings, id), readLink: readReadingLink });
+
   const origin = new URL(request.url).origin;
 
   // The tier's own Stripe product, so a free retry code can be held to it
@@ -101,9 +104,9 @@ export default guard("checkout", async (request) => {
   });
 
   try {
-    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh, kept }));
+    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh, kept, email }));
     console.log(
-      `POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${upgrades ? ", upgrade" : ""}${fresh ? ", someone new" : ""}${product ? "" : ", inline product"})`,
+      `POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${upgrades ? ", upgrade" : ""}${fresh ? ", someone new" : ""}${email ? ", email kept" : ""}${product ? "" : ", inline product"})`,
     );
     return json(200, { url: session.url });
   } catch (e) {

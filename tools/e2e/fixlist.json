@@ -1379,6 +1379,55 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-1-note-spacing",
+      "about": "Live retest 10/23 (batch-1024 item 1): in the reading PDF a margin note that wraps had an extra gap between its lines ('Decided over time, not in / the moment.', 'Right Angle Cross of Eden / (36/6 | 11/12)'), so one note read as two. The body's spacing (x1.08 + 3pt) is right at 10.5pt and loose at the notes' 8.5pt: a wrapped value stepped 14pt while its label stepped 10pt onto it. readingPdf.mjs now lays the margin labels and values out with NOTE_LINE_GAP = 0 (pdfText.mjs Layout/layout take an optional { extra }), so every line of a note steps 10pt, the label-to-value step; 9pt between notes is unchanged, and the body text keeps 17pt. A label that breaks ('MANIFESTING / GENERATOR') keeps a link box per line, with less room above and below so the boxes do not overlap (linkLayout). Scaling the body's room to 8.5pt (13pt) was tried first and the 2x render still showed the gap. Positions only; no line of text changes, so this entry claims no line. A shorter margin can let a reading section start a page earlier, so lines may move between the reading PDF's pages: claimed as moved (`moves`). Test: test/batch1024-notes.test.mjs. Renders: hd-e2e/batch-1024/renders-ui/item1-compare*.png.",
+      "docs": "^$",
+      "minus": [],
+      "plus": [],
+      "moves": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$"
+    },
+    {
+      "id": "BATCH1024-2-checkout-email",
+      "about": "Live retest 10/23 (batch-1024 item 2): the upgrades (summary to chart, chart to reading) and the someone-new purchase made from an owned chart's page opened Stripe Checkout with an empty email box, so the buyer typed the address the shop already had. checkout.mjs checkoutEmail() reads the chart the signed link names (the newest record of its chain, as the credit does) and sessionParams() passes its receipt email as customer_email, which only fills the box (the buyer can change it). The someone-new cards on /u/<token>#new now send the link with someoneNew (purchase.ts, App.tsx Tiers `from`), for the email only: checkoutCredit still returns no credit for someone new. The receipt, the claim and the purchase watcher still read the email from the paid Stripe session (customer_details); the address is never logged. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-checkout-email.test.mjs (Stripe mocked through createSession's fetchImpl).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-3-addtime-dropped",
+      "about": "Live retest 10/23 (batch-1024 item 3): on the add-time page (src/AddTime.tsx), when fetch itself failed (the connection dropped, nothing reached the server) the catch branch showed 'addtime-slow', which says 'Jeremy has been told' -- untrue, since nobody was. The catch branch now shows its own line, 'addtime-connection-dropped' (shared/customerMessages.mjs, act false, one entry for chart and summary alike): 'That didn’t reach me — the connection dropped, so nothing has changed. The time you chose is still in the form; another try usually works.' A server that answered keeps its words: its own message, or 'addtime-slow' / 'addtime-slow-summary' when the answer had none (unchanged). Shown only after a dropped connection, so no baseline page should carry it; the plus line is here so a render that does is allowed. Test: test/batch1024-addtime-dropped.test.mjs (the form's own onSubmit run with fetch stubbed to throw, to answer 503 with words, and 502 without).",
+      "docs": "^page ",
+      "minus": [],
+      "plus": [
+        "^That didn’t reach me — the connection dropped, so nothing has changed\\. The time you chose is still in the form; another try usually works\\.$"
+      ]
+    },
+    {
+      "id": "BATCH1024-4-draft-no-page",
+      "about": "10/23 21:47 (batch-1024 item 4): every deploy shares the live blob stores, and a draft deployed with no secrets filed a 'places-misconfigured' incident, severity page-jeremy, into the live health store. New netlify/lib/deployContext.mjs: the deploy context comes from the context object a v2 function is handed (context.deploy.context; guard() and the scheduled functions sweep, watch, reconcile and retry-code pass it on), then Netlify's global Netlify.context, then process.env.CONTEXT (a build variable, likely absent at runtime, as DEPLOY_ID was on 9/8). Anything but 'production' never files a page-jeremy incident and never alerts: noteFailure() and reportFailure() log one line ('<kind>: not filed and no alert -- deploy context \"<ctx>\" is not production') and stop; the sweep's rate alarm goes through reportFailure; watch sends no digest. Lower-severity incidents are still kept, unalerted. Nothing known (tests, the local rig) behaves as production did, so a monitor never goes quiet for not knowing where it runs. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-draft-health.test.mjs (both contexts, three sources, guard, the rate alarm, watch, and the places function with no secrets end to end through a recorded fetch).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-5-email-place",
+      "about": "Live retest 10/23 (batch-1024 item 5): the 'Email me my charts' email showed 'Coeur d'Alene' with a straight apostrophe. Decision 8 curled place names where they are shown (shared/birthLine.mjs: the PDF and the pages); myChartsEmail.mjs chartCard() now curls the kept place for its row the same way (curly(), HTML and text alike), so a row reads 'The chart · January 2, 1990 · Coeur d’Alene, Idaho'. The kept place is unchanged. No other email prints a birth place (the ready, receipt and add-time emails do not; the add-time page's kept line already goes through birthLine). Test: test/batch1024-email-place.test.mjs.",
+      "docs": "^email ",
+      "minus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*'[^·]*$"
+      ],
+      "plus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*’[^·]*$"
+      ]
+    },
+    {
+      "id": "BATCH1024-6-places-town-first",
+      "about": "Live retest 10/23 (batch-1024 item 6): typing 'Denver' in the town search listed Copenhagen, Århus, Odense and Aalborg (and Henderson) after Denver. The engine (hd-engine CityIndex.search, its own service, untouched) fills a short list with near-misses on ANY word of a row, and 'denver' is two letters from 'denmar(k)'. New netlify/lib/placeRank.mjs orders the engine's rows in the places function (every way out: miss, blob cache hit, memory) before they are cached or sent: 0 the town's name starts with the first word typed, 1 a later word of the town's name does, 2 the town's name holds it, 3 the town's name is a near-miss (Henderson), 4 only the state or country matched (the Danish towns). Stable inside a class, so the engine's order stands there: Denver stays first, a whole-word town prefix beats a country prefix ('Den' -> Denton, Denver before Copenhagen), and Portland, Coeur d'Alene, Boise, Hartford and a whole-state fallback read as before. Same rows, same count. The places list is not a captured document line set, so this entry claims nothing by design. Test: test/batch1024-places-rank.test.mjs (the classes, the reported list, the four towns, and /api/places end to end with the engine and the blob store faked).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }

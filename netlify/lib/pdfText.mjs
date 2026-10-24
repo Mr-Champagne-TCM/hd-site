@@ -159,14 +159,19 @@ function breakLines(doc, text, p, width) {
   return lines;
 }
 
-/** One laid-out block: StaticLayout's answer, in points. */
+/**
+ * One laid-out block: StaticLayout's answer, in points. `opts.extra`, when
+ * given, replaces the room between lines (the margin notes, batch-1024 item 1).
+ */
 export class Layout {
-  constructor(doc, text, p, width) {
+  constructor(doc, text, p, width, opts = {}) {
     this.text = text;
     this.paint = p;
     this.width = width;
+    this.opts = opts;
     this.lines = breakLines(doc, text, p, width);
-    const m = lineMetrics(p.size);
+    const base = lineMetrics(p.size);
+    const m = opts.extra == null ? base : { ...base, extra: opts.extra };
     this.m = m;
     this.tops = [];
     let y = 0;
@@ -238,13 +243,13 @@ export const hooks = { onLayout: null, onText: null };
  * lines) -- until the last line has at least two words. If no width inside
  * that allowance works, the word before the lonely one is carried down.
  */
-export function layout(doc, text, p, width) {
-  const first = new Layout(doc, text, p, width);
+export function layout(doc, text, p, width, opts = {}) {
+  const first = new Layout(doc, text, p, width, opts);
   let best = first;
   if (hasLonelyLastWord(first)) {
     let fixed = false;
     for (let w = width - LONELY_STEP_PT; w >= width - lonelyAllowance(p.size); w -= LONELY_STEP_PT) {
-      const l = new Layout(doc, text, p, w);
+      const l = new Layout(doc, text, p, w, opts);
       if (!hasLonelyLastWord(l)) {
         best = l;
         fixed = true;
@@ -258,7 +263,7 @@ export function layout(doc, text, p, width) {
         const next = carryDown(l, t);
         if (next === null) break;
         t = next;
-        l = new Layout(doc, t, p, width);
+        l = new Layout(doc, t, p, width, opts);
       }
       if (!hasLonelyLastWord(l)) best = l;
     }

@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { handleRetryCode } from "../lib/retryCode.mjs";
+import { noteDeployContext } from "../lib/deployContext.mjs";
 import { createCoupon, createPromotionCode, ensureProduct, getSession } from "../lib/stripe.mjs";
 
 /**
@@ -12,7 +13,8 @@ import { createCoupon, createPromotionCode, ensureProduct, getSession } from "..
  * Nothing here is reachable without a link this site signed. A stranger who
  * finds the path gets "Not a working link" and nothing else.
  */
-export default async (request) => {
+export default async (request, context) => {
+  noteDeployContext(context); // batch-1024 item 4: only production pages
   try {
     const url = new URL(request.url);
     let token = url.searchParams.get("t") ?? "";

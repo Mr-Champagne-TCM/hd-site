@@ -245,6 +245,12 @@ export const MESSAGES = {
       "Something on my side is slow right now, so your chart wasn’t redone — nothing has changed, and the time " +
       `you chose is still in the form. Another try in a minute usually works. Jeremy has been told. ${CONTACT} reaches him.`,
   },
+  // The page's own words when nothing reached the server at all (the fetch itself failed): nobody was told,
+  // so it does not say so (batch-1024 item 3, live retest 10/23). No chart or summary named, so one entry serves both.
+  "addtime-connection-dropped": {
+    act: false,
+    text: "That didn’t reach me — the connection dropped, so nothing has changed. The time you chose is still in the form; another try usually works.",
+  },
   "addtime-not-saved": {
     act: false,
     text:
