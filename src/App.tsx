@@ -298,16 +298,15 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
         is already asking; "Three ways in" names what the cards are.
       */}
       {!fresh && (
-        <>
-          <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-            {TIERS_INTRO.lead}
-          </h2>
-          {/* text-pretty: the shorter line (credit said once, 10/23) left "you." alone on a phone's second line. */}
-          <p className="mt-3 max-w-[62ch] text-pretty text-[17px] leading-relaxed text-brand-paper/85">{TIERS_INTRO.body}</p>
-        </>
+        <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
+          {TIERS_INTRO.lead}
+        </h2>
       )}
 
-      <p className={(fresh ? "" : "mt-10 ") + "font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal"}>
+      {/* PICKS-PRICE-LINE (Jeremy 10/23, GO v3): the line under the invitation ("The price is here before
+          anything is asked of you.") is gone. The label sits closer (mt-6, was mt-10 under that line), so
+          the invitation, the label and the cards read as one block. */}
+      <p className={(fresh ? "" : "mt-6 ") + "font-sans text-[12px] uppercase tracking-[0.18em] text-brand-teal"}>
         {TIERS_INTRO.title}
       </p>
 

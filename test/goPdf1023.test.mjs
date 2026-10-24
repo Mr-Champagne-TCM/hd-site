@@ -35,14 +35,14 @@ const pageMechanics = await importTs("src", "mechanics.ts");
 
 test("CREDIT ONCE: the price page says the credit idea in one place, under the cards", () => {
   const { TIERS_INTRO, LADDER_NOTE } = copy;
-  // The line above the cards is the price, said plainly; the credit lives in the note under them.
-  assert.equal(TIERS_INTRO.body, "The price is here before anything is asked of you.");
+  // No line above the cards any more (Jeremy, GO v3, 10/23); the credit lives in the note under them.
+  assert.equal(TIERS_INTRO.body, undefined);
   assert.equal(
     LADDER_NOTE,
     "Straight to the reading, or a step at a time — the total is identical either way. " +
       "What you have already paid comes off what you pay next — nobody pays twice for the same thing.",
   );
-  const page = `${TIERS_INTRO.lead}\n${TIERS_INTRO.title}\n${TIERS_INTRO.body}\n${LADDER_NOTE}`;
+  const page = `${TIERS_INTRO.lead}\n${TIERS_INTRO.title}\n${LADDER_NOTE}`;
   const count = (re) => (page.match(re) ?? []).length;
   assert.equal(count(/the total is identical/g), 1);
   assert.equal(count(/costs the same/g), 0, "the same total, said a second way");

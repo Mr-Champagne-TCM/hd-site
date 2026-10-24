@@ -260,11 +260,8 @@ export const TIERS_INTRO = {
   title: "Three ways in",
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   // The credit idea is said ONCE on this page (Jeremy's GO PDF, 10/23: "Good, be consistent"): in
-  // LADDER_NOTE under the cards, beside the prices it is about. That note already says "the total is
-  // identical either way" and "comes off what you pay next — nobody pays twice", so this
-  // line no longer says it, or "costs the same in the end". The credit sentence is the same words on
-  // the chart and summary pages, the emails, the PDF and the website (10/23 verbatim read, S4).
-  body: "The price is here before anything is asked of you.",
+  // LADDER_NOTE under the cards, beside the prices it is about. The line that sat under the invitation
+  // ("The price is here before anything is asked of you.") is gone too (Jeremy, GO v3, 10/23).
 };
 
 /**

@@ -1335,6 +1335,15 @@
         "^A reading lists all twenty-six planet numbers, each with the planet that lit$",
         "^(it\\.|that lit it\\.|planet that lit it\\.)$"
       ]
+    },
+    {
+      "id": "PICKS-EXTRA-price-line",
+      "about": "Jeremy on GO v3 (10/23): 'consider removing line and accommodating new white space with adjustments for objects around it.' The offer page's line under 'If you’d like to see your own' ('The price is here before anything is asked of you.') is gone: TIERS_INTRO.body and its <p> are removed (copy.ts, App.tsx Tiers), and the 'Three ways in' label sits closer to the invitation (mt-6, was mt-10 under the line), so the invitation, the label and the cards read as one block. Nothing else on the page changes.",
+      "docs": "^page offer$",
+      "minus": [
+        "^The price is here before anything is asked of you\\.$"
+      ],
+      "plus": []
     }
   ]
 }
