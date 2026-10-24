@@ -1,7 +1,8 @@
 import { getStore } from "@netlify/blobs";
 import { interpretOne } from "../lib/interpretJob.mjs";
 import { promptProblem } from "../lib/interpretation.mjs";
-import { PROMPT_STORE, loadPrompt } from "../lib/gemini.mjs";
+import { PROMPT_STORE, generateReading, loadPrompt } from "../lib/gemini.mjs";
+import { claudeWriter } from "../lib/writer.mjs";
 import { alertSender, noteFailure } from "../lib/failures.mjs";
 import { loadReading } from "../lib/reading.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
@@ -66,14 +67,32 @@ export default async (request) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const mailKey = process.env.RESEND_API_KEY;
   const origin = process.env.URL || "https://humandesign.thechampagnemethod.co";
+  /**
+   * CLAUDE WRITES, GEMINI CATCHES (10/23, Jeremy's T4 + T5 plan; writer.mjs). HD_ANTHROPIC_KEY is the
+   * TCM "hd-live" workspace key -- deliberately NOT named ANTHROPIC_API_KEY, which Netlify's AI Gateway
+   * fills with its own paid key when it is unset. HD_WRITER=gemini is the off switch. No key, or the
+   * switch off, and every reading is written by Gemini exactly as before.
+   */
+  const claudeKey = process.env.HD_WRITER === "gemini" ? null : process.env.HD_ANTHROPIC_KEY || null;
 
-  if (!apiKey) {
-    console.log("interpret: no GEMINI_API_KEY, nothing to do");
+  if (!apiKey && !claudeKey) {
+    console.log("interpret: no GEMINI_API_KEY or HD_ANTHROPIC_KEY, nothing to do");
     return new Response(null, { status: 204 });
   }
 
   const store = getStore({ name: "readings", consistency: "strong" });
   const health = getStore({ name: "health", consistency: "strong" });
+  const writer = claudeKey
+    ? claudeWriter({
+        apiKey: claudeKey,
+        store: health,
+        notify: alertSender(mailKey),
+        ...(Number(process.env.HD_CLAUDE_SWITCH_AT) > 0 ? { switchAt: Number(process.env.HD_CLAUDE_SWITCH_AT) } : {}),
+        ...(Number(process.env.HD_CREDIT_DAY) > 0 ? { creditDay: Number(process.env.HD_CREDIT_DAY) } : {}),
+        expectOrg: process.env.HD_ANTHROPIC_ORG || null,
+        blockOrgs: (process.env.HD_ANTHROPIC_BLOCK_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean),
+      })
+    : null;
 
   /**
    * One reading, written. The named purchase and the drain share this exactly.
@@ -95,6 +114,7 @@ export default async (request) => {
       origin,
       deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
       deadline,
+      ...(writer ? { generate: (output, opts) => generateReading(output, { ...opts, writer }) } : {}),
     });
   /** What a run that found another writer on the reading says. */
   const elsewhere = (r) => `another run is writing it (writing lock ${untilText(r.until)}); this one does nothing`;

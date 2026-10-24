@@ -112,9 +112,9 @@ const ATTEMPTS = 1;
  */
 export async function generateReading(
   output,
-  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text", fix = null, factCards = FACT_CARDS } = {},
+  { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text", fix = null, factCards = FACT_CARDS, writer = null } = {},
 ) {
-  if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
+  if (!apiKey && !writer) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
   const instruction = typeof prompt === "string" && prompt.trim() ? prompt.trim() : null;
   if (!instruction) {
     return { ok: false, reason: "misconfigured", detail: "no READING_PROMPT" };
@@ -127,7 +127,7 @@ export async function generateReading(
   const part = shape === "json" && fix && fix.form && Array.isArray(fix.parts) && fix.parts.length ? fix : null;
   let last = { ok: false, reason: "unknown" };
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards });
+    last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards, writer });
     if (last.ok) return last;
     /**
      * A BUSY MODEL IS NOT A VERDICT. On 2026-09-03 Google answered 503 for a
@@ -138,7 +138,7 @@ export async function generateReading(
     const busy = last.reason === "http" && /\b(503|429)\b/.test(String(last.detail));
     if (busy) {
       await new Promise((r) => setTimeout(r, 5000));
-      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards });
+      last = await once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix: part, factCards, writer });
       if (last.ok) return last;
     }
     if (last.reason !== "malformed") return last;
@@ -187,7 +187,7 @@ export function draftCheck(clean, output, { instruction, facts, json, sources = 
   );
 }
 
-async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix = null, factCards = FACT_CARDS }) {
+async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, shape, fix = null, factCards = FACT_CARDS, writer = null }) {
   // "json": the model fills READING_SCHEMA and structured.mjs writes the
   // document. "text": the original letter-shaped prompt. See structured.mjs.
   const json = shape === "json";
@@ -196,56 +196,18 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   const asked = fix ? fixRequest(fix.form, output, fix.parts) : null;
   // What the draft is held to for copying: the prompt, the form notes, and the words of a re-ask.
   const sources = [instruction, ...(json ? schemaNotes() : []), ...(fix ? FIX_WORDS : [])];
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let res;
-  try {
-    res = await fetchImpl(ENDPOINT(model), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: instruction }] },
-        // THE ONLY THING THAT LEAVES. See interpretation.mjs. A re-ask adds the
-        // model's own draft of this chart and the checker's words, nothing else.
-        contents: [{ role: "user", parts: [{ text: facts + (asked ? asked.text : "") }] }],
-        generationConfig: json
-          ? {
-              temperature: 1,
-              maxOutputTokens: 8192,
-              responseMimeType: "application/json",
-              responseSchema: asked ? asked.schema : READING_SCHEMA,
-            }
-          : { temperature: 1, maxOutputTokens: 8192 },
-      }),
-      signal: controller.signal,
-    });
-  } catch (e) {
-    // An abort and a dropped connection are the same answer to the caller.
-    return {
-      ok: false,
-      reason: e?.name === "AbortError" ? "timeout" : "network",
-      detail: e?.message ?? "no reply",
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  // THE ONLY THING THAT LEAVES. See interpretation.mjs. A re-ask adds the
+  // model's own draft of this chart and the checker's words, nothing else.
+  const user = facts + (asked ? asked.text : "");
+  const schema = json ? (asked ? asked.schema : READING_SCHEMA) : null;
 
-  if (!res.ok) {
-    /**
-     * THE STATUS TRAVELS, THE BODY DOES NOT. An error body from Google can
-     * echo the request back, and the request is a chart -- which is exactly
-     * what must not end up in a log or in a monitoring digest.
-     */
-    return { ok: false, reason: "http", detail: `gemini ${res.status}` };
-  }
-
-  let text;
-  try {
-    const body = await res.json();
-    text = body?.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "";
-  } catch {
-    return { ok: false, reason: "unreadable", detail: "gemini sent something that is not json" };
-  }
+  // 10/23 (Jeremy's T4 + T5 plan): Claude writes first (writer.mjs); Gemini, as before, only when it cannot.
+  // Either way the answer is the form's text, rendered and checked below exactly the same.
+  const viaClaude = writer ? await writer({ instruction, user, schema, timeoutMs }) : null;
+  const got = viaClaude && !viaClaude.useGemini ? viaClaude : await geminiText({ apiKey, model, fetchImpl, timeoutMs, instruction, user, schema });
+  if (!got.ok) return { ok: false, reason: got.reason, detail: got.detail };
+  let text = got.text;
+  const by = writer ? { by: got.by ?? "gemini" } : {};
 
   let form = null;
   let built = null;
@@ -289,5 +251,57 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   }
 
   // The form travels with a passing draft too (form mode), so a test round can read what was written where.
-  return json ? { ok: true, text: clean, form } : { ok: true, text: clean };
+  return json ? { ok: true, text: clean, form, ...by } : { ok: true, text: clean, ...by };
+}
+
+/** One Gemini call: the answer's text, or why not. */
+async function geminiText({ apiKey, model, fetchImpl, timeoutMs, instruction, user, schema }) {
+  if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetchImpl(ENDPOINT(model), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: instruction }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: schema
+          ? {
+              temperature: 1,
+              maxOutputTokens: 8192,
+              responseMimeType: "application/json",
+              responseSchema: schema,
+            }
+          : { temperature: 1, maxOutputTokens: 8192 },
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    // An abort and a dropped connection are the same answer to the caller.
+    return {
+      ok: false,
+      reason: e?.name === "AbortError" ? "timeout" : "network",
+      detail: e?.message ?? "no reply",
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    /**
+     * THE STATUS TRAVELS, THE BODY DOES NOT. An error body from Google can
+     * echo the request back, and the request is a chart -- which is exactly
+     * what must not end up in a log or in a monitoring digest.
+     */
+    return { ok: false, reason: "http", detail: `gemini ${res.status}` };
+  }
+
+  try {
+    const body = await res.json();
+    return { ok: true, text: body?.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "" };
+  } catch {
+    return { ok: false, reason: "unreadable", detail: "gemini sent something that is not json" };
+  }
 }
