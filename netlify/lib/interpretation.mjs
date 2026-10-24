@@ -690,40 +690,23 @@ export function provisionalValues(output) {
   return { measured: false, fields: ["type", "authority", "profile"] };
 }
 
-/** The NOTE's names for those values, as the facts above it label them. */
-function provisionalNames(fields, form) {
-  const names = {
-    type: "Type",
-    strategy: "Strategy",
-    authority: "Inner Authority",
-    profile: "Profile",
-    definition: "Definition",
-    signature: form ? "the on-track feeling" : "Signature",
-    notSelfTheme: form ? "the off-track feeling" : "Not-Self Theme",
-    incarnationCross: "Incarnation Cross",
-    definedCenters: "the centers' states (defined, undefined or open)",
-    undefinedCenters: "the centers' states (defined, undefined or open)",
-    openCenters: "the centers' states (defined, undefined or open)",
-    channels: "Channels",
-  };
-  const said = [...new Set(fields.map((f) => names[f]))];
-  return said.length < 2 ? said.join("") : `${said.slice(0, -1).join(", ")} and ${said.at(-1)}`;
-}
+/**
+ * THE READING NEVER MENTIONS THE BIRTH TIME (10/23 word-for-word read, M2; a pick
+ * made for measuring, not yet Jeremy's call). Asked to name every value the
+ * birth day changes, every unknown-time reading of round rk-a3 carried a forced
+ * sentence: "Your energy reflects the room because your Type, Strategy, Inner
+ * Authority, Profile, Definition, on-track feeling, off-track feeling, center
+ * states, and Channels are provisional since the birth time was not known."
+ * The page already says it three ways: the time line, the bar and the
+ * PROVISIONAL tags. So the NOTE now asks for silence, the same for every
+ * unknown-time chart, and birthTimeProblem refuses any mention.
+ */
+export const BIRTH_TIME_NOTE =
+  "NOTE: the birth time was not known. The page already shows, beside the chart, which values can change with it. " +
+  "Do not mention the birth time anywhere in the reading, and never call any value provisional, uncertain or unconfirmed.";
 
-export function birthTimeNote(output, { form = false } = {}) {
-  const p = provisionalValues(output);
-  if (!p) return null;
-  const head = "NOTE: birth time was not known and the chart was cast at noon.";
-  if (!p.fields.length) {
-    return `${head} Measured across the whole birth day, every value above holds at any birth time; the page already says so. Do not mention the birth time, and never call any value uncertain.`;
-  }
-  return (
-    `${head} ${p.measured ? "Measured across the whole birth day, these" : "These"} values can change with the birth time: ` +
-    `${provisionalNames(p.fields, form)}. Every other value above holds at any birth time. The page already says so; ` +
-    // 10/23: "as those values being provisional" came back as "these values are provisional" with none named (18
-    // drafts in rounds v3p-v3s, noteListProblem); the reader is told which.
-    "mention it at most once, in plain words, naming every one of those values as provisional. Never call any other value uncertain, and add no other caveat about the birth time."
-  );
+export function birthTimeNote(output) {
+  return provisionalValues(output) ? BIRTH_TIME_NOTE : null;
 }
 
 /**
@@ -737,14 +720,16 @@ export function birthTimeNote(output, { form = false } = {}) {
  * A claim about the whole chart ("your exact chart configuration cannot be
  * confirmed") is the caveat the NOTE asks the reading not to add, and so is
  * any claim when nothing changes. Denied ("your Type is not provisional") is
- * not a claim. And the birth time is said once at most, never in the summary
- * lines (the page says it beside the chart): stored drafts said it up to four
- * times, once in each of three summary lines.
+ * not a claim. Then (10/23, M2, replacing "at most once, naming every measured
+ * value"): the birth time is never mentioned at all, and nothing is called
+ * "provisional" or "unconfirmed", the page's own tag -- the page shows the
+ * time line, the bar and the tags. Only on an unknown-time chart; a known one
+ * has timeClaimProblem.
  */
 const UNSURE_STRONG = /\b(?:provisional(?:ly)?|unconfirmed|tentative(?:ly)?|(?:cannot|can['\u2019]t|could not|couldn['\u2019]t|can ?not)\s+(?:yet\s+)?be\s+(?:(?:fully|strictly|definitively|absolutely|completely|entirely|truly|reliably|precisely|exactly|accurately|firmly)\s+)?(?:confirmed|verified|certain|known|fixed|pinned down)|not\s+(?:yet\s+)?(?:be\s+)?(?:confirmed|verified))\b/gi;
 const UNSURE_WEAK = /\b(?:uncertain(?:ty)?|not\s+(?:fully\s+|entirely\s+|completely\s+)?certain|(?:may|might|could|can|would)\s+(?:all\s+)?(?:change|shift|differ|vary|be different)|subject to change)\b/gi;
 const BIRTH_TIME = /\bbirth[\s-]?(?:time|hour)\b|\btime of (?:your |their )?birth\b|\bnoon\b|\b(?:exact|precise) (?:time|hour|minute)\b/i;
-const BIRTH_SAID = /\bbirth[\s-]?(?:time|hour)s?\b|\btime of (?:your |their )?birth\b|\b(?:cast|calculated|drawn|set|charted)\s+(?:at|for)\s+noon\b|\bnoon[- ](?:cast|calculated|based|chart)\b/i;
+const BIRTH_SAID = /\bbirth[\s-]?(?:time|hour)s?\b|\btime of (?:your |their )?birth\b|\b(?:cast|calculated|drawn|set|charted)\s+(?:at|for|from)\s+(?:a\s+)?(?:noon|midday)\b|\b(?:noon|midday)[- ](?:cast|calculated|based|chart|placeholder|placements?)\b|\bmoment of (?:your )?birth\b|\btime\s?stamp\b/i;
 const VALUE_NAMED = [
   ["Type", ["type"], /\btypes?\b|\b(?:Manifesting Generator|Generator|Projector|Manifestor|Reflector)\b/i],
   ["Strategy", ["strategy"], /\bstrateg(?:y|ies)\b/i],
@@ -795,65 +780,19 @@ export function birthTimeProblem(raw, output) {
       }
     }
   }
-  const said = [];
-  for (const [where, text] of prose) {
-    for (const s of text.split(/(?<=[.!?])\s+/)) if (BIRTH_SAID.test(s)) said.push([where, s]);
+  // 10/23 (M2): the page says it, so the reading never does -- no birth time, no "provisional", anywhere. A try-this
+  // line's tag is the page's own label, as Jeremy approved it: "(Emotional authority, provisional) This week, ...".
+  for (const [where, line] of prose) {
+    const text = where === `"${TAKEAWAYS}"` ? line.replace(/^\([^)]*\)\s*/, "") : line;
+    const first = [BIRTH_SAID.exec(text), PROVISIONAL_SAID.exec(text)].filter(Boolean).sort((a, b) => a.index - b.index)[0];
+    if (!first) continue;
+    const what = BIRTH_SAID.test(first[0]) ? "mentions the birth time" : `calls something "${first[0].toLowerCase()}"`;
+    return `The reading ${what} in ${where}; the page already shows beside the chart which values can change with the birth time, so the reading never mentions it: "${quoteAt(text, first.index, first[0].length)}"`;
   }
-  const row = said.find(([where]) => where.endsWith(" line"));
-  if (row) return `The reading mentions the birth time in ${row[0]}; the page says it beside the chart, and the reading at most once, in its energy section: "${row[1].slice(0, 120)}"`;
-  if (said.length > 1) return `The reading mentions the birth time ${said.length} times (${[...new Set(said.map(([w]) => w))].join(", ")}); once at most: "${said[1][1].slice(0, 120)}"`;
-  return noteListProblem(prose, p, output);
+  return null;
 }
-
-/**
- * THE NOTE'S LIST, WHOLE (10/23, v3s R34 and R35, delivered). birthTimeProblem
- * refuses a value called uncertain that the birth day does not change; the round
- * also delivered the other half: "Note that these values are provisional because
- * your birth time was not known" (which values?) and a note that named six of the
- * nine measured ones. A reading that says values are provisional names the
- * measured ones, every one, in that sentence or the one beside it. A reading that
- * does not mention the birth time at all is not judged here (the NOTE says "at
- * most once").
- */
-const NOTE_FEELINGS = ["the on-track and off-track feelings", ["signature", "notSelfTheme"], /\bfeelings?\b|\bfeeling\s+words?\b|\bsignature\b|\bnot[- ]self\b|\b(?:on|off)[- ]track\b/i];
-function noteListProblem(prose, p, output) {
-  if (!p.fields.length) return null;
-  const own = [output?.signature, output?.notSelfTheme].filter((w) => /^[A-Za-z]+$/.test(String(w ?? "")));
-  const groups = [
-    ...VALUE_NAMED,
-    [NOTE_FEELINGS[0], NOTE_FEELINGS[1], own.length ? new RegExp(`${NOTE_FEELINGS[2].source}|\\b(?:${own.join("|")})\\b`, "i") : NOTE_FEELINGS[2]],
-  ];
-  const wanted = groups.filter(([, fields]) => fields.some((f) => p.fields.includes(f)));
-  const namedIn = (s) => groups.filter(([, , re]) => re.test(String(s ?? "")));
-  const named = new Set();
-  let first = null;
-  for (const [where, text] of prose) {
-    const sentences = text.split(/(?<=[.!?])\s+/);
-    for (let i = 0; i < sentences.length; i++) {
-      const s = sentences[i];
-      const claim = [...s.matchAll(UNSURE_STRONG), ...(BIRTH_TIME.test(s) ? s.matchAll(UNSURE_WEAK) : [])].find(
-        (m) => !negatedAt(s, m.index, m.index + m[0].length),
-      );
-      if (!claim) continue;
-      const beside = [sentences[i - 1], sentences[i + 1]];
-      if (!BIRTH_TIME.test(s) && !beside.some((b) => BIRTH_TIME.test(String(b ?? "")))) continue;
-      // The sentence beside counts when it is about the birth time too ("Your Type and Profile were cast at noon.
-      // These values are provisional."), not for a centre it happens to name.
-      let here = namedIn(s);
-      if (!here.length) here = beside.filter((b) => BIRTH_TIME.test(String(b ?? ""))).flatMap(namedIn);
-      if (!here.length) {
-        return `The reading says values are provisional in ${where} without naming them; measured across the birth day, these can change: ${wanted.map(([n]) => n).join(", ")}: "${quoteAt(s, claim.index, claim[0].length)}"`;
-      }
-      for (const g of here) named.add(g[0]);
-      first ??= [where, s, claim];
-    }
-  }
-  if (!first) return null;
-  const missing = wanted.filter(([n]) => !named.has(n)).map(([n]) => n);
-  if (!missing.length) return null;
-  const [where, s, claim] = first;
-  return `The reading's birth-time note in ${where} leaves out ${missing.join(", ")}; measured across the birth day, these can change: ${wanted.map(([n]) => n).join(", ")}: "${quoteAt(s, claim.index, claim[0].length)}"`;
-}
+/** "provisional", "unconfirmed": the page's own tag, never the reading's word (10/23, M2). */
+const PROVISIONAL_SAID = /\b(?:provisional(?:ly)?|unconfirmed)\b/i;
 
 /**
  * The model's written text as writtenText gives it, minus the takeaways' tags
@@ -977,6 +916,24 @@ export function voiceProblem(raw) {
   return null;
 }
 const RULE_AT_READER = /\byou\s+(?:can|will|should|must)\s+never\s+(?!be\b|have\b)|\byou\s+(?:are|were)\s+(?:never|not)\s+(?:designed|meant|built|made|supposed|wired)\s+to\b/i;
+
+/**
+ * BROCHURE WORDS (10/23 word-for-word read, S9: "cosmic mirror for humanity", "fascinating tapestry",
+ * "breathtaking objectivity and grace", "inexhaustible engine"). Only the words that are never right in
+ * Jeremy's voice -- not in his library or website copy, not in his approved lines, and in every stored
+ * draft only as decoration ("cosmic weather", "the cosmos"), or a claim no centre makes good
+ * ("inexhaustible"). "unique", "ultimate", "profound", "magic(al)", "superpower" (his library says "a quiet
+ * superpower") stay: the prompt asks for the plain word instead, and the checker does not refuse them.
+ */
+const BROCHURE = /\b(?:tapestr(?:y|ies)|cosmic|cosmos|breathtaking(?:ly)?|inexhaustibl[ey])\b/i;
+export function brochureProblem(raw) {
+  for (const [where, text] of writtenText(raw)) {
+    if (where === "a takeaway's tag") continue;
+    const m = BROCHURE.exec(text);
+    if (m) return `The reading uses "${m[0]}" in ${where}, a brochure word; it says the plain thing instead: "${quoteAt(text, m.index, m[0].length)}"`;
+  }
+  return null;
+}
 
 /**
  * A FEELING WORD OR "STRATEGY" CAPITALIZED MID-SENTENCE (10/22 verbatim read:
@@ -1111,6 +1068,7 @@ export function draftProblem(raw, output) {
     motorProblem(raw, output) ??
     splitBridgeProblem(raw, output) ??
     voiceProblem(raw) ??
+    brochureProblem(raw) ??
     doubledWordProblem(raw) ??
     themeSpellingProblem(raw) ??
     themeCapProblem(raw) ??
@@ -1149,6 +1107,7 @@ export const CHECKS = [
   ["motor", (t, o) => motorProblem(t, o)],
   ["splitBridge", (t, o) => splitBridgeProblem(t, o)],
   ["voice", (t) => voiceProblem(t)],
+  ["brochure", (t) => brochureProblem(t)],
   ["doubledWord", (t) => doubledWordProblem(t)],
   ["themeSpelling", (t) => themeSpellingProblem(t)],
   ["themeCap", (t) => themeCapProblem(t)],
@@ -1266,8 +1225,35 @@ export function trackRowProblem(raw) {
     if (n < TRACK_ROW_MIN_WORDS) {
       return `The reading's "${SUMMARY_LABELS[key]}" line came back as ${n} word${n === 1 ? "" : "s"} ("${text}"), not a sentence.`;
     }
+    if (trackEcho(text)) {
+      return `The reading's "${SUMMARY_LABELS[key]}" line only repeats its label and its feeling ("${text}"); it says what the feeling is like in an ordinary day.`;
+    }
   }
   return null;
+}
+
+/**
+ * A TRACK ROW THAT ONLY REPEATS ITS LABEL (10/23 word-for-word read, S9): "Surprise meets you when things are
+ * on track.", "Bitterness arises when you are off track.", "You experience success when your design is on
+ * track." -- five words or more, and nothing in them but the label, the feeling and a linking verb. A row that
+ * names the track and nothing else of the reader's day is refused; one with anything of its own passes
+ * ("You feel success when recognition arrives", "...when your work matches what your gut said yes to").
+ * Measured on every stored draft (1,217, 2,376 rows): 29 rows refused (in 23 drafts), every one an echo.
+ */
+const TRACK_PHRASE = /\b(?:on|off)[-\s]track\b/i;
+const TRACK_FEELING = /^(?:satisf|frustrat|peace|ang(?:er|ry|rier|riest|rily)$|success|bitter|surpris|disappoint)/;
+const TRACK_ECHO_WORDS = new Set(
+  ("a an the and or but so of to in on at for with from into by as is are was were be been being it its it's this that these " +
+    "those you your yours yourself when whenever while once if things thing everything something life track tracks off feel " +
+    "feels felt feeling feelings sense senses experience experiences notice notices meet meets greet greets arrive arrives " +
+    "come comes appear appears arise arises show shows emerge emerges surface surfaces reveal reveals signal signals mark " +
+    "marks tell tells set sets settle settles fill fills there here state design path energy system").split(" "),
+);
+export function trackEcho(row) {
+  const t = String(row ?? "");
+  if (!TRACK_PHRASE.test(t)) return false;
+  const words = t.toLowerCase().replace(/[‘’]/g, "'").match(/[a-z']+/g) ?? [];
+  return words.every((w) => TRACK_ECHO_WORDS.has(w) || TRACK_FEELING.test(w));
 }
 
 /**
@@ -2192,12 +2178,18 @@ function chartWiring(output) {
     direct.add([...pair].sort().join("|"));
     parent[find(pair[0])] = find(pair[1]);
   }
+  const joined = (a, b) => parent[a] !== undefined && parent[b] !== undefined && find(a) === find(b);
   return {
     own,
     direct: (a, b) => direct.has([a, b].sort().join("|")),
-    joined: (a, b) => parent[a] !== undefined && parent[b] !== undefined && find(a) === find(b),
+    joined,
+    // A centre with a channel is defined; the centres its channels reach, itself included (10/23, M1).
+    defined: (c) => parent[c] !== undefined,
+    island: (c) => Object.keys(GATE_CENTRE_ORDER).filter((x) => joined(x, c)),
   };
 }
+/** The nine centres in the order the facts list them, for messages. */
+const GATE_CENTRE_ORDER = { Head: 1, Ajna: 2, Throat: 3, G: 4, Heart: 5, Sacral: 6, Spleen: 7, "Solar Plexus": 8, Root: 9 };
 
 const WIRE_NAME = String.raw`(?:(Solar Plexus|Head|Ajna|Throat|Heart|Sacral|Spleen|Root|G)\b(?:\s+cent(?:er|re)s?\b)?|(solar plexus|head|ajna|throat|heart|sacral|spleen|root)\s+cent(?:er|re)s?\b)`;
 const WIRE_POSS = String.raw`(?:(?:the|your|its)\s+)?(?:(?:own|defined|undefined|open)\s+)?`;
@@ -2227,7 +2219,9 @@ export function connectionProblem(raw, output) {
   if (!Array.isArray(output?.channels)) return null;
   const wiring = chartWiring(output);
   for (const [where, text] of proseOf(raw)) {
-    for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    for (let si = 0; si < sentences.length; si++) {
+      const sentence = sentences[si];
       const numbers = [...sentence.matchAll(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/g)]
         .map((n) => channelKey(+n[1], +n[2]))
         .filter((k) => CHANNEL_CENTRES.has(k));
@@ -2252,7 +2246,221 @@ export function connectionProblem(raw, output) {
           }
         }
       }
+      // 10/23 word-for-word read (M1): motor power at the Throat, thoughts reaching words, a gap, power from several centres.
+      const claim = wiringClaim(sentence, sentences[si - 1] ?? "", where, wiring);
+      if (claim) return claim;
     }
+  }
+  return null;
+}
+
+/**
+ * WHAT FEEDS THE THROAT, WHAT REACHES WORDS, WHAT IS APART (10/23 word-for-word read of round rk-a3, M1 and N21).
+ * The shapes above read "<centre> connects to <centre>"; the round delivered the same wrong wiring in other words:
+ *   - "Because this defined region [the Throat] connects directly to your motors" and "translating the power of
+ *     your Sacral and Root motors into tangible results" on Generators whose Throat joins only the G. A motor
+ *     wired to the Throat is what makes a Manifesting Generator or a Manifestor; no other type has one;
+ *   - "this mental processing finds a direct outlet into spoken words" with no channel from the Ajna to the Throat;
+ *   - "bridge the gap between your conceptual mind and your expressive voice" with 11-56 joining the two;
+ *   - "Because your Throat, G, and Heart are defined, you generate steady power from multiple centers" (one motor).
+ * Judged, sentence by sentence, in these shapes only:
+ *   1. the Throat (named in the sentence, or the centre the sentence before opens on when this one says "this
+ *      defined center", "this area"...) taking, translating or channelling the power of motors, wired to motors,
+ *      working alongside them, or speaking whenever they engage; and "a motor connected to the Throat". A motor
+ *      named must be joined to the Throat by this chart's channels; "your motors" needs one that is;
+ *      Also (arms af-a, af-b) the Throat turning "your vitality" into words or results (not judged on a Throat
+ *      joined to the Spleen, whose word vitality also is), and another centre taking or channelling a motor's power
+ *      ("Your defined G center channels that sacral power", a part re-ask that swapped the Throat for the G);
+ *   2. any centre said to connect to "your motors": a motor must be in its part of the chart;
+ *   3. the motor the sentence before names, working "alongside your Throat": the two must be joined;
+ *   4. thoughts, ideas or mental processing finding an outlet, bridge or path into words, speech or expression:
+ *      the Ajna must be joined to the Throat (by a channel of its own when it says "direct");
+ *   5. a gap to bridge between two sides that name centres (the mind, the voice, identity, willpower, the
+ *      emotions, intuition, the motors, or a centre by name): wrong only when every centre of one side is
+ *      already joined to every centre of the other;
+ *   6. power from several centres, with the centres named: two of them must be motors.
+ * A denial in the clause ("lacks a motor connected to the Throat", "without needing bridges") is not a claim.
+ * Measured on every stored draft and on Jeremy's approved lines: every hit read (hd-e2e/ai-facts-1023).
+ */
+const MOTOR_WORD = String.raw`(?:(?:inner|internal|lower|defined|underlying|multiple|several|other|physical|own|various|core)\s+)*(?:motor\s+cent(?:er|re)s?|motors?|engines?)\b`;
+const FEED_VERB = String.raw`(?:tak(?:e|es|ing)|draw(?:s|ing)?|channel(?:s|ed|ing|led|ling)?|translat(?:e|es|ed|ing)|turn(?:s|ed|ing)?|convert(?:s|ed|ing)?|transform(?:s|ed|ing)?|receiv(?:e|es|ed|ing)|harness(?:es|ed|ing)?|carr(?:y|ies|ied|ying)|express(?:es|ed|ing)?|voic(?:e|es|ed|ing)|amplif(?:y|ies|ied|ying)|gives?\s+(?:a\s+)?voice\s+to|giving\s+(?:a\s+)?voice\s+to)`;
+const POWER_WORD = String.raw`(?:(?:raw|vital|creative|motor|engine|physical|generative|steady|sustained)\s+)*(?:power|energy|force|fuel|output|drive|momentum|vitality|life[- ]force|stamina)`;
+/**
+ * kind "feed": the Throat (or the voice) is the subject, and what feeds it is read from the words after the
+ * shape's group 1 (a motor named, or "your motors"); "wire": any centre connected to "your motors";
+ * "motorish": the Throat carrying what can only be a motor's power ("this raw power", "life force").
+ */
+const THROAT_FEEDS = [
+  // "taking the raw power from your motor centers", "translating the power of your Sacral and Root motors"
+  ["feed", String.raw`\b${FEED_VERB}\s+(?:(?:the|all|this|that|your|its)\s+)?${POWER_WORD}\s+(?:from|of)\s+(?:your|the)\s+([^.,;:!?]{1,60})`],
+  // "transforms internal motor output into", "translates raw motor output into"
+  ["feed", String.raw`\b${FEED_VERB}\s+(?:(?:the|your|its)\s+)?(?:(?:raw|internal|inner)\s+)*(motor|engine)\s+(?:power|energy|output|force|drive)\b`],
+  // "connects directly to your motors", "is connected to multiple motors", "connects your internal motors to"
+  ["wire", String.raw`\b(?:connect|link|wir|tie|tied|join|fus|attach)\w*\s+(?:(?:directly|straight|up)\s+)*(?:to|with|into)\s+(?:your\s+|the\s+|its\s+)?(${MOTOR_WORD})`],
+  ["wire", String.raw`\b(?:connect|link|tie|join)\w*\s+your\s+(${MOTOR_WORD})(?:\s+(?:power|energy|output))?\s+(?:directly\s+)?(?:to|with)\b`],
+  // "whenever your motors engage", "whenever your motor is switched on", "whenever your internal motor gets activated"
+  ["feed", String.raw`\b(?:whenever|when|once|as soon as)\s+your\s+(${MOTOR_WORD})\s+(?:engages?|fires?|kicks?\s+in|switch(?:es)?\s+on|activates?)\b`],
+  ["feed", String.raw`\b(?:whenever|when|once|as soon as)\s+your\s+(${MOTOR_WORD})\s+(?:is|gets?)\s+(?:switched\s+on|activated|engaged|triggered|turned\s+on)\b`],
+  // "works alongside your motor centers", "the meeting point for your inner motors", "an outlet for the motor energy"
+  ["feed", String.raw`\b(?:alongside|in tandem with|together with)\s+your\s+(${MOTOR_WORD})`],
+  ["feed", String.raw`\b(?:meeting point|outlet|mouthpiece|megaphone)\s+for\s+(?:your|the)\s+(${MOTOR_WORD}|motor\s+(?:energy|power|output))`],
+  // "Through the Throat, your inner motor finds a voice"
+  ["feed", String.raw`\b(${MOTOR_WORD})(?:\s+(?:power|energy|output))?\s+(?:finds?|gets?)\s+(?:a\s+|its\s+)?(?:voice|outlet|way\s+out)\b`],
+  // "your voice and actions ... emerge naturally from your Sacral engine", "flows effortlessly from your sacral engine"
+  ["feed", String.raw`\b(?:emerg(?:e|es|ed|ing)|flow(?:s|ed|ing)?|com(?:e|es|ing)|mov(?:e|es|ed|ing)|ris(?:e|es|ing)|spring(?:s|ing)?)\s+(?:[a-z]+\s+){0,2}?from\s+your\s+((?:(?:sacral|root|solar plexus|heart)\s+(?:engine|motor|cent(?:er|re)))|${MOTOR_WORD})`],
+  // "channels this physical power into outward expression"
+  ["motorish", String.raw`\b(?:channel|translat|turn|convert|carr|push|transform)\w*\s+(?:this|that|your|the)\s+(?:(?:raw|steady|physical|vital)\s+)*(?:life[- ]force|physical\s+power|raw\s+power|motor\s+power|sacral\s+power|physical\s+drive)\s+(?:outward\s+)?into\s+(?:[a-z]+\s+){0,2}?(?:expression|speech|words|action|voice|communication)\b`],
+  // 10/23 (arm af-a R04, R05): "This defined outlet [the Throat] ensures your vitality translates directly into
+  // tangible results", "a direct channel to manifest your internal vitality into spoken words". Vitality is the
+  // Sacral's word, and the Spleen's too: on a Throat joined to the Spleen it is not judged (wiringClaim).
+  ["vital", String.raw`\b(?:your|this|that|the)\s+(?:(?:inner|internal|raw|physical|generative|sacral)\s+)?(vitality|life[- ]force|vital\s+force|sacral\s+(?:power|energy))\s+(?:translates?|flows?|moves?|pours?|turns?|is\s+channell?ed|finds?\s+(?:its\s+way|an?\s+outlet))\s+(?:(?:directly|effortlessly|naturally|smoothly|outward|straight)\s+)*(?:into|through)\s+(?:your\s+)?(?:spoken\s+words|speech|expression|words|voice|tangible\s+results|outward\s+expression)\b`],
+  ["vital", String.raw`\b(?:manifest|channel|translat|turn|carr|express)\w*\s+(?:your\s+|this\s+|that\s+|the\s+)?(?:(?:inner|internal|raw|physical)\s+)?(vitality|life[- ]force|vital\s+force)\s+(?:outward\s+)?into\s+(?:spoken\s+words|speech|expression|words|voice)\b`],
+].map(([kind, src]) => [kind, new RegExp(src, "gi")]);
+/** "a motor connected to the Throat", in the round's denials and its Manifestors' claims. */
+const MOTOR_AT_THROAT = new RegExp(String.raw`\b(${MOTOR_WORD})\s+(?:[a-z]+\s+){0,2}?(?:connected|linked|wired|attached|joined|tied)\s+(?:directly\s+)?(?:to|with)\s+(?:your\s+|the\s+)(?:defined\s+)?throat\b`, "gi");
+/** "Working alongside your defined Throat center, this engine pushes you to ...", "Your defined Throat center joins this vital engine" (the engine: the sentence before's motor). */
+const THROAT_WITH_ENGINE = [
+  /\b(?:alongside|in tandem with|together with)\s+your\s+(?:defined\s+)?Throat(?:\s+cent(?:er|re))?\s*,\s*(?:this|that|the|your)\s+(?:engine|motor)\b/gi,
+  /\bThroat(?:\s+cent(?:er|re))?\s+(?:joins|pairs\s+with|works\s+(?:with|alongside)|teams\s+up\s+with|combines\s+with)\s+(?:this|that)\s+(?:[a-z]+\s+)?(?:engine|motor)\b/gi,
+];
+/** A motor named in lower case before "engine" / "motor" ("your sacral engine"). */
+const MOTOR_NAMED_LOWER = /\b(sacral|root|solar plexus|heart)\s+(?:engine|motor)\b/gi;
+/** The voice standing for the Throat as a sentence's subject ("your communication flows ... from your sacral engine"). */
+const VOICE_SUBJECT = /\byour\s+(?:[a-z]+\s+)?(?:voice|words|speech|communication|expressions?)\b/i;
+const MIND_TO_WORDS = /\b(mental\s+(?:processing|concepts|activity|energy|insights?)|thoughts?|thinking|ideas|insights|concepts|mind)\b[^.;:!?]{0,40}?\b(?:finds?|found|has|have|gets?|takes?|follows?|with)\s+(?:a\s+|an\s+|its\s+)?((?:direct|reliable|straight|clear|consistent|steady|dependable|natural|immediate)\s+)?(?:outlet|bridge|path|pathway|channel|line|route|conduit|road|doorway)\s+(?:into|to)\s+(?:(?:spoken|verbal|clear|outward)\s+)?(?:words?|speech|voice|expression|language|communication)\b/gi;
+const GAP_BETWEEN = /\b(?:bridg(?:e|es|ed|ing)|span(?:s|ned|ning)?|clos(?:e|es|ed|ing)|cross(?:es|ed|ing)?|navigat(?:e|es|ed|ing))\s+(?:the\s+|a\s+|this\s+|that\s+)?(?:(?:internal|inner|natural|mechanical)\s+)?(?:gap|divide|distance)\s+between\s+([^.;:!?]{3,90})/gi;
+const POWER_FROM_MANY = /\b(?:generate|produce|draw|carry|hold|have|get)s?\s+(?:(?:steady|consistent|reliable|sustained|constant|real|abundant)\s+)?(?:power|energy|fuel|momentum|drive|force|stamina)\s+from\s+(?:multiple|several|many|these|those|all|both|two|three|four|five|six|seven|eight|nine)\s+(?:(?:defined|different|separate)\s+)?(?:cent(?:er|re)s|areas|sources|places|parts)\b/gi;
+const CLAIM_DENIED = /\b(?:not|never|no|without|rather\s+than|instead\s+of|neither|nor|cannot|lacks?|lacking|lack\s+of|absence\s+of|free\s+of|devoid\s+of|missing)\b|n['’]t\b/i;
+const ANAPHOR = /\b(?:this|that|it|these|here)\b/i;
+const CENTRE_IN = new RegExp(WIRE_NAME, "g");
+/** The centres a stretch of text names, in order (the gate-table names). */
+const centresIn = (s) => [...String(s).matchAll(CENTRE_IN)].map((m) => m[1] ?? titleCentre(m[2]));
+/**
+ * Plain words for a centre, in the two sides of "a gap between X and Y". The noun at the end of a side wins
+ * ("your conceptual voice" is the voice); a side with none of these is not judged.
+ */
+const SIDE_WORDS = [
+  [/\b(?:mind|minds|thoughts?|thinking|intellect|ideas|concepts|mental\s+(?:processing|concepts|awareness|activity|framework))\b/i, ["Head", "Ajna"]],
+  [/\b(?:voice|expression|speech|words|communication)\b/i, ["Throat"]],
+  [/\b(?:identity|sense of self|direction)\b/i, ["G"]],
+  [/\b(?:willpower|will)\b/i, ["Heart"]],
+  [/\b(?:emotions|emotional\s+(?:waves?|depth|awareness)|feelings)\b/i, ["Solar Plexus"]],
+  [/\b(?:intuition|instincts?|intuitive\s+awareness)\b/i, ["Spleen"]],
+  [/\bmotors?(?:\s+cent(?:er|re)s?)?\b/i, MOTOR_CENTRES],
+];
+function sideCentres(side, wiring) {
+  const named = centresIn(side);
+  if (named.length) return named;
+  let best = null;
+  for (const [re, centres] of SIDE_WORDS) {
+    const m = re.exec(side);
+    if (m && (!best || m.index > best.at)) best = { at: m.index, centres };
+  }
+  return best ? best.centres.filter((c) => wiring.defined(c)) : [];
+}
+const andList = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
+const theList = (xs) => andList(xs.map((x) => `the ${x}`));
+
+function wiringClaim(sentence, prev, where, wiring) {
+  const quote = (m) => `"${quoteAt(sentence, m.index, m[0].length)}"`;
+  const denied = (m) => CLAIM_DENIED.test(sentence.slice(0, m.index).split(/[,;:]/).at(-1) + m[0]);
+  // The centre a sentence is about: the first it names before `at`, else the first the sentence before names
+  // when this one points back ("This defined center takes ...").
+  // "Through this defined throat, ..." names it in lower case; "your communication flows ..." speaks for it.
+  const subject = (at, voice = false) => {
+    const before = sentence.slice(0, at);
+    const own = centresIn(before);
+    if (own.length) return own[0];
+    if (/\bthroat\b/i.test(before)) return "Throat";
+    if (ANAPHOR.test(before)) {
+      const back = centresIn(prev)[0];
+      if (back) return back;
+    }
+    return voice && VOICE_SUBJECT.test(before) ? "Throat" : null;
+  };
+  const motorsNamed = (s) => [...new Set([...centresIn(s), ...[...String(s).matchAll(MOTOR_NAMED_LOWER)].map((x) => titleCentre(x[1]))])].filter((c) => MOTOR_CENTRES.includes(c));
+  const throatMotors = MOTOR_CENTRES.filter((c) => wiring.joined(c, "Throat"));
+  const throatSays = () => {
+    if (!wiring.defined("Throat")) return "the Throat is not defined on this chart";
+    return `the Throat is joined only to ${theList(wiring.island("Throat").filter((c) => c !== "Throat"))}, and no motor reaches it`;
+  };
+  // 1. Motor power at the Throat.
+  for (const [kind, re] of THROAT_FEEDS) {
+    for (const m of sentence.matchAll(re)) {
+      if (denied(m)) continue;
+      const about = subject(m.index, kind !== "wire");
+      const tail = m[1] ?? "";
+      const named = kind === "motorish" || kind === "vital" ? [] : motorsNamed(tail.split(/\b(?:into|and\s+(?:translat|turn|convert|giv|transform)\w*|to\s+(?:fuel|power|drive)|through)\b/i)[0]);
+      const generic = kind === "motorish" || kind === "vital" || /\b(?:motors?|motor\s+cent|engines?|motor|engine)\b/i.test(tail);
+      if (!named.length && !generic) continue;
+      if (kind === "wire") {
+        // 2. Any centre connected to "your motors".
+        if (!about || named.length) continue;
+        const own = MOTOR_CENTRES.filter((c) => c !== about && wiring.joined(c, about));
+        if (own.length) continue;
+        if (about === "Throat") return `The reading says the Throat is wired to motors in ${where}, but ${throatSays()}: ${quote(m)}`;
+        return `The reading says the ${about} connects to motors in ${where}, but no motor of this chart is joined to the ${about}: ${quote(m)}`;
+      }
+      if (!about || MOTOR_CENTRES.includes(about)) continue;
+      if (about !== "Throat") {
+        // 10/23 (arm af-b R01, a part re-ask that swapped the Throat for the G): the same take-the-power claim made of
+        // another centre, "Your defined G center channels that sacral power into outward expression".
+        if (!(kind === "motorish" || re === THROAT_FEEDS[0][1] || re === THROAT_FEEDS[1][1])) continue;
+        const reach = MOTOR_CENTRES.filter((c) => wiring.joined(c, about));
+        const off = named.filter((c) => !reach.includes(c));
+        if (named.length ? !off.length : reach.length) continue;
+        if (named.length) return `The reading says the power of ${theList(off)} reaches the ${about} in ${where}, but no channel of this chart joins ${off.length > 1 ? "them" : "it"} to the ${about}: ${quote(m)}`;
+        return `The reading says motor power reaches the ${about} in ${where}, but no motor of this chart is joined to the ${about}: ${quote(m)}`;
+      }
+      // Vitality on a Throat joined to the Spleen may be the Spleen's own.
+      if (kind === "vital" && /vital/i.test(tail) && wiring.joined("Spleen", "Throat")) continue;
+      if (named.length) {
+        const off = named.filter((c) => !throatMotors.includes(c));
+        if (off.length) return `The reading says the power of ${theList(off)} reaches the Throat in ${where}, but no channel of this chart joins ${off.length > 1 ? "them" : "it"} to the Throat: ${quote(m)}`;
+        continue;
+      }
+      if (!throatMotors.length) return `The reading says motor power reaches the Throat in ${where}, but ${throatSays()}: ${quote(m)}`;
+    }
+  }
+  for (const m of sentence.matchAll(MOTOR_AT_THROAT)) {
+    if (denied(m) || throatMotors.length) continue;
+    return `The reading says a motor is connected to the Throat in ${where}, but ${throatSays()}: ${quote(m)}`;
+  }
+  // 3. The motor of the sentence before, "alongside your Throat" / joined by "your Throat".
+  for (const [k, re] of THROAT_WITH_ENGINE.entries()) {
+    for (const m of sentence.matchAll(re)) {
+      if (denied(m)) continue;
+      const motor = centresIn(prev).find((c) => MOTOR_CENTRES.includes(c));
+      if (!motor || wiring.joined(motor, "Throat")) continue;
+      if (k === 0 && centresIn(sentence.slice(0, m.index)).length) continue;
+      return `The reading says the ${motor} works with the Throat in ${where}, but no channel of this chart joins the ${motor} to the Throat: ${quote(m)}`;
+    }
+  }
+  // 4. Thoughts reaching words.
+  for (const m of sentence.matchAll(MIND_TO_WORDS)) {
+    if (denied(m) || !wiring.defined("Throat")) continue;
+    const direct = Boolean(m[2] && /direct|straight|immediate/i.test(m[2]));
+    if (direct ? wiring.direct("Ajna", "Throat") : wiring.joined("Ajna", "Throat")) continue;
+    return `The reading says your thoughts reach your words${direct ? " directly" : ""} in ${where}, but no channel of this chart ${direct ? "joins" : "links"} the Ajna to the Throat: ${quote(m)}`;
+  }
+  // 5. A gap between two sides that are joined.
+  for (const m of sentence.matchAll(GAP_BETWEEN)) {
+    if (denied(m)) continue;
+    const sides = m[1].split(/\s+and\s+(?=(?:your|the|their|its)\b)/i);
+    if (sides.length !== 2) continue;
+    const [xs, ys] = sides.map((s) => sideCentres(s.replace(/,.*$/, ""), wiring));
+    if (!xs.length || !ys.length || xs.some((x) => ys.includes(x))) continue;
+    if (!xs.every((x) => ys.every((y) => wiring.joined(x, y)))) continue;
+    return `The reading says a gap lies between ${theList(xs)} and ${theList(ys)} in ${where}, but this chart's channels already join them: ${quote(m)}`;
+  }
+  // 6. Power from several centres.
+  for (const m of sentence.matchAll(POWER_FROM_MANY)) {
+    if (denied(m)) continue;
+    const named = [...new Set(centresIn(sentence))];
+    if (named.length < 2) continue;
+    const motors = named.filter((c) => MOTOR_CENTRES.includes(c));
+    if (motors.length >= 2) continue;
+    return `The reading says power comes from several centers in ${where}, but of ${theList(named)} ${motors.length ? `only the ${motors[0]} is a motor` : "none is a motor"} (the motors are the Sacral, Root, Solar Plexus and Heart): ${quote(m)}`;
   }
   return null;
 }
@@ -2265,9 +2473,12 @@ export function connectionProblem(raw, output) {
  * Throat", which is true. Measured on every stored draft: 6 refused, every one
  * wrong (two say "without a defined motor for sustainable labor" on a chart whose
  * Heart is defined: the Sacral is meant, and the Heart is still a defined motor).
+ * 10/23 (M1): "the" / "its" motor too ("Your Throat center acts as the primary motor for your
+ * expression", 10 drafts, every one wrong); a motor OUTPUT or OUTLET is what the Throat is, not a
+ * motor ("acts as a powerful motor outlet" on a Manifestor was the one false hit).
  */
 const NOT_MOTOR = new RegExp(
-  String.raw`\b(Head|Ajna|Throat|G|Spleen)(?:\s+cent(?:er|re))?\b[^.;:!?]{0,40}?\b(?:is|acts\s+as|serves\s+as|works\s+as|operates\s+as|functions\s+as|becomes|as)\s+(?:a|an|your)\s+(?:[a-z-]+\s+){0,2}motor\b`,
+  String.raw`\b(Head|Ajna|Throat|G|Spleen)(?:\s+cent(?:er|re))?\b[^.;:!?]{0,40}?\b(?:is|acts\s+as|serves\s+as|works\s+as|operates\s+as|functions\s+as|becomes|as)\s+(?:a|an|your|the|its)\s+(?:[a-z-]+\s+){0,2}motor\b(?!\s+(?:output|outlets?)\b)`,
   "gi",
 );
 const NO_MOTOR = /\b(?:without|no|lacks?|lacking|lack\s+of|absence\s+of|(?:does|do)\s+not\s+(?:have|carry|hold)|(?:doesn|don)['’]t\s+(?:have|carry|hold))\s+(?:a\s+|any\s+)?(?:single\s+)?defined\s+motors?\b(?:\s+cent(?:er|re)s?)?/gi;
