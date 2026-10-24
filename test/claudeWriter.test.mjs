@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toJsonSchema, failureKind, cost } from "../netlify/lib/claude.mjs";
-import { claudeWriter, creditMonth, normalLimit, SWITCH_AT } from "../netlify/lib/writer.mjs";
+import { claudeWriter, creditMonth, normalLimit, SWITCH_AT, addSpend, monthSpend } from "../netlify/lib/writer.mjs";
 import { generateReading } from "../netlify/lib/gemini.mjs";
 import { READING_SCHEMA } from "../netlify/lib/structured.mjs";
 
@@ -16,6 +16,7 @@ function memStore() {
     data,
     async get(k) { return data.has(k) ? JSON.parse(JSON.stringify(data.get(k))) : null; },
     async setJSON(k, v) { data.set(k, JSON.parse(JSON.stringify(v))); },
+    async list({ prefix = "" } = {}) { return { blobs: [...data.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
   };
 }
 const ASK = { instruction: "PROMPT", user: "FACTS", schema: READING_SCHEMA, timeoutMs: 90_000 };
@@ -77,13 +78,13 @@ test("fast first; a busy fast ask is asked again at once at normal speed with 15
   const r = await w(ASK);
   assert.deepEqual(calls, [{ fast: true, timeoutMs: 90_000 }, { fast: false, timeoutMs: 150_000 }]);
   assert.deepEqual(r, { ok: true, text: "{}", by: "claude-normal" });
-  assert.equal((await store.get("claude-spend/2026-10")).spent, 0.3);
+  assert.ok(Math.abs((await monthSpend(store, "2026-10")) - 0.3) < 1e-9);
 });
 
 test("past the switch, every ask is normal speed, and the switch is said once", async () => {
   const sent = [];
   const store = memStore();
-  await store.setJSON("claude-spend/2026-10", { spent: SWITCH_AT - 0.5, out: false, said: {} });
+  await addSpend(store, "2026-10", SWITCH_AT - 0.5, OCT_20);
   const speeds = [];
   const w = claudeWriter({
     apiKey: "k", store, clock: () => OCT_20, notify: async (m) => sent.push(m.subject),
@@ -151,4 +152,11 @@ test("generateReading: when Claude steps aside, Gemini is asked exactly as befor
   assert.equal(r.ok, false);
   assert.equal(r.detail, "gemini 503");
   assert.ok(geminiCalls >= 1);
+});
+
+test("readings written at the same time never lose each other's spend", async () => {
+  const store = memStore();
+  const w = claudeWriter({ apiKey: "k", store, clock: () => OCT_20, ask: async () => { await new Promise((r) => setTimeout(r, 5)); return { ok: true, text: "{}", cost: 0.57, org: "tcm" }; } });
+  await Promise.all(Array.from({ length: 5 }, () => w(ASK)));
+  assert.ok(Math.abs((await monthSpend(store, "2026-10")) - 2.85) < 1e-6);
 });

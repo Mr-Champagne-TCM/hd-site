@@ -16,7 +16,7 @@ import { askClaude } from "./claude.mjs";
  *
  * The credit month starts on CREDIT_DAY, when the thechampagnemethod Max plan renews and its $200 of API
  * credit arrives. The month's spend is counted from Anthropic's own token counts and kept in the health
- * store (`claude-spend/<month>`); the Console stays the real figure (asks cut off at a time limit still
+ * store (one record per ask under `claude-spend/<month>/`); the Console stays the real figure (asks cut off at a time limit still
  * cost, and are not counted here), which is why the switch sits well below the credit.
  *
  * ALERTS, each once per month: the switch to normal speed, $190 spent, out of credit, the wrong account.
@@ -70,11 +70,12 @@ export function claudeWriter({
     // Letter mode (no form) is Gemini's: the Claude path is form mode only.
     if (!schema) return { useGemini: true, why: "letter mode" };
     const month = creditMonth(clock(), creditDay);
-    const key = `claude-spend/${month}`;
-    const state = { spent: 0, out: false, said: {}, ...((await read(store, key)) ?? {}) };
+    const stateKey = `claude-state/${month}`;
+    const state = { out: false, said: {}, ...((await read(store, stateKey)) ?? {}) };
     if (state.out) return { useGemini: true, why: "claude credit used up this month" };
+    const spent = await monthSpend(store, month);
 
-    let fast = state.spent < switchAt;
+    let fast = spent < switchAt;
     let r = await ask({ apiKey, instruction, user, schema, fast, timeoutMs: fast ? timeoutMs : normalLimit(timeoutMs) });
     if (!r.ok && r.failure === "busy" && fast) {
       // T4: the same ask again at once, at normal speed, with the time a normal one needs.
@@ -83,46 +84,68 @@ export function claudeWriter({
     }
 
     if (r.ok && r.org && (blockOrgs.includes(r.org) || (expectOrg && r.org !== expectOrg))) {
-      await say(state, "org", `Claude writer: the key answered for the wrong Anthropic account (${String(r.org).slice(0, 8)}...). Readings are on Gemini until HD_ANTHROPIC_KEY is the TCM hd-live key.`);
-      await write(store, key, state);
+      await say("org", spent, `Claude writer: the key answered for the wrong Anthropic account (${String(r.org).slice(0, 8)}...). Readings are on Gemini until HD_ANTHROPIC_KEY is the TCM hd-live key.`);
       return { useGemini: true, why: "wrong claude account" };
     }
     if (r.ok) {
-      const before = state.spent;
-      state.spent = before + r.cost;
-      if (before < switchAt && state.spent >= switchAt) {
-        await say(state, "switch", `Claude writer: $${state.spent.toFixed(2)} of this month's credit used, so readings now go to Opus at normal speed (~2 min each) until the credit renews on the ${creditDay}th.`);
+      await addSpend(store, month, r.cost, clock());
+      const now = spent + r.cost;
+      if (spent < switchAt && now >= switchAt) {
+        await say("switch", now, `Claude writer: $${now.toFixed(2)} of this month's credit used, so readings now go to Opus at normal speed (~2 min each) until the credit renews on the ${creditDay}th.`);
       }
-      if (before < NEAR_OUT && state.spent >= NEAR_OUT) {
-        await say(state, "near", `Claude writer: $${state.spent.toFixed(2)} of the $200 credit used this month. At $0 readings move to Gemini by themselves.`);
+      if (spent < NEAR_OUT && now >= NEAR_OUT) {
+        await say("near", now, `Claude writer: $${now.toFixed(2)} of the $200 credit used this month. At $0 readings move to Gemini by themselves.`);
       }
-      await write(store, key, state);
       return { ok: true, text: r.text, by: fast ? "claude-fast" : "claude-normal" };
     }
     if (r.failure === "timeout") return { ok: false, reason: "timeout", detail: r.detail };
 
     if (r.failure === "outOfCredit") {
       state.out = true;
-      await say(state, "out", `Claude writer: this month's Claude credit is used up ($${state.spent.toFixed(2)} counted). Readings are on Gemini until the credit renews on the ${creditDay}th.`);
+      await write(store, stateKey, state);
+      await say("out", spent, `Claude writer: this month's Claude credit is used up ($${spent.toFixed(2)} counted). Readings are on Gemini until the credit renews on the ${creditDay}th.`);
     } else {
       const day = new Date(clock()).toISOString().slice(0, 10);
-      await say(state, `gemini-${day}`, `Claude writer: Gemini wrote a reading today because Claude could not (${r.failure}${r.detail ? `: ${r.detail}` : ""}). This is said once a day.`);
+      await say(`gemini-${day}`, spent, `Claude writer: Gemini wrote a reading today because Claude could not (${r.failure}${r.detail ? `: ${r.detail}` : ""}). This is said once a day.`);
     }
-    await write(store, key, state);
     return { useGemini: true, why: r.failure };
 
-    async function say(s, what, text) {
-      if (s.said[what]) return;
-      s.said[what] = clock();
+    /** Once per month (once per day for Gemini); the flag is stored before the alert goes out. */
+    async function say(what, total, text) {
+      if (state.said[what]) return;
+      state.said[what] = clock();
+      await write(store, stateKey, state);
       if (typeof notify === "function") {
         try {
-          await notify({ subject: `HD readings: ${text.split(":")[0]}: ${what}`, text: `${text}\n\nSpend this credit month: $${s.spent.toFixed(2)} (counted by the shop).` });
+          await notify({ subject: `HD readings: ${text.split(":")[0]}: ${what}`, text: `${text}\n\nSpend this credit month: $${total.toFixed(2)} (counted by the shop).` });
         } catch {
           // An alert that cannot be sent never stops a reading.
         }
       }
     }
   };
+}
+
+/**
+ * ONE RECORD PER ASK, NEVER A RUNNING TOTAL (10/24): readings written at the same time each read a total
+ * and wrote it back, and the 36-chart proof counted $7 of ~$20 spent. Now every ask adds its own key,
+ * its cost in millionths of a dollar at the end of the name, and the month's spend is the sum of one
+ * listing. Nothing is rewritten, so nothing is lost.
+ */
+const SPEND = (month) => `claude-spend/${month}/`;
+
+export async function addSpend(store, month, cost, at = Date.now()) {
+  const micro = Math.max(0, Math.round(cost * 1e6));
+  await write(store, `${SPEND(month)}${at}-${Math.random().toString(36).slice(2, 8)}-${micro}`, { cost });
+}
+
+export async function monthSpend(store, month) {
+  try {
+    const { blobs = [] } = (await store?.list?.({ prefix: SPEND(month) })) ?? {};
+    return blobs.reduce((sum, b) => sum + (Number(String(b.key).split("-").pop()) || 0), 0) / 1e6;
+  } catch {
+    return 0;
+  }
 }
 
 async function read(store, key) {
