@@ -1344,6 +1344,13 @@
         "^The price is here before anything is asked of you\\.$"
       ],
       "plus": []
+    },
+    {
+      "id": "PICKS-EXTRA-rate-sweep",
+      "about": "MUST before release (Jeremy on GO v3, 10/23): the privacy page says 'The scrambled IP hash: One week', but the shop's salted-IP rate counters (stores chart-rate, resend-rate, places-rate; keys <hash>, t:<hash>, v:/mv:/ma:/r:…) were written and never deleted (@netlify/blobs 8.2.0 has no expiry). ratelimit.mjs sweepCounters() deletes every counter whose newest hit is older than seven days (an empty one too; a blob that is not a list of hit times is left alone; never throws), and the fifteen-minute sweep (functions/sweep.mjs) runs it on all three stores, as sweepIncidents does for the health records (b2894e8). A week is the longest window any limiter counts, so no limit changes. No page, PDF or email changes, so this entry claims nothing by design: it is here so the fix is on the list. Test: test/picks1023-rate-sweep.test.mjs (an 8-day-old counter deleted, a 6-day-old one kept).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }

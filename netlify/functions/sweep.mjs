@@ -1,6 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { checkFailureRate, sweepIncidents } from "../lib/health.mjs";
+import { sweepCounters } from "../lib/ratelimit.mjs";
 import { alertSender } from "../lib/failures.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
@@ -63,6 +64,16 @@ export default async () => {
     if (gone.deleted || gone.failed) console.log(`sweep: health records past 14 days: ${gone.deleted} deleted, ${gone.failed} failed`);
   } catch (e) {
     console.log(`sweep: could not clear old health records (${e.message})`);
+  }
+
+  // The scrambled-IP counters past their one week (the privacy page says so; picks-1023).
+  for (const name of ["chart-rate", "resend-rate", "places-rate"]) {
+    try {
+      const gone = await sweepCounters(getStore({ name, consistency: "strong" }));
+      if (gone.deleted || gone.failed) console.log(`sweep: ${name} counters past 7 days: ${gone.deleted} deleted, ${gone.failed} failed`);
+    } catch (e) {
+      console.log(`sweep: could not clear old ${name} counters (${e.message})`);
+    }
   }
   return new Response(null, { status: 204 });
 };

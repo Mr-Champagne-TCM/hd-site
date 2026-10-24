@@ -89,3 +89,48 @@ function friendly(seconds) {
   if (hours < 36) return `Another one will go through in about ${hours} hours.`;
   return `Another one will go through in about ${Math.ceil(hours / 24)} days.`;
 }
+
+/**
+ * THE ONE WEEK, KEPT (picks-1023, MUST before release). The privacy page says
+ * "The scrambled IP hash: One week". The counters keyed by a salted hash of the
+ * IP (chart-rate, resend-rate, places-rate) were written and never deleted:
+ * Netlify Blobs keeps a blob until something deletes it. This deletes every
+ * counter whose newest hit is older than keepMs (a week by default, which is
+ * also the longest window any limiter counts, so nothing a limiter would still
+ * use is lost). An empty list is deleted too. A blob that is not a list of hit
+ * times is not one of ours and is left alone. Returns counts; never throws.
+ * Run by the fifteen-minute sweep (netlify/functions/sweep.mjs), as
+ * sweepIncidents is for the health records.
+ */
+export async function sweepCounters(store, { now = Date.now(), keepMs = WEEK } = {}) {
+  const counts = { listed: 0, deleted: 0, kept: 0, failed: 0 };
+  let keys = [];
+  try {
+    keys = ((await store.list())?.blobs ?? []).map((b) => b.key);
+  } catch {
+    counts.failed++;
+    return counts;
+  }
+  counts.listed = keys.length;
+  for (const key of keys) {
+    let hits;
+    try {
+      hits = await store.get(key, { type: "json" });
+    } catch {
+      counts.failed++;
+      continue;
+    }
+    const times = Array.isArray(hits) ? hits.filter((t) => Number.isFinite(t)) : null;
+    if (!times || times.length !== hits.length || (times.length && now - Math.max(...times) <= keepMs)) {
+      counts.kept++;
+      continue;
+    }
+    try {
+      await store.delete(key);
+      counts.deleted++;
+    } catch {
+      counts.failed++;
+    }
+  }
+  return counts;
+}
