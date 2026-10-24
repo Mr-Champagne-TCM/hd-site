@@ -1365,6 +1365,13 @@
       "docs": "^(page|pdf|email) ",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "AI-grouped-wiring-1024",
+      "about": "Jeremy 10/23 (\"1. yes\", in the Claude-Max session; to ship in one batch): the connection check refused right sentences that group centres or channels (\"Channels 1-8 and 21-45 join your G and Heart to your Throat\", \"The G, Throat and Spleen link through channels 1-8 and 10-57\"), read as \"1-8 joins the G and the Heart\" (first drafts of the 10/23 Claude rounds c1 R01 R05 R06 R09, op1 R18, and t1-t45). connectionProblem (netlify/lib/interpretation.mjs; the phone's Reading.kt word for word) now reads a claim with its lists of centres, its own clause's channel numbers and the centres those numbers pass through; a channel said to join centres it does not join is still refused. Measured offline on 1,479 stored drafts (the ai-facts corpus of 1,258 + 221 Claude-round readings): 0 old hits lost, 3 new hits, all wrong (a Throat said to connect directly to every centre of a list, one of which no channel of the chart joins to it directly: \"connects directly to your Ajna and G centers\" with the G apart); 0 hits on Jeremy's 21 approved lines; phone = shop on 2,703 cases. Only new drafts are judged; no page, PDF or email words change, so this entry claims nothing by design. Tests: test/groupedWiring1024.test.mjs (phone GroupedWiring1024Test).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }

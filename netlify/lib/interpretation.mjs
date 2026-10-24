@@ -2215,6 +2215,113 @@ const wireCentres = (m) => {
   return out;
 };
 
+/**
+ * GROUPED SENTENCES (10/24, the Claude rounds of 10/23: "Channels 1-8 and 21-45 join your G and Heart to your
+ * Throat", "The G, Throat and Spleen link through channels 1-8 and 10-57" were refused as "1-8 joins the G and the
+ * Heart"). The shapes above find two centres; the sentence often names a list on either side, several channels,
+ * and more than one claim. So a claim is read with its lists and its own channel numbers:
+ *   - a sentence is cut into clauses at ";" and at ", while" / ", whereas" / ", with" / " while ", and a clause's
+ *     channel numbers belong to the claim they follow (the first claim of a clause also takes the ones before it);
+ *   - centre names chained by "and" / "or" (and commas, when an "and" / "or" ends the chain) are one list; a name
+ *     the shapes found stands for its list ("the G, Sacral and Spleen connect with the Root": the three, each to
+ *     the Root; the subject is the name nearest the verb, so "Sacral energy plus a Heart wired to your Throat" is
+ *     the Heart's);
+ *   - "<list> to <list>" claims every pair across; "<list> link / are joined" (no object) claims the list is linked;
+ *     "<list> link into this line" (an object that is not a centre) is judged as before when the clause has no
+ *     channel number and not at all when it has one;
+ *   - a pair passes when a number joins the two (and the chart has it), or when the clause's numbers link them
+ *     through other centres ("your Heart connects to your Throat by way of your Solar Plexus, through 37-40 and
+ *     12-22"), or, when the clause gives its numbers as examples ("channels such as", "several channels"), when the
+ *     chart links them. Otherwise it is refused as before.
+ */
+const WIRE_CLAUSE_CUT = /;|,\s+(?=(?:while|whereas|with)\b)|\s+(?=while\b)/g;
+const NAME_AT = new RegExp(WIRE_NAME, "g");
+const LIST_GAP = new RegExp(String.raw`^(?:\s*,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)${WIRE_POSS}$`);
+const POSS_AT = new RegExp(`^${WIRE_POSS}`);
+const OBJECT_AFTER = /^\s+(?:(?:directly|straight|up|together)\s+)?(?:to|with|into)\s+/;
+const NUMBERS_ARE_EXAMPLES = /\b(?:such\s+as|like|including|among\s+them|for\s+example)\s+(?:the\s+)?(?:channels?\s+)?\d|\b(?:several|various|multiple|many|other|more|two|three|four|five|six|seven|eight|nine)\s+(?:other\s+|more\s+)?channels\b/i;
+const WIRE_VERB_AT = new RegExp(String.raw`\b${WIRE_VERB}\b`);
+/** The clauses of a sentence, each with where it starts. */
+function clausesOf(sentence) {
+  const out = [];
+  let from = 0;
+  for (const m of sentence.matchAll(WIRE_CLAUSE_CUT)) {
+    out.push([from, sentence.slice(from, m.index)]);
+    from = m.index + m[0].length;
+  }
+  out.push([from, sentence.slice(from)]);
+  return out;
+}
+/** The centre names of a clause, chained into lists: [[{at, end, c}, ...], ...]. */
+function centreLists(clause) {
+  const names = [...clause.matchAll(NAME_AT)].map((m) => ({ at: m.index, end: m.index + m[0].length, c: m[1] ?? titleCentre(m[2]) }));
+  const chains = [];
+  names.forEach((n, i) => {
+    const gap = i ? clause.slice(names[i - 1].end, n.at) : null;
+    if (gap !== null && LIST_GAP.test(gap)) {
+      chains.at(-1).names.push(n);
+      if (/\b(?:and|or)\b/.test(gap)) chains.at(-1).and = true;
+    } else chains.push({ names: [n], and: false });
+  });
+  // Names joined by commas alone are not a list ("Beyond your Throat, your G links ..."): each stands alone.
+  return chains.flatMap((ch) => (ch.and ? [ch.names] : ch.names.map((n) => [n])));
+}
+const listOf = (lists, name) => lists.find((l) => l.includes(name)) ?? [name];
+const nameAt = (names, at) => names.find((n) => n.at <= at && at < n.end);
+/** What one shape's match claims: pairs across ("to"), or a list linked together; null when it claims nothing to judge. */
+function wireClaim(k, m, clause, lists) {
+  const names = lists.flat().filter((n) => n.at >= m.index && n.end <= m.index + m[0].length).sort((x, y) => x.at - y.at);
+  if (names.length < 2) return null;
+  const first = names[0], last = names.at(-1);
+  const after = clause.slice(m.index + m[0].length);
+  const objectName = () => {
+    const o = OBJECT_AFTER.exec(after);
+    if (!o) return undefined;
+    const at = m.index + m[0].length + o[0].length;
+    return nameAt(lists.flat(), at + POSS_AT.exec(clause.slice(at))[0].length) ?? null;
+  };
+  const from = (n) => { const l = listOf(lists, n); return l.slice(l.indexOf(n)); };
+  const upTo = (n) => { const l = listOf(lists, n); return l.slice(0, l.indexOf(n) + 1); };
+  if (k === 0) {
+    // "<subject> ... connects to <object>": the subject is the name nearest the verb.
+    const verb = WIRE_VERB_AT.exec(m[0].slice(first.end - m.index));
+    const verbAt = first.end + (verb ? verb.index : 0);
+    const subject = names.filter((n) => n.end <= verbAt).at(-1) ?? first;
+    return { pairsOf: [upTo(subject), from(last)], start: upTo(subject)[0].at };
+  }
+  if (k === 1) {
+    const joint = clause.slice(first.end, last.at);
+    if (/\band\b/.test(joint)) {
+      const obj = objectName();
+      if (obj) return { pairsOf: [from(first), from(obj)], start: m.index };
+      if (obj === null) return { tied: [first, last], start: m.index };
+      return { group: from(first), start: m.index };
+    }
+    return { pairsOf: [[first], from(last)], start: m.index };
+  }
+  if (k === 2) {
+    const obj = objectName();
+    if (obj) return null; // "<list> connect with the Root": the first shape reads it, the pairs across.
+    if (obj === null) return { tied: [first, last], start: m.index };
+    return { group: upTo(last), start: upTo(last)[0].at };
+  }
+  return { pairsOf: [[first], from(last)], start: m.index };
+}
+/** The channel numbers a stretch of text names. */
+const numbersIn = (s) => [...s.matchAll(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/g)].map((n) => channelKey(+n[1], +n[2])).filter((k) => CHANNEL_CENTRES.has(k));
+/** Whether the centres x and y are linked by these channels alone (through any centres). */
+function linkedBy(keys, x, y) {
+  const reach = new Set([x]);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const k of keys) {
+      const [p, q] = CHANNEL_CENTRES.get(k);
+      if (reach.has(p) !== reach.has(q)) { reach.add(reach.has(p) ? q : p); grew = true; }
+    }
+  }
+  return reach.has(y);
+}
+
 export function connectionProblem(raw, output) {
   if (!Array.isArray(output?.channels)) return null;
   const wiring = chartWiring(output);
@@ -2222,27 +2329,52 @@ export function connectionProblem(raw, output) {
     const sentences = text.split(/(?<=[.!?])\s+/);
     for (let si = 0; si < sentences.length; si++) {
       const sentence = sentences[si];
-      const numbers = [...sentence.matchAll(/\b(\d{1,2})\s*-\s*(\d{1,2})\b/g)]
-        .map((n) => channelKey(+n[1], +n[2]))
-        .filter((k) => CHANNEL_CENTRES.has(k));
-      for (const re of WIRE_SHAPES) {
-        for (const m of sentence.matchAll(re)) {
-          const [a, b] = wireCentres(m);
-          if (!a || !b || a === b) continue;
-          if (WIRE_DENIED.test(sentence.slice(0, m.index).split(/[,;:]/).at(-1) + m[0])) continue;
-          const quote = `"${quoteAt(sentence, m.index, m[0].length)}"`;
-          if (numbers.length) {
-            const joins = numbers.filter((k) => CHANNEL_CENTRES.get(k).includes(a) && CHANNEL_CENTRES.get(k).includes(b));
-            if (!joins.length) {
-              const [x, y] = CHANNEL_CENTRES.get(numbers[0]);
-              return `The reading says Channel ${numbers[0]} joins the ${a} and the ${b} in ${where}; it joins the ${x} and the ${y}: ${quote}`;
-            }
-            if (!joins.some((k) => wiring.own.has(k))) return `The reading wires the ${a} and the ${b} through Channel ${joins[0]} in ${where}, a channel this chart does not have: ${quote}`;
-            continue;
+      for (const [off, clause] of clausesOf(sentence)) {
+        const lists = centreLists(clause);
+        const claims = [];
+        WIRE_SHAPES.forEach((re, k) => {
+          for (const m of clause.matchAll(re)) {
+            const [a, b] = wireCentres(m);
+            if (!a || !b || a === b) continue;
+            if (WIRE_DENIED.test(clause.slice(0, m.index).split(/[,;:]/).at(-1) + m[0])) continue;
+            const claim = wireClaim(k, m, clause, lists);
+            if (claim) claims.push({ ...claim, m });
           }
+        });
+        const starts = [...new Set(claims.map((c) => c.start))].sort((x, y) => x - y);
+        const clauseNumbers = numbersIn(clause);
+        for (const c of claims) {
+          const { m } = c;
+          const quote = `"${quoteAt(sentence, off + m.index, m[0].length)}"`;
+          const next = starts.find((s) => s > c.start) ?? clause.length;
+          const region = clause.slice(c.start === starts[0] ? 0 : c.start, next);
+          const numbers = numbersIn(region);
           const directly = /\bdirect(?:ly)?\b/i.test(m[0]);
-          if (directly ? !wiring.direct(a, b) : !wiring.joined(a, b)) {
-            return `The reading says the ${a} and the ${b} connect${directly ? " directly" : ""} in ${where}, but ${directly ? "no channel of this chart joins them" : "no channel of this chart links them"}: ${quote}`;
+          if (c.tied && numbers.length) continue; // "<list> link into this line through 10-34": not judged.
+          const pairs = [];
+          if (c.pairsOf) for (const x of c.pairsOf[0]) for (const y of c.pairsOf[1]) pairs.push([x.c, y.c]);
+          const group = c.group ?? c.tied;
+          if (group) group.forEach((x, i) => group.slice(i + 1).forEach((y) => pairs.push([x.c, y.c])));
+          for (const [x, y] of pairs) {
+            if (x === y) continue;
+            // A number of the clause that joins the two answers for them wherever it stands ("channel 10-34 ties the G
+            // to the Sacral, and channel 6-59 joins the Sacral to the Solar Plexus").
+            const joins = clauseNumbers.filter((k) => CHANNEL_CENTRES.get(k).includes(x) && CHANNEL_CENTRES.get(k).includes(y));
+            if (joins.length) {
+              if (!joins.some((k) => wiring.own.has(k))) return `The reading wires the ${x} and the ${y} through Channel ${joins[0]} in ${where}, a channel this chart does not have: ${quote}`;
+              continue;
+            }
+            if (numbers.length) {
+              const own = numbers.filter((k) => wiring.own.has(k));
+              if (linkedBy(own, x, y)) continue;
+              if (linkedBy(numbers, x, y)) return `The reading wires the ${x} and the ${y} through Channel ${numbers.find((k) => !wiring.own.has(k))} in ${where}, a channel this chart does not have: ${quote}`;
+              if (NUMBERS_ARE_EXAMPLES.test(region) && wiring.joined(x, y)) continue;
+              const [p, q] = CHANNEL_CENTRES.get(numbers[0]);
+              return `The reading says Channel ${numbers[0]} joins the ${x} and the ${y} in ${where}; it joins the ${p} and the ${q}: ${quote}`;
+            }
+            if (directly ? !wiring.direct(x, y) : !wiring.joined(x, y)) {
+              return `The reading says the ${x} and the ${y} connect${directly ? " directly" : ""} in ${where}, but ${directly ? "no channel of this chart joins them" : "no channel of this chart links them"}: ${quote}`;
+            }
           }
         }
       }
