@@ -693,17 +693,17 @@ function ReturningView({ token }: { token: string }) {
     );
   } else if (showNew || data!.pending) {
     // "Start a new chart for someone else": full price, fresh, plain words.
-    const backLabel = data!.pending ? `Back to ${whoseOf(whose)} chart` : "Back to your choices";
+    const backLabel = data!.pending ? `Back to ${whoseOf(whose)} chart` : "Back to your options";
     body = (
       <>
         <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
           {/* Decision 14 (GO v3): the way back says where it goes. From the choices it goes back to
-              them ("your choices"); before the buyer's own details it goes to the chart's page. */}
+              them ("your options"); before the buyer's own details it goes to the chart's page. */}
           <a
             href={back}
             {...hint(
               backLabel,
-              data!.pending ? ownPageHint(whoseOf(whose), "chart") : `Opens your choices for ${whoseOf(whose)} chart`,
+              data!.pending ? ownPageHint(whoseOf(whose), "chart") : `Opens your options for ${whoseOf(whose)} chart`,
             )}
             onClick={(e) => {
               if (data!.pending) return;
