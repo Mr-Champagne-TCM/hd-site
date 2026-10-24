@@ -1,7 +1,7 @@
 import { loadCurrent, loadReading, readReadingLink } from "./reading.mjs";
 import { TIERS } from "../../shared/pricing.mjs";
 import { marginNotes, parseReading, structureProblem } from "./interpretation.mjs";
-import { buildReadingView } from "./readingView.mjs";
+import { buildReadingView, forDisplay, writtenForDisplay } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
@@ -251,10 +251,14 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      *
      * Gated on the TIER rather than on whether text happens to be stored, so a
      * record that somehow carried text it was not paid for still shows none.
+     *
+     * The model's sentences curled for display (decision 4, 10/23), here and
+     * in `view` below: parsed from the stored text, curled on the way out,
+     * never written back (readingView.mjs forDisplay).
      */
     written:
       reading.tier >= 2 && typeof reading.reading === "string"
-        ? parseReading(reading.reading)
+        ? writtenForDisplay(parseReading(reading.reading))
         : null,
     /**
      * The chart facts that sit beside each section. From the CHART, never from
@@ -284,7 +288,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      */
     view:
       reading.tier >= 2 && typeof reading.reading === "string" && structureProblem(reading.reading) === null
-        ? buildReadingView(reading.output, reading.reading)
+        ? forDisplay(buildReadingView(reading.output, reading.reading))
         : null,
     /** The PDF's birth line, when the record keeps birth details (16 Oct 2026 on). */
     birthLine: birthLine(reading.birth),

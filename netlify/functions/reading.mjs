@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { handleReading } from "../lib/readingHandler.mjs";
 import { loadCurrent, readReadingLink } from "../lib/reading.mjs";
 import { ringIfDue } from "../lib/ring.mjs";
+import { untilText } from "../lib/writingLock.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
 import { readingPdf, pdfPageCount } from "../lib/readingPdf.mjs";
@@ -126,6 +127,8 @@ async function nudgeIfStuck(rawBody, answer, secret, request) {
       console.log(`reading: rang the writer for a stuck reading -> ${res.status}`);
     },
   });
+  // Decision 23 (10/23): a writer holds the reading's writing lock, so this poll does not ring a second one.
+  if (out.writing) console.log(`reading: a writer is on this reading (writing lock ${untilText(out.writing)}); not rung`);
   if (!out.rang) return;
 }
 

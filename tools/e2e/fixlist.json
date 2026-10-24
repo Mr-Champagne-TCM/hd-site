@@ -1351,6 +1351,13 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "GO4-curly-ai",
+      "about": "GO page v3, decision 4 (10/23): 'The AI's own sentences keep straight apostrophes beside curly headings (e.g. \"environment's\"). Curl them for display only (shop page + PDF, phone PDF); the stored text and the checker stay untouched.' The model's sentences are curled where the reading page and the PDF show them (netlify/lib/readingView.mjs forDisplay, writtenForDisplay, summaryForDisplay; shared/curlyQuotes.mjs curly(), which now also handles quotes inside quotes, a straight quote after a curly one, a possessive after a closing quote and '90s / '08). The stored reading, the checker and every gate read the model's text as written. The emails quote no reading text. A line whose ONLY change is its quote marks is not a changed line (regress.mjs foldQuotes, as for GO-curly), so this entry claims nothing by design: it is here so the change is on the list. The phone does the same (hd-reading-app ReadingView.display(), PdfExport).",
+      "docs": "^(page|pdf) ",
+      "minus": [],
+      "plus": []
     }
   ]
 }

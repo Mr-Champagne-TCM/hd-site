@@ -15,7 +15,7 @@ import {
   TYPE_NOTES,
   describe,
 } from "./mechanics.mjs";
-import { buildReadingView, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView.mjs";
+import { buildReadingView, forDisplay, summaryForDisplay, NO_CHANNELS, PROFILE_LINE_NAMES } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { curly } from "../../shared/curlyQuotes.mjs";
 import { chartTitle } from "../../shared/chartName.mjs";
@@ -598,12 +598,14 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     glancePage(d, { output, tier, reading: text });
     // Same gate as the phone: a reading that can be laid out in the new order
     // gets the new order; anything else keeps its words as plain paragraphs.
-    const view = text && structureProblem(text) === null ? buildReadingView(output, text) : null;
+    // The gate reads the stored text; the model's sentences are curled only
+    // as they are printed (decision 4, 10/23: readingView.mjs forDisplay).
+    const view = text && structureProblem(text) === null ? forDisplay(buildReadingView(output, text)) : null;
     if (view) {
       startHere(d, view, output);
       readingPages(d, output, view);
     } else if (text) {
-      plainReading(d, text);
+      plainReading(d, curly(text));
     }
     d.finish();
     if (inspect) hooks.onText = null;
@@ -853,7 +855,8 @@ function glancePage(d, { output, tier, reading }) {
   const pdf = d.pdf;
   d.start("Your chart at a glance");
   // Value from the chart, sentence from the model. Never the reverse.
-  const says = reading ? summaryRows(reading) : chartTierSentences(c);
+  // The model's sentences curled as printed (decision 4, 10/23); the stored text is not touched.
+  const says = reading ? summaryForDisplay(summaryRows(reading)) : chartTierSentences(c);
   const words = profileWords(c.profile);
   const rows = [
     ["TYPE", c.type],

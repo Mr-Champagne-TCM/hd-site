@@ -9,6 +9,7 @@ import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 import { TRIGGER_HEADER, triggerOk, triggerToken } from "../lib/trigger.mjs";
 import { RERING_GAP_MS, reringIfDue, reringWorth } from "../lib/ring.mjs";
+import { untilText } from "../lib/writingLock.mjs";
 
 /**
  * THE WRITER. Runs when there is something to write, not on a timer.
@@ -74,12 +75,20 @@ export default async (request) => {
   const store = getStore({ name: "readings", consistency: "strong" });
   const health = getStore({ name: "health", consistency: "strong" });
 
-  /** One reading, written. The named purchase and the drain share this exactly. */
+  /**
+   * One reading, written. The named purchase and the drain share this exactly.
+   *
+   * ONE WRITER PER READING (decision 23, 10/23): `lock` is where the reading's
+   * "writing" lock lives -- the health store, strong consistency, beside the
+   * ring gates. A run that finds another run writing the same reading does
+   * nothing for it and says so below (interpretJob.mjs, writingLock.mjs).
+   */
   const run = (id) =>
     interpretOne({
       id,
       store,
       health,
+      lock: health,
       apiKey,
       prompt,
       grantSecret,
@@ -87,6 +96,8 @@ export default async (request) => {
       deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
       deadline,
     });
+  /** What a run that found another writer on the reading says. */
+  const elsewhere = (r) => `another run is writing it (writing lock ${untilText(r.until)}); this one does nothing`;
 
   /**
    * IS THE CONFIGURED PROMPT THE ONE THIS CODE EXPECTS?
@@ -141,7 +152,9 @@ export default async (request) => {
     const r = await run(first);
     done.add(first);
     if (!r.ok && reringWorth(r.reason)) unwritten.push(first);
-    console.log(`interpret: named ${first} -> ${r.ok ? `written (${r.asks} asks, ${r.partAsks} for parts)` : r.reason}`);
+    console.log(
+      `interpret: named ${first} -> ${r.ok ? `written (${r.asks} asks, ${r.partAsks} for parts)` : r.reason === "writing_elsewhere" ? elsewhere(r) : r.reason}`,
+    );
   }
 
   let waiting;
@@ -179,7 +192,7 @@ export default async (request) => {
     if (result.ok) wrote += 1;
     else {
       if (reringWorth(result.reason)) unwritten.push(id);
-      console.log(`interpret: skipped one (${result.reason})`);
+      console.log(`interpret: skipped one (${result.reason === "writing_elsewhere" ? elsewhere(result) : result.reason})`);
     }
   }
 
@@ -220,8 +233,10 @@ export default async (request) => {
         },
       }).catch(() => ({ rang: false }));
       if (out.rang) return;
+      // Decision 23: another run took the reading in the gap; it re-rings for itself if it must.
+      if (out.writing) console.log(`interpret: no re-ring for ${id}: another run is writing it (writing lock ${untilText(out.writing)})`);
     }
-    console.log("interpret: every unwritten reading has had its rings; the sweep carries on");
+    console.log("interpret: nothing to ring again (rings used up, or another run is writing); the sweep carries on");
   }
 };
 

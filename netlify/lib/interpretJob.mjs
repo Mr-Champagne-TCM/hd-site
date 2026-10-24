@@ -3,6 +3,7 @@ import { generateReading } from "./gemini.mjs";
 import { promptShape } from "./interpretation.mjs";
 import { geminiKind, noteFailure } from "./failures.mjs";
 import { PLACEHOLDERS } from "./structured.mjs";
+import { releaseLock, takeLock } from "./writingLock.mjs";
 
 /**
  * WRITE ONE READING. The job itself, with everything it touches passed in.
@@ -87,7 +88,37 @@ export const PART_TRIES = 3;
 export const PART_ASK_MS = 45_000;
 export const ASK_GAP_MS = 6_000;
 
-export async function interpretOne({
+/**
+ * ONE WRITER PER READING (GO page v3, decision 23, 10/23; writingLock.mjs).
+ * A job takes the reading's "writing" lock before its first ask and lets go
+ * when it ends; while another job holds it, this one does nothing and says
+ * so (`writing_elsewhere`). The lock outlives the reading's budget by a
+ * margin for filing the words and sending the email, then expires by itself,
+ * so a writer killed mid-job holds a reading for ten minutes at most.
+ *
+ * `lock` is the store it lives in (the health store, strong consistency:
+ * interpret.mjs passes it). Without one, no lock is taken -- the old
+ * behavior, which the tests of the job's own logic keep.
+ */
+export const WRITING_LOCK_MARGIN_MS = 2 * 60_000;
+export const WRITING_LOCK_MS = READING_BUDGET_MS + WRITING_LOCK_MARGIN_MS;
+export const WRITING_ELSEWHERE = "writing_elsewhere";
+
+export async function interpretOne(args) {
+  const { id, lock = null, clock = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = args;
+  if (!lock) return writeOne(args);
+  const took = await takeLock({ gate: lock, id, ms: WRITING_LOCK_MS, clock, sleep });
+  if (!took.ok) return { ok: false, reason: WRITING_ELSEWHERE, until: took.held?.until ?? null };
+  try {
+    // Loaded AFTER the lock is held, so a job that waited on another one sees its words and stops ("already_written").
+    const out = await writeOne(args);
+    return took.unlocked ? { ...out, unlocked: took.unlocked } : out;
+  } finally {
+    if (took.lock) await releaseLock({ gate: lock, id, lock: took.lock });
+  }
+}
+
+async function writeOne({
   id,
   store,
   health,
