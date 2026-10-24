@@ -1358,6 +1358,13 @@
       "docs": "^(page|pdf) ",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "BATCH1024-1-note-spacing",
+      "about": "Live retest 10/23 (batch-1024 item 1): in the reading PDF a margin note that wraps had an extra gap between its lines ('Decided over time, not in / the moment.', 'Right Angle Cross of Eden / (36/6 | 11/12)'), so one note read as two. The body's spacing (x1.08 + 3pt) is right at 10.5pt and loose at the notes' 8.5pt: a wrapped value stepped 14pt while its label stepped 10pt onto it. readingPdf.mjs now lays the margin labels and values out with NOTE_LINE_GAP = 0 (pdfText.mjs Layout/layout take an optional { extra }), so every line of a note steps 10pt, the label-to-value step; 9pt between notes is unchanged, and the body text keeps 17pt. A label that breaks ('MANIFESTING / GENERATOR') keeps a link box per line, with less room above and below so the boxes do not overlap (linkLayout). Scaling the body's room to 8.5pt (13pt) was tried first and the 2x render still showed the gap. Positions only; no line of text changes, so this entry claims nothing by design. Test: test/batch1024-notes.test.mjs. Renders: hd-e2e/batch-1024/renders-ui/item1-compare*.png.",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }
