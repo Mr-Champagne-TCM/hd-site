@@ -136,10 +136,11 @@ export function placeholderForm(f) {
   const sec = (topic) => ({ lede: `[RIG PLACEHOLDER] The lead line for ${topic}, which you can skip.`, paragraphs: [para(topic), para(topic + " (second)")] });
   return {
     summary: {
-      type: `[RIG PLACEHOLDER] You are a ${f.type}.`,
-      strategy: `[RIG PLACEHOLDER] Your strategy is to ${f.strategy.toLowerCase()}.`,
+      // 10/24 (glanceEcho): a row made only of its value is refused, so these three say what they stand in for too.
+      type: `[RIG PLACEHOLDER] You are a ${f.type}; the rig put this sentence here for now.`,
+      strategy: `[RIG PLACEHOLDER] Your strategy is to ${f.strategy.toLowerCase()}, in words set here for this run.`,
       authority: `[RIG PLACEHOLDER] Your ${f.authority} authority is how you decide.`,
-      profile: `[RIG PLACEHOLDER] Your profile is ${f.profile}.`,
+      profile: `[RIG PLACEHOLDER] Your profile is ${f.profile}, in stand-in words the test bench filled in.`,
       // 10/23 (S9, trackEcho): a row that only repeats its label and feeling is refused, so each says what it stands in for.
       signature: `[RIG PLACEHOLDER] On track, the feeling is ${f.signature.toLowerCase()}; a stand-in sentence holds this row.`,
       notSelf: `[RIG PLACEHOLDER] Off track, the feeling is ${f.notSelf.toLowerCase()}, and the rig wrote this row in place of one.`,
@@ -167,7 +168,8 @@ export function placeholderForm(f) {
     // Marked "Rig stand-in:" in words (10/22 verbatim read: they read as real), since
     // the checker refuses square brackets in a try-this line.
     takeaways: [
-      `(Authority) Rig stand-in: the next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer. Notice what changes, so the wait is familiar when a heavier choice comes along.`,
+      // 10/24: the tag names the authority, as the checker now asks (tagProblem: "(Authority)" alone is refused).
+      `(${f.authority} authority) Rig stand-in: the next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer. Notice what changes, so the wait is familiar when a heavier choice comes along.`,
       `(Strategy) Rig stand-in: this week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish. Notice how the plan feels an hour later, so the strategy is familiar when more depends on it.`,
       `(Profile ${f.profile}) Rig stand-in: over the next few days, in an easy catch-up with a friend, you might let one line of your profile lead the conversation. Notice how it is received, so that line is familiar when an opening matters more.`,
       `(Type) Rig stand-in: once or twice this week, on something light like a short errand, you might work the way a ${f.type} is built to. Notice how your energy holds up afterward, so that pace is familiar when the week is fuller.`,

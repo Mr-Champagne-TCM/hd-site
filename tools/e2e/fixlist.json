@@ -1372,6 +1372,13 @@
       "docs": "^$",
       "minus": [],
       "plus": []
+    },
+    {
+      "id": "AI-live-words-1024",
+      "about": "The AI wording Jeremy's live test 6 showed on 10/23, each measured offline on every stored draft (1,479: the ai-facts corpus + the Claude rounds; no live AI call) and refused only where every hit is the slip (netlify/lib/interpretation.mjs; the phone's Reading.kt word for word, phone = shop on 2,704 cases): (1) \"profound\" a third time in one reading (repeatWordProblem; 26 drafts, every use decoration; once or twice still passes); (2) a try-this tag that names no authority, \"(Inner Authority)\" / \"(Authority)\" while the reading says \"Emotional authority\" (tagProblem; 135 tags, every one unnamed); (3) a glance row made only of its value and filler, \"You move through daily life as a Projector.\" (glanceProblem / glanceEcho; 16 rows the older glance checks let through, every one an echo). \"weave a tapestry\" was already refused by the 10/23 brochure check (AI-facts-1023). Each refusal traces to one part (a part re-ask). 0 hits on Jeremy's 21 approved lines. The phone's entry screen also curls the date note's quotes where it draws them (\"3/12/1979\" could be ...; EasyEntry doubtShown), not in the stored note. Only new drafts are judged; no stored reading, page, PDF or email changes, so this entry claims nothing by design. The rig's stand-in writer (tools/e2e/harness/fakeGemini.mjs) now names the authority in its try-this tag (\"(Splenic authority)\", was \"(Authority)\") and gives its Type, Strategy and Profile placeholder rows words of their own; the rig has NOT been run on this branch (self-test only): before a merge, run it and claim here the stand-in lines these move. Tests: test/liveWords1024.test.mjs (phone LiveWords1024Test).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
     }
   ]
 }
