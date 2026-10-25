@@ -96,8 +96,8 @@ export function Nav() {
  */
 const AI_LINE =
   `Your chart is calculated, not written by AI. The written part of the ${money(READING.cents)} reading is ` +
-  "drafted by Anthropic’s Claude AI (Google’s Gemini steps in if Claude can’t) from your chart’s values only — no name, no birth date, no place — " +
-  "and checked before it reaches you.";
+  "drafted by AI (Anthropic’s Claude, with Google’s Gemini on standby) from your chart’s values only — no name, no birth date, no place. " +
+  "Every sentence goes through my checks against your chart and Human Design’s original teaching — or it doesn’t reach you.";
 
 const linkCls =
   "text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal";

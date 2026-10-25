@@ -1477,10 +1477,10 @@
     },
     {
       "id": "CLAUDE-writer-words",
-      "about": "Claude writer (Jeremy 10/23: \"This is the new approach\"), WORDS PENDING HIS GO: the home page's AI line names Anthropic’s Claude as the writer and Google’s Gemini as the backup (src/App.tsx AI_LINE). Ships with claude-writer-1024.",
+      "about": "Claude writer (Jeremy 10/23: \"This is the new approach\"): the home page's AI line, APPROVED 10/25 (his pick \"2\": \"Every sentence goes through my checks ...\"), names AI as the drafter (Anthropic’s Claude, Google’s Gemini on standby) and that every sentence goes through his checks against the chart and Human Design’s original teaching (src/App.tsx AI_LINE). Ships with claude-writer-1024.",
       "docs": "^page offer$",
       "minus": ["drafted by Google’s Gemini AI from your chart’s values only"],
-      "plus": ["drafted by Anthropic’s Claude AI \\(Google’s Gemini steps in if Claude can’t\\) from your chart’s values only"]
+      "plus": ["drafted by AI \\(Anthropic’s Claude, with Google’s Gemini on standby\\) from your chart’s values only — no name, no birth date, no place\\. Every sentence goes through my checks against your chart and Human Design’s original teaching — or it doesn’t reach you\\."]
     },
     {
       "id": "CLAUDE-writer-privacy",
@@ -1491,7 +1491,8 @@
         "Google never sees it\\.",
         "to Stripe, Google, Resend and the chart calculator",
         "Google writes the interpretation on the reading tier, using their Gemini model\\.",
-        "Google writes the interpretation for these too, from the values of your chart only"
+        "Google writes the interpretation for these too, from the values of your chart only",
+        "^Last updated October 23, 2026\\.$"
       ],
       "plus": [
         "never sent to Anthropic or Google, who write the interpretation",
@@ -1499,7 +1500,8 @@
         "to Stripe, Anthropic, Google, Resend and the chart calculator",
         "Anthropic writes the interpretation on the reading tier, using their Claude model; if Claude can’t answer, Google’s Gemini model writes it instead\\.",
         "Anthropic doesn’t use it to train their models and deletes it within 30 days\\.",
-        "Anthropic writes the interpretation for these too \\(Google’s Gemini as a backup\\), from the values of your chart only"
+        "Anthropic writes the interpretation for these too \\(Google’s Gemini as a backup\\), from the values of your chart only",
+        "^Last updated October 24, 2026\\.$"
       ]
     }
   ]
