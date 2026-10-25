@@ -5,7 +5,7 @@ import { askClaude } from "./claude.mjs";
  *
  *   1. Claude Opus 5.5 FAST, effort medium, the ask's own limit (90 s a draft). 36 test charts: 89%
  *      first try, ~45 s a reading, ~$0.57.
- *   2. Fast busy (429 / 5xx), or this credit month's spend at SWITCH_AT or more: Opus at NORMAL
+ *   2. Fast busy (429 / 5xx) or refused, or this credit month's spend at SWITCH_AT or more: Opus at NORMAL
  *      speed, effort medium, NORMAL_MS to answer (~2 min, ~$0.27).
  *   3. Claude cannot write it at all (no key, out of credit, a refusal, a rejected key, a key from
  *      any account but the live one): { useGemini: true }, and gemini.mjs asks Gemini exactly as before.
@@ -77,8 +77,10 @@ export function claudeWriter({
 
     let fast = spent < switchAt;
     let r = await ask({ apiKey, instruction, user, schema, fast, timeoutMs: fast ? timeoutMs : normalLimit(timeoutMs) });
-    if (!r.ok && r.failure === "busy" && fast) {
-      // T4: the same ask again at once, at normal speed, with the time a normal one needs.
+    if (!r.ok && (r.failure === "busy" || r.failure === "rejected") && fast) {
+      // T4: the same ask again at once, at normal speed, with the time a normal one needs. A fast ask
+      // REFUSED (a 400 because the account can't use fast mode, say) gets the same one normal try
+      // before Gemini (10/25 pre-deploy audit: the live account had never made a fast call).
       fast = false;
       r = await ask({ apiKey, instruction, user, schema, fast: false, timeoutMs: normalLimit(timeoutMs) });
     }

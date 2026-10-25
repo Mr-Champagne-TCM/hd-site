@@ -1501,7 +1501,9 @@
         "Anthropic writes the interpretation on the reading tier, using their Claude model; if Claude can’t answer, Google’s Gemini model writes it instead\\.",
         "Anthropic doesn’t use it to train their models and deletes it within 30 days\\.",
         "Anthropic writes the interpretation for these too \\(Google’s Gemini as a backup\\), from the values of your chart only",
-        "^Last updated October 24, 2026\\.$"
+        "^Last updated October 24, 2026\\.$",
+        "^Last updated October 25, 2026\\.$",
+        "^Last updated <today>\\.$"
       ]
     }
   ]

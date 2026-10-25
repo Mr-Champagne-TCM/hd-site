@@ -17,6 +17,12 @@ import Anthropic from "@anthropic-ai/sdk";
 export const MODEL = "claude-opus-5-5";
 const EFFORT = "medium";
 const MAX_TOKENS = 32_000;
+/**
+ * ANTHROPIC ITSELF, ALWAYS (10/25 pre-deploy audit). Left unset, the SDK takes ANTHROPIC_BASE_URL from
+ * the environment, and Netlify's AI Gateway can set that for functions: the hd-live key would go to
+ * Netlify's gateway, not to Anthropic. Pinned here so nothing in the environment can move it.
+ */
+export const ANTHROPIC_URL = "https://api.anthropic.com";
 
 /** Published Opus 5.5 prices, $ per token; fast mode is twice these. */
 const PRICE = { in: 4e-6, cacheWrite: 5e-6, cacheRead: 0.2e-6, out: 20e-6 };
@@ -73,7 +79,7 @@ export function failureKind(e) {
  * { ok: false, failure: "timeout" }. `fetchImpl` lets tests answer instead of Anthropic.
  */
 export async function askClaude({ apiKey, instruction, user, schema, fast, timeoutMs, fetchImpl }) {
-  const client = new Anthropic({ apiKey, maxRetries: 0, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
+  const client = new Anthropic({ apiKey, baseURL: ANTHROPIC_URL, maxRetries: 0, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

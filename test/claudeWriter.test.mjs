@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toJsonSchema, failureKind, cost } from "../netlify/lib/claude.mjs";
+import { toJsonSchema, failureKind, cost, askClaude, ANTHROPIC_URL } from "../netlify/lib/claude.mjs";
 import { claudeWriter, creditMonth, normalLimit, SWITCH_AT, addSpend, monthSpend } from "../netlify/lib/writer.mjs";
 import { generateReading } from "../netlify/lib/gemini.mjs";
 import { READING_SCHEMA } from "../netlify/lib/structured.mjs";
@@ -79,6 +79,38 @@ test("fast first; a busy fast ask is asked again at once at normal speed with 15
   assert.deepEqual(calls, [{ fast: true, timeoutMs: 90_000 }, { fast: false, timeoutMs: 150_000 }]);
   assert.deepEqual(r, { ok: true, text: "{}", by: "claude-normal" });
   assert.ok(Math.abs((await monthSpend(store, "2026-10")) - 0.3) < 1e-9);
+});
+
+test("a fast ask refused (fast mode not on the account) gets one normal try before Gemini", async () => {
+  const calls = [];
+  const w = claudeWriter({
+    apiKey: "k", store: memStore(), clock: () => OCT_20,
+    ask: async (a) => { calls.push(a.fast); return calls.length === 1 ? { ok: false, failure: "rejected", detail: "400" } : { ok: true, text: "{}", cost: 0.3, org: "tcm" }; },
+  });
+  assert.deepEqual(await w(ASK), { ok: true, text: "{}", by: "claude-normal" });
+  assert.deepEqual(calls, [true, false]);
+  // Refused at normal speed too (a dead key): Gemini, after exactly two asks.
+  let asked = 0;
+  const dead = claudeWriter({ apiKey: "k", store: memStore(), clock: () => OCT_20, ask: async () => { asked++; return { ok: false, failure: "rejected" }; } });
+  assert.equal((await dead(ASK)).useGemini, true);
+  assert.equal(asked, 2);
+});
+
+test("the request goes to api.anthropic.com even when the environment names another address", async () => {
+  const before = process.env.ANTHROPIC_BASE_URL;
+  process.env.ANTHROPIC_BASE_URL = "https://gateway.invalid/anthropic";
+  const urls = [];
+  try {
+    const r = await askClaude({
+      apiKey: "k", instruction: "PROMPT", user: "FACTS", schema: READING_SCHEMA, fast: true, timeoutMs: 5_000,
+      fetchImpl: async (url) => { urls.push(String(url)); throw new Error("no network in tests"); },
+    });
+    assert.equal(r.ok, false);
+  } finally {
+    if (before === undefined) delete process.env.ANTHROPIC_BASE_URL; else process.env.ANTHROPIC_BASE_URL = before;
+  }
+  assert.ok(urls.length >= 1);
+  for (const u of urls) assert.ok(u.startsWith(`${ANTHROPIC_URL}/`), u);
 });
 
 test("past the switch, every ask is normal speed, and the switch is said once", async () => {
