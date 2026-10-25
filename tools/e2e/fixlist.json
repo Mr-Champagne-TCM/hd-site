@@ -1481,6 +1481,26 @@
       "docs": "^page offer$",
       "minus": ["drafted by Google’s Gemini AI from your chart’s values only"],
       "plus": ["drafted by Anthropic’s Claude AI \\(Google’s Gemini steps in if Claude can’t\\) from your chart’s values only"]
+    },
+    {
+      "id": "CLAUDE-writer-privacy",
+      "about": "Claude writer, WORDS PENDING JEREMY'S GO: the website privacy page names Anthropic as the writer and Google's Gemini as the backup, in the five places it said Google writes the interpretation (the-champagne-method claude-words-1024, src/library/article/Privacy.tsx). Ships with claude-writer-1024.",
+      "docs": "^page web-readings-privacy",
+      "minus": [
+        "never sent to Google, who writes the interpretation",
+        "Google never sees it\\.",
+        "to Stripe, Google, Resend and the chart calculator",
+        "Google writes the interpretation on the reading tier, using their Gemini model\\.",
+        "Google writes the interpretation for these too, from the values of your chart only"
+      ],
+      "plus": [
+        "never sent to Anthropic or Google, who write the interpretation",
+        "Neither of them ever sees it\\.",
+        "to Stripe, Anthropic, Google, Resend and the chart calculator",
+        "Anthropic writes the interpretation on the reading tier, using their Claude model; if Claude can’t answer, Google’s Gemini model writes it instead\\.",
+        "Anthropic doesn’t use it to train their models and deletes it within 30 days\\.",
+        "Anthropic writes the interpretation for these too \\(Google’s Gemini as a backup\\), from the values of your chart only"
+      ]
     }
   ]
 }
