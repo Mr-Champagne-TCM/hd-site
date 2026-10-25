@@ -3,6 +3,7 @@ import { digest, digestPlan, incidents } from "../lib/health.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 import { alertContext } from "../lib/failures.mjs";
+import { deployContext, mayPage, noteDeployContext } from "../lib/deployContext.mjs";
 
 /**
  * The daily watch. A scheduled function, not an endpoint anybody calls.
@@ -21,7 +22,13 @@ import { alertContext } from "../lib/failures.mjs";
  * lib/health.mjs). The schedule fires daily either way and `digestPlan` says
  * whether today sends -- one schedule, one date, nothing to remember to edit.
  */
-export default async () => {
+export default async (request, context) => {
+  noteDeployContext(context);
+  // The digest reports the live store; only production sends it (batch-1024 item 4).
+  if (!mayPage()) {
+    console.log(`watch: deploy context "${deployContext()}" is not production, no digest`);
+    return new Response(null, { status: 204 });
+  }
   const apiKey = process.env.RESEND_API_KEY;
   const now = Date.now();
   const plan = digestPlan(now);

@@ -335,8 +335,36 @@ export function glanceProblem(raw) {
     // 10/22 round: "Type: classifies you as a Manifestor who..." -- the label taken
     // for the subject. The page prints the value, a period, then the row.
     if (/^[a-z]/.test(String(v).trim())) return `The "${SUMMARY_LABELS[k] ?? k}" line does not begin a sentence (no capital letter): "${String(v).trim().slice(0, 90)}"`;
+    if (glanceEcho(k, v)) return `The "${SUMMARY_LABELS[k] ?? k}" line only repeats its value ("${String(v).trim().slice(0, 90)}"); it says what that is like in an ordinary day.`;
   }
   return null;
+}
+
+/**
+ * A GLANCE ROW THAT ONLY REPEATS ITS VALUE (10/23 live test 6, the PDF's page 2: "TYPE Projector. You move
+ * through daily life as a Projector."). The page prints the chart's value, then the row; a row made only of
+ * value words (any type, strategy, authority or profile line name) and filler says nothing the value did not.
+ * The two track rows have their own check (trackEcho). Measured on every stored draft (1,479, 5,799 rows): 72
+ * rows refused ("You operate as a Projector.", "Your inner authority is emotional.", "Your profile is the
+ * 6/2.", a bare "Generator"), every one an echo; a row with one word of its own passes ("You decide through
+ * your Ego Projected authority").
+ */
+const GLANCE_ECHO_WORDS = new Set(
+  ("a an the and or but so of to in on at for with from into by as is are was were be been being it its this that " +
+    "you your yours yourself who which when what how through daily life day days everyday move moves moving operate " +
+    "operates operating live lives living exist exists function functions work works working navigate navigates world " +
+    "type strategy authority profile inner human design designed chart energy energetic person someone one being role " +
+    "mean means meaning line lines " +
+    "generator generators manifesting manifestor manifestors projector projectors reflector reflectors " +
+    "wait waiting waits respond responding response invitation invitations invited inform informing informs before " +
+    "acting act lunar cycle month " +
+    "emotional emotions solar plexus sacral splenic spleen ego manifested projected self-projected self mental heart " +
+    "investigator hermit martyr opportunist heretic model").split(" "),
+);
+export function glanceEcho(key, row) {
+  if (key === "Signature" || key === "Not-self") return false;
+  const words = String(row ?? "").toLowerCase().replace(/[‘’]/g, "'").match(/[a-z][a-z'-]*/g) ?? [];
+  return words.every((w) => GLANCE_ECHO_WORDS.has(w));
 }
 
 /**
@@ -606,6 +634,7 @@ const TAG_AUTHORITY = [
   ["Lunar", /\b(?:lunar|moon)\b/i],
 ];
 const TAG_TYPE = /\b(manifesting generator|generator|manifestor|projector|reflector)\b/i;
+const TAG_AUTHORITY_ONLY = /^(?:your\s+)?(?:inner\s+)?authority$/i;
 
 export function tagProblem(raw, output) {
   const section = parseReading(raw).sections.find((s) => s.heading === TAKEAWAYS);
@@ -632,6 +661,12 @@ export function tagProblem(raw, output) {
       if (!numbers.some((m) => (m[1] === ch[1] && m[2] === ch[2]) || (m[1] === ch[2] && m[2] === ch[1]))) {
         return wrong(numbers.length ? `but its channels are ${numbers.map((m) => m[0]).join(", ")}` : "but it has no channels");
       }
+    }
+    // 10/23 live test 6: a try-this line tagged "(Inner Authority)" while the reading says "Emotional authority"
+    // (the facts' label, "Inner Authority: Emotional", copied). A tag that is only the word: 136 of 1,253 authority
+    // tags in the stored drafts (100 "Inner Authority", 33 "Authority", 3 "Your Inner Authority"), every one unnamed.
+    if (authority && output?.authority && TAG_AUTHORITY_ONLY.test(tag.split(",")[0].trim())) {
+      return `A takeaway's (chart feature) says "(${tag})" without naming the authority; it names it as the reading does: "(${output.authority} authority)"`;
     }
     if (authority && output?.authority) {
       const named = TAG_AUTHORITY.find(([, re]) => re.test(tag));
@@ -936,6 +971,29 @@ export function brochureProblem(raw) {
 }
 
 /**
+ * ONE WORD, OVER AND OVER (10/23 live test 6: "profound" three times in one reading). "profound" is not a
+ * brochure word (it stays allowed once or twice); a third use in one reading is refused, quoting the third, so
+ * the part it sits in is asked for again. Measured on every stored draft (1,479: the ai-facts corpus + the
+ * Claude rounds): 26 drafts use it 3 or 4 times, every use read: decoration ("a profound sense of success",
+ * "profound mysteries", "a profound sponge"); 119 use it twice (allowed). Never in the library's own copy.
+ */
+const REPEATED = [/\bprofound(?:ly|ity)?\b/gi];
+export const REPEAT_MAX = 2;
+export function repeatWordProblem(raw) {
+  for (const re of REPEATED) {
+    let n = 0;
+    for (const [where, text] of writtenText(raw)) {
+      if (where === "a takeaway's tag") continue;
+      for (const m of text.matchAll(re)) {
+        if (++n <= REPEAT_MAX) continue;
+        return `The reading uses "${m[0]}" a third time in ${where}; twice in one reading is enough, so this one says the plain thing instead: "${quoteAt(text, m.index, m[0].length)}"`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * A FEELING WORD OR "STRATEGY" CAPITALIZED MID-SENTENCE (10/22 verbatim read:
  * "deep Satisfaction ... heavy Frustration", "your Strategy of waiting"). The
  * page writes them lower case in a sentence. A list of the chart's names
@@ -1069,6 +1127,7 @@ export function draftProblem(raw, output) {
     splitBridgeProblem(raw, output) ??
     voiceProblem(raw) ??
     brochureProblem(raw) ??
+    repeatWordProblem(raw) ??
     doubledWordProblem(raw) ??
     themeSpellingProblem(raw) ??
     themeCapProblem(raw) ??
@@ -1108,6 +1167,7 @@ export const CHECKS = [
   ["splitBridge", (t, o) => splitBridgeProblem(t, o)],
   ["voice", (t) => voiceProblem(t)],
   ["brochure", (t) => brochureProblem(t)],
+  ["repeatWord", (t) => repeatWordProblem(t)],
   ["doubledWord", (t) => doubledWordProblem(t)],
   ["themeSpelling", (t) => themeSpellingProblem(t)],
   ["themeCap", (t) => themeCapProblem(t)],

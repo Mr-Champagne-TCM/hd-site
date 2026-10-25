@@ -120,6 +120,37 @@ export async function checkoutCredit({ body, secret, level, head, readLink, now 
 }
 
 /**
+ * THE EMAIL STRIPE'S PAGE STARTS WITH (batch-1024 item 2, live retest 10/23).
+ *
+ * An upgrade (summary to chart, chart to reading) and a someone-new purchase
+ * made from an owned chart's page opened Stripe Checkout with an empty email
+ * box, so the buyer typed the address we already had. Now the chart the signed
+ * link names (the newest record of its chain) hands its receipt's email to
+ * `customer_email`, which only fills the box: the buyer can still change it.
+ *
+ * Only a prefill. Credit is still `checkoutCredit` alone (someone new is
+ * never credited, link or not), and the receipt and the claim still read the
+ * email from the paid Stripe session (`customer_details`), never from here.
+ *
+ * Returns the address, or null: no link, a link that does not read, a record
+ * with no email, or anything that does not look like an address. Never throws.
+ */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export async function checkoutEmail({ body, secret, head, readLink, now = Date.now() }) {
+  if (body?.upgrade !== true && body?.someoneNew !== true) return null;
+  if (typeof body?.reading !== "string" || !body.reading) return null;
+  try {
+    const link = readLink(body.reading, secret, now);
+    if (!link?.ok) return null;
+    const h = await head(link.id);
+    const email = String(h?.buyer?.email ?? "").trim();
+    return email.length <= 254 && EMAIL_SHAPE.test(email) ? email : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * EACH TIER IS ONE STRIPE PRODUCT, under an id we choose (10/16).
  *
  * Jeremy: the free retry code is "limited to the tier they bought" (any tier
@@ -174,7 +205,7 @@ const READY = new Set();
  * inline product so a sale is never lost over it -- a retry code then does not
  * reach that one purchase, and the checkout says so to Jeremy.
  */
-export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false }) {
+export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false, email = null }) {
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);
   const due = priceFor(tier, alreadyPaidCents);
@@ -251,6 +282,10 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * is the contact list.
      */
     customer_creation: "always",
+    // The email the chart's receipt went to, already in the box (batch-1024
+    // item 2; `checkoutEmail`). The buyer may change it; the claim reads the
+    // session's own email either way.
+    ...(email ? { customer_email: email } : {}),
     // The buyer types a discount code on Stripe's page, not ours. We never
     // validate a code, never count redemptions, and never hold one (D-8).
     allow_promotion_codes: true,

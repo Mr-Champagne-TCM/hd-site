@@ -1,4 +1,5 @@
 import { customerText } from "../../shared/customerMessages.mjs";
+import { deployContext, mayPage } from "./deployContext.mjs";
 import { PLAYBOOK, briefLine, countTouched, optionLines, touchLine, whichLines } from "./playbook.mjs";
 
 /**
@@ -113,6 +114,11 @@ export async function reportFailure(
   store,
   { kind, detail, excerpt, now = Date.now(), send, site, severity, customer, ref, paid, context } = {},
 ) {
+  // Only production pages Jeremy; a draft or preview shares this store (batch-1024 item 4).
+  if (!mayPage()) {
+    console.log(`${kind}: not filed and no alert -- deploy context "${deployContext()}" is not production`);
+    return { recorded: false, alerted: false, notProduction: true };
+  }
   const entry = await record(store, { kind, detail, excerpt, now, severity, customer, ref, paid });
   if (!entry || typeof send !== "function") return { recorded: Boolean(entry), alerted: false };
 

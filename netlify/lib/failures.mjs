@@ -1,4 +1,5 @@
 import { record, reportFailure } from "./health.mjs";
+import { deployContext, mayPage, noteDeployContext } from "./deployContext.mjs";
 import { sendMail } from "./mail.mjs";
 import { SITE } from "./siteLinks.mjs";
 import { mintReadingLink } from "./reading.mjs";
@@ -262,6 +263,13 @@ export function customerError(kind, { paid = false, message, extra, status, code
 export async function noteFailure(store, kind, { detail, excerpt, paid = false, ref, send, site, now = Date.now() } = {}) {
   const d = describe(kind, { paid });
   const fields = { kind, detail, excerpt, now, severity: d.severity, customer: d.customer, ref, paid };
+  // Not production (a draft, a preview, a branch deploy): it shares the live
+  // health store, so a page-jeremy incident is never filed from it and nobody
+  // is paged -- the function log says so (batch-1024 item 4, deployContext.mjs).
+  if (d.severity === SEVERITY.PAGE && !mayPage()) {
+    console.log(`${kind}: not filed and no alert -- deploy context "${deployContext()}" is not production`);
+    return { recorded: false, alerted: false, notProduction: true };
+  }
   try {
     if (d.severity === SEVERITY.PAGE && typeof send === "function") {
       return await reportFailure(store, { ...fields, send, site });
@@ -375,6 +383,8 @@ export function alertSender(apiKey, context = alertContext()) {
 export function guard(name, handler, { health, page = null } = {}) {
   const kind = `${name}-crash`;
   return async (request, context) => {
+    // Which deploy this is, for every incident it may file (batch-1024 item 4).
+    noteDeployContext(context);
     try {
       return await handler(request, context);
     } catch (e) {

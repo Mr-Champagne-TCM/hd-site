@@ -1361,15 +1361,117 @@
     },
     {
       "id": "AI-facts-1023",
-      "about": "The 10/23 word-for-word read of AI round rk-a3 (hd-e2e/verbatim-1023 M1, M2, S9, N21, N22; branch ai-facts-1023, the phone's the same word for word): the fact checks catch wrong centre wiring in more shapes (motor power at a Throat no motor reaches, thoughts reaching words with no Ajna-Throat channel, a gap between sides already joined, power from several centres with one motor, the Throat called 'the' motor); an unknown birth time's facts NOTE asks the reading never to mention it and the checker refuses any mention or 'provisional' (the page shows the time line, the bar and the tags; the old NOTE listed the values and asked for them all); brochure words (tapestry, cosmic, cosmos, breathtaking, inexhaustible) and a track row that only repeats its label are refused and asked for again; a Reflector's facts say Lunar authority is about a month; the prompt (rev t, private) says the same and lists words to avoid. The rig's stand-in writer's placeholder track rows now say what they stand in for. Only new drafts are judged; no stored reading changes. The rig has NOT been run on this branch: before a merge, run it and claim here any stand-in line the new checks move.",
+      "about": "The 10/23 word-for-word read of AI round rk-a3 (hd-e2e/verbatim-1023 M1, M2, S9, N21, N22; branch ai-facts-1023, the phone's the same word for word): the fact checks catch wrong centre wiring in more shapes (motor power at a Throat no motor reaches, thoughts reaching words with no Ajna-Throat channel, a gap between sides already joined, power from several centres with one motor, the Throat called 'the' motor); an unknown birth time's facts NOTE asks the reading never to mention it and the checker refuses any mention or 'provisional' (the page shows the time line, the bar and the tags; the old NOTE listed the values and asked for them all); brochure words (tapestry, cosmic, cosmos, breathtaking, inexhaustible) and a track row that only repeats its label are refused and asked for again; a Reflector's facts say Lunar authority is about a month; the prompt (rev t, private) says the same and lists words to avoid. The rig's stand-in writer's placeholder track rows now say what they stand in for. Only new drafts are judged; no stored reading changes. The rig has NOT been run on this branch: before a merge, run it and claim here any stand-in line the new checks move. RIG RUN 10/24 (batch-1024 finish, hd-e2e/runs/2026-10-24T06-00-21-2deb1ba): the stand-in writer's placeholder track rows moved as expected and are claimed here: the old rows ('[RIG PLACEHOLDER] On track, the feeling is peace.', 'Off track, the feeling is anger.') are gone and the new ones ('...; a stand-in sentence holds this row.', '..., and the rig wrote this row in place of one.') are new, on the pages and the PDFs' page 2 (with the PDF's wrapped pieces). No other line of this entry's moved.",
       "docs": "^(page|pdf|email) ",
-      "minus": [],
-      "plus": []
+      "minus": [
+        "^(WHEN IT['’]S (ON|OFF) TRACK )?The feeling is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment)\\. \\[RIG PLACEHOLDER\\] (On|Off) track, the feeling( is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment)\\.)?$",
+        "^is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment)\\.$"
+      ],
+      "plus": [
+        "^(WHEN IT['’]S ON TRACK )?The feeling is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment)\\. \\[RIG PLACEHOLDER\\] On track, the feeling is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment);( a( stand-in sentence holds this row\\.)?)?$",
+        "^(a )?stand-in sentence holds this row\\.$",
+        "^(WHEN IT['’]S OFF TRACK )?The feeling is (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment)\\. \\[RIG PLACEHOLDER\\] Off track, the feeling is( (satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment),( and( the rig wrote this row in place of one\\.)?)?)?$",
+        "^((satisfaction|success|peace|surprise|frustration|bitterness|anger|disappointment), )?(and )?the rig wrote this row in place of one\\.$"
+      ]
     },
     {
       "id": "AI-grouped-wiring-1024",
       "about": "Jeremy 10/23 (\"1. yes\", in the Claude-Max session; to ship in one batch): the connection check refused right sentences that group centres or channels (\"Channels 1-8 and 21-45 join your G and Heart to your Throat\", \"The G, Throat and Spleen link through channels 1-8 and 10-57\"), read as \"1-8 joins the G and the Heart\" (first drafts of the 10/23 Claude rounds c1 R01 R05 R06 R09, op1 R18, and t1-t45). connectionProblem (netlify/lib/interpretation.mjs; the phone's Reading.kt word for word) now reads a claim with its lists of centres, its own clause's channel numbers and the centres those numbers pass through; a channel said to join centres it does not join is still refused. Measured offline on 1,479 stored drafts (the ai-facts corpus of 1,258 + 221 Claude-round readings): 0 old hits lost, 3 new hits, all wrong (a Throat said to connect directly to every centre of a list, one of which no channel of the chart joins to it directly: \"connects directly to your Ajna and G centers\" with the G apart); 0 hits on Jeremy's 21 approved lines; phone = shop on 2,703 cases. Only new drafts are judged; no page, PDF or email words change, so this entry claims nothing by design. Tests: test/groupedWiring1024.test.mjs (phone GroupedWiring1024Test).",
       "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "AI-live-words-1024",
+      "about": "The AI wording Jeremy's live test 6 showed on 10/23, each measured offline on every stored draft (1,479: the ai-facts corpus + the Claude rounds; no live AI call) and refused only where every hit is the slip (netlify/lib/interpretation.mjs; the phone's Reading.kt word for word, phone = shop on 2,704 cases): (1) \"profound\" a third time in one reading (repeatWordProblem; 26 drafts, every use decoration; once or twice still passes); (2) a try-this tag that names no authority, \"(Inner Authority)\" / \"(Authority)\" while the reading says \"Emotional authority\" (tagProblem; 135 tags, every one unnamed); (3) a glance row made only of its value and filler, \"You move through daily life as a Projector.\" (glanceProblem / glanceEcho; 16 rows the older glance checks let through, every one an echo). \"weave a tapestry\" was already refused by the 10/23 brochure check (AI-facts-1023). Each refusal traces to one part (a part re-ask). 0 hits on Jeremy's 21 approved lines. The phone's entry screen also curls the date note's quotes where it draws them (\"3/12/1979\" could be ...; EasyEntry doubtShown), not in the stored note. Only new drafts are judged; no stored reading, page, PDF or email changes, so this entry claims nothing by design. The rig's stand-in writer (tools/e2e/harness/fakeGemini.mjs) now names the authority in its try-this tag (\"(Splenic authority)\", was \"(Authority)\") and gives its Type, Strategy and Profile placeholder rows words of their own; the rig has NOT been run on this branch (self-test only): before a merge, run it and claim here the stand-in lines these move. Tests: test/liveWords1024.test.mjs (phone LiveWords1024Test). RIG RUN 10/24 (batch-1024 finish, hd-e2e/runs/2026-10-24T06-00-21-2deb1ba): the stand-in writer's Type, Strategy and Profile placeholder rows moved as expected and are claimed here ('[RIG PLACEHOLDER] You are a Projector.' -> '...; the rig put this sentence here for now.', 'Your strategy is to ...' -> '..., in words set here for this run.', 'Your profile is 6/2.' -> '..., in stand-in words the test bench filled in.'), on the pages and the PDFs' page 2 (with the PDF's wrapped pieces). The stand-in try-this tag moved too ('Authority' -> 'Sacral authority', 'Emotional authority' and so on, 21 tags in the run); those lines sit inside the try-this sections entry AI1 already claims, so nothing more is needed here. The longer rows push one unknown-time PDF's technical values onto a page of their own (addUp-2-upgrade-t2 p3, 12% filled): pdf-page-fill fails on it, reported as a finding, not claimed.",
+      "docs": "^(page|pdf) ",
+      "minus": [
+        "^(TYPE )?[A-Z][a-z]+( Generator)?\\. \\[RIG PLACEHOLDER\\] You are a [A-Z][a-z]+( Generator)?\\.$",
+        "^(STRATEGY )?[A-Z][^.\\[]+\\. \\[RIG PLACEHOLDER\\] Your strategy is to (?![a-z ,]*in words set here)[a-z ,]+(\\.)?$",
+        "^the invitation\\.$",
+        "^(PROFILE )?\\d/\\d — [A-Za-z ]+ / [A-Za-z ]+\\. \\[RIG PLACEHOLDER\\] Your profile is \\d/\\d\\.$"
+      ],
+      "plus": [
+        "^(TYPE )?[A-Z][a-z]+( Generator)?\\. \\[RIG PLACEHOLDER\\] You are a [A-Z][a-z]+( Generator)?; the rig put this( sentence( here for now\\.)?)?$",
+        "^(sentence )?here for now\\.$",
+        "^(STRATEGY )?[A-Z][^.\\[]+\\. \\[RIG PLACEHOLDER\\] Your strategy is to [a-z ,]+?(, in words set here for this run\\.)?$",
+        "^((the )?invitation, )?in words set here for this run\\.$",
+        "^(PROFILE )?\\d/\\d — [A-Za-z ]+ / [A-Za-z ]+\\. \\[RIG PLACEHOLDER\\] Your profile is \\d/\\d(, in( stand-(in( words the test bench filled in\\.)?)?)?)?$",
+        "^(in |stand-in )?words the test bench filled in\\.$"
+      ]
+    },
+    {
+      "id": "BATCH1024-1-note-spacing",
+      "about": "Live retest 10/23 (batch-1024 item 1): in the reading PDF a margin note that wraps had an extra gap between its lines ('Decided over time, not in / the moment.', 'Right Angle Cross of Eden / (36/6 | 11/12)'), so one note read as two. The body's spacing (x1.08 + 3pt) is right at 10.5pt and loose at the notes' 8.5pt: a wrapped value stepped 14pt while its label stepped 10pt onto it. readingPdf.mjs now lays the margin labels and values out with NOTE_LINE_GAP = 0 (pdfText.mjs Layout/layout take an optional { extra }), so every line of a note steps 10pt, the label-to-value step; 9pt between notes is unchanged, and the body text keeps 17pt. A label that breaks ('MANIFESTING / GENERATOR') keeps a link box per line, with less room above and below so the boxes do not overlap (linkLayout). Scaling the body's room to 8.5pt (13pt) was tried first and the 2x render still showed the gap. Positions only; no line of text changes, so this entry claims no line. A shorter margin can let a reading section start a page earlier, so lines may move between the reading PDF's pages: claimed as moved (`moves`). Test: test/batch1024-notes.test.mjs. Renders: hd-e2e/batch-1024/renders-ui/item1-compare*.png.",
+      "docs": "^$",
+      "minus": [],
+      "plus": [],
+      "moves": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$"
+    },
+    {
+      "id": "BATCH1024-2-checkout-email",
+      "about": "Live retest 10/23 (batch-1024 item 2): the upgrades (summary to chart, chart to reading) and the someone-new purchase made from an owned chart's page opened Stripe Checkout with an empty email box, so the buyer typed the address the shop already had. checkout.mjs checkoutEmail() reads the chart the signed link names (the newest record of its chain, as the credit does) and sessionParams() passes its receipt email as customer_email, which only fills the box (the buyer can change it). The someone-new cards on /u/<token>#new now send the link with someoneNew (purchase.ts, App.tsx Tiers `from`), for the email only: checkoutCredit still returns no credit for someone new. The receipt, the claim and the purchase watcher still read the email from the paid Stripe session (customer_details); the address is never logged. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-checkout-email.test.mjs (Stripe mocked through createSession's fetchImpl).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-3-addtime-dropped",
+      "about": "Live retest 10/23 (batch-1024 item 3): on the add-time page (src/AddTime.tsx), when fetch itself failed (the connection dropped, nothing reached the server) the catch branch showed 'addtime-slow', which says 'Jeremy has been told' -- untrue, since nobody was. The catch branch now shows its own line, 'addtime-connection-dropped' (shared/customerMessages.mjs, act false, one entry for chart and summary alike): 'That didn’t reach me — the connection dropped, so nothing has changed. The time you chose is still in the form; another try usually works.' A server that answered keeps its words: its own message, or 'addtime-slow' / 'addtime-slow-summary' when the answer had none (unchanged). Shown only after a dropped connection, so no baseline page should carry it; the plus line is here so a render that does is allowed. Test: test/batch1024-addtime-dropped.test.mjs (the form's own onSubmit run with fetch stubbed to throw, to answer 503 with words, and 502 without).",
+      "docs": "^page ",
+      "minus": [],
+      "plus": [
+        "^That didn’t reach me — the connection dropped, so nothing has changed\\. The time you chose is still in the form; another try usually works\\.$"
+      ]
+    },
+    {
+      "id": "BATCH1024-4-draft-no-page",
+      "about": "10/23 21:47 (batch-1024 item 4): every deploy shares the live blob stores, and a draft deployed with no secrets filed a 'places-misconfigured' incident, severity page-jeremy, into the live health store. New netlify/lib/deployContext.mjs: the deploy context comes from the context object a v2 function is handed (context.deploy.context; guard() and the scheduled functions sweep, watch, reconcile and retry-code pass it on), then Netlify's global Netlify.context, then process.env.CONTEXT (a build variable, likely absent at runtime, as DEPLOY_ID was on 9/8). Anything but 'production' never files a page-jeremy incident and never alerts: noteFailure() and reportFailure() log one line ('<kind>: not filed and no alert -- deploy context \"<ctx>\" is not production') and stop; the sweep's rate alarm goes through reportFailure; watch sends no digest. Lower-severity incidents are still kept, unalerted. Nothing known (tests, the local rig) behaves as production did, so a monitor never goes quiet for not knowing where it runs. No page, PDF or email text changes, so this entry claims nothing by design. Test: test/batch1024-draft-health.test.mjs (both contexts, three sources, guard, the rate alarm, watch, and the places function with no secrets end to end through a recorded fetch).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-5-email-place",
+      "about": "Live retest 10/23 (batch-1024 item 5): the 'Email me my charts' email showed 'Coeur d'Alene' with a straight apostrophe. Decision 8 curled place names where they are shown (shared/birthLine.mjs: the PDF and the pages); myChartsEmail.mjs chartCard() now curls the kept place for its row the same way (curly(), HTML and text alike), so a row reads 'The chart · January 2, 1990 · Coeur d’Alene, Idaho'. The kept place is unchanged. No other email prints a birth place (the ready, receipt and add-time emails do not; the add-time page's kept line already goes through birthLine). Test: test/batch1024-email-place.test.mjs.",
+      "docs": "^email ",
+      "minus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*'[^·]*$"
+      ],
+      "plus": [
+        "^The (summary|chart|reading) · [A-Z][a-z]+ \\d{1,2}, \\d{4} · [^·]*’[^·]*$"
+      ]
+    },
+    {
+      "id": "BATCH1024-6-places-town-first",
+      "about": "Live retest 10/23 (batch-1024 item 6): typing 'Denver' in the town search listed Copenhagen, Århus, Odense and Aalborg (and Henderson) after Denver. The engine (hd-engine CityIndex.search, its own service, untouched) fills a short list with near-misses on ANY word of a row, and 'denver' is two letters from 'denmar(k)'. New netlify/lib/placeRank.mjs orders the engine's rows in the places function (every way out: miss, blob cache hit, memory) before they are cached or sent: 0 the town's name starts with the first word typed, 1 a later word of the town's name does, 2 the town's name holds it, 3 the town's name is a near-miss (Henderson), 4 only the state or country matched (the Danish towns). Stable inside a class, so the engine's order stands there: Denver stays first, a whole-word town prefix beats a country prefix ('Den' -> Denton, Denver before Copenhagen), and Portland, Coeur d'Alene, Boise, Hartford and a whole-state fallback read as before. Same rows, same count. The places list is not a captured document line set, so this entry claims nothing by design. Test: test/batch1024-places-rank.test.mjs (the classes, the reported list, the four towns, and /api/places end to end with the engine and the blob store faked).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-1-phone-note-spacing",
+      "about": "The phone's side of batch-1024 item 1 (= BATCH1024-1-note-spacing, hd-site 59f32ec): the phone's reading PDF (hd-reading-app PdfExport.kt) laid its margin notes out with the body's spacing (x1.08 + 3pt), so a wrapped value ('Answered once, quietly, in / the present.', 'Right Angle Cross of / Eden (11/12 | 6/36)') stepped 14pt while its label stepped 10pt onto it, and a label that breaks ('ON TRACK, / THE FEELING IS') stepped 14pt too. The notes' labels and values now lay out with NOTE_LINE_GAP = 0 (no added room, multiplier 1: every line of a note steps 10pt, as the shop's do); 9pt between notes and the body's 17pt are unchanged. linkLayout pads a box less above and below when its lines sit close (= the shop's), so a broken label's two link boxes touch and do not overlap. Positions only; no line of text changes. The rig does not drive the phone's PDF, so this entry claims nothing by design. Test: hd-reading-app Batch1024NotesTest (the four test clients: every wrapped note line steps the label step, 9pt between notes, two link boxes per broken label without overlap, body 17pt; 2x renders before/after in hd-e2e/batch-1024/renders-phone).",
+      "docs": "^$",
+      "minus": [],
+      "plus": []
+    },
+    {
+      "id": "BATCH1024-7-correction-place",
+      "about": "Batch-1024 leftover (10/24): the correction note's 'Birth place changed from X to Y' (shared/correctionNote.mjs detailSentences, the buyer's own page after 'Change a detail') printed both places as kept, so 'Coeur d'Alene' showed a straight apostrophe beside the curled birth line (decision 8, shared/birthLine.mjs). Both places are now curled where the sentence is built (curly()), for display only; the record's correction keeps the places as typed. The phone has no correction note, so there is no phone side. No rig birth has a place with an apostrophe, so no line changes today; a correction lead with a curled place is claimed in case one does. Test: test/batch1024-correction-place.test.mjs.",
+      "docs": "^page ",
+      "minus": [
+        "^(.*\\. )?Birth place changed from [^—]*'[^—]* — your chart is cast from the corrected details\\.$"
+      ],
+      "plus": [
+        "^(.*\\. )?Birth place changed from [^—]*’[^—]* — your chart is cast from the corrected details\\.$"
+      ]
+    },
+    {
+      "id": "BATCH1024-8-page-fill",
+      "about": "Rig 10/24 (runs/2026-10-24T06-00-21-2deb1ba, pdf-page-fill): in addUp-2-upgrade-t2, page 3 of 9 was 12% filled -- only the technical values ('TECHNICAL VALUES: YOUR TWENTY-SIX PLANET NUMBERS ...') and the onward note. An unknown birth time (PROVISIONAL tags and the Moon note), six channels and two-line glance rows left page 2 about two lines of room, so the block's heading went over and took the whole block with it; the 6B rule only caught the note alone or under a stray row. Jeremy's option 1, 'let page 2 hold the table': readingPdf.mjs now counts the whole block going over (its heading pushed to a new page, not by keepClosing) as a closing block alone, and page 2's white space gives way the measured 6B way. The most it gives is now half (NOTE_MOST 0.5, was 0.6: 0.6 left this case 10pt short); the gentlest of 0.9, 0.8, 0.7, 0.6, 0.55 that fits is still chosen. White space only, never text leading; the footer line holds; when even half is not enough the block goes over whole with its note, as before. Phone (hd-reading-app PdfExport.kt): its spill rule already covered the block going over, its ladder now runs 0.9 .. 0.5 (= shop). Lines only move between pages of the reading PDFs (one page fewer where it applies), so this entry claims them as moved. Tests: test/batch1024-page-fill.test.mjs; hd-reading-app Batch1024PageFillTest. Renders: hd-e2e/batch-1024/renders-pagefill.",
+      "docs": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$",
+      "moves": "^pdf [a-zA-Z0-9]+-\\d-[a-z-]+-t2 p\\d+$",
       "minus": [],
       "plus": []
     }

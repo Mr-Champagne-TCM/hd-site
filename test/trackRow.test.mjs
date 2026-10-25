@@ -71,7 +71,8 @@ test("the shortest healthy real row (11 words) passes", () => {
 
 test("only the on / off track rows are held to it", () => {
   // The other four glance rows are not part of this rule (Jeremy chose A for the two feeling rows).
-  assert.equal(check(letter("Type", "Generator."), CHART), null);
+  // A short row with a word of its own (10/24: a bare "Generator." only repeats its value, glanceEcho).
+  assert.equal(check(letter("Type", "Steady work builds."), CHART), null);
   assert.equal(trackRowProblem("IN SHORT\n\nType: A.\nStrategy: B.\n"), null);
 });
 
