@@ -38,13 +38,27 @@ export function fontName(p) {
   return p.bold ? "bold" : "body";
 }
 
+/**
+ * ONE OPEN PER FONT PER DOCUMENT (10/25 live test: a 10-page reading's PDF took 31 s on Netlify, so
+ * the download and the reading page's page count timed out). pdfkit keeps a registered font under its
+ * name only when no equal font is open yet: "body" is the Roboto the document starts with, and
+ * "fallback" the same Outfit file as the bodygraph's "svgBody", so nearly every word measured opened
+ * and parsed its font file again. Kept under its own name after the first open, so later calls take
+ * pdfkit's cached path; the font drawn is the same object, and the pages are pixel for pixel the same.
+ */
+export function useFont(doc, name) {
+  doc.font(name);
+  if (doc._fontFamilies && !doc._fontFamilies[name]) doc._fontFamilies[name] = doc._font;
+  return doc;
+}
+
 /** Width of `text` in `p`, fallback glyphs included. */
 export function measure(doc, text, p) {
   if (!text) return 0;
   const cs = p.letterSpacing * p.size;
   let w = 0;
   for (const run of runs(text)) {
-    doc.font(run.fallback ? "fallback" : fontName(p)).fontSize(p.size);
+    useFont(doc, run.fallback ? "fallback" : fontName(p)).fontSize(p.size);
     w += doc.widthOfString(run.text) + cs * run.text.length;
   }
   return w;
@@ -75,7 +89,7 @@ export function drawText(doc, text, x, y, p, { align = "left" } = {}) {
   hooks.onText?.({ text, x: cx, y, w, size: p.size, color: p.color, bold: p.bold });
   const cs = p.letterSpacing * p.size;
   for (const run of runs(text)) {
-    doc.font(run.fallback ? "fallback" : fontName(p)).fontSize(p.size).fillColor(p.color);
+    useFont(doc, run.fallback ? "fallback" : fontName(p)).fontSize(p.size).fillColor(p.color);
     doc.text(run.text, cx, y, { lineBreak: false, baseline: "alphabetic", characterSpacing: cs });
     cx += doc.widthOfString(run.text) + cs * run.text.length;
   }
