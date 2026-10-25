@@ -1,0 +1,341 @@
+{
+ "type": "Manifesting Generator",
+ "strategy": "Wait to respond, then inform",
+ "authority": "Sacral",
+ "profile": "1/3",
+ "definition": "Single",
+ "notSelfTheme": "Frustration",
+ "signature": "Satisfaction",
+ "incarnationCross": "Right Angle Cross of Penetration (53/54 | 51/57)",
+ "definedCenters": [
+  "Ajna",
+  "Throat",
+  "Sacral",
+  "Spleen",
+  "Root"
+ ],
+ "undefinedCenters": [
+  "Heart",
+  "Solar Plexus"
+ ],
+ "openCenters": [
+  "Head",
+  "G"
+ ],
+ "engineVersion": "0.6.0",
+ "computedAt": "2026-10-24T06:11:17.283855100Z",
+ "timeKnown": false,
+ "chartedAt": "noon local",
+ "note": "Birth time unknown - charted at noon. Treat Type, Authority and Profile as provisional.",
+ "provisional": [
+  "type",
+  "strategy",
+  "authority",
+  "profile",
+  "notSelfTheme",
+  "signature"
+ ],
+ "channels": [
+  "17-62 (Acceptance)",
+  "20-57 (The Brainwave)",
+  "20-34 (Charisma)",
+  "34-57 (Power)",
+  "27-50 (Preservation)",
+  "42-53 (Maturation)"
+ ],
+ "channelLines": [
+  "17-62 (Acceptance), Ajna to Throat",
+  "20-57 (The Brainwave), Throat to Spleen",
+  "20-34 (Charisma), Throat to Sacral",
+  "34-57 (Power), Sacral to Spleen",
+  "27-50 (Preservation), Sacral to Spleen",
+  "42-53 (Maturation), Sacral to Root"
+ ],
+ "activatedGates": [
+  5,
+  9,
+  12,
+  17,
+  18,
+  20,
+  23,
+  27,
+  29,
+  30,
+  34,
+  37,
+  39,
+  42,
+  50,
+  51,
+  53,
+  54,
+  57,
+  62
+ ],
+ "personality": [
+  {
+   "planet": "SUN",
+   "gate": 53,
+   "line": 1
+  },
+  {
+   "planet": "EARTH",
+   "gate": 54,
+   "line": 1
+  },
+  {
+   "planet": "MOON",
+   "gate": 39,
+   "line": 1
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 34,
+   "line": 1
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 20,
+   "line": 1
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 12,
+   "line": 3
+  },
+  {
+   "planet": "VENUS",
+   "gate": 29,
+   "line": 6
+  },
+  {
+   "planet": "MARS",
+   "gate": 27,
+   "line": 4
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 42,
+   "line": 2
+  },
+  {
+   "planet": "SATURN",
+   "gate": 62,
+   "line": 1
+  },
+  {
+   "planet": "URANUS",
+   "gate": 50,
+   "line": 3
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 9,
+   "line": 5
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 18,
+   "line": 3
+  }
+ ],
+ "design": [
+  {
+   "planet": "SUN",
+   "gate": 51,
+   "line": 3
+  },
+  {
+   "planet": "EARTH",
+   "gate": 57,
+   "line": 3
+  },
+  {
+   "planet": "MOON",
+   "gate": 37,
+   "line": 6
+  },
+  {
+   "planet": "NORTH_NODE",
+   "gate": 34,
+   "line": 2
+  },
+  {
+   "planet": "SOUTH_NODE",
+   "gate": 20,
+   "line": 2
+  },
+  {
+   "planet": "MERCURY",
+   "gate": 17,
+   "line": 4
+  },
+  {
+   "planet": "VENUS",
+   "gate": 23,
+   "line": 5
+  },
+  {
+   "planet": "MARS",
+   "gate": 30,
+   "line": 4
+  },
+  {
+   "planet": "JUPITER",
+   "gate": 17,
+   "line": 2
+  },
+  {
+   "planet": "SATURN",
+   "gate": 39,
+   "line": 4
+  },
+  {
+   "planet": "URANUS",
+   "gate": 50,
+   "line": 5
+  },
+  {
+   "planet": "NEPTUNE",
+   "gate": 5,
+   "line": 1
+  },
+  {
+   "planet": "PLUTO",
+   "gate": 18,
+   "line": 4
+  }
+ ],
+ "timeSpread": {
+  "v": 1,
+  "ok": true,
+  "minutes": 1440,
+  "noon": 720,
+  "window": [
+   697,
+   731
+  ],
+  "changes": [
+   "authority",
+   "profile",
+   "definedCenters",
+   "undefinedCenters",
+   "openCenters",
+   "channels"
+  ],
+  "segments": {
+   "authority": [
+    [
+     0,
+     "Emotional"
+    ],
+    [
+     29,
+     "Sacral"
+    ],
+    [
+     1434,
+     "Emotional"
+    ]
+   ],
+   "profile": [
+    [
+     0,
+     "1/3"
+    ],
+    [
+     755,
+     "1/4"
+    ],
+    [
+     944,
+     "2/4"
+    ]
+   ],
+   "definedCenters": [
+    [
+     0,
+     "Ajna, G, Root, Sacral, Solar Plexus, Spleen, Throat"
+    ],
+    [
+     29,
+     "Ajna, G, Root, Sacral, Spleen, Throat"
+    ],
+    [
+     123,
+     "Ajna, Root, Sacral, Spleen, Throat"
+    ],
+    [
+     1434,
+     "Ajna, Root, Sacral, Solar Plexus, Spleen, Throat"
+    ]
+   ],
+   "undefinedCenters": [
+    [
+     0,
+     "Heart"
+    ],
+    [
+     29,
+     "Heart, Solar Plexus"
+    ],
+    [
+     732,
+     "Head, Heart, Solar Plexus"
+    ],
+    [
+     1434,
+     "Heart"
+    ]
+   ],
+   "openCenters": [
+    [
+     0,
+     "Head"
+    ],
+    [
+     123,
+     "G, Head"
+    ],
+    [
+     732,
+     "G"
+    ],
+    [
+     1434,
+     "G, Head"
+    ]
+   ],
+   "channels": [
+    [
+     0,
+     "17-62, 20-34, 20-57, 27-50, 34-57, 39-55, 42-53, 5-15"
+    ],
+    [
+     29,
+     "17-62, 20-34, 20-57, 27-50, 34-57, 42-53, 5-15"
+    ],
+    [
+     123,
+     "17-62, 20-34, 20-57, 27-50, 34-57, 42-53, 9-52"
+    ],
+    [
+     697,
+     "17-62, 20-34, 20-57, 27-50, 34-57, 42-53"
+    ],
+    [
+     1434,
+     "12-22, 17-62, 20-34, 20-57, 27-50, 34-57, 42-53"
+    ]
+   ]
+  },
+  "clock": [
+   [
+    0,
+    0
+   ]
+  ],
+  "gates": "change"
+ }
+}

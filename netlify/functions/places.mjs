@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
+import { rankPlaces } from "../lib/placeRank.mjs";
 
 const health = () => getStore({ name: "health", consistency: "strong" });
 
@@ -122,16 +123,18 @@ export default guard("places", async (request, context) => {
   const cache = getStore({ name: "places-cache", consistency: "eventual" });
 
   // Memory first. This is the whole point of the layer above.
+  // Ranked on every way out (batch-1024 item 6): an answer kept before the ranking still reads town-first.
   const remembered = memory.get(cacheKey);
   if (remembered) {
-    return json(200, { places: remembered }, { "X-Cache": "memory" });
+    return json(200, { places: rankPlaces(raw, remembered) }, { "X-Cache": "memory" });
   }
 
   try {
     const hit = await cache.get(cacheKey, { type: "json" });
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
-      remember(cacheKey, hit.places);
-      return json(200, { places: hit.places }, { "X-Cache": "hit" });
+      const ranked = rankPlaces(raw, hit.places);
+      remember(cacheKey, ranked);
+      return json(200, { places: ranked }, { "X-Cache": "hit" });
     }
   } catch {
     // A cache that cannot be read is not a reason to fail; it is a reason to
@@ -187,7 +190,9 @@ export default guard("places", async (request, context) => {
     return unavailable("places-engine-down");
   }
 
-  const places = Array.isArray(payload?.places) ? payload.places : [];
+  // The town before the country: "Denver" no longer lists Danish towns on their country's name
+  // ahead of town-name matches (batch-1024 item 6, lib/placeRank.mjs). Same rows, town-first order.
+  const places = rankPlaces(raw, Array.isArray(payload?.places) ? payload.places : []);
   remember(cacheKey, places);
   try {
     await cache.setJSON(cacheKey, { at: Date.now(), places });

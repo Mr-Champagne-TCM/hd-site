@@ -267,7 +267,7 @@ function RealLine() {
  * The old third state -- the tiles priced against an owned tier -- is gone:
  * a returning buyer now meets the question first (ReturningView).
  */
-export function Tiers({ fresh = false }: { fresh?: boolean }) {
+export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: string | null }) {
   const rows = ladder();
   /**
    * Which card is waiting on Stripe, and what went wrong if anything did.
@@ -284,7 +284,8 @@ export function Tiers({ fresh = false }: { fresh?: boolean }) {
     setFailed(null);
     // Resolves with a message only if it did NOT leave -- the success case is a
     // redirect, so there is nothing to do afterwards.
-    const problem = await startCheckout(level, fresh ? { someoneNew: true } : {});
+    // `from`: the owned chart's link, so Stripe's email box starts filled (batch-1024 item 2). Never credit.
+    const problem = await startCheckout(level, fresh ? { someoneNew: true, reading: from } : {});
     if (problem) {
       setFailed({ sku, message: problem });
       setBusy(null);
@@ -722,7 +723,7 @@ function ReturningView({ token }: { token: string }) {
           <p className="mt-2 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">{RETURNING.staysWithYours}</p>
           <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">{RETURNING.theirDetailsLater}</p>
         </section>
-        <Tiers fresh />
+        <Tiers fresh from={token} />
       </>
     );
   } else if (data!.tier >= TIERS.length - 1) {

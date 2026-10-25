@@ -5,6 +5,7 @@ import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { INDEX_STORE } from "../lib/charts.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { alertSender, noteFailure } from "../lib/failures.mjs";
+import { noteDeployContext } from "../lib/deployContext.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 
 /**
@@ -23,7 +24,9 @@ import { SITE } from "../lib/siteLinks.mjs";
  * delivers. The alert fires in BOTH modes, so turning delivery on never makes
  * the failure quieter.
  */
-export default async () => {
+export default async (request, context) => {
+  // Which deploy this is: its incidents page only from production (batch-1024 item 4).
+  noteDeployContext(context);
   const key = process.env.STRIPE_SECRET_KEY;
   const grantSecret = process.env.GRANT_SECRET;
   const mailKey = process.env.RESEND_API_KEY;

@@ -41,7 +41,7 @@ import {
   profileLink,
   typeLink,
 } from "../../shared/libraryLinks.mjs";
-import { Layout, drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
+import { FONT_ASC, FONT_DESC, Layout, drawText, drawLayout, hooks, layout, measure, paint, phraseRects, textBox, lineMetrics } from "./pdfText.mjs";
 
 /**
  * THE CLIENT PDF -- the SAME DOCUMENT the phone app makes (Jeremy 10/16: "All
@@ -128,6 +128,20 @@ const BODY_W = 352;
 const RULE_X = MARGIN + 366;
 const NOTE_X = MARGIN + 382;
 const NOTE_W = 122;
+const NOTE_SIZE = 8.5;
+/**
+ * BATCH-1024 ITEM 1 (live retest 10/23): a margin note that wraps ("Decided
+ * over time, not in / the moment.", "Right Angle Cross of Eden / (36/6 |
+ * 11/12)") had a gap between its lines that read as two notes. The body's
+ * spacing (x1.08 + 3pt) adds a fixed 3pt: right at 10.5pt, loose at 8.5pt,
+ * and a wrapped value stepped 14pt while its label stepped 10pt onto it. Scaling
+ * the body's room to 8.5pt gave 13pt, and the 2x render still showed the gap,
+ * so a note's lines now step by the type's own line height (10pt), the step
+ * its label already takes onto its value: one note, one block. The 9pt between
+ * notes keeps them apart. Labels that break ("ON TRACK, / THE FEELING IS")
+ * step the same way.
+ */
+export const NOTE_LINE_GAP = 0;
 
 const INK = "#0E1A2B";
 const GOLD = "#8A6D0F"; // darkened for contrast on white
@@ -354,10 +368,17 @@ class Doc {
 
   /** Link every line of `l`, drawn with its top-left at (x, top). */
   linkLayout(l, x, top, uri) {
+    // Lines set closer than usual (the margin notes, batch-1024 item 1) get
+    // less room above and below their boxes, so one line's box never covers
+    // the next; at the usual spacing this is the usual 1.5pt.
+    const pad = 1.5;
+    const glyph = (FONT_ASC + FONT_DESC) * l.paint.size;
+    const vpad = l.lineCount > 1 ? Math.max(0, Math.min(pad, (l.m.h + l.m.extra - glyph) / 2)) : pad;
     l.lines.forEach((line, i) => {
       if (!line.text) return;
       const base = top + l.baseline(i);
-      this.link(textBox(this.pdf, line.text, x, base, l.paint), uri);
+      const r = textBox(this.pdf, line.text, x, base, l.paint);
+      this.link({ left: r.left - pad, top: r.top - vpad, right: r.right + pad, bottom: r.bottom + vpad }, uri, 0);
     });
   }
 
@@ -480,10 +501,13 @@ class Doc {
     this.open = false;
   }
 
-  L(text, p, width = CONTENT_W) {
-    return layout(this.pdf, text, p, width);
+  L(text, p, width = CONTENT_W, opts = {}) {
+    return layout(this.pdf, text, p, width, opts);
   }
 }
+
+/** The most page 2's white space gives for a closing block that would stand alone (readingPdf, below). */
+export const NOTE_MOST = 0.5;
 
 /**
  * Builds the PDF. `birth` is the record's birth block (null on readings stored
@@ -526,18 +550,25 @@ export async function readingPdf(args) {
    * card, after the reading's pages. The most page 2 can give is tried first:
    * if that is not enough, nothing gentler is. If it is, everything on that
    * page sits higher by the white space it gave, so where the note ended says
-   * which gentler squeeze (0.9, 0.8, 0.7 of the space) still fits; the
+   * which gentler squeeze (0.9 down to 0.55 of the space) still fits; the
    * gentlest that does is built.
+   *
+   * THE MOST IS HALF (batch-1024, Jeremy's option 1, "let page 2 hold the
+   * table"; was 0.6): an unknown birth time's tags and Moon note, six channels
+   * and two-line glance rows sent the whole planet-numbers block over (10/24
+   * rig, page 3 at 12%), and 0.6 left it 10pt short. White space only, never
+   * the leading of any text, never less than half of it; the footer line
+   * (`bottom`) holds as ever.
    */
   const page = first.alone - 1;
   // A page already squeezed for its values keeps at least that squeeze.
   const squeezed = (f) => buildPdf(args, { squeeze: { page, f: base.squeeze?.page === page ? Math.min(f, base.squeeze.f) : f } });
   if (first.aloneKind === "note") {
-    const most = await squeezed(0.6);
+    const most = await squeezed(NOTE_MOST);
     if (most.alone === null) {
       const room = most.noteEnd?.page === page ? most.bottom - most.noteEnd.y : 0;
       const given = most.spaced[page] ?? 0;
-      const f = [0.9, 0.8, 0.7].find((f) => (f - 0.6) * given <= room);
+      const f = [0.9, 0.8, 0.7, 0.6, 0.55].find((f) => (f - NOTE_MOST) * given <= room);
       if (f) {
         const gentler = await squeezed(f);
         if (gentler.alone === null) return out(gentler);
@@ -968,6 +999,7 @@ function glancePage(d, { output, tier, reading }) {
   const pers = Array.isArray(c.personality) ? c.personality : [];
   const des = Array.isArray(c.design) ? c.design : [];
   let techPage = null;
+  let wentOver = false;
   if (tier >= 2 && pers.length + des.length > 0) {
     /**
      * FIX 6A (Jeremy 10/19): the same grid, NAMED AND EXPLAINED -- the page
@@ -985,7 +1017,18 @@ function glancePage(d, { output, tier, reading }) {
       const note = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
       d.need(8 + 12 + how.height + 4 + 0.8 + rowsH + 14 + note.height);
     }
+    const from = d.pageNo;
     d.need(8 + 12 + how.height + 4 + 40);
+    /**
+     * THE WHOLE BLOCK WENT OVER (batch-1024, Jeremy's option 1: "let page 2
+     * hold the table"): its heading did not fit, so the planet numbers and
+     * the note under them start a page of their own -- and the reading always
+     * starts the page after, so that page holds nothing else (the 10/24 rig:
+     * 12% filled). That is a closing block alone, as the note alone is, and
+     * page 2 gives way for it the same measured way. Not when the block was
+     * sent along on purpose (`keepClosing`, the fallback).
+     */
+    wentOver = d.pageNo !== from && !d.keepClosing;
     d.space(8);
     const headW = drawText(pdf, head, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.15));
     if (marked?.has("planetNumbers")) drawText(pdf, "PROVISIONAL", MARGIN + headW + 6, d.y + 8, TAG_PAINT);
@@ -1007,7 +1050,7 @@ function glancePage(d, { output, tier, reading }) {
   let onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
   d.space(14);
   d.need(onward.height);
-  d.closing("note", techPage !== null && d.pageNo !== techPage);
+  d.closing("note", techPage !== null && (d.pageNo !== techPage || wentOver));
   // Off page 2 the note names the page, as the chart tier's does ("above" pointed at nothing).
   if (d.pageNo !== 2) onward = d.L(ONWARD_NOTE_PAGE, paint(9, DIM), CONTENT_W);
   const noteTop = d.y;
@@ -1295,8 +1338,8 @@ function readingPages(d, c, v) {
     // Chart facts for the margin, always from the chart; beside the FIRST
     // part of the section only.
     const noteLs = (notes[h] ?? []).map(([k, val]) => [
-      k ? d.L(k, paint(8.5, GOLD, true, 0.09), NOTE_W) : null,
-      d.L(String(val ?? ""), paint(8.5, DIM), NOTE_W),
+      k ? d.L(k, paint(NOTE_SIZE, GOLD, true, 0.09), NOTE_W, { extra: NOTE_LINE_GAP }) : null,
+      d.L(String(val ?? ""), paint(NOTE_SIZE, DIM), NOTE_W, { extra: NOTE_LINE_GAP }),
       k,
     ]);
     const notesH = noteLs.reduce((n, [kl, vl, k]) => n + (kl?.height ?? 0) + (tagged(k) ? NOTE_TAG_H : 0) + vl.height + 9, 0);

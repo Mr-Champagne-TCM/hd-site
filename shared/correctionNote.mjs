@@ -1,4 +1,5 @@
 import { typeLink, profileLink, AUTHORITY } from "./libraryLinks.mjs";
+import { curly } from "./curlyQuotes.mjs";
 
 /**
  * THE CALM NOTE AFTER A CORRECTION (release 2, Jeremy 10/19).
@@ -63,7 +64,10 @@ export function detailSentences(c) {
     } else if (f === "date") {
       out.push(`Birth date changed from ${sayDate(was.date)} to ${sayDate(now.date)}`);
     } else if (f === "place") {
-      out.push(`Birth place changed from ${was.place || "the one before"} to ${now.place || "the new one"}`);
+      // A place with an apostrophe ("Coeur d'Alene, Idaho") is curled where it is shown, as the
+      // birth line curls it (shared/birthLine.mjs, decision 8); the kept places stay as typed
+      // (batch-1024, 10/24).
+      out.push(`Birth place changed from ${was.place ? curly(was.place) : "the one before"} to ${now.place ? curly(now.place) : "the new one"}`);
     } else if (f === "name") {
       out.push(
         was.name && now.name

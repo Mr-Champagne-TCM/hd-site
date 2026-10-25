@@ -2,6 +2,7 @@ import { TIERS, money } from "../../shared/pricing.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
+import { curly } from "../../shared/curlyQuotes.mjs";
 import { receiptDate } from "./deliveryEmail.mjs";
 import { HINT, actionHint, hintAttrs, ownPageHint } from "../../shared/linkHints.mjs";
 
@@ -64,7 +65,9 @@ export function chartCard(reading, { atTime = false } = {}) {
   const title = whose ? `${whose}’s ${word(reading.tier)}` : `${reading.fresh === true ? "Their" : "Your"} ${word(reading.tier)}`;
   const label = TIERS[reading.tier]?.label ?? "The chart";
   const when = sayDate(reading.birth?.date);
-  const where = reading.birth?.place ?? null;
+  // Curled where it is shown ("Coeur d’Alene, Idaho"), as the PDF and the pages do (decision 8,
+  // shared/birthLine.mjs); the kept place stays exactly as picked (batch-1024 item 5).
+  const where = reading.birth?.place ? curly(reading.birth.place) : null;
   /**
    * A RECORD FROM BEFORE 16 OCTOBER keeps no birth details, so its row read
    * only "Your reading · The reading" (10/21 live test, bug 8). It says when

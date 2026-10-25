@@ -66,8 +66,10 @@ export async function startCheckout(
    *                 further. The server checks the link, works out what that
    *                 chart has cost so far, and tells Stripe which chart this
    *                 purchase grows.
-   *   someone new   `{ someoneNew: true }` -- full price, a fresh chart, no
-   *                 link sent at all.
+   *   someone new   `{ someoneNew: true }` -- full price, a fresh chart.
+   *                 From an owned chart's page its link rides along, ONLY
+   *                 so Stripe's email box starts filled (batch-1024 item 2);
+   *                 the server never credits a someone-new purchase.
    *   first visit   `{}` -- full price.
    *
    * The price is never sent: the server decides it.
@@ -78,7 +80,7 @@ export async function startCheckout(
     body: JSON.stringify({
       level,
       ...(how.upgrade && how.reading ? { reading: how.reading, upgrade: true } : {}),
-      ...(how.someoneNew ? { someoneNew: true } : {}),
+      ...(how.someoneNew ? { someoneNew: true, ...(how.reading ? { reading: how.reading } : {}) } : {}),
     }),
   });
   const body = await res.json().catch(() => null);
