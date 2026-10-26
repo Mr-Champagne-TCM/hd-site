@@ -46,16 +46,38 @@ const FIXTURES = [
 const read = (f) => readFileSync(new URL(f, /\.output\.json$/.test(f) ? DIR : LOCAL), "utf8");
 
 function phoneRuns(slug) {
-  return read(`${slug}.phone.tsv`)
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((l) => {
-      const p = l.split("\t");
-      return { page: +p[0], x: +p[1], y: +p[2], size: +p[3], color: p[4], bold: p[5] === "1", w: +p[6], text: p[7] };
-    })
-    // The phone's own bodygraph labels (gate numbers and center names, 5.5-6pt).
-    // Strictly under 6.5: the QR caption (fix 17A, 10/19) is 6.5pt on both sides.
-    .filter((r) => !(r.page === 1 && r.size < 6.5));
+  return joinClockColons(
+    read(`${slug}.phone.tsv`)
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((l) => {
+        const p = l.split("\t");
+        return { page: +p[0], x: +p[1], y: +p[2], size: +p[3], color: p[4], bold: p[5] === "1", w: +p[6], text: p[7] };
+      })
+      // The phone's own bodygraph labels (gate numbers and center names, 5.5-6pt).
+      // Strictly under 6.5: the QR caption (fix 17A, 10/19) is 6.5pt on both sides.
+      .filter((r) => !(r.page === 1 && r.size < 6.5)),
+  );
+}
+
+/**
+ * THE PHONE DRAWS A CLOCK TIME'S COLON ON ITS OWN (10/25, PdfExport.kt
+ * CLOCK_COLON): its face swaps a colon between figures for a raised colon the
+ * PDF's text layer cannot read, so "6:18" is drawn "6", ":", "18" -- three
+ * runs, touching on one baseline, that a reader sees as one word. Joined back
+ * here so the words compare; nothing else on the page touches like that.
+ */
+function joinClockColons(runs) {
+  const out = [];
+  for (const r of runs) {
+    const prev = out.at(-1);
+    // Within 2pt: Robolectric rounds each glyph's advance to a whole pixel, so a run's measured width can be off by a point.
+    const touching = prev && prev.page === r.page && Math.abs(prev.y - r.y) < 0.6 && Math.abs(prev.x + prev.w - r.x) < 2;
+    const clock = prev && ((/\d$/.test(prev.text) && r.text.startsWith(":")) || (prev.text.endsWith(":") && /^\d/.test(r.text)));
+    if (touching && clock) out[out.length - 1] = { ...prev, text: prev.text + r.text, w: prev.w + r.w };
+    else out.push(r);
+  }
+  return out;
 }
 
 function phoneLinks(slug) {
