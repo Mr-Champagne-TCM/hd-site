@@ -215,6 +215,12 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      */
     name: reading.birth?.name ?? buyerNameFor(reading),
     whose,
+    /**
+     * Bought from "Start a new chart for someone else" (or grown from one): their chart. The options page
+     * says "For them" and "Their birth details" from it (10/25 live test: Kit O'Brien's options said "For me";
+     * only the pending answer carried this).
+     */
+    fresh: reading.fresh === true,
     purchasedAt: reading.purchasedAt,
     output: reading.output,
     /**

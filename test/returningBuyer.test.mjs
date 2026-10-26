@@ -170,6 +170,10 @@ test("SOMEONE NEW, GROWN, IS STILL THEIRS: the upgrade keeps the mark, and its r
   const id = randomBytes(16).toString("hex");
   await recordPurchase({ readings, id, level: 0, session: session(0, { fresh: "1" }), secret: SECRET, now: NOW });
   assert.equal((await chart(readings, { reading: mintReadingLink({ id, tier: 0, now: NOW }, SECRET), birth: { ...ALEX, name: "Theo" } })).status, 200);
+  // The filled-in chart's own page knows it is theirs (the options page reads this: "For them").
+  const opened = JSON.parse((await handleReading({ body: JSON.stringify({ token: mintReadingLink({ id, tier: 0, now: NOW }, SECRET) }), store: readings, secret: SECRET, now: NOW })).body);
+  assert.notEqual(opened.pending, true);
+  assert.equal(opened.fresh, true, "a filled-in someone-new chart says so");
   const up = randomBytes(16).toString("hex");
   await recordPurchase({ readings, id: up, level: 1, session: session(1, { upgrades: id }), secret: SECRET, now: NOW });
   const grown = await loadReading(readings, up, NOW);
