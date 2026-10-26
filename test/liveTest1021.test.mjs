@@ -345,8 +345,9 @@ test("#6 (6B) THE PAGE-2 NOTE IS PULLED UP when it would stand on a page alone",
 });
 
 test("#6 when it cannot be pulled up, the block before it goes with it, and the note names page 2", async () => {
-  // No written reading: page 2 is too full for any squeeze to help.
-  const r = await pdf({ reading: null });
+  // No written reading, and two channels more: page 2 is too full for any squeeze down to the floor
+  // (10/25: page 2 now gives down to FIT_FLOOR, measured, so the plain no-reading page fits).
+  const r = await pdf({ reading: null, output: { ...OUTPUT, channels: [...OUTPUT.channels, "1-8 (Inspiration)", "2-14 (The Beat)"] } });
   assert.equal(r.alone, null);
   assert.notEqual(notePage(r), 2, "this layout was meant to need the fallback");
   const on = r.runs.filter((x) => x.page === notePage(r)).map((x) => x.text).join(" ");

@@ -26,7 +26,7 @@ const FOOTER_Y = 792 - 54 + 14;
 const BOTTOM = 792 - 54 - 26;
 const TOP = 54 + 31;
 const VALUE_X = 54 + 122;
-/** The bound: white space gives at most half of itself (readingPdf NOTE_MOST). */
+/** The rig's case keeps half its white space (10/25: still exactly what NOTE_MOST gave it; the floor is FIT_FLOOR now). */
 const HALF = 0.5;
 const page = (r, n) => r.runs.filter((x) => x.page === n);
 const body = (r, n) => page(r, n).filter((x) => x.y > 70 && x.y < FOOTER_Y - 1);
@@ -95,12 +95,14 @@ test("BATCH1024-8 where page 2 has the room, nothing is squeezed (the same chart
   assert.equal(step(r), 21);
 });
 
-test("BATCH1024-8 beyond half the white space, the block goes over whole with its note, which names page 2 (as before)", async () => {
-  // All six rows two lines: 17pt more than the rig's case, more than half page 2's white space can give.
+test("BATCH1024-8 all six rows on two lines (17pt more than the rig): page 2 holds it now, the note with its block (10/25)", async () => {
+  // Before 10/25 this went over whole -- more than half page 2's white space could give. Page 2 now gives
+  // the measured share, down to FIT_FLOOR (test/pdf1025.test.mjs), so the block and its note stay on page 2.
   const long = READING.replace(/^Authority: .*$/m, "Authority: The authority sentence of this placeholder reading, long enough that it runs on to a second line.");
   const r = await pdf({ reading: long });
   const head = find(r, /^TECHNICAL VALUES/);
   const note = find(r, /^Every word (above|on page 2)/);
   assert.equal(note.page, head.page, "the note left its block");
-  if (head.page !== 2) assert.match(note.text, /^Every word on page 2/);
+  assert.equal(head.page, 2, "the planet numbers went over to a page of their own");
+  assert.match(note.text, /^Every word above/);
 });

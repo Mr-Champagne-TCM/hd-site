@@ -121,6 +121,8 @@ export const W = 612;
 export const H = 792;
 const MARGIN = 54;
 const CONTENT_W = W - MARGIN * 2;
+/** The foot of the page's text: below it, only the footer line. */
+const BOTTOM = H - MARGIN - 26;
 
 // The reading runs in a narrow column with chart facts in the margin beside
 // it, all measured from the page edge: body 54..406, rule 420, notes 436..558.
@@ -342,6 +344,21 @@ class Doc {
     this.noteEnd = null;
     /** The page the chart values began on, when they ran onto the next one (else null). */
     this.spilled = null;
+    /**
+     * PAGE 2, MEASURED WHOLE (10/25): `tall` is a page laid out with no foot,
+     * so what page 2 holds can be measured in one pass. `valuesEnd` and
+     * `glanceEnd` say where the chart values, and everything page 2 holds
+     * (the values, the planet numbers, the note), ended -- page, y, and the
+     * white space laid on that page by then.
+     */
+    this.tall = null;
+    this.valuesEnd = null;
+    this.glanceEnd = null;
+  }
+
+  /** Where the cursor is now, for `valuesEnd` / `glanceEnd`. */
+  mark() {
+    return { page: this.pageNo, y: this.y, spaced: this.spaced[this.pageNo] ?? 0 };
   }
 
   /**
@@ -383,7 +400,7 @@ class Doc {
   }
 
   get bottom() {
-    return H - MARGIN - 26;
+    return this.pageNo === this.tall ? Infinity : BOTTOM;
   }
 
   start(runningHead = null) {
@@ -506,77 +523,114 @@ class Doc {
   }
 }
 
-/** The most page 2's white space gives for a closing block that would stand alone (readingPdf, below). */
-export const NOTE_MOST = 0.5;
+/**
+ * THE LEAST OF ITS WHITE SPACE PAGE 2 KEEPS when it gives way (10/25; was
+ * NOTE_MOST, half, with fixed tries). See `holdPage2`. Measured on the
+ * worst cases: the 10/24 rig keeps 0.5, as before; the 10/25 live reading and the
+ * rig with all six glance rows on two lines 0.45; a seventh channel on top
+ * 0.38 -- so one more row than the realistic worst still holds. At 0.31 (an
+ * eighth channel) the rows begin to crowd their rules, so the floor is 0.35:
+ * below it, page 2 lets its planet numbers and note go over together, as before.
+ */
+export const FIT_FLOOR = 0.35;
+
+/**
+ * The share of a page's white space that brings `end` up to the page's foot:
+ * 1 - (how far past the foot it runs) / (the white space laid on that page by
+ * then), rounded DOWN to the hundredth, so the footer line always holds.
+ * 1 or more: it fits as it is.
+ */
+export function fitShare(end, bottom = BOTTOM) {
+  if (!end) return -Infinity;
+  if (end.y <= bottom) return 1;
+  if (!(end.spaced > 0)) return -Infinity;
+  return Math.floor((1 - (end.y - bottom) / end.spaced) * 100) / 100;
+}
+
+/**
+ * The shares page 2 steps down through: the earlier rules' own (0.9 to half),
+ * so a page they held is laid out exactly as before, then by hundredths.
+ */
+const FIT_STEPS = [0.9, 0.8, 0.7, 0.6, 0.55, 0.5];
+
+/**
+ * What to try for a measured `share`, gentlest first: the gentlest step at or
+ * under it, then one step more (a page break's look-ahead can still send the
+ * last line over), never under FIT_FLOOR.
+ */
+export function fitTries(share) {
+  const hundredths = (x) => Math.round(x * 100) / 100;
+  const first = FIT_STEPS.find((s) => s <= share) ?? hundredths(Math.min(share, FIT_STEPS.at(-1)));
+  const i = FIT_STEPS.indexOf(first);
+  const next = i >= 0 && i < FIT_STEPS.length - 1 ? FIT_STEPS[i + 1] : hundredths(first - 0.03);
+  return [first, next].filter((f) => f >= FIT_FLOOR);
+}
 
 /**
  * Builds the PDF. `birth` is the record's birth block (null on readings stored
  * before 16 Oct 2026, which simply get no birth line). Resolves to the bytes,
  * or -- with `inspect` set, for the tests -- to `{ bytes, links, runs, pages,
- * alone, aloneKind }`: every link box and every run of text drawn, page by page.
+ * alone, aloneKind, squeeze }`: every link box and every run of text drawn,
+ * page by page, and the share of page 2's white space it kept.
  *
  * NO PAGE HOLDS ONLY A CLOSING BLOCK (10/21 live test, bug 6; Jeremy's pick 6B):
  * the page-2 note, or the coaching card, pushed onto a page of its own. It is
- * pulled up: the page before gives a little of its white space until it fits.
+ * pulled up: page 2 gives some of its white space until it fits (`holdPage2`).
  * Only if it cannot (the card is tall) does the block before it go with it.
  */
 export async function readingPdf(args) {
   const out = (r) => (args.inspect ? r : r.bytes);
-  let first = await buildPdf(args);
-  /**
-   * PAGE 2'S VALUES STAY ON PAGE 2 (10/22: the new Activated gates row -- and,
-   * with no birth time, its tag and note -- ran the last row onto page 3 under
-   * page 2's running head). When the table spills, that page's white space
-   * gives way: the most it can give first (0.55), then, if that kept it whole,
-   * the gentler 0.8 when that does too. Neither: it spills, as before. At most
-   * two more builds.
-   */
+  let r = await buildPdf(args);
   let base = {};
-  if (first.spilled !== null) {
-    const at = (f) => buildPdf(args, { squeeze: { page: first.spilled, f } });
-    const most = await at(0.55);
-    if (most.spilled === null) {
-      const gentle = await at(0.8);
-      const pick = gentle.spilled === null ? gentle : most;
-      base = { squeeze: { page: first.spilled, f: pick === gentle ? 0.8 : 0.55 } };
-      first = pick;
-    }
+  if (r.glanceEnd && r.glanceEnd.page > 2) {
+    const held = await holdPage2(args, r);
+    if (held) ({ r, base } = held);
   }
-  if (first.alone === null) return out(first);
-  /**
-   * Each try is a whole build, and the download (and the reading page's page
-   * count) waits on them, so at most three. Only page 2 has white space that
-   * gives (`space`), so only the page-2 note can be pulled up -- never the
-   * card, after the reading's pages. The most page 2 can give is tried first:
-   * if that is not enough, nothing gentler is. If it is, everything on that
-   * page sits higher by the white space it gave, so where the note ended says
-   * which gentler squeeze (0.9 down to 0.55 of the space) still fits; the
-   * gentlest that does is built.
-   *
-   * THE MOST IS HALF (batch-1024, Jeremy's option 1, "let page 2 hold the
-   * table"; was 0.6): an unknown birth time's tags and Moon note, six channels
-   * and two-line glance rows sent the whole planet-numbers block over (10/24
-   * rig, page 3 at 12%), and 0.6 left it 10pt short. White space only, never
-   * the leading of any text, never less than half of it; the footer line
-   * (`bottom`) holds as ever.
-   */
-  const page = first.alone - 1;
-  // A page already squeezed for its values keeps at least that squeeze.
-  const squeezed = (f) => buildPdf(args, { squeeze: { page, f: base.squeeze?.page === page ? Math.min(f, base.squeeze.f) : f } });
-  if (first.aloneKind === "note") {
-    const most = await squeezed(NOTE_MOST);
-    if (most.alone === null) {
-      const room = most.noteEnd?.page === page ? most.bottom - most.noteEnd.y : 0;
-      const given = most.spaced[page] ?? 0;
-      const f = [0.9, 0.8, 0.7, 0.6, 0.55].find((f) => (f - NOTE_MOST) * given <= room);
-      if (f) {
-        const gentler = await squeezed(f);
-        if (gentler.alone === null) return out(gentler);
-      }
-      return out(most);
-    }
-  }
+  if (r.alone === null) return out(r);
+  // The card after the reading's pages (no white space there gives), or a page 2 too full even at the floor.
   return out(await buildPdf(args, { ...base, keepClosing: true }));
+}
+
+/**
+ * PAGE 2 HOLDS WHAT IT HOLDS, MEASURED (10/25; the 10/24 rig and the 10/25 live
+ * reading). Page 2 is the glance box, the chart values, the planet numbers and
+ * the onward note. When they run over, the planet numbers and the note go
+ * over together and page 3 is that block alone (the live reading's page 3: 30%
+ * filled) -- or the last value row goes over under page 2's running head.
+ *
+ * Before, page 2's white space was squeezed to fixed shares (0.55 / 0.8 for
+ * the values, then half, then 0.9-0.55, for the note), each a whole build, and
+ * the most it could give was half: the 10/24 rig fitted with a few points to
+ * spare and one more two-line glance row sent the block over again. Now page 2
+ * is laid out once with no foot (`tall`), so how far past the foot it runs and
+ * how much white space it laid down are MEASURED, and the share that brings
+ * it up to the foot is worked out (`fitShare`, `fitTries`): the gentlest that
+ * holds, on the earlier rules' own steps down to half, so a page they held is
+ * unchanged. Page 2's whole content moves as one block: all of it is held, or
+ * (only when even the floor will not hold it) its values are, and the planet
+ * numbers and the note go over together, as before.
+ *
+ * Jeremy's rules hold: white space only gives (`space`), never the leading of
+ * any text; the footer line (`bottom`) holds; never less than FIT_FLOOR of the
+ * white space is kept. A share is tried, then one step more if a page break's
+ * look-ahead still sent something over: a tall build and at most two more for
+ * each block.
+ */
+async function holdPage2(args, first) {
+  const tall = await buildPdf(args, { tall: 2 });
+  const blocks = [tall.glanceEnd];
+  // The values alone, only when they themselves ran over (10/22: the gates row under page 2's running head).
+  if ((first.valuesEnd?.page ?? 2) > 2) blocks.push(tall.valuesEnd);
+  for (const end of blocks) {
+    if (!end || end.page !== 2) continue;
+    for (const f of fitTries(fitShare(end))) {
+      const opts = { squeeze: { page: 2, f } };
+      const r = await buildPdf(args, opts);
+      const kept = end === tall.glanceEnd ? r.glanceEnd : r.valuesEnd;
+      if (kept && kept.page === 2) return { r, base: opts };
+    }
+  }
+  return null;
 }
 
 async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null, gift = false }, opts = {}) {
@@ -644,7 +698,21 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     const pages = d.pageNo;
     pdf.on("end", () => {
       const bytes = Buffer.concat(chunks);
-      resolve({ bytes, links: d.links, runs, pages, alone: d.alone, aloneKind: d.aloneKind, spaced: d.spaced, noteEnd: d.noteEnd, bottom: d.bottom, spilled: d.spilled });
+      resolve({
+        bytes,
+        links: d.links,
+        runs,
+        pages,
+        alone: d.alone,
+        aloneKind: d.aloneKind,
+        spaced: d.spaced,
+        noteEnd: d.noteEnd,
+        bottom: BOTTOM,
+        spilled: d.spilled,
+        valuesEnd: d.valuesEnd,
+        glanceEnd: d.glanceEnd,
+        squeeze: d.squeeze,
+      });
     });
     pdf.end();
   });
@@ -970,6 +1038,7 @@ function glancePage(d, { output, tier, reading }) {
     valueRow("Activated gates", gateList(c.activatedGates), GATES, "gates", marked?.has("gates") ? GATES_NOTE : null);
   }
   if (d.pageNo !== valuesFrom) d.spilled = valuesFrom;
+  d.valuesEnd = d.mark();
 
   // The activations, in a four-up grid -- the READING tier's, never sold with
   // the chart tier.
@@ -1044,7 +1113,10 @@ function glancePage(d, { output, tier, reading }) {
   // The tiers below the reading end on a calm page of their own (10/16,
   // option B): the onward note and the offer used to spill onto page 3 as
   // one stray block under a page-2 running head.
-  if (tier < 2) return nextStepsPage(d, tier);
+  if (tier < 2) {
+    d.glanceEnd = d.mark();
+    return nextStepsPage(d, tier);
+  }
 
   // The onward pointer: both free pages, in the voice of an invitation.
   let onward = d.L(ONWARD_NOTE, paint(9, DIM), CONTENT_W);
@@ -1057,6 +1129,7 @@ function glancePage(d, { output, tier, reading }) {
   d.draw(onward);
   linkOnward(d, onward, noteTop);
   d.noteEnd = { page: d.pageNo, y: d.y };
+  d.glanceEnd = d.mark();
 }
 
 function linkOnward(d, layout, top) {
@@ -1168,19 +1241,41 @@ function startHere(d, v, c) {
     subLabel(d, `Not colored in (${other.length}) · taken in from others`, other[0].h, others);
     itemList(d, other, () => CENTERS);
   }
-  takeaway(d, v.centersTakeaway, c);
+  takeaway(d, takeawayLayouts(d, v.centersTakeaway), c);
 
   if (d.pageNo === firstPage) d.start(START_HERE);
   const chans = v.channels.map((it) => itemBlock(d, it, false));
-  sectionHead(d, 2, "Your channels", `(${v.channels.length})`, chans[0]?.h ?? 20, marked.has("channels"));
-  if (!chans.length) plainLine(d, NO_CHANNELS);
+  const chansTake = takeawayLayouts(d, v.channelsTakeaway);
+  const none = chans.length ? null : d.L(NO_CHANNELS, paint(10.5, INK), LIST_W);
+  const chansRows = chans.length ? chans.reduce((n, b) => n + b.h, 0) : none.height + 4;
+  sectionHead(d, 2, "Your channels", `(${v.channels.length})`, sectionKeep(chansRows, chansTake, chans[0]?.h ?? 20), marked.has("channels"));
+  if (!chans.length) d.block(none, MARGIN, 4);
   else itemList(d, chans, (it) => channelLink(it.title));
-  takeaway(d, v.channelsTakeaway, c);
+  takeaway(d, chansTake, c);
 
   const lines = v.profileLines.map((it) => itemBlock(d, it, false));
-  sectionHead(d, 3, "Your profile", v.profile, lines[0]?.h ?? 20, marked.has("profile"));
+  const linesTake = takeawayLayouts(d, v.profileLinesTakeaway);
+  const linesRows = lines.reduce((n, b) => n + b.h, 0);
+  sectionHead(d, 3, "Your profile", v.profile, sectionKeep(linesRows, linesTake, lines[0]?.h ?? 20), marked.has("profile"));
   itemList(d, lines, (it) => lineLink(it.title));
-  takeaway(d, v.profileLinesTakeaway, c);
+  takeaway(d, linesTake, c);
+}
+
+/**
+ * A START HERE SECTION KEEPS TOGETHER (10/25 live test: "Your profile" and its
+ * lines ended page 5 and its Takeaway stood at the top of page 6, cut off from
+ * them). What a section heading needs under it before it may start on this
+ * page: the whole section -- its rows and its Takeaway -- whenever that fits
+ * on a page of its own, so a section that would split goes to the next page
+ * whole; a section taller than a page keeps only its first row with its
+ * heading, as before, and flows. `rows` is the height of the rows as drawn,
+ * `take` the Takeaway's layouts.
+ */
+function sectionKeep(rows, take, firstRow) {
+  const takeH = take.length ? 8 + takeawayHeight(take) + 4 : 1;
+  const whole = rows + takeH;
+  // On a fresh page the heading sits 2pt under the running head (sectionHead).
+  return 2 + 24 + whole <= BOTTOM - (MARGIN + 31) ? whole : firstRow;
 }
 
 /** A gold-ringed number, the section title, a dim count beside it, and the tag when it can change. */
@@ -1250,11 +1345,18 @@ function itemList(d, items, href) {
   });
 }
 
-/** "TAKEAWAY" on a gold bar, then the reading's own sentences. Kept whole. */
-function takeaway(d, lines, c) {
-  if (!lines.length) return;
-  const ls = lines.map((t) => d.L(t, paint(10.5, INK), LIST_W - 14));
-  const h = 14 + ls.reduce((n, l) => n + l.height + 5, 0);
+/** A Takeaway's sentences, laid out (measured before the section starts, `sectionKeep`). */
+function takeawayLayouts(d, lines) {
+  return lines.map((t) => d.L(t, paint(10.5, INK), LIST_W - 14));
+}
+
+/** The height of a Takeaway: its label, then each sentence and the room under it. */
+const takeawayHeight = (ls) => 14 + ls.reduce((n, l) => n + l.height + 5, 0);
+
+/** "TAKEAWAY" on a gold bar, then the reading's own sentences (`ls`, laid out). Kept whole. */
+function takeaway(d, ls, c) {
+  if (!ls.length) return;
+  const h = takeawayHeight(ls);
   d.gap(8);
   d.need(h + 4);
   const top = d.y;
