@@ -1,7 +1,7 @@
 /* Fonts first. An @import after any other statement is dropped by the bundler
    with a warning, and the page then falls back to system fonts while looking
    like it built cleanly. */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Outfit:wght@300;400;500;600;700&display=swap");
+@import url("/fonts/fonts.css");
 
 @tailwind base;
 @tailwind components;
