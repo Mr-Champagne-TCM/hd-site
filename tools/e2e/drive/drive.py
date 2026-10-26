@@ -148,8 +148,14 @@ def stripe_pay(page, cid, buyer, promo, meta):
 
 
 def wait_written(page, tier):
-    """A reading tier is written in the background (interpret, replayed)."""
+    """A reading tier is written in the background (interpret, replayed). A chart tier's PDF is built in the
+    background too (pdf-warm, 10/26): the page shows its page count once it is kept, so it is captured after."""
+    if tier < 1:
+        return
     if tier < 2:
+        rig("/__rig/idle")
+        page.reload()
+        settle(page, 500)
         return
     for _ in range(30):
         rig("/__rig/idle")

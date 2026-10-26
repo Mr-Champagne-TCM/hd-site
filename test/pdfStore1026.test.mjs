@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pdfArgs, pdfKey, pdfReady, keptPages, keptPdf, keepPdf, warmPdf, dropPdfs, ringPdf } from "../netlify/lib/pdfStore.mjs";
+import { readFileSync } from "node:fs";
+import { pdfArgs, pdfKey, pdfReady, pdfBuilding, keptPages, keptPdf, keepPdf, warmPdf, dropPdfs, ringPdf } from "../netlify/lib/pdfStore.mjs";
 import { handlePdf } from "../netlify/lib/pdfHandler.mjs";
 import { fillReading, mintReadingLink, saveReading } from "../netlify/lib/reading.mjs";
 
@@ -114,6 +115,25 @@ test("the download hands over the kept copy without building; with none kept it 
   assert.equal(second.kept, true, "the kept copy was handed over");
   assert.equal(builds, 1, "no second build");
   assert.deepEqual([...second.bytes], [...first.bytes]);
+});
+
+test("a builder at work is seen by its lock, so the page's repeat asks ring no second one", async () => {
+  const pdfs = memStore();
+  const key = `${ID}/100-0-d`;
+  assert.equal(await pdfBuilding(pdfs, key, NOW), false, "no lock");
+  await pdfs.setJSON(`lock/${key}`, { until: NOW + 60_000 });
+  assert.equal(await pdfBuilding(pdfs, key, NOW), true);
+  assert.equal(await pdfBuilding(pdfs, key, NOW + 61_000), false, "a builder that stopped frees it");
+  assert.equal(await pdfBuilding({ get: async () => { throw new Error("down"); } }, key, NOW), false);
+  const fn = readFileSync(new URL("../netlify/functions/reading.mjs", import.meta.url), "utf8");
+  assert.match(fn, /if \(await pdfBuilding\(pdfs, key\)\) return null;\s*\n\s*await ringPdf\(/, "the reading page rings only when no builder is at work");
+});
+
+test("the page asks again for the count while the PDF is made, and changes only the count", () => {
+  const page = readFileSync(new URL("../src/ReadingPage.tsx", import.meta.url), "utf8");
+  assert.match(page, /const countMissing =\s*state\.at === "ready" && !state\.reading\.writing && !state\.reading\.pending && state\.reading\.tier >= 1 && !state\.reading\.pdfPages;/);
+  assert.match(page, /if \(\+\+tries > 8\)/, "eight asks at most");
+  assert.match(page, /\{ \.\.\.s\.reading, pdfPages: pages \}/, "only the count is swapped in");
 });
 
 test("keptPdf and keepPdf never throw on a store that fails", async () => {

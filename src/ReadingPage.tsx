@@ -209,6 +209,50 @@ export default function ReadingPage({ token }: { token: string }) {
     };
   }, [writing, gaveUp, token]);
 
+  /**
+   * THE PDF'S PAGE COUNT, WHILE THE PDF IS STILL BEING MADE (10/26).
+   *
+   * Every PDF is now built in the background as soon as the chart is cast or
+   * the reading written, and the page only reads the count of the one kept
+   * (functions/reading.mjs). Opened in the first seconds, before it is kept,
+   * the button says "PDF" with no count. So the page asks again, every three
+   * seconds, eight times at most, and puts the count in when it comes. Only the
+   * count changes: nothing else on the page moves.
+   */
+  const countMissing =
+    state.at === "ready" && !state.reading.writing && !state.reading.pending && state.reading.tier >= 1 && !state.reading.pdfPages;
+
+  useEffect(() => {
+    if (!countMissing) return;
+    let alive = true;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      if (++tries > 8) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const res = await fetch("/api/reading", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        if (!res.ok || !alive) return;
+        const body = (await res.json()) as Reading;
+        const pages = body?.pdfPages;
+        if (alive && typeof pages === "number" && pages > 0) {
+          setState((s: State) => (s.at === "ready" ? { at: "ready", reading: { ...s.reading, pdfPages: pages } } : s));
+        }
+      } catch {
+        /* the button still works without its count */
+      }
+    }, 3000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [countMissing, token]);
+
   const shell = "page-bottom mx-auto max-w-3xl px-6 pt-16 sm:px-8";
 
   if (state.at === "loading") {

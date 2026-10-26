@@ -5,7 +5,7 @@ import { ringIfDue } from "../lib/ring.mjs";
 import { untilText } from "../lib/writingLock.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
-import { PDF_STORE, deployId, keptPages, pdfKey, pdfReady, ringPdf } from "../lib/pdfStore.mjs";
+import { PDF_STORE, deployId, keptPages, pdfBuilding, pdfKey, pdfReady, ringPdf } from "../lib/pdfStore.mjs";
 
 /**
  * THE PDF'S PAGE COUNT (fix 9A), READ, NEVER BUILT HERE (10/26, lib/pdfStore.mjs). Until 10/26 this built the
@@ -18,8 +18,11 @@ const pageCounter = (request, context) => {
   const deploy = deployId(context);
   return async (r, id) => {
     if (!pdfReady(r)) return null;
-    const pages = await keptPages(pdfs, pdfKey(id, r, deploy));
+    const key = pdfKey(id, r, deploy);
+    const pages = await keptPages(pdfs, key);
     if (pages) return pages;
+    // The page asks again while the PDF is made (ReadingPage.tsx): one builder at a time is enough.
+    if (await pdfBuilding(pdfs, key)) return null;
     await ringPdf({
       origin: process.env.URL || new URL(request.url).origin,
       token: triggerToken(process.env.GRANT_SECRET),

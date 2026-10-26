@@ -97,6 +97,19 @@ export async function keptPages(pdfs, key) {
   }
 }
 
+/**
+ * Whether a builder is at work on this copy now (its lock is live). The reading page asks again while the PDF
+ * is being made (ReadingPage.tsx); each ask need not ring another builder. A store that does not answer: false.
+ */
+export async function pdfBuilding(pdfs, key, now = Date.now()) {
+  try {
+    const lock = await pdfs.get(`lock/${key}`, { type: "json" });
+    return Boolean(lock && Number(lock.until) > now);
+  } catch {
+    return false;
+  }
+}
+
 /** The kept bytes and page count, or null. */
 export async function keptPdf(pdfs, key) {
   try {
@@ -148,9 +161,8 @@ export async function warmPdf({ pdfs, current, secret, links, build, now = Date.
   const key = pdfKey(current.id, reading, build);
   const have = await keptPages(pdfs, key);
   if (have) return { pages: have, built: false, why: "kept" };
+  if (await pdfBuilding(pdfs, key, now)) return { pages: null, built: false, why: "another builder" };
   try {
-    const lock = await pdfs.get(`lock/${key}`, { type: "json" });
-    if (lock && Number(lock.until) > now) return { pages: null, built: false, why: "another builder" };
     await pdfs.setJSON(`lock/${key}`, { until: now + WARM_LOCK_MS });
   } catch {
     /* no lock is no harm: two builders keep the same bytes */
