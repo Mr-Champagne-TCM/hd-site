@@ -7,6 +7,7 @@ import { alertSender, customerError, guard, noteFailure } from "../lib/failures.
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
+import { ringPdf } from "../lib/pdfStore.mjs";
 
 /**
  * POST /api/add-time -- a birth time found later, added once (Jeremy 10/22).
@@ -103,6 +104,15 @@ export default guard("addtime", async (request, context) => {
     if (tier >= 2) {
       await ringTheWriter(request, id).catch(() => {});
       return;
+    }
+    // The chart's PDF, written ahead (10/26, lib/pdfStore.mjs): built in the background now, kept for the download.
+    if (tier === 1) {
+      await ringPdf({
+        origin: process.env.URL || new URL(request.url).origin,
+        token: triggerToken(process.env.GRANT_SECRET),
+        header: TRIGGER_HEADER,
+        id,
+      });
     }
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;

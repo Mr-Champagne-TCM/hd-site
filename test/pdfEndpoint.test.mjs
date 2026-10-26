@@ -21,8 +21,10 @@ import { fileURLToPath } from "node:url";
 const source = (p) => readFileSync(fileURLToPath(new URL(`../${p}`, import.meta.url)), "utf8");
 
 test("THE PDF ENDPOINT HANDS OVER THE WRITTEN READING", () => {
-  // The hand-over moved into the testable half on 10/16 (lib/pdfHandler.mjs).
-  const pdf = source("netlify/lib/pdfHandler.mjs");
+  // The hand-over moved into the testable half on 10/16 (lib/pdfHandler.mjs), and its inputs into
+  // pdfStore.mjs pdfArgs on 10/26 (one set for the download, the kept copy and the count).
+  assert.match(source("netlify/lib/pdfHandler.mjs"), /build\(pdfArgs\(reading, current\.id, secret, links\)\)/);
+  const pdf = source("netlify/lib/pdfStore.mjs");
   assert.match(
     pdf,
     /reading:\s*reading\.reading/,

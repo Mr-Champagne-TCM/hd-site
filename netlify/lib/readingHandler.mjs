@@ -19,7 +19,7 @@ async function pagesFor(reading, id, countPages) {
   const key = `${id}:${reading.filledAt}:${reading.writtenAt}`;
   if (PAGES.has(key)) return PAGES.get(key);
   try {
-    const n = await countPages(reading);
+    const n = await countPages(reading, id);
     const pages = Number.isInteger(n) && n > 0 ? n : null;
     if (pages) {
       if (PAGES.size > 500) PAGES.clear();

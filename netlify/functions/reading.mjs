@@ -5,22 +5,30 @@ import { ringIfDue } from "../lib/ring.mjs";
 import { untilText } from "../lib/writingLock.mjs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
-import { readingPdf, pdfPageCount } from "../lib/readingPdf.mjs";
-import { SITE } from "../lib/siteLinks.mjs";
-import { buyerNameFor } from "../../shared/chartName.mjs";
+import { PDF_STORE, deployId, keptPages, pdfKey, pdfReady, ringPdf } from "../lib/pdfStore.mjs";
 
-/** The PDF's page count (fix 9A): built exactly as /api/pdf builds it (pdfHandler.mjs). */
-const countPages = async (r) =>
-  pdfPageCount(
-    await readingPdf({
-      tier: r.tier,
-      name: r.birth?.name ?? buyerNameFor(r),
-      output: r.output,
-      links: SITE,
-      reading: r.reading ?? null,
-      birth: r.birth ?? null,
-    }),
-  );
+/**
+ * THE PDF'S PAGE COUNT (fix 9A), READ, NEVER BUILT HERE (10/26, lib/pdfStore.mjs). Until 10/26 this built the
+ * whole PDF on the request to count it -- 26-31 s for a 10-page reading on 10/25, the page answered 504 and
+ * showed "couldn't load". Now the count is the kept copy's; with none kept yet the builder is rung and the
+ * button says "PDF" until it is done.
+ */
+const pageCounter = (request, context) => {
+  const pdfs = getStore({ name: PDF_STORE, consistency: "strong" });
+  const deploy = deployId(context);
+  return async (r, id) => {
+    if (!pdfReady(r)) return null;
+    const pages = await keptPages(pdfs, pdfKey(id, r, deploy));
+    if (pages) return pages;
+    await ringPdf({
+      origin: process.env.URL || new URL(request.url).origin,
+      token: triggerToken(process.env.GRANT_SECRET),
+      header: TRIGGER_HEADER,
+      id,
+    });
+    return null;
+  };
+};
 
 const health = () => getStore({ name: "health", consistency: "strong" });
 const note = (kind, { detail, ref } = {}) =>
@@ -40,7 +48,7 @@ const note = (kind, { detail, ref } = {}) =>
  * history sync. The address bar still carries it -- that is unavoidable, it is
  * how somebody arrives -- but nothing downstream of that has to.
  */
-export default guard("reading", async (request) => {
+export default guard("reading", async (request, context) => {
   if (request.method !== "POST") {
     return json(405, { error: { code: "method", message: "Use POST." } });
   }
@@ -67,7 +75,7 @@ export default guard("reading", async (request) => {
     secret,
     now: Date.now(),
     note,
-    countPages,
+    countPages: pageCounter(request, context),
   });
 
   // Status only. Never the token, never the reading id, never the name -- a log

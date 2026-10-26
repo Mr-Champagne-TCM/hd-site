@@ -4,7 +4,8 @@ import { promptProblem } from "../lib/interpretation.mjs";
 import { PROMPT_STORE, generateReading, loadPrompt } from "../lib/gemini.mjs";
 import { claudeWriter } from "../lib/writer.mjs";
 import { alertSender, noteFailure } from "../lib/failures.mjs";
-import { loadReading } from "../lib/reading.mjs";
+import { loadCurrent, loadReading } from "../lib/reading.mjs";
+import { PDF_STORE, deployId, warmPdf } from "../lib/pdfStore.mjs";
 import { deliveryEmail } from "../lib/deliveryEmail.mjs";
 import { sendMail } from "../lib/mail.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
@@ -35,7 +36,7 @@ import { untilText } from "../lib/writingLock.mjs";
  * SAFE TO RUN TWICE is what makes both of those safe: writing is write-once, so
  * a second pass over the same purchase stops.
  */
-export default async (request) => {
+export default async (request, context) => {
   /**
    * Fifteen minutes is the background function's hard limit. Every reading is
    * handed this deadline (interpretJob starts an ask only when its worst case
@@ -96,7 +97,27 @@ export default async (request) => {
    * ring gates. A run that finds another run writing the same reading does
    * nothing for it and says so below (interpretJob.mjs, writingLock.mjs).
    */
-  const run = (id) =>
+  /**
+   * THE PDF, WRITTEN RIGHT AFTER THE WORDS (10/26, lib/pdfStore.mjs): this job has the time a download does
+   * not, so the reading's PDF is built and kept here, and the buyer's download hands over the kept copy.
+   * Never in the way of the reading: a failed build is built on the first download instead.
+   */
+  const pdfs = getStore({ name: PDF_STORE, consistency: "strong" });
+  const warmAfter = async (id) => {
+    try {
+      const t0 = Date.now();
+      const out = await warmPdf({ pdfs, current: await loadCurrent(store, id, Date.now()), secret: grantSecret, links: SITE, build: deployId(context) });
+      if (out.built) console.log(`interpret: PDF kept (${out.pages ?? "?"} pages, ${Date.now() - t0} ms)`);
+    } catch (e) {
+      console.log(`interpret: PDF not kept (${e?.name ?? "Error"}); the first download builds it`);
+    }
+  };
+  const run = async (id) => {
+    const r = await runOnly(id);
+    if (r.ok) await warmAfter(id);
+    return r;
+  };
+  const runOnly = (id) =>
     interpretOne({
       id,
       store,

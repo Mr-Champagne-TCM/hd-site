@@ -1,10 +1,8 @@
 import { loadCurrent, readReadingLink } from "./reading.mjs";
 import { customerError } from "./failures.mjs";
 import { forTier } from "../../shared/customerMessages.mjs";
-import { buyerNameFor } from "../../shared/chartName.mjs";
 import { messagePage } from "./messagePage.mjs";
-import { SHOP } from "../../shared/libraryLinks.mjs";
-import { mintAddTimeKey } from "./addTime.mjs";
+import { keepPdf, keptPdf, pdfArgs, pdfKey } from "./pdfStore.mjs";
 
 /**
  * GET /api/pdf, with the store, the builder and the clock passed in, so every
@@ -16,8 +14,12 @@ import { mintAddTimeKey } from "./addTime.mjs";
  * for JSON still gets JSON.
  *
  * `note(kind, { detail })` files the failure at its severity (failures.mjs).
+ *
+ * `pdfs` + `deploy` (10/26, pdfStore.mjs): the kept copy of this record's PDF is handed over when there is
+ * one; otherwise it is built here, as it always was, and kept for next time. Without `pdfs` (the tests that
+ * pass a builder) it builds every time.
  */
-export async function handlePdf({ token, secret, store, build, links, accept = "", now = Date.now(), note = async () => {} }) {
+export async function handlePdf({ token, secret, store, build, links, accept = "", now = Date.now(), note = async () => {}, pdfs = null, deploy = null }) {
   const wantsJson = /application\/json/.test(accept) && !/text\/html/.test(accept);
   const back = typeof token === "string" && token ? `/r/${encodeURIComponent(token)}` : null;
 
@@ -85,29 +87,22 @@ export async function handlePdf({ token, secret, store, build, links, accept = "
   if (reading.tier < 1) return fail("pdf-link-bad", "tier 0 has no pdf");
   if (reading.pending) return fail("pdf-not-ready", `tier ${reading.tier}`);
 
+  // The kept copy, written ahead (pdfStore.mjs): no build on the request.
+  const key = pdfs ? pdfKey(current.id, reading, deploy) : null;
+  if (pdfs) {
+    const kept = await keptPdf(pdfs, key);
+    if (kept) return { status: 200, reading, bytes: kept.bytes, kept: true };
+  }
+
   let bytes;
   try {
-    bytes = await build({
-      tier: reading.tier,
-      // The name typed for the chart (fix 17A), else the buyer's, as the page shows.
-      name: reading.birth?.name ?? buyerNameFor(reading),
-      output: reading.output,
-      links,
-      // THE WRITTEN INTERPRETATION -- forgotten once, and a reading-tier buyer
-      // downloaded a chart-tier PDF. pdfEndpoint.test.mjs watches this line.
-      reading: reading.reading ?? null,
-      // THE BIRTH LINE under the name (Jeremy 10/16).
-      birth: reading.birth ?? null,
-      // Where "add it here" opens: the PDF's own never-expiring key for this chart (netlify/lib/addTime.mjs),
-      // not the six-day reading link -- a PDF is kept far longer than six days.
-      addTimeUrl: `${SHOP}t/${mintAddTimeKey(current.id, secret)}`,
-      // Bought for someone else: page 3 speaks to the person it is for too (decision 30).
-      gift: reading.fresh === true,
-    });
+    // The inputs (reading, birth line, add-time key, gift) are pdfStore.mjs pdfArgs, shared with the kept copy.
+    bytes = await build(pdfArgs(reading, current.id, secret, links));
   } catch (e) {
     console.log(`GET /api/pdf -> 500 (${e?.message})`);
     return fail("pdf-build-failed", `tier ${reading.tier}: ${e?.name ?? "Error"}`, { reading: link.id, tier: link.tier });
   }
+  if (pdfs) await keepPdf(pdfs, key, bytes);
 
   return { status: 200, reading, bytes };
 }

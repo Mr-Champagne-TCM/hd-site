@@ -3,6 +3,7 @@ import { handlePdf } from "../lib/pdfHandler.mjs";
 import { alertSender, guard, noteFailure } from "../lib/failures.mjs";
 import { messagePage, messageResponse } from "../lib/messagePage.mjs";
 import { readingPdf } from "../lib/readingPdf.mjs";
+import { PDF_STORE, deployId } from "../lib/pdfStore.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
 import { buyerNameFor } from "../../shared/chartName.mjs";
 
@@ -29,7 +30,7 @@ const health = () => getStore({ name: "health", consistency: "strong" });
 
 export default guard(
   "pdf",
-  async (request) => {
+  async (request, context) => {
     if (request.method !== "GET") {
       return json(405, { error: { code: "method", message: "Use GET." } });
     }
@@ -45,6 +46,9 @@ export default guard(
       secret: process.env.GRANT_SECRET,
       store: getStore({ name: "readings", consistency: "strong" }),
       build: readingPdf,
+      // The copy written ahead (10/26, lib/pdfStore.mjs): handed over when kept, else built and kept.
+      pdfs: getStore({ name: PDF_STORE, consistency: "strong" }),
+      deploy: deployId(context),
       links: SITE,
       accept: request.headers.get("accept") ?? "",
       note: (kind, { detail, ref } = {}) =>
@@ -56,7 +60,7 @@ export default guard(
     }
     const { reading, bytes } = result;
 
-    console.log(`GET /api/pdf -> 200 (tier ${reading.tier}, ${bytes.length} bytes)`);
+    console.log(`GET /api/pdf -> 200 (tier ${reading.tier}, ${bytes.length} bytes, ${result.kept ? "kept copy" : "built now"})`);
 
     /**
      * The filename is the chart's name, because a downloads folder full of

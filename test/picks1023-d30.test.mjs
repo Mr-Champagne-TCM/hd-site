@@ -39,7 +39,7 @@ test("decision 30: a gift's PDF page 3 says the gift words; the buyer's own says
 
 test("decision 30: the page and the PDF are told it is a gift", () => {
   assert.match(read("src/ReadingPage.tsx"), /gift=\{reading\.fresh === true\}/);
-  assert.match(read("netlify/lib/pdfHandler.mjs"), /gift: reading\.fresh === true,/);
+  assert.match(read("netlify/lib/pdfStore.mjs"), /gift: reading\.fresh === true,/);
   const actions = read("src/ReadingActions.tsx");
   assert.match(actions, /giftCredit\(tier >= 1 \? "chart" : "summary"\)/);
   assert.match(actions, /gift \? GIFT_CREDIT_KEEPS : "Your credit keeps, and this link is how you come back to it\."/);
