@@ -358,7 +358,8 @@ export const RETURNING = {
   sameChart: "The same chart, a step further",
   // Someone else's chart (10/25 live test: Theo's options said "For me" and "Your birth details").
   forThem: "For them",
-  theirChart: "Their chart, a step further",
+  // His question (10/19), for their chart; the card under it keeps "The same chart, a step further".
+  questionTheirs: "Their chart, a step further — or someone new?",
   someoneNewEyebrow: "Someone new",
   startNew: "Start a new chart for someone else",
   startTheirs: "Start their new chart",

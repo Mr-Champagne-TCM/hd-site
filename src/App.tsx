@@ -768,14 +768,14 @@ function ReturningView({ token }: { token: string }) {
     const ahead = TIERS.map((t, level) => ({ t, level })).filter(({ level }) => level > owned);
     body = (
       <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
-        <h1 className={h1}>{RETURNING.question}</h1>
+        <h1 className={h1}>{theirs ? RETURNING.questionTheirs : RETURNING.question}</h1>
         <p className="mt-4 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.questionBody}</p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           <ChoiceCard
             tone="gold"
             picture={<ChartThumb defined={data!.output?.definedCenters ?? []} />}
             eyebrow={theirs ? RETURNING.forThem : RETURNING.forMe}
-            title={theirs ? RETURNING.theirChart : RETURNING.sameChart}
+            title={RETURNING.sameChart}
             action={
               <div className="flex flex-col items-start gap-3">
                 {ahead.map(({ t, level }) =>
