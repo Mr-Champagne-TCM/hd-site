@@ -1505,6 +1505,34 @@
         "^Last updated October 25, 2026\\.$",
         "^Last updated <today>\\.$"
       ]
+    },
+    {
+      "id": "1025b-line-A-claude-only",
+      "about": "Gemini dropped (Jeremy 10/25: \"drop gemini. fix related wording affected\"): the home page's AI line (his pick 2) loses \"with Google’s Gemini on standby\"; the rest is his words as approved (src/App.tsx AI_LINE).",
+      "docs": "^page offer$",
+      "minus": ["drafted by AI \\(Anthropic’s Claude, with Google’s Gemini on standby\\) from your chart’s values only"],
+      "plus": ["drafted by AI \\(Anthropic’s Claude\\) from your chart’s values only — no name, no birth date, no place\\. Every sentence goes through my checks against your chart and Human Design’s original teaching — or it doesn’t reach you\\."]
+    },
+    {
+      "id": "1025b-privacy-claude-only",
+      "about": "Gemini dropped (10/25): the website privacy page names Anthropic as the only writer and Google is on none of its lists -- the callout (\"never sent to Anthropic, who writes the interpretation\"; \"Anthropic never sees it\"), the HTTPS list, who sees what, the in-person section; Last updated October 26, 2026 (the-champagne-method 54024ad).",
+      "docs": "^page web-readings-privacy",
+      "minus": ["never sent to Anthropic or Google, who write the interpretation", "Neither of them ever sees it\\.", "to Stripe, Anthropic, Google, Resend and the chart calculator", "Anthropic writes the interpretation on the reading tier, using their Claude model; if Claude can’t answer, Google’s Gemini model writes it instead\\.", "Anthropic writes the interpretation for these too \\(Google’s Gemini as a backup\\), from the values of your chart only", "^Last updated October 2\\d, 2026\\.$", "^Last updated <today>\\.$"],
+      "plus": ["never sent to Anthropic, who writes the interpretation", "Anthropic never sees it\\.", "to Stripe, Anthropic, Resend and the chart calculator", "Anthropic writes the interpretation on the reading tier, using their Claude model\\. They receive the values of your chart and nothing else", "Anthropic writes the interpretation for these too, from the values of your chart only", "^Last updated October 2\\d, 2026\\.$", "^Last updated <today>\\.$"]
+    },
+    {
+      "id": "1025b-stand-in-tail",
+      "about": "Rig only (tools/e2e/harness/fakeGemini.mjs placeholderForm): the stand-in's Strategy try-this ended \"so the strategy is familiar\", the very clunk the new checker rule refuses (interpretation.mjs familiarLabel, 10/25); it now ends \"so following it is familiar\". Not customer text.",
+      "docs": "^page ",
+      "minus": ["^Rig stand-in: this week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish\\. Notice how the plan feels an hour later, so the strategy is familiar when more depends on it\\.$"],
+      "plus": ["^Rig stand-in: this week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish\\. Notice how the plan feels an hour later, so following it is familiar when more depends on it\\.$"]
+    },
+    {
+      "id": "1025b-baseline-day-mask",
+      "about": "Not a change: the baseline was saved on 10/25, when the rig masked the receipt's own date as <today>; a run on any later day masks the same date as <date>. Emails only, the Date row only.",
+      "docs": "^email ",
+      "minus": ["^Date: <today>$"],
+      "plus": ["^Date: <date>$"]
     }
   ]
 }
