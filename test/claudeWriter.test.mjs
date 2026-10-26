@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toJsonSchema, failureKind, cost, askClaude, ANTHROPIC_URL } from "../netlify/lib/claude.mjs";
-import { claudeWriter, creditMonth, normalLimit, SWITCH_AT, addSpend, monthSpend } from "../netlify/lib/writer.mjs";
+import { claudeWriter, creditMonth, normalLimit, SWITCH_AT, OUT_RECHECK_MS, addSpend, monthSpend, worstWriterAsk } from "../netlify/lib/writer.mjs";
+import { geminiKind } from "../netlify/lib/failures.mjs";
 import { generateReading } from "../netlify/lib/gemini.mjs";
 import { READING_SCHEMA } from "../netlify/lib/structured.mjs";
 
@@ -81,7 +82,7 @@ test("fast first; a busy fast ask is asked again at once at normal speed with 15
   assert.ok(Math.abs((await monthSpend(store, "2026-10")) - 0.3) < 1e-9);
 });
 
-test("a fast ask refused (fast mode not on the account) gets one normal try before Gemini", async () => {
+test("a fast ask refused (fast mode not on the account) gets one normal try; refused again, the reading waits", async () => {
   const calls = [];
   const w = claudeWriter({
     apiKey: "k", store: memStore(), clock: () => OCT_20,
@@ -89,10 +90,10 @@ test("a fast ask refused (fast mode not on the account) gets one normal try befo
   });
   assert.deepEqual(await w(ASK), { ok: true, text: "{}", by: "claude-normal" });
   assert.deepEqual(calls, [true, false]);
-  // Refused at normal speed too (a dead key): Gemini, after exactly two asks.
+  // Refused at normal speed too (a dead key): the reading waits, after exactly two asks; nothing else writes.
   let asked = 0;
   const dead = claudeWriter({ apiKey: "k", store: memStore(), clock: () => OCT_20, ask: async () => { asked++; return { ok: false, failure: "rejected" }; } });
-  assert.equal((await dead(ASK)).useGemini, true);
+  assert.deepEqual(await dead(ASK), { ok: false, reason: "claude", detail: "rejected" });
   assert.equal(asked, 2);
 });
 
@@ -129,35 +130,61 @@ test("past the switch, every ask is normal speed, and the switch is said once", 
   assert.equal(sent.filter((s) => s.endsWith(": switch")).length, 1);
 });
 
-test("out of credit: Gemini, said once, and Claude is not asked again this month", async () => {
+test("out of credit: the reading waits, said once, and Claude is asked again only after an hour", async () => {
   const sent = [];
   let asked = 0;
+  let now = OCT_20;
+  let credit = false;
+  const store = memStore();
   const w = claudeWriter({
-    apiKey: "k", store: memStore(), clock: () => OCT_20, notify: async (m) => sent.push(m.subject),
-    ask: async () => { asked++; return { ok: false, failure: "outOfCredit" }; },
+    apiKey: "k", store, clock: () => now, notify: async (m) => sent.push(m.subject),
+    ask: async () => { asked++; return credit ? { ok: true, text: "{}", cost: 0.5, org: "tcm" } : { ok: false, failure: "outOfCredit" }; },
   });
-  assert.equal((await w(ASK)).useGemini, true);
-  assert.equal((await w(ASK)).useGemini, true);
-  assert.equal(asked, 1);
+  assert.deepEqual(await w(ASK), { ok: false, reason: "claude", detail: "out of credit this month" });
+  now += OUT_RECHECK_MS - 60_000;
+  const held = await w(ASK);
+  assert.equal(held.ok, false);
+  assert.equal(held.reason, "claude");
+  assert.match(held.detail, /^out of credit this month \(checked again \d\d:\d\d UTC\)$/);
+  assert.equal(asked, 1, "no ask while the hour runs");
+  // Jeremy raised the limit: the next check finds credit, and the flag is cleared.
+  credit = true;
+  now += 2 * 60_000;
+  assert.equal((await w(ASK)).ok, true);
+  assert.equal(asked, 2);
+  assert.equal((await w(ASK)).ok, true);
+  assert.equal(asked, 3);
   assert.equal(sent.filter((s) => s.endsWith(": out")).length, 1);
+});
+
+test("the near-limit alert sits $20 under the hd-live limit, so it can fire", async () => {
+  const sent = [];
+  const store = memStore();
+  await addSpend(store, "2026-10", 149.8, OCT_20);
+  const w = claudeWriter({ apiKey: "k", store, clock: () => OCT_20, limit: 170, notify: async (m) => sent.push(m.text), ask: async () => ({ ok: true, text: "{}", cost: 0.5, org: "tcm" }) });
+  await w(ASK);
+  await w(ASK);
+  const near = sent.filter((t) => /\$20 from the \$170 hd-live limit/.test(t));
+  assert.equal(near.length, 1);
+  assert.ok(!sent.some((t) => /Gemini/.test(t)));
 });
 
 test("the test account's key never writes a customer's reading", async () => {
   const sent = [];
   const w = claudeWriter({ apiKey: "k", store: memStore(), clock: () => OCT_20, notify: async (m) => sent.push(m.subject), blockOrgs: ["test-org"], ask: async () => ({ ok: true, text: "{}", cost: 0.5, org: "test-org" }) });
-  assert.equal((await w(ASK)).useGemini, true);
+  assert.deepEqual(await w(ASK), { ok: false, reason: "claude", detail: "wrong claude account" });
   assert.equal(sent.length, 1);
   const pinned = claudeWriter({ apiKey: "k", store: memStore(), clock: () => OCT_20, expectOrg: "tcm-org", ask: async () => ({ ok: true, text: "{}", cost: 0.5, org: "someone-else" }) });
-  assert.equal((await pinned(ASK)).useGemini, true);
+  assert.deepEqual(await pinned(ASK), { ok: false, reason: "claude", detail: "wrong claude account" });
 });
 
-test("a timeout goes back to the job, which asks again with longer; no key or letter mode is Gemini's", async () => {
+test("a timeout goes back to the job, which asks again with longer; no key or letter mode is a setup fault", async () => {
   const w = claudeWriter({ apiKey: "k", store: memStore(), clock: () => OCT_20, ask: async () => ({ ok: false, failure: "timeout", detail: "claude took too long" }) });
   assert.deepEqual(await w(ASK), { ok: false, reason: "timeout", detail: "claude took too long" });
   const none = claudeWriter({ apiKey: null, store: memStore(), ask: async () => assert.fail("asked") });
-  assert.equal((await none(ASK)).useGemini, true);
+  assert.equal((await none(ASK)).reason, "misconfigured");
   const letter = claudeWriter({ apiKey: "k", store: memStore(), ask: async () => assert.fail("asked") });
-  assert.equal((await letter({ ...ASK, schema: null })).useGemini, true);
+  assert.equal((await letter({ ...ASK, schema: null })).reason, "misconfigured");
 });
 
 test("generateReading: Claude's answer goes through the same checker, and Gemini is not called", async () => {
@@ -173,17 +200,23 @@ test("generateReading: Claude's answer goes through the same checker, and Gemini
   assert.equal(geminiCalls, 0);
 });
 
-test("generateReading: when Claude steps aside, Gemini is asked exactly as before", async () => {
+test("generateReading: when Claude cannot write, Google is never asked, even with a Gemini key at hand", async () => {
   let geminiCalls = 0;
   const fetchImpl = async () => { geminiCalls++; return new Response("{}", { status: 503 }); };
   const output = { type: "Generator", profile: "1/3", authority: "Sacral", definedCenters: [], undefinedCenters: [], openCenters: [], channels: [] };
   const r = await generateReading(output, {
     apiKey: "gemini-key", prompt: "PROMPT", shape: "json", fetchImpl,
-    writer: async () => ({ useGemini: true, why: "no claude key" }),
+    writer: async () => ({ ok: false, reason: "claude", detail: "busy" }),
   });
-  assert.equal(r.ok, false);
-  assert.equal(r.detail, "gemini 503");
-  assert.ok(geminiCalls >= 1);
+  assert.deepEqual([r.ok, r.reason, r.detail], [false, "claude", "busy"]);
+  assert.equal(geminiCalls, 0);
+  assert.equal(geminiKind(r.reason, r.detail), "claude-unavailable");
+});
+
+test("one ask's worst case is the fast limit plus the normal-speed limit (the job's budget uses it)", () => {
+  assert.equal(worstWriterAsk(90_000), 240_000);
+  assert.equal(worstWriterAsk(150_000), 300_000);
+  assert.equal(worstWriterAsk(45_000), 135_000);
 });
 
 test("readings written at the same time never lose each other's spend", async () => {

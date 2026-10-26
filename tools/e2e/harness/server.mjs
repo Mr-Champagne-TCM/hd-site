@@ -29,7 +29,7 @@ import { pathToFileURL } from "node:url";
 import { BlobsServer } from "@netlify/blobs/server";
 import { fakeStripe } from "./fakeStripe.mjs";
 import { fakeMail } from "./fakeMail.mjs";
-import { fakeGemini } from "./fakeGemini.mjs";
+import { RIG_ORG, fakeGemini } from "./fakeGemini.mjs";
 import { engineCache, startEngine } from "./engine.mjs";
 import { REPO, SIBLINGS } from "./paths.mjs";
 
@@ -159,7 +159,8 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     if (url.hostname === "127.0.0.1" || url.hostname === "localhost") return REAL_FETCH(input, init);
     if (url.hostname === "api.stripe.com") return stripe.api(request);
     if (url.hostname === "api.resend.com") return mail.api(request);
-    if (url.hostname === "generativelanguage.googleapis.com") return gemini.api(request);
+    // 10/25 ("drop gemini"): Claude is the only writer; a request to Google is now blocked like any other.
+    if (url.hostname === "api.anthropic.com") return gemini.claudeApi(request);
     blocked.push({ at: Date.now(), host: url.hostname, path: url.pathname });
     hlog(`BLOCKED outbound request to ${url.hostname}${url.pathname}`);
     throw new TypeError(`rig: outbound network to ${url.hostname} is blocked`);
@@ -180,7 +181,9 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     // The right SHAPE, so stripe.mjs's checkKey passes; it opens nothing.
     STRIPE_SECRET_KEY: "sk_test_rig-local-fake",
     RESEND_API_KEY: "re_rig-local-fake",
-    GEMINI_API_KEY: "rig-local-replay",
+    // The writer is Claude (writer.mjs); the stand-in answers for RIG_ORG, the account guard's org.
+    HD_ANTHROPIC_KEY: "rig-local-claude",
+    HD_ANTHROPIC_ORG: RIG_ORG,
     ENGINE_URL: `${origin}/__engine`,
     ENGINE_KEY: engineKey,
     PAYWALL: "1",

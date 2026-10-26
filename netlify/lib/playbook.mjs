@@ -228,15 +228,16 @@ export const PLAYBOOK = {
 
   // --- writing the reading -----------------------------------------------------------
   "gemini-refused-5x": { who: "buyer", brief: "A paid reading could not be written: five drafts in a row were refused as incomplete.", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-503": { who: "buyer", brief: "A paid reading could not be written: Gemini was overloaded (503).", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-429": { who: "buyer", brief: "A paid reading could not be written: Gemini's rate limit (429).", auto: SWEEP, fix: "Gemini quota in Google AI Studio.", options: WRITER_OPTIONS },
-  "gemini-http": { who: "buyer", brief: "A paid reading could not be written: Gemini answered with an error (the Reason line has the status).", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-timeout": { who: "buyer", brief: "A paid reading could not be written: Gemini took too long.", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-network": { who: "buyer", brief: "A paid reading could not be written: Gemini could not be reached.", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-unreadable": { who: "buyer", brief: "A paid reading could not be written: Gemini's answer could not be read.", auto: SWEEP, options: WRITER_OPTIONS },
-  "gemini-misconfigured": { who: "buyer", brief: "A paid reading could not be written: the Gemini key is not set.", fix: MISCONFIG, auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-503": { who: "buyer", brief: "A paid reading could not be written: the writer was overloaded (503).", auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-429": { who: "buyer", brief: "A paid reading could not be written: the writer's rate limit (429).", auto: SWEEP, fix: "Rate limits on the hd-live workspace in the Claude Console.", options: WRITER_OPTIONS },
+  "gemini-http": { who: "buyer", brief: "A paid reading could not be written: the writer answered with an error (the Reason line has the status).", auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-timeout": { who: "buyer", brief: "A paid reading could not be written: Claude took too long, twice (a draft, then one longer ask).", auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-network": { who: "buyer", brief: "A paid reading could not be written: Claude could not be reached.", auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-unreadable": { who: "buyer", brief: "A paid reading could not be written: Claude's answer could not be read.", auto: SWEEP, options: WRITER_OPTIONS },
+  "gemini-misconfigured": { who: "buyer", brief: "A paid reading could not be written: the Claude key (HD_ANTHROPIC_KEY) is not set, or the stored prompt asks for no form.", fix: MISCONFIG, auto: SWEEP, options: WRITER_OPTIONS },
   "gemini-no-chart": { who: "buyer", brief: "A paid reading could not be written: its chart was missing from the record.", options: WRITER_OPTIONS },
   "gemini-unknown": { who: "buyer", brief: "A paid reading could not be written, for a reason the writer did not name.", auto: SWEEP, options: WRITER_OPTIONS },
+  "claude-unavailable": { who: "buyer", brief: "A paid reading could not be written: Claude could not write it (the Reason line says why: out of credit, busy, refused, wrong account). Nothing else writes readings; it waits and is asked again by the sweep every fifteen minutes.", fix: "Out of credit: raise the hd-live limit in the Claude Console (checked again every hour). Wrong account: HD_ANTHROPIC_KEY must be the TCM hd-live key.", auto: SWEEP, options: WRITER_OPTIONS },
   "reading-prompt": { who: "system", brief: "The reading prompt could not be loaded, so no paid reading can be written right now.", fix: "The prompt blob in the store (tools/reading-prompt*.local.txt is the source).", auto: SWEEP, options: WRITER_OPTIONS },
   "reading-failure-rate": { who: "system", brief: "Readings are failing to write at an unusual rate in the last hour; buyers are waiting longer than they should.", auto: SWEEP, options: WRITER_OPTIONS },
 

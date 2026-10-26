@@ -130,8 +130,9 @@ export const KINDS = {
   "reading-link-bad": { severity: I, customer: "reading-link-bad", status: 404, code: "not_found" },
   "reading-tier-mismatch": { severity: F, customer: "reading-link-bad", status: 404, code: "not_found" },
 
-  // --- writing the reading (Gemini). The buyer sees "being written" and, after
-  //     ten minutes, "taking longer than it should" -- never an error. --------
+  // --- writing the reading (Claude only since 10/25; the ids keep the gemini- prefix so health history
+  //     still counts). The buyer sees "being written" and, after ten minutes, "taking longer than it
+  //     should" -- never an error. --------
   "gemini-refused": { severity: I, customer: "reading-writing", status: 200, code: null },
   // 10/22: a form filled with "string" in its slots (structured.mjs placeholders), re-asked like a refusal, counted on its own.
   "gemini-placeholder": { severity: I, customer: "reading-writing", status: 200, code: null },
@@ -147,6 +148,8 @@ export const KINDS = {
   "gemini-misconfigured": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "gemini-no-chart": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "gemini-unknown": { severity: P, customer: "reading-writing-long", status: 200, code: null },
+  // 10/25: Claude could not write it (out of credit, busy at normal speed, refused, wrong account); nothing else writes.
+  "claude-unavailable": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "reading-prompt": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "reading-failure-rate": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "interpret-store": { severity: F, customer: null, status: 200, code: null },
@@ -317,6 +320,8 @@ export function geminiKind(reason, detail) {
       return "gemini-misconfigured";
     case "no_chart":
       return "gemini-no-chart";
+    case "claude":
+      return "claude-unavailable";
     default:
       return "gemini-unknown";
   }

@@ -2,10 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 
 /**
  * ASKING CLAUDE FOR THE READING FORM (10/23, Jeremy: "i think we have enough data to support my t4+t5
- * approach. This is the new approach"). The same instruction, the same chart facts and the same form
- * as the Gemini call in gemini.mjs; the answer comes back as the form's JSON text and gemini.mjs
- * renders and checks it exactly as it does Gemini's. Which speed to ask at, and when to step aside for
- * Gemini, is writer.mjs's business.
+ * approach. This is the new approach"; the only writer since 10/25: "drop gemini"). The same instruction,
+ * the same chart facts and the same form the reading has always been asked with (gemini.mjs, named for
+ * its first writer); the answer comes back as the form's JSON text and gemini.mjs renders and checks it
+ * exactly as before. Which speed to ask at, and what a failure means, is writer.mjs's business.
  *
  * THE PRIVACY RULE HOLDS: only `chartFactsOnly(output)` (and, on a re-ask, the model's own draft) goes
  * over the wire. Anthropic does not train on API traffic and deletes it within 30 days.
@@ -28,7 +28,7 @@ export const ANTHROPIC_URL = "https://api.anthropic.com";
 const PRICE = { in: 4e-6, cacheWrite: 5e-6, cacheRead: 0.2e-6, out: 20e-6 };
 
 /**
- * GEMINI'S FORM SCHEMA AS A JSON SCHEMA. Lower-case types, every object closed (structured outputs
+ * THE READING FORM'S SCHEMA (structured.mjs, OpenAPI subset) AS A JSON SCHEMA. Lower-case types, every object closed (structured outputs
  * require `additionalProperties: false`), and an array of fixed length says so in words: structured
  * outputs accept no length constraint. The checker refuses a wrong count either way.
  */
@@ -60,8 +60,8 @@ export function cost(usage = {}, fast = false) {
  * WHAT A FAILED CALL MEANS. Only the status and the error's own type travel: an error body can echo the
  * request, and the request is a chart.
  *   busy         429 / 5xx / overloaded: fast mode may be full; writer.mjs asks again at normal speed.
- *   outOfCredit  the month's credit or a spend limit is used up: Gemini until the credit renews.
- *   rejected     a bad key, a bad request: Gemini, and an alert.
+ *   outOfCredit  the month's credit or a spend limit is used up: readings wait (checked hourly).
+ *   rejected     a bad key, a bad request: one normal-speed try, then the reading waits (an incident).
  */
 export function failureKind(e) {
   const status = e?.status ?? 0;

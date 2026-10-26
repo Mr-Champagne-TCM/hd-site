@@ -4,12 +4,13 @@ import { promptShape } from "./interpretation.mjs";
 import { geminiKind, noteFailure } from "./failures.mjs";
 import { PLACEHOLDERS } from "./structured.mjs";
 import { releaseLock, takeLock } from "./writingLock.mjs";
+import { worstWriterAsk } from "./writer.mjs";
 
 /**
  * WRITE ONE READING. The job itself, with everything it touches passed in.
  *
  * Written this way so the whole path can be tested without Netlify, without
- * Google, and without a network -- which matters more here than anywhere else
+ * the model, and without a network -- which matters more here than anywhere else
  * on the site, because the thing being tested is what a buyer is handed for
  * forty-four dollars.
  *
@@ -46,13 +47,17 @@ export const TIMEOUT_REASK_MS = 150_000;
 const ASK_MS = 90_000;
 /**
  * TIME, NOT ONLY ASKS. interpret.mjs is a background function: fifteen minutes,
- * hard. One ask can take its limit twice (a busy 503, five seconds, one more
- * try: gemini.mjs), so an ask starts only when that worst case still ends
- * inside this reading's budget and the caller's deadline. A reading stopped
- * here is still owed; the sweep asks again later (the job is safe to run twice).
+ * hard. One ask can take its fast limit and then a normal-speed limit (a busy
+ * or refused fast ask is asked again at once at normal speed: writer.mjs; 90 s
+ * then 150 s for a draft), so an ask starts only when that worst case still
+ * ends inside this reading's budget and the caller's deadline. Until 10/25 the
+ * worst case here was Gemini's (its limit twice, plus five seconds), which the
+ * Claude chain outran: an ask could end past the writing lock (10/25 pre-deploy
+ * audit). The larger of the two is kept. A reading stopped here is still owed;
+ * the sweep asks again later (the job is safe to run twice).
  */
 export const READING_BUDGET_MS = 8 * 60_000;
-const worstAsk = (limit) => 2 * limit + 5_000;
+const worstAsk = (limit) => Math.max(2 * limit + 5_000, worstWriterAsk(limit));
 
 /**
  * RE-ASK ONLY THE FAILING PART, AND SOONER (Jeremy 10/23: "yes, reask only

@@ -15,7 +15,7 @@ import { warmEngine } from "./warm";
 import MailtoText from "../MailtoText";
 import { customerText } from "../../shared/customerMessages.mjs";
 import { claimIfReturning, heldGrant, ownedNow } from "../purchase";
-import { CHART_NAME_MAX, chartTitle, cleanChartName, firstName } from "../../shared/chartName.mjs";
+import { CHART_NAME_MAX, chartTitle, cleanChartName, firstName, shownName } from "../../shared/chartName.mjs";
 
 /**
  * The way in.
@@ -656,7 +656,7 @@ export default function EntryForm({
               : correcting
                 ? RETURNING.correctButton
                 : other
-                  ? `${cleanChartName(who) ? `${cleanChartName(who)}’s` : "Their"} ${(TIERS[tier]?.label ?? "chart").replace(/^The\s+/i, "").toLowerCase()}`
+                  ? `${shownName(who) ? `${shownName(who)}’s` : "Their"} ${(TIERS[tier]?.label ?? "chart").replace(/^The\s+/i, "").toLowerCase()}`
                   : `My ${(TIERS[tier]?.label ?? "summary").replace(/^The\s+/i, "").toLowerCase()}`}
           </button>
           {correcting && onCancel && (

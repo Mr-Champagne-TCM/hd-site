@@ -93,10 +93,12 @@ export function Nav() {
  * FIX 3A (Jeremy 10/19): who makes this, under the opening -- his current
  * site photo (approach-candid.jpg, cropped round), one line in his own voice,
  * and the AI said plainly before anybody pays, not only on the privacy page.
+ * Words: Jeremy's pick 2 (10/25); "with Google's Gemini on standby" taken out when
+ * Gemini was dropped (10/25: "drop gemini. fix related wording affected").
  */
 const AI_LINE =
   `Your chart is calculated, not written by AI. The written part of the ${money(READING.cents)} reading is ` +
-  "drafted by AI (Anthropic’s Claude, with Google’s Gemini on standby) from your chart’s values only — no name, no birth date, no place. " +
+  "drafted by AI (Anthropic’s Claude) from your chart’s values only — no name, no birth date, no place. " +
   "Every sentence goes through my checks against your chart and Human Design’s original teaching — or it doesn’t reach you.";
 
 const linkCls =
@@ -668,6 +670,8 @@ function ReturningView({ token }: { token: string }) {
   };
 
   const whose = data?.whose ?? null;
+  // Someone else's chart (bought from "Start a new chart for someone else", or grown from one).
+  const theirs = data?.fresh === true;
   const back = data?.pending ? `/r/${encodeURIComponent(token)}` : `/u/${encodeURIComponent(token)}`;
 
   let body: React.ReactNode;
@@ -770,8 +774,8 @@ function ReturningView({ token }: { token: string }) {
           <ChoiceCard
             tone="gold"
             picture={<ChartThumb defined={data!.output?.definedCenters ?? []} />}
-            eyebrow={RETURNING.forMe}
-            title={RETURNING.sameChart}
+            eyebrow={theirs ? RETURNING.forThem : RETURNING.forMe}
+            title={theirs ? RETURNING.theirChart : RETURNING.sameChart}
             action={
               <div className="flex flex-col items-start gap-3">
                 {ahead.map(({ t, level }) =>
@@ -795,10 +799,17 @@ function ReturningView({ token }: { token: string }) {
               {ahead.length > 1
                 ? `The chart and the written reading, from the ${tierWord(owned)} you already have.`
                 : `The written ${tierWord(ahead[0]?.level ?? 2)}, from the ${tierWord(owned)} you already have.`}{" "}
-              {data!.birthLine ? "Your birth details are kept, so there is nothing to type." : ""}
+              {data!.birthLine ? `${theirs ? "Their" : "Your"} birth details are kept, so there is nothing to type.` : ""}
             </p>
             {data!.birthLine ? (
-              <KeptLine label={owned === 0 ? RETURNING.keptLabelSummary : RETURNING.keptLabel} line={data!.birthLine} />
+              <KeptLine
+                label={
+                  owned === 0
+                    ? theirs ? RETURNING.keptLabelSummaryTheirs : RETURNING.keptLabelSummary
+                    : theirs ? RETURNING.keptLabelTheirs : RETURNING.keptLabel
+                }
+                line={data!.birthLine}
+              />
             ) : (
               <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">{RETURNING.noKeptYet}</p>
             )}

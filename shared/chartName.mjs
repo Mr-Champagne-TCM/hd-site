@@ -9,7 +9,19 @@
  *
  * One title function for the page, the PDF and (ported) the phone, so the three
  * cannot disagree about an apostrophe.
+ *
+ * SHOWN CURLY, KEPT AS TYPED (10/25 live test: "Sam O'Brien’s Human Design" mixed
+ * a straight apostrophe with the curly one the title adds). The stored name is
+ * what was typed, so a correction can still tell whether it changed; every place
+ * that SHOWS a name goes through shownName.
  */
+import { curly } from "./curlyQuotes.mjs";
+
+/** A name as it is shown: cleaned, with curly apostrophes and quotes ("O'Brien" -> "O’Brien"). Null for none. */
+export function shownName(raw) {
+  const n = cleanChartName(raw);
+  return n ? curly(n) : null;
+}
 
 /** The most a name may be: long enough for "Mary-Jane O'Brien-Smith", short enough for one title line. */
 export const CHART_NAME_MAX = 40;
@@ -32,7 +44,7 @@ export function cleanChartName(raw) {
 
 /** "Alex" -> "Alex’s Human Design"; "James" -> "James’s Human Design"; none -> "Your Human Design". */
 export function chartTitle(name) {
-  const n = cleanChartName(name);
+  const n = shownName(name);
   return n ? `${n}’s Human Design` : "Your Human Design";
 }
 

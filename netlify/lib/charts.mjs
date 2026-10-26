@@ -177,7 +177,9 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
     paidCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,
     person: source ? source.person : id,
     grewFrom: source ? source.id : null,
-    fresh: meta.fresh === "1",
+    // Someone else's chart stays THEIRS when it grows (10/25 live test: Theo's summary taken to the
+    // chart said "Your chart is ready" and "For me"): the grown record keeps the mark its source had.
+    fresh: meta.fresh === "1" || source?.fresh === true,
     // NOTHING TO RETYPE: the chart's kept details (the name for the chart
     // with them) and its earlier corrections come along.
     birth: source?.birth ?? null,

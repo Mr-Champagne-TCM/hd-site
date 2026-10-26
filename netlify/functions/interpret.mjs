@@ -39,7 +39,7 @@ export default async (request) => {
   /**
    * Fifteen minutes is the background function's hard limit. Every reading is
    * handed this deadline (interpretJob starts an ask only when its worst case
-   * still ends before it), so a slow Google can no longer run the job past it.
+   * still ends before it), so a slow model can no longer run the job past it.
    */
   const deadline = Date.now() + 14 * 60 * 1000;
   const grantSecret = process.env.GRANT_SECRET;
@@ -57,42 +57,36 @@ export default async (request) => {
     /**
      * A background function's path is on the public internet like any other.
      * The job is idempotent, so this is not a door to anything -- but two
-     * invocations racing on one purchase both call Google, and only one answer
+     * invocations racing on one purchase both call the model, and only one answer
      * is ever kept. The other is billed and discarded.
      */
     console.log("interpret: refused (bad or missing trigger)");
     return new Response(null, { status: 404 });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
   const mailKey = process.env.RESEND_API_KEY;
   const origin = process.env.URL || "https://humandesign.thechampagnemethod.co";
   /**
-   * CLAUDE WRITES, GEMINI CATCHES (10/23, Jeremy's T4 + T5 plan; writer.mjs). HD_ANTHROPIC_KEY is the
-   * TCM "hd-live" workspace key -- deliberately NOT named ANTHROPIC_API_KEY, which Netlify's AI Gateway
-   * fills with its own paid key when it is unset. HD_WRITER=gemini is the off switch. No key, or the
-   * switch off, and every reading is written by Gemini exactly as before.
+   * CLAUDE WRITES, AND ONLY CLAUDE (10/23 Jeremy's T4 + T5 plan; Gemini dropped 10/25: "drop gemini";
+   * writer.mjs). HD_ANTHROPIC_KEY is the TCM "hd-live" workspace key -- deliberately NOT named
+   * ANTHROPIC_API_KEY, which Netlify's AI Gateway fills with its own paid key when it is unset.
+   * GEMINI_API_KEY is no longer read. With no Claude key the job still runs: every reading files a
+   * "misconfigured" incident (Jeremy is paged) and waits, rather than this function quietly doing nothing.
    */
-  const claudeKey = process.env.HD_WRITER === "gemini" ? null : process.env.HD_ANTHROPIC_KEY || null;
-
-  if (!apiKey && !claudeKey) {
-    console.log("interpret: no GEMINI_API_KEY or HD_ANTHROPIC_KEY, nothing to do");
-    return new Response(null, { status: 204 });
-  }
+  const claudeKey = process.env.HD_ANTHROPIC_KEY || null;
 
   const store = getStore({ name: "readings", consistency: "strong" });
   const health = getStore({ name: "health", consistency: "strong" });
-  const writer = claudeKey
-    ? claudeWriter({
-        apiKey: claudeKey,
-        store: health,
-        notify: alertSender(mailKey),
-        ...(Number(process.env.HD_CLAUDE_SWITCH_AT) > 0 ? { switchAt: Number(process.env.HD_CLAUDE_SWITCH_AT) } : {}),
-        ...(Number(process.env.HD_CREDIT_DAY) > 0 ? { creditDay: Number(process.env.HD_CREDIT_DAY) } : {}),
-        expectOrg: process.env.HD_ANTHROPIC_ORG || null,
-        blockOrgs: (process.env.HD_ANTHROPIC_BLOCK_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean),
-      })
-    : null;
+  const writer = claudeWriter({
+    apiKey: claudeKey,
+    store: health,
+    notify: alertSender(mailKey),
+    ...(Number(process.env.HD_CLAUDE_SWITCH_AT) > 0 ? { switchAt: Number(process.env.HD_CLAUDE_SWITCH_AT) } : {}),
+    ...(Number(process.env.HD_CREDIT_DAY) > 0 ? { creditDay: Number(process.env.HD_CREDIT_DAY) } : {}),
+    ...(Number(process.env.HD_CLAUDE_LIMIT) > 0 ? { limit: Number(process.env.HD_CLAUDE_LIMIT) } : {}),
+    expectOrg: process.env.HD_ANTHROPIC_ORG || null,
+    blockOrgs: (process.env.HD_ANTHROPIC_BLOCK_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean),
+  });
 
   /**
    * One reading, written. The named purchase and the drain share this exactly.
@@ -108,13 +102,13 @@ export default async (request) => {
       store,
       health,
       lock: health,
-      apiKey,
+      apiKey: null,
       prompt,
       grantSecret,
       origin,
       deliver: { email: readyEmail(mailKey), alert: alertSender(mailKey) },
       deadline,
-      ...(writer ? { generate: (output, opts) => generateReading(output, { ...opts, writer }) } : {}),
+      generate: (output, opts) => generateReading(output, { ...opts, writer }),
     });
   /** What a run that found another writer on the reading says. */
   const elsewhere = (r) => `another run is writing it (writing lock ${untilText(r.until)}); this one does nothing`;
@@ -127,7 +121,7 @@ export default async (request) => {
    * reading, for every buyer, with a message about the model rather than about
    * the configuration. Checked once, before any request, so the answer is one
    * alert naming what is missing instead of a trickle of "malformed" that looks
-   * like Google having a bad week.
+   * like the model having a bad week.
    */
   const prompt = await loadPrompt({
     store: getStore({ name: PROMPT_STORE, consistency: "strong" }),

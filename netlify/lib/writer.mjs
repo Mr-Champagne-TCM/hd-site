@@ -1,14 +1,18 @@
 import { askClaude } from "./claude.mjs";
 
 /**
- * WHO WRITES EACH ASK (10/23, Jeremy's T4 + T5 plan: "This is the new approach").
+ * WHO WRITES EACH ASK (10/23, Jeremy's T4 + T5 plan: "This is the new approach"; Gemini dropped 10/25:
+ * "drop gemini").
  *
  *   1. Claude Opus 5.5 FAST, effort medium, the ask's own limit (90 s a draft). 36 test charts: 89%
  *      first try, ~45 s a reading, ~$0.57.
  *   2. Fast busy (429 / 5xx) or refused, or this credit month's spend at SWITCH_AT or more: Opus at NORMAL
  *      speed, effort medium, NORMAL_MS to answer (~2 min, ~$0.27).
- *   3. Claude cannot write it at all (no key, out of credit, a refusal, a rejected key, a key from
- *      any account but the live one): { useGemini: true }, and gemini.mjs asks Gemini exactly as before.
+ *   3. Claude cannot write it at all (no key, out of credit, a refusal, a rejected key, a key from any
+ *      account but the live one, still busy at normal speed): { ok: false, reason: "claude", detail }.
+ *      NOTHING ELSE WRITES IT. The reading waits ("being written", then "taking longer than it should"),
+ *      the job files a claude-unavailable incident (Jeremy is paged, failures.mjs), and the writer is rung
+ *      again (ring.mjs) and swept every fifteen minutes until Claude answers.
  *
  * WHICH ACCOUNT: `expectOrg` (HD_ANTHROPIC_ORG) is the TCM "TCM HD live" org; an answer from any other
  * org is refused, and so is one from `blockOrgs` (HD_ANTHROPIC_BLOCK_ORGS: the test account). The ids
@@ -19,16 +23,22 @@ import { askClaude } from "./claude.mjs";
  * store (one record per ask under `claude-spend/<month>/`); the Console stays the real figure (asks cut off at a time limit still
  * cost, and are not counted here), which is why the switch sits well below the credit.
  *
- * ALERTS, each once per month: the switch to normal speed, $190 spent, out of credit, the wrong account.
- * Gemini stepping in for any other reason, once per day.
+ * OUT OF CREDIT IS CHECKED AGAIN EVERY HOUR (10/25 pre-deploy audit): with no other writer, a flag that
+ * held until the next credit month would keep readings waiting after Jeremy raised the limit. Between
+ * checks no ask is made, so the sweep does not spend fifteen-minute rings on refusals.
+ *
+ * ALERTS, each once per credit month: the switch to normal speed, `limit` - NEAR_GAP spent (the hd-live
+ * workspace limit, HD_CLAUDE_LIMIT, $170: the $190 alert could never fire under it), out of credit, the
+ * wrong account. Every reading Claude could not write is also an incident of its own (failures.mjs).
  */
 
 export const SWITCH_AT = 130;
 export const CREDIT_DAY = 16;
+export const LIMIT = 170;
 export const NORMAL_MS = 150_000;
+export const OUT_RECHECK_MS = 60 * 60_000;
 const ASK_MS = 90_000;
-const NEAR_OUT = 190;
-
+const NEAR_GAP = 20;
 
 const STRONG = { type: "json", consistency: "strong" };
 
@@ -50,9 +60,17 @@ export function normalLimit(ms) {
 }
 
 /**
+ * The longest one ask can take, for interpretJob's budget: the fast ask's limit, then the normal-speed
+ * ask's (a busy or refused fast ask is asked again at once at normal speed).
+ */
+export function worstWriterAsk(ms) {
+  return ms + normalLimit(ms);
+}
+
+/**
  * The writer gemini.mjs calls for each ask: ({ instruction, user, schema, timeoutMs }) resolves to
  * { ok: true, text, by }, { ok: false, reason: "timeout", detail } (the job asks again, longer), or
- * { useGemini: true, why }.
+ * { ok: false, reason: "claude", detail } (Claude cannot write it now; the reading waits).
  */
 export function claudeWriter({
   apiKey,
@@ -60,19 +78,24 @@ export function claudeWriter({
   notify,
   switchAt = SWITCH_AT,
   creditDay = CREDIT_DAY,
+  limit = LIMIT,
   expectOrg = null,
   blockOrgs = [],
   clock = Date.now,
   ask = askClaude,
 }) {
+  const unavailable = (detail) => ({ ok: false, reason: "claude", detail });
+  const nearAt = limit - NEAR_GAP;
   return async ({ instruction, user, schema, timeoutMs }) => {
-    if (!apiKey) return { useGemini: true, why: "no claude key" };
-    // Letter mode (no form) is Gemini's: the Claude path is form mode only.
-    if (!schema) return { useGemini: true, why: "letter mode" };
+    if (!apiKey) return { ok: false, reason: "misconfigured", detail: "no Claude key (HD_ANTHROPIC_KEY)" };
+    // The Claude writer fills the reading form; letter mode (a prompt with no form) has no writer.
+    if (!schema) return { ok: false, reason: "misconfigured", detail: "letter mode: the stored prompt asks for no form" };
     const month = creditMonth(clock(), creditDay);
     const stateKey = `claude-state/${month}`;
     const state = { out: false, said: {}, ...((await read(store, stateKey)) ?? {}) };
-    if (state.out) return { useGemini: true, why: "claude credit used up this month" };
+    if (state.out && clock() - (Number(state.outAt) || 0) < OUT_RECHECK_MS) {
+      return unavailable(`out of credit this month (checked again ${new Date((Number(state.outAt) || 0) + OUT_RECHECK_MS).toISOString().slice(11, 16)} UTC)`);
+    }
     const spent = await monthSpend(store, month);
 
     let fast = spent < switchAt;
@@ -80,23 +103,28 @@ export function claudeWriter({
     if (!r.ok && (r.failure === "busy" || r.failure === "rejected") && fast) {
       // T4: the same ask again at once, at normal speed, with the time a normal one needs. A fast ask
       // REFUSED (a 400 because the account can't use fast mode, say) gets the same one normal try
-      // before Gemini (10/25 pre-deploy audit: the live account had never made a fast call).
+      // (10/25 pre-deploy audit: the live account had never made a fast call).
       fast = false;
       r = await ask({ apiKey, instruction, user, schema, fast: false, timeoutMs: normalLimit(timeoutMs) });
     }
 
     if (r.ok && r.org && (blockOrgs.includes(r.org) || (expectOrg && r.org !== expectOrg))) {
-      await say("org", spent, `Claude writer: the key answered for the wrong Anthropic account (${String(r.org).slice(0, 8)}...). Readings are on Gemini until HD_ANTHROPIC_KEY is the TCM hd-live key.`);
-      return { useGemini: true, why: "wrong claude account" };
+      await say("org", spent, `Claude writer: the key answered for the wrong Anthropic account (${String(r.org).slice(0, 8)}...). Readings wait until HD_ANTHROPIC_KEY is the TCM hd-live key.`);
+      return unavailable("wrong claude account");
     }
     if (r.ok) {
       await addSpend(store, month, r.cost, clock());
+      if (state.out) {
+        // Credit is back (a raised limit, a top-up): the hourly check found it.
+        state.out = false;
+        await write(store, stateKey, state);
+      }
       const now = spent + r.cost;
       if (spent < switchAt && now >= switchAt) {
         await say("switch", now, `Claude writer: $${now.toFixed(2)} of this month's credit used, so readings now go to Opus at normal speed (~2 min each) until the credit renews on the ${creditDay}th.`);
       }
-      if (spent < NEAR_OUT && now >= NEAR_OUT) {
-        await say("near", now, `Claude writer: $${now.toFixed(2)} of the $200 credit used this month. At $0 readings move to Gemini by themselves.`);
+      if (spent < nearAt && now >= nearAt) {
+        await say("near", now, `Claude writer: $${now.toFixed(2)} used this month, $${NEAR_GAP} from the $${limit} hd-live limit. At the limit readings wait until it is raised or the credit renews on the ${creditDay}th.`);
       }
       return { ok: true, text: r.text, by: fast ? "claude-fast" : "claude-normal" };
     }
@@ -104,15 +132,14 @@ export function claudeWriter({
 
     if (r.failure === "outOfCredit") {
       state.out = true;
+      state.outAt = clock();
       await write(store, stateKey, state);
-      await say("out", spent, `Claude writer: this month's Claude credit is used up ($${spent.toFixed(2)} counted). Readings are on Gemini until the credit renews on the ${creditDay}th.`);
-    } else {
-      const day = new Date(clock()).toISOString().slice(0, 10);
-      await say(`gemini-${day}`, spent, `Claude writer: Gemini wrote a reading today because Claude could not (${r.failure}${r.detail ? `: ${r.detail}` : ""}). This is said once a day.`);
+      await say("out", spent, `Claude writer: this month's Claude credit is used up ($${spent.toFixed(2)} counted). Readings wait, and are written as soon as Claude answers again (checked every hour): raise the hd-live limit in the Claude Console, or the credit renews on the ${creditDay}th.`);
+      return unavailable("out of credit this month");
     }
-    return { useGemini: true, why: r.failure };
+    return unavailable(`${r.failure}${r.detail ? `: ${r.detail}` : ""}`);
 
-    /** Once per month (once per day for Gemini); the flag is stored before the alert goes out. */
+    /** Once per credit month; the flag is stored before the alert goes out. */
     async function say(what, total, text) {
       if (state.said[what]) return;
       state.said[what] = clock();

@@ -217,7 +217,10 @@ export function ConfirmKept({
   timeKnown = true,
   definedCenters,
   onChange,
+  theirs = false,
 }: {
+  /** Someone else's chart ("Start a new chart for someone else"), grown: their details, their chart. */
+  theirs?: boolean;
   token: string;
   tier: number;
   whose: string | null;
@@ -262,7 +265,7 @@ export function ConfirmKept({
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {whoseOf(whose, true)} {what}, from the {from} you already have
       </h2>
-      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.confirmBody}</p>
+      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">{theirs ? RETURNING.confirmBodyTheirs : RETURNING.confirmBody}</p>
       <div
         className="mt-6 flex max-w-[34rem] items-center gap-5 rounded-3xl border border-brand-gold/35 p-5"
         style={{ backgroundImage: "radial-gradient(120% 80% at 0% 0%, rgba(232,203,160,0.14), transparent 60%)" }}
@@ -273,7 +276,7 @@ export function ConfirmKept({
           <p className="mt-1 text-[16px] leading-snug text-brand-paper">{birthLine}</p>
           {chart && (
             <>
-              <p className="mt-3 font-sans text-[12px] uppercase tracking-[0.14em] text-brand-muted/90">Your chart</p>
+              <p className="mt-3 font-sans text-[12px] uppercase tracking-[0.14em] text-brand-muted/90">{theirs ? "Their chart" : "Your chart"}</p>
               <p className="mt-1 text-[16px] leading-snug text-brand-paper">
                 {chartParts?.length
                   ? chartParts.map((p, i) => (
@@ -296,7 +299,7 @@ export function ConfirmKept({
       </div>
       <div className="mt-7 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap">
         <button type="button" onClick={confirm} disabled={state.at === "working"} className={btn}>
-          {state.at === "working" ? "Working…" : RETURNING.confirmYes(what)}
+          {state.at === "working" ? "Working…" : theirs ? RETURNING.confirmYesTheirs(what) : RETURNING.confirmYes(what)}
         </button>
         <button type="button" onClick={onChange} className={btnQuiet}>
           {RETURNING.changeDetail}
@@ -312,7 +315,9 @@ export function ConfirmKept({
       )}
       {/* No time to make "more exact": the line says how to add one (B2). */}
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-        {timeKnown ? RETURNING.confirmHelp : RETURNING.confirmHelpNoTime}
+        {theirs
+          ? timeKnown ? RETURNING.confirmHelpTheirs : RETURNING.confirmHelpNoTimeTheirs
+          : timeKnown ? RETURNING.confirmHelp : RETURNING.confirmHelpNoTime}
       </p>
       <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {/* The one privacy sentence (copy.ts), here too. */}

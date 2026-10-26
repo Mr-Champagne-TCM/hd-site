@@ -2,7 +2,8 @@ import { TIERS, money } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
-import { chartTitle, firstName } from "../../shared/chartName.mjs";
+import { chartTitle, firstName, shownName } from "../../shared/chartName.mjs";
+import { curly } from "../../shared/curlyQuotes.mjs";
 
 /**
  * The delivery email, which is a door and not the product.
@@ -217,7 +218,7 @@ export function deliveryEmail({
   const top = tier >= TIERS.length - 1;
   // Guest checkout collects no name (Link would have supplied one). "Hello,"
   // on its own reads like a field that failed to fill; this reads as intended.
-  const greeting = name ? `Hello ${name},` : "Hello there,";
+  const greeting = name ? `Hello ${curly(name)},` : "Hello there,";
   const label = TIERS[tier]?.label ?? "The reading";
 
   /**
@@ -234,7 +235,7 @@ export function deliveryEmail({
    * until then, the name on the payment -- what the receipt said before.
    * A chart bought for someone else keeps its own receipt (below).
    */
-  const forChart = chartName || (their ? null : name);
+  const forChart = shownName(chartName) || (their ? null : name ? curly(name) : null);
   const chartWhose = forChart ? `${forChart}’s` : "Your";
   /** Whose chart, mid-sentence: "Quinn’s", else "their" or "your". */
   const whoseInline = forChart ? chartWhose : their ? "their" : "your";
@@ -258,7 +259,7 @@ export function deliveryEmail({
    */
   const receiptFor = chartName || (their ? null : firstName(name) || null);
   const receiptWhat = their
-    ? `${name ? `${name}, a` : "A"} Human Design ${word} for someone else`
+    ? `${name ? `${curly(name)}, a` : "A"} Human Design ${word} for someone else`
     : `${chartTitle(receiptFor)} ${word}`;
   const subject = pending
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`

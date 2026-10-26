@@ -170,7 +170,7 @@ export function placeholderForm(f) {
     takeaways: [
       // 10/24: the tag names the authority, as the checker now asks (tagProblem: "(Authority)" alone is refused).
       `(${f.authority} authority) Rig stand-in: the next time a small choice is yours alone, like what to cook tonight, you might wait for your ${f.authority} authority before you answer. Notice what changes, so the wait is familiar when a heavier choice comes along.`,
-      `(Strategy) Rig stand-in: this week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish. Notice how the plan feels an hour later, so the strategy is familiar when more depends on it.`,
+      `(Strategy) Rig stand-in: this week, on an easy plan like a walk after dinner, you might follow your strategy from start to finish. Notice how the plan feels an hour later, so following it is familiar when more depends on it.`,
       `(Profile ${f.profile}) Rig stand-in: over the next few days, in an easy catch-up with a friend, you might let one line of your profile lead the conversation. Notice how it is received, so that line is familiar when an opening matters more.`,
       `(Type) Rig stand-in: once or twice this week, on something light like a short errand, you might work the way a ${f.type} is built to. Notice how your energy holds up afterward, so that pace is familiar when the week is fuller.`,
     ],
@@ -452,5 +452,47 @@ export function fakeGemini({ dir, fixturesDir }) {
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   }
-  return { api, asked, fixtures };
+
+  /**
+   * THE SAME STAND-IN, ASKED AS CLAUDE (10/25, Jeremy: "drop gemini"). The shop's only writer is now
+   * Claude (writer.mjs -> claude.mjs, the official SDK, streaming), so the rig answers at
+   * api.anthropic.com: the Messages request is read back into the shape `api` already understands (the
+   * instruction, the facts, the form's schema -- `partsAsked` reads the same property names), and the
+   * answer goes back as the Messages stream the SDK expects, with the organization header the writer's
+   * account guard checks (RIG_ORG, set as HD_ANTHROPIC_ORG by server.mjs). Tokens are made up and small.
+   */
+  async function claudeApi(request) {
+    const body = await request.json().catch(() => null);
+    const system = Array.isArray(body?.system) ? body.system.map((b) => b?.text ?? "").join("") : String(body?.system ?? "");
+    const content = body?.messages?.[0]?.content;
+    const user = typeof content === "string" ? content : Array.isArray(content) ? content.map((b) => b?.text ?? "").join("") : "";
+    const schema = body?.output_config?.format?.schema ?? null;
+    const asGemini = new Request("https://generativelanguage.googleapis.com/rig", {
+      method: "POST",
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: schema ? { responseSchema: schema } : {},
+      }),
+    });
+    const answered = await (await api(asGemini)).json();
+    const text = answered?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    const usage = { input_tokens: 1200, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+    const events = [
+      ["message_start", { type: "message_start", message: { id: `msg_rig_${asked.length}`, type: "message", role: "assistant", model: body?.model ?? "rig", content: [], stop_reason: null, stop_sequence: null, usage } }],
+      ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
+      ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } }],
+      ["content_block_stop", { type: "content_block_stop", index: 0 }],
+      ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1800 } }],
+      ["message_stop", { type: "message_stop" }],
+    ];
+    return new Response(events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), {
+      status: 200,
+      headers: { "Content-Type": "text/event-stream", "anthropic-organization-id": RIG_ORG, "request-id": `req_rig_${asked.length}` },
+    });
+  }
+  return { api, claudeApi, asked, fixtures };
 }
+
+/** The organization the rig's stand-in Claude answers for (server.mjs sets HD_ANTHROPIC_ORG to it). */
+export const RIG_ORG = "rig-local-org";

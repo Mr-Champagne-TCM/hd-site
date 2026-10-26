@@ -3,7 +3,12 @@ import { FACT_CARDS, READING_SCHEMA, renderReading, schemaNotes, structuredFacts
 import { FIX_WORDS, fixRequest, mergeFix, refusedPlan } from "./reask.mjs";
 
 /**
- * Asking Gemini for the written interpretation.
+ * Asking for the written interpretation, and judging the answer.
+ *
+ * WHO ANSWERS (10/25, Jeremy: "drop gemini"): Anthropic's Claude, through the writer interpret.mjs
+ * hands in (writer.mjs). Nothing in production asks Google any more; the Gemini request below
+ * (geminiText) is reached only with no writer, which is this module's own tests -- they hold the
+ * checks to the same answers they always did. The file keeps its name so history reads straight.
  *
  * THE CONTRACT LIVES IN `interpretation.mjs` AND IS NOT REPEATED HERE. This
  * file only knows how to make the request and how to give up. What is asked
@@ -114,7 +119,7 @@ export async function generateReading(
   output,
   { apiKey, prompt, model = MODEL, fetchImpl = fetch, timeoutMs = 90_000, shape = "text", fix = null, factCards = FACT_CARDS, writer = null } = {},
 ) {
-  if (!apiKey && !writer) return { ok: false, reason: "misconfigured", detail: "no GEMINI_API_KEY" };
+  if (!apiKey && !writer) return { ok: false, reason: "misconfigured", detail: "no writer (HD_ANTHROPIC_KEY)" };
   const instruction = typeof prompt === "string" && prompt.trim() ? prompt.trim() : null;
   if (!instruction) {
     return { ok: false, reason: "misconfigured", detail: "no READING_PROMPT" };
@@ -201,13 +206,13 @@ async function once(output, { apiKey, instruction, model, fetchImpl, timeoutMs, 
   const user = facts + (asked ? asked.text : "");
   const schema = json ? (asked ? asked.schema : READING_SCHEMA) : null;
 
-  // 10/23 (Jeremy's T4 + T5 plan): Claude writes first (writer.mjs); Gemini, as before, only when it cannot.
-  // Either way the answer is the form's text, rendered and checked below exactly the same.
-  const viaClaude = writer ? await writer({ instruction, user, schema, timeoutMs }) : null;
-  const got = viaClaude && !viaClaude.useGemini ? viaClaude : await geminiText({ apiKey, model, fetchImpl, timeoutMs, instruction, user, schema });
+  // 10/25 (Jeremy: "drop gemini"): with a writer (the shop always has one, writer.mjs), it alone answers;
+  // when Claude cannot, the ask fails and the reading waits. Gemini is asked only with no writer at all,
+  // which is this module's own tests. Either way the answer is the form's text, checked below the same.
+  const got = writer ? await writer({ instruction, user, schema, timeoutMs }) : await geminiText({ apiKey, model, fetchImpl, timeoutMs, instruction, user, schema });
   if (!got.ok) return { ok: false, reason: got.reason, detail: got.detail };
   let text = got.text;
-  const by = writer ? { by: got.by ?? "gemini" } : {};
+  const by = writer ? { by: got.by ?? "claude" } : {};
 
   let form = null;
   let built = null;

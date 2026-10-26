@@ -369,7 +369,7 @@ export async function checkFailureRate(
       const entry = await store.get(blob.key, { type: "json" });
       // `gemini-*` since 10/16 (failures.mjs); `interpretation-*` before, and
       // still on file for a fortnight after the rename.
-      if (entry && /^(interpretation|gemini)-/.test(String(entry.kind))) count += 1;
+      if (entry && /^(interpretation|gemini|claude)-/.test(String(entry.kind))) count += 1;
     } catch {
       /* one unreadable incident is not a reason to lose the count */
     }

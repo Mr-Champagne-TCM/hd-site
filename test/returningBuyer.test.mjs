@@ -163,6 +163,29 @@ test("SOMEONE NEW is marked fresh and is its own person", async () => {
   assert.equal(r.birth, null, "nothing carried to someone new");
 });
 
+test("SOMEONE NEW, GROWN, IS STILL THEIRS: the upgrade keeps the mark, and its ready email says their (10/25 live test)", async () => {
+  const { deliveryEmail } = await import("../netlify/lib/deliveryEmail.mjs");
+  const { SITE } = await import("../netlify/lib/siteLinks.mjs");
+  const readings = memoryStore();
+  const id = randomBytes(16).toString("hex");
+  await recordPurchase({ readings, id, level: 0, session: session(0, { fresh: "1" }), secret: SECRET, now: NOW });
+  assert.equal((await chart(readings, { reading: mintReadingLink({ id, tier: 0, now: NOW }, SECRET), birth: { ...ALEX, name: "Theo" } })).status, 200);
+  const up = randomBytes(16).toString("hex");
+  await recordPurchase({ readings, id: up, level: 1, session: session(1, { upgrades: id }), secret: SECRET, now: NOW });
+  const grown = await loadReading(readings, up, NOW);
+  assert.equal(grown.fresh, true, "the grown chart is still someone else's");
+  assert.equal(grown.person, (await loadReading(readings, id, NOW)).person);
+  const ready = deliveryEmail({ tier: 1, name: "Alex Rivera", chartName: "Theo", url: "https://x.test/r/a.b", links: SITE, someoneNew: grown.fresh === true });
+  assert.match(ready.text, /Their bodygraph, drawn/);
+  assert.doesNotMatch(ready.text, /Your bodygraph/);
+  // The buyer's own chart, grown, is still the buyer's.
+  const mine = randomBytes(16).toString("hex");
+  await recordPurchase({ readings, id: mine, level: 0, session: session(0), secret: SECRET, now: NOW });
+  const mineUp = randomBytes(16).toString("hex");
+  await recordPurchase({ readings, id: mineUp, level: 1, session: session(1, { upgrades: mine }), secret: SECRET, now: NOW });
+  assert.equal((await loadReading(readings, mineUp, NOW)).fresh, false);
+});
+
 test("an upgrade naming a chart that already grew this far stands on its own, and Jeremy is told", async () => {
   const readings = memoryStore();
   const sum = await alexSummary(readings, memoryStore());

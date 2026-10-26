@@ -1,6 +1,6 @@
 import { TIERS, money } from "../../shared/pricing.mjs";
 import { emailFooter } from "./emailFooter.mjs";
-import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
+import { buyerNameFor, firstName, shownName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
 import { curly } from "../../shared/curlyQuotes.mjs";
 import { receiptDate } from "./deliveryEmail.mjs";
@@ -57,7 +57,7 @@ const boughtAt = (ms) =>
  * time). `atTime`: an older record names the time it was bought too, when the
  * date alone would read the same as another row's.
  */
-const whoseName = (reading) => reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null);
+const whoseName = (reading) => shownName(reading.birth?.name ?? (firstName(buyerNameFor(reading)) || null));
 
 export function chartCard(reading, { atTime = false } = {}) {
   const whose = whoseName(reading);

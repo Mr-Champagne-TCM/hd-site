@@ -6,7 +6,7 @@ import { birthLine } from "../../shared/birthLine.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
 import { forTier } from "../../shared/customerMessages.mjs";
-import { buyerNameFor, firstName } from "../../shared/chartName.mjs";
+import { buyerNameFor, firstName, shownName } from "../../shared/chartName.mjs";
 import { addTimeState } from "./addTime.mjs";
 import { markedFields } from "../../shared/timeSpread.mjs";
 
@@ -152,7 +152,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     }
   }
   /** "Alex": the name on the chart, else the buyer's first name (never on a chart for someone else). */
-  const whose = reading.birth?.name ?? firstName(buyerNameFor(reading)) ?? null;
+  const whose = shownName(reading.birth?.name ?? firstName(buyerNameFor(reading))) ?? null;
 
   /**
    * A PENDING READING IS NOT A BROKEN ONE. They have paid and have not yet

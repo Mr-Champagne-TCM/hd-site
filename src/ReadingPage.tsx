@@ -384,6 +384,7 @@ export default function ReadingPage({ token }: { token: string }) {
       return (
         <div className="mx-auto max-w-3xl">
           <ConfirmKept
+            theirs={reading.fresh === true}
             token={token}
             tier={reading.tier}
             whose={reading.whose ?? null}

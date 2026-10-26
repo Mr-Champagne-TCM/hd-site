@@ -356,6 +356,9 @@ export const RETURNING = {
   questionBody: "Both are welcome. Whichever you choose, the right details and the right price come with it.",
   forMe: "For me",
   sameChart: "The same chart, a step further",
+  // Someone else's chart (10/25 live test: Theo's options said "For me" and "Your birth details").
+  forThem: "For them",
+  theirChart: "Their chart, a step further",
   someoneNewEyebrow: "Someone new",
   startNew: "Start a new chart for someone else",
   startTheirs: "Start their new chart",
@@ -365,8 +368,10 @@ export const RETURNING = {
   staysWithYours: "What you paid stays with your own chart.",
   theirDetailsLater: "Their birth details go in after checkout, on a page of their own.",
   keptLabel: "Kept from your chart",
+  keptLabelTheirs: "Kept from their chart",
   // A summary's holder (10/22 verbatim read, B9), as the add-time form says it.
   keptLabelSummary: "Kept from your summary",
+  keptLabelSummaryTheirs: "Kept from their summary",
   noKeptYet: "Your birth details are asked for once, after checkout — then they stay with your chart.",
   topBody:
     "You have the whole of it. And if there is someone whose chart you would love to see, theirs can " +
@@ -377,14 +382,22 @@ export const RETURNING = {
   confirmBody:
     "Payment received, thank you. Your birth details are kept, so there is nothing to type — just a " +
     "look, to be sure they are right.",
+  confirmBodyTheirs:
+    "Payment received, thank you. Their birth details are kept, so there is nothing to type — just a " +
+    "look, to be sure they are right.",
   // Names what was bought: "make my chart" on a chart upgrade (bug 5, 10/21: it said "reading").
   confirmYes: (what: string) => `These are right — make my ${what}`,
+  confirmYesTheirs: (what: string) => `These are right — make their ${what}`,
   changeDetail: "Change a detail",
   confirmHelp:
     "Learned a more exact birth time? “Change a detail” corrects it, and your chart is cast from the " +
     "corrected details.",
   // NEW (10/22 verbatim read, B2): the kept details have no birth time.
   confirmHelpNoTime: "Found your birth time? “Change a detail” adds it, and your chart is cast from it.",
+  confirmHelpTheirs:
+    "Learned a more exact birth time? “Change a detail” corrects it, and their chart is cast from the " +
+    "corrected details.",
+  confirmHelpNoTimeTheirs: "Found their birth time? “Change a detail” adds it, and their chart is cast from it.",
   correctTitle: "Change a detail",
   correctNote:
     "Your details as they are kept now. You’re welcome to change anything that needs correcting — your " +

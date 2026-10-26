@@ -542,6 +542,25 @@ const TAIL_BARE = new RegExp(
 );
 const TAIL_WORN = /\b(?:when|before|by the time)\s+(?:a heavier moment (?:arrives|arises)|the pressure is heavier|the stakes are heavier|the wave is high|larger commitments are on the table|decisions arise)\s*[.!?]?$/i;
 const sizeKey = (w) => w.toLowerCase().replace(/\s+/g, "-");
+/**
+ * WHAT BECOMES FAMILIAR IS THE PRACTICE, NOT A CHART LABEL (10/25 batch: "clunky 'so the 6/2 profile is
+ * familiar' wording", seen in the 10/24 live tests). The tail is Jeremy's own shape -- "so that instant
+ * bodily trust is familiar when a heavier choice appears" -- and a practice in it is fine ("so consulting
+ * your Lunar authority is familiar"). Refused: the thing made familiar is a bare label with no practice in
+ * it -- "so Channel 10-20 is familiar", "so your 1/3 profile is familiar", "so your open Spleen center is
+ * familiar". Measured on all 4,258 distinct stored try-this lines: 37 hits, every one this clunk; Jeremy's
+ * approved lines: 0 (test/familiarLabel.test.mjs).
+ */
+const FAMILIAR_THING = /,\s*so (?:that )?(.+?) (?:is|are|feels|becomes) (?:more )?familiar\b/i;
+const CHART_LABEL = /\b(?:profile|channel|cent(?:er|re)s?|gates?|authority|cross|definition|strategy|\d\/\d|\d line|line \d|\d-\d{1,2})\b/i;
+export function familiarLabel(ending) {
+  const m = FAMILIAR_THING.exec(String(ending ?? ""));
+  if (!m) return null;
+  const thing = m[1];
+  // A practice ("consulting your authority", "trusting your gut") is what the tail is for.
+  if (/\b\w+ing\b/i.test(thing)) return null;
+  return CHART_LABEL.test(thing) ? thing : null;
+}
 export const FINANCE = new RegExp(
   String.raw`\b(?:financ(?:e|es|ial|ially)` +
     String.raw`|(?<!\b(?:energy|time|attention)\s)budget(?:s|ing|ed)?\b(?!\s+(?:of\s+|for\s+|your\s+|their\s+)?(?:energy|time|attention|effort)\b)` +
@@ -596,6 +615,8 @@ export function takeawayProblem(raw) {
     if (bare) return say(`ends on "${bare[0]}", which names no real situation`);
     const worn = TAIL_WORN.exec(ending);
     if (worn) return say(`ends on a worn tail ("${worn[0].replace(/[.!?]$/, "").trim()}"); each ending names its own situation`);
+    const label = familiarLabel(ending);
+    if (label) return say(`makes a chart label familiar ("so ${label} is familiar"); what becomes familiar is the practice, as in "so pausing first is familiar"`);
     // Everyday moments, work and purchases included, never financial matters (10/22: "when
     // financial commitments arise", right above the disclaimer; narrowed 10/23, above).
     const money = FINANCE.exec(body);
