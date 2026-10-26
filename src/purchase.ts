@@ -19,6 +19,7 @@
  */
 
 import { customerText } from "../shared/customerMessages.mjs";
+import { countBuy } from "./count";
 
 const KEY = "hd.grant";
 
@@ -74,6 +75,7 @@ export async function startCheckout(
    *
    * The price is never sent: the server decides it.
    */
+  countBuy(level, how.upgrade && how.reading ? "upgrade" : how.someoneNew ? "someone" : "new");
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
