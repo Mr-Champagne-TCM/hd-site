@@ -131,18 +131,28 @@ test("TWO RINGS AT ONCE -> ONE WRITER: the second does nothing, Google is asked 
   }
 });
 
-test("a ring while a writer is mid-reading does nothing at once (no settle wait, no Google)", async () => {
+test("a ring while a writer is mid-reading does nothing at once (no settle wait, no Google)", { timeout: 10_000 }, async () => {
   const store = fakeStore();
   const gate = fakeStore();
   const id = await readyReading(store);
-  const { asks, generate } = slowModel(200);
+  // The first job's model answers only when released (10/26: a stopwatch "< 100 ms" here failed under load).
+  const asks = [];
+  let release = null;
+  const generate = async () => {
+    asks.push(Date.now());
+    await new Promise((r) => { release = r; });
+    return { ok: true, text: TEXT };
+  };
   const first = interpretOne({ id, store, health: gate, lock: gate, apiKey: "k", generate, sleep: quickSleep });
-  await new Promise((r) => setTimeout(r, 80)); // the first job holds the lock and is asking
+  for (let i = 0; !release && i < 400; i++) await new Promise((r) => setTimeout(r, 5)); // the first job holds the lock and is asking
+  assert.ok(release, "the first job reached the model");
   assert.ok(await liveLock(gate, id), "the first job holds no lock while writing");
-  const t0 = Date.now();
+  let firstDone = false;
+  first.then(() => { firstDone = true; });
   const second = await interpretOne({ id, store, health: gate, lock: gate, apiKey: "k", generate, sleep: () => assert.fail("a held lock needs no wait") });
   assert.equal(second.reason, WRITING_ELSEWHERE);
-  assert.ok(Date.now() - t0 < 100);
+  assert.equal(firstDone, false, "the second answered while the first was still writing: it waited on nothing");
+  release();
   assert.equal((await first).ok, true);
   assert.equal(asks.length, 1);
   // After it ends, a ring finds the words and stops, as it always has.

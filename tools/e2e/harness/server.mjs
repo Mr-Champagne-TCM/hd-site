@@ -244,13 +244,15 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     try {
       /* --- controls --- */
       if (url.pathname === "/__rig/idle") {
-        const t0 = Date.now();
-        while (Date.now() - t0 < 180_000) {
-          if (inflight.size === 0 && Date.now() - lastBackgroundAt > 400) break;
+        // The REAL clock (10/26): a job that ended while /__rig/clock had moved the functions' clock a week on
+        // left lastBackgroundAt a week ahead, and every idle check after the clock came back waited its full 180 s.
+        const t0 = REAL_NOW();
+        while (REAL_NOW() - t0 < 180_000) {
+          if (inflight.size === 0 && REAL_NOW() - lastBackgroundAt > 400) break;
           await new Promise((r) => setTimeout(r, 100));
         }
         res.writeHead(200, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ idle: inflight.size === 0, waitedMs: Date.now() - t0 }));
+        return res.end(JSON.stringify({ idle: inflight.size === 0, waitedMs: REAL_NOW() - t0 }));
       }
       if (url.pathname === "/__rig/clock") {
         // The functions' clock (Date.now), moved: ?days=7 is a week from now, ?days=0 is now again.
@@ -399,13 +401,13 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
         const ip = visitor ? `10.77.${vh[0]}.${vh[1]}` : "127.0.0.1";
         const context = { ip, deploy: { id: "rig" }, site: { url: origin }, params: {}, waitUntil: () => {} };
         if (route.background) {
-          lastBackgroundAt = Date.now();
+          lastBackgroundAt = REAL_NOW();
           const job = Promise.resolve()
             .then(() => route.handler(request, context))
             .catch((e) => hlog(`background ${route.name} threw ${e?.message}`))
             .finally(() => {
               inflight.delete(job);
-              lastBackgroundAt = Date.now();
+              lastBackgroundAt = REAL_NOW();
             });
           inflight.add(job);
           res.writeHead(202);
