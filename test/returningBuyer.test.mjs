@@ -163,6 +163,15 @@ test("SOMEONE NEW is marked fresh and is its own person", async () => {
   assert.equal(r.birth, null, "nothing carried to someone new");
 });
 
+test("someone else's options say what THEIR next step adds (10/26 live test: 'Your bodygraph drawn')", async () => {
+  const { CHART, READING } = await import("../shared/pricing.mjs");
+  assert.equal(CHART.addsTheirs, "Their bodygraph drawn, and its PDF to keep.");
+  assert.equal(READING.addsToSummaryTheirs, "Their bodygraph drawn, all twenty-six planet numbers and the written reading.");
+  // The same words otherwise, so the two can never drift apart.
+  assert.equal(CHART.addsTheirs.replace(/^Their/, "Your"), CHART.adds);
+  assert.equal(READING.addsToSummaryTheirs.replace(/^Their/, "Your"), READING.addsToSummary);
+});
+
 test("SOMEONE NEW, GROWN, IS STILL THEIRS: the upgrade keeps the mark, and its ready email says their (10/25 live test)", async () => {
   const { deliveryEmail } = await import("../netlify/lib/deliveryEmail.mjs");
   const { SITE } = await import("../netlify/lib/siteLinks.mjs");

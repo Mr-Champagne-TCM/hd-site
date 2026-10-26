@@ -54,6 +54,8 @@ export const CHART = {
   /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
   // The same punctuation as READING.addsToSummary, "Your bodygraph drawn, …" (10/23 verbatim read, N5).
   adds: "Your bodygraph drawn, and its PDF to keep.",
+  // Someone else's chart (10/26 live test, Kit O'Brien's options said "Your bodygraph").
+  addsTheirs: "Their bodygraph drawn, and its PDF to keep.",
 };
 
 export const READING = {
@@ -69,6 +71,7 @@ export const READING = {
   /** Under its price on "The same chart, a step further": what it adds to a chart, and to a summary. */
   adds: "All twenty-six planet numbers and the written reading.",
   addsToSummary: "Your bodygraph drawn, all twenty-six planet numbers and the written reading.",
+  addsToSummaryTheirs: "Their bodygraph drawn, all twenty-six planet numbers and the written reading.",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */
