@@ -22,7 +22,7 @@ import { chartTitle } from "../../shared/chartName.mjs";
 import { GIFT_PROOF, giftCredit } from "../../shared/giftCopy.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
-import { closingCard, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
+import { closingCard, TECH_HOW, TECH_TITLE_NOTE, techTitle, MEANINGS, DETAILS_TITLE, DETAILS_NOTE, CENTERS_LINE, CHART_KEY } from "../../shared/readingCopy.mjs";
 import { gateList } from "../../shared/gateList.mjs";
 import { GATES_NOTE, holdsLine, marginFields, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
@@ -121,6 +121,8 @@ export const W = 612;
 export const H = 792;
 const MARGIN = 54;
 const CONTENT_W = W - MARGIN * 2;
+/** Q7b: the width of the plain-meaning column on page 2's values. */
+const MEANING_COL = 112;
 /** The foot of the page's text: below it, only the footer line. */
 const BOTTOM = H - MARGIN - 26;
 
@@ -882,15 +884,26 @@ function drawLegend(d, b) {
   const ty = (y) => offY + y * scale;
   const s = (v) => v * scale;
 
-  const KEY = [
-    ["Personality", "conscious — what you know", "#F0F3F9"],
-    ["Design", "unconscious — what the body knows", "#7C5BFF"],
-    ["Both", "held consciously and unconsciously", "#F0F3F9", "#7C5BFF"],
-    ["Open", "not activated — open to others", "#1F3151"],
-  ];
-  const colW = LEG_W / 2;
+  // Q7a (11/16): the colors by name (shared/readingCopy.mjs CHART_KEY, as the page prints them).
+  const KEY = CHART_KEY;
   const rowH = 48;
   const barX = 16;
+  // The longest line ("from about 3 months before birth…", right column) must end inside the
+  // box at the size the others print: the left column takes only the room its own lines need,
+  // the right one the rest. The size steps down from 17 only if even that does not fit (measured).
+  const over = 26 + 18 + 12;
+  const subW = (z, t) => measure(pdf, t, paint(s(z), subInk)) / scale;
+  let subSize = 12;
+  let colW = LEG_W / 2;
+  for (const z of [17, 16, 15, 14, 13, 12]) {
+    const leftW = barX + over + Math.max(...KEY.filter((_, i) => i % 2 === 0).map(([, sub]) => subW(z, sub)));
+    const rightRoom = LEG_W - leftW - barX - over;
+    if (KEY.filter((_, i) => i % 2 === 1).every(([, sub]) => subW(z, sub) <= rightRoom)) {
+      subSize = z;
+      colW = leftW;
+      break;
+    }
+  }
   KEY.forEach(([title, sub, fill, second], i) => {
     const x0 = (i % 2) * colW + barX;
     const cy = 21 + Math.floor(i / 2) * rowH;
@@ -909,7 +922,7 @@ function drawLegend(d, b) {
     pdf.restore();
     const textX = tx(x0 + 26 + 18);
     drawText(pdf, title, textX, ty(cy + 1), paint(s(22), titleInk, true));
-    drawText(pdf, sub, textX, ty(cy + 22), paint(s(17), subInk));
+    drawText(pdf, sub, textX, ty(cy + 22), paint(s(subSize), subInk));
   });
 
   d.rect(tx(0), ty(0), tx(LEG_W) - tx(0), s(1.2), ruleInk, 150 / 255);
@@ -1001,16 +1014,32 @@ function glancePage(d, { output, tier, reading }) {
   d.rect(W - MARGIN - 1, boxTop, 1, d.y - boxTop, RULE);
   d.space(22);
 
-  drawText(pdf, "YOUR CHART VALUES", MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.17));
+  // Q7b (11/16): "The details", with where each is explained, and a few plain words under each label.
+  const detailsPaint = paint(7.5, GOLD, true, 0.17);
+  const detailsW = drawText(pdf, DETAILS_TITLE.toUpperCase(), MARGIN, d.y + 8, detailsPaint);
+  drawText(pdf, DETAILS_NOTE, MARGIN + detailsW + 6, d.y + 8, paint(7.5, DIM));
   d.gap(13);
   d.rule(RULE, 0.8);
   d.space(2);
 
   const valueRow = (label, value, href, field = null, note = null) => {
-    const l = d.L(value, paint(10, INK), CONTENT_W - 110);
+    /**
+     * Q7b (11/16): the label's plain meaning. Page 2 has no room to spare (BATCH1024-8), so it
+     * costs no height where it can: a short value keeps its one line and the meaning sits in a
+     * column of its own at the right; a value that runs to more lines (channels, gates) has room
+     * under its label, and the meaning goes there.
+     */
+    const vp = paint(10, INK);
+    const full = d.L(value, vp, CONTENT_W - 110);
+    const text = field ? MEANINGS[field] : null;
+    const narrow = text ? d.L(value, vp, CONTENT_W - 110 - MEANING_COL - 10) : null;
+    const aside = Boolean(narrow && narrow.height <= full.height);
+    const l = aside ? narrow : full;
+    const meaning = text ? d.L(text, paint(7.5, DIM), aside ? MEANING_COL : 104) : null;
     // A short note under the value (the gate list's, with no birth time), smaller and dim.
     const n = note ? d.L(note, paint(8.5, DIM), CONTENT_W - 110) : null;
-    d.need(l.height + (n ? n.height + 3 : 0) + 10);
+    const leftH = meaning ? (aside ? meaning.height : 11 + meaning.height) : 0;
+    d.need(Math.max(l.height + (n ? n.height + 3 : 0), leftH) + 10);
     d.space(5);
     const lp = paint(8, DIM, false, 0.06);
     drawText(pdf, label.toUpperCase(), MARGIN, d.y + 8, lp);
@@ -1019,7 +1048,9 @@ function glancePage(d, { output, tier, reading }) {
     const tagRows = field && marked?.has(field) ? labelTag(pdf, label.toUpperCase(), lp, MARGIN, d.y + 8, 100) : 0;
     drawLayout(pdf, l, MARGIN + 110, d.y - 1);
     if (n) drawLayout(pdf, n, MARGIN + 110, d.y - 1 + l.height + 3);
-    d.gap(Math.max(l.height + (n ? n.height + 3 : 0), 12, tagRows > 1 ? 20 : 0));
+    if (meaning && aside) drawLayout(pdf, meaning, MARGIN + CONTENT_W - MEANING_COL, d.y + 0.5);
+    else if (meaning) drawLayout(pdf, meaning, MARGIN, d.y + (tagRows > 1 ? 20 : 11));
+    d.gap(Math.max(l.height + (n ? n.height + 3 : 0), 12, tagRows > 1 ? 20 : 0, leftH + (!aside && tagRows > 1 ? 9 : 0)));
     d.space(4);
     d.rect(MARGIN, d.y, CONTENT_W, 0.5, VALUE_RULE);
   };
@@ -1172,7 +1203,7 @@ function offerLayouts(d, tier, gift = false) {
   return { head, body };
 }
 
-/** A small gold label over a gold rule, as YOUR CHART VALUES has on page 2. */
+/** A small gold label over a gold rule, as THE DETAILS has on page 2. */
 function sectionLabel(d, text) {
   drawText(d.pdf, text, MARGIN, d.y + 8, paint(7.5, GOLD, true, 0.17));
   d.gap(13);
@@ -1198,7 +1229,7 @@ function nextStepsPage(d, tier) {
     d.start(NEXT_STEPS_HEAD);
     d.gap(10);
   }
-  sectionLabel(d, "FREE TO READ, EITHER WAY");
+  sectionLabel(d, "FREE GUIDES, BOUGHT OR NOT"); // Q9c (11/16)
   const noteTop = d.y;
   d.draw(onward);
   linkOnward(d, onward, noteTop);
@@ -1240,7 +1271,9 @@ function startHere(d, v, c) {
 
   const defined = v.definedCenters.map((it) => itemBlock(d, it, false));
   const other = v.otherCenters.map((it) => itemBlock(d, it, true));
-  sectionHead(d, 1, "Your centers", "", 15 + (defined[0]?.h ?? 20));
+  sectionHead(d, 1, "Your centers", "", 31 + (defined[0]?.h ?? 20));
+  // Q7c (11/16): what a center is, in one line.
+  d.block(d.L(CENTERS_LINE, paint(9.5, DIM), LIST_W), MARGIN, 4);
   subLabel(d, `Colored in (${v.definedCenters.length}) · steady, yours`, defined[0]?.h ?? 20, marked.has("definedCenters"));
   if (!defined.length) plainLine(d, "None colored in.");
   else itemList(d, defined, () => CENTERS);

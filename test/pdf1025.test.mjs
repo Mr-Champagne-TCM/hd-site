@@ -109,7 +109,7 @@ const fill = (r, n) => {
 };
 
 function holdsPage2(r, label) {
-  const head = find(r, /^TECHNICAL VALUES/);
+  const head = find(r, /^THE RAW NUMBERS BEHIND YOUR CHART/);
   const note = find(r, /^Every word (above|on page 2)/);
   assert.equal(head.page, 2, `${label}: the planet numbers went over to page ${head.page}`);
   assert.equal(note.page, 2, `${label}: the onward note went over to page ${note.page}`);
@@ -152,7 +152,7 @@ test("1025-3 the gentlest share that holds: the rig keeps what the earlier rule 
 
 test("1025-3 beyond the floor, the planet numbers and the note go over TOGETHER, and the note names page 2", async () => {
   const r = await uma({ reading: WORST, output: more(3) });
-  const head = find(r, /^TECHNICAL VALUES/);
+  const head = find(r, /^THE RAW NUMBERS BEHIND YOUR CHART/);
   const note = find(r, /^Every word (above|on page 2)/);
   assert.equal(note.page, head.page, "the note left its block");
   assert.notEqual(head.page, 2, "this case was meant to be past the floor");

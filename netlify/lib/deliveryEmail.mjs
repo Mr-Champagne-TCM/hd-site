@@ -130,7 +130,7 @@ const READY = Object.freeze({
   1: {
     lead: "Your chart is ready.",
     // The drawing first: it is what the chart adds (10/22); the values come with it.
-    ticks: ["Your bodygraph, drawn", "Your chart values, with your channels and activated gates", "A PDF to keep"],
+    ticks: ["Your bodygraph, drawn", "Every detail of your chart, with your channels and activated gates", "A PDF to keep"],
   },
   2: {
     lead: "Your chart and your written reading are ready.",
@@ -155,7 +155,7 @@ const REDONE = Object.freeze({
  */
 const READY_THEIR = Object.freeze({
   0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their channels and activated gates", "Their incarnation cross"],
-  1: ["Their bodygraph, drawn", "Their chart values, with their channels and activated gates", "A PDF to keep"],
+  1: ["Their bodygraph, drawn", "Every detail of their chart, with their channels and activated gates", "A PDF to keep"],
   2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
 });
 
@@ -361,14 +361,16 @@ export function deliveryEmail({
     ? kept
       ? "Confirm your birth details"
       : their
-        ? "Enter their birth details"
-        : "Enter your birth details"
+        ? "Their birth details (about two minutes) →"
+        : "Your birth details (about two minutes) →"
     : their
       ? `Open ${whoseInline} ${top ? "reading" : word}`
       : top
         ? "Open your reading"
         : `Open your ${word}`;
 
+  // The plain-text email names the button without its arrow or its "(about two minutes)": the line above says it.
+  const textAction = action.replace(" (about two minutes) →", "").replace(/ →$/, "");
   const text = [
     greeting,
     "",
@@ -382,12 +384,12 @@ export function deliveryEmail({
           nextHead.toUpperCase(),
           nextLine,
           "",
-          `${action}:`,
+          `${textAction}:`,
           url,
           "",
           ...(bookingLine ? [bookingHead.toUpperCase(), bookingLine, ""] : []),
         ]
-      : [ready.lead, "", "In it:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", ...(bookingLine ? [bookingHead.toUpperCase(), bookingLine, ""] : []), keptLine, ""]),
+      : [ready.lead, "", "In it:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${textAction}:`, url, "", ...(bookingLine ? [bookingHead.toUpperCase(), bookingLine, ""] : []), keptLine, ""]),
     `${resourcesHead.toUpperCase()}:`,
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),

@@ -1,5 +1,6 @@
 import { SITE } from "./copy";
 import { HINT, hint } from "../shared/linkHints.mjs";
+import { CHART_KEY } from "../shared/readingCopy.mjs";
 
 /**
  * THE KEY UNDER THE CHART, as both PDFs print it (Jeremy 10/16): the four
@@ -8,12 +9,8 @@ import { HINT, hint } from "../shared/linkHints.mjs";
  * The swatches are the engine drawing's own colours, because they are the key
  * to the picture directly above them; the words are the PDFs' words.
  */
-const KEY: ReadonlyArray<readonly [string, string, string, string?]> = [
-  ["Personality", "conscious — what you know", "#F0F3F9"],
-  ["Design", "unconscious — what the body knows", "#7C5BFF"],
-  ["Both", "held consciously and unconsciously", "#F0F3F9", "#7C5BFF"],
-  ["Open", "not activated — open to others", "#1F3151"],
-];
+// Q7a (11/16, accepted): the colors by name, as the PDF prints them (shared/readingCopy.mjs).
+const KEY = CHART_KEY as ReadonlyArray<readonly [string, string, string, string?]>;
 
 export default function ChartKey() {
   return (

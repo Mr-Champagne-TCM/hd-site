@@ -13,6 +13,9 @@
 
 import { profileWithNames } from "./mechanics";
 import { gateList } from "../shared/gateList.mjs";
+import { MEANINGS } from "../shared/readingCopy.mjs";
+
+const MEANING = MEANINGS as Record<string, string>;
 
 export type SummaryData = {
   type: string;
@@ -59,15 +62,22 @@ const ROWS: ReadonlyArray<readonly [string, keyof SummaryData]> = [
 
 function Row({
   label,
+  field,
   children,
 }: {
   label: string;
+  /** Q6 (11/16): the field whose plain meaning sits under the label. */
+  field?: string;
   children: React.ReactNode;
 }) {
+  const meaning = field ? MEANING[field] : undefined;
   return (
     <div className="grid gap-1 px-5 py-3 sm:grid-cols-[13rem_1fr] sm:gap-4">
       <dt className="font-sans text-[14px] uppercase tracking-[0.12em] text-brand-muted/80">
         {label}
+        {meaning && (
+          <span className="mt-0.5 block text-[13px] normal-case tracking-normal text-brand-muted">{meaning}</span>
+        )}
       </dt>
       <dd className="text-[17px] leading-snug text-brand-paper">{children}</dd>
     </div>
@@ -83,7 +93,7 @@ export default function Summary({ data }: { data: SummaryData }) {
     <div className="overflow-hidden rounded-2xl border border-brand-gold/25 bg-white/[0.04]">
       <dl className="divide-y divide-brand-gold/10">
         {ROWS.map(([label, field]) => (
-          <Row key={label} label={label}>
+          <Row key={label} label={label} field={field}>
             {/*
               THE PROFILE IS NAMED HERE TOO, not only in the PDF. The engine
               returns "2/4"; the app's document prints "2/4 — Hermit /
@@ -108,12 +118,12 @@ export default function Summary({ data }: { data: SummaryData }) {
           count them; a row that silently vanished on a Reflector would read as
           something we failed to work out rather than as a fact about them.
         */}
-        <Row label="Defined centers">{data.definedCenters.join(" · ") || "None"}</Row>
+        <Row label="Defined centers" field="definedCenters">{data.definedCenters.join(" · ") || "None"}</Row>
         {/* Absent on readings stored before the third state existed -- see readingPdf. */}
         {Array.isArray(data.undefinedCenters) && (
-          <Row label="Undefined centers">{data.undefinedCenters.join(" · ") || "None"}</Row>
+          <Row label="Undefined centers" field="undefinedCenters">{data.undefinedCenters.join(" · ") || "None"}</Row>
         )}
-        <Row label="Open centers">{data.openCenters.join(" · ") || "None"}</Row>
+        <Row label="Open centers" field="openCenters">{data.openCenters.join(" · ") || "None"}</Row>
         {/*
           THE CHANNELS, which the PDF had and this did not.
           Jeremy: "why does the PDF have channels but the web view doesn't?"
@@ -127,10 +137,10 @@ export default function Summary({ data }: { data: SummaryData }) {
           "None"; an older answer with no list at all shows no row.
         */}
         {Array.isArray(data.channels) && (
-          <Row label="Channels">{data.channels.length ? data.channels.join(" · ") : "None"}</Row>
+          <Row label="Channels" field="channels">{data.channels.length ? data.channels.join(" · ") : "None"}</Row>
         )}
         {Array.isArray(data.activatedGates) && (
-          <Row label="Activated gates">{gateList(data.activatedGates)}</Row>
+          <Row label="Activated gates" field="gates">{gateList(data.activatedGates)}</Row>
         )}
       </dl>
 

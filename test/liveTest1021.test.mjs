@@ -247,9 +247,10 @@ test("W8 the buyer's own cards are unchanged", () => {
 });
 
 test("UNDER 'Start a new chart for someone else' THE TERMS SPEAK OF THEIR BIRTH DETAILS (check audit, with #19 and W8)", () => {
-  assert.match(text(app.render("Footer", { their: true })), /; and if their birth details went in wrong, write to/);
-  assert.doesNotMatch(text(app.render("Footer", { their: true })), /if your birth details/);
-  assert.match(text(app.render("Footer", {})), /; and if your birth details went in wrong, write to/);
+  // Q2 (Jeremy 11/16, accepted): three short lines.
+  assert.match(text(app.render("Footer", { their: true })), /Their birth details went in wrong\? Write to/);
+  assert.doesNotMatch(text(app.render("Footer", { their: true })), /(^|[.?] )Birth details went in wrong/);
+  assert.match(text(app.render("Footer", {})), /All sales are final\. Something didn’t arrive or didn’t work\? That’s mine to put right\. Birth details went in wrong\? Write to/);
   const src = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
   assert.match(src, /<Footer their=\{Boolean\(failed \|\| showNew \|\| data\?\.pending\)\} \/>/, "the someone-new page's footer");
 });
@@ -352,7 +353,7 @@ test("#6 when it cannot be pulled up, the block before it goes with it, and the 
   assert.notEqual(notePage(r), 2, "this layout was meant to need the fallback");
   const on = r.runs.filter((x) => x.page === notePage(r)).map((x) => x.text).join(" ");
   assert.match(on, /Every word on page 2 is explained/, "off page 2, 'above' points at nothing");
-  assert.match(on, /TECHNICAL VALUES/, "the note went over without the block before it");
+  assert.match(on, /THE RAW NUMBERS/, "the note went over without the block before it");
 });
 
 test("#6 THE NOTE NEVER SITS UNDER A STRAY ROW of planet numbers on an almost empty page", async () => {
@@ -360,7 +361,7 @@ test("#6 THE NOTE NEVER SITS UNDER A STRAY ROW of planet numbers on an almost em
   // That counts as alone: pulled up, or the whole block goes with the note.
   for (const n of [0, 1, 2, 3]) {
     const r = await pdf({ reading: null, output: { ...OUTPUT, channels: OUTPUT.channels.slice(0, n) } });
-    const head = r.runs.find((x) => /^TECHNICAL VALUES/.test(x.text));
+    const head = r.runs.find((x) => /^THE RAW NUMBERS BEHIND YOUR CHART/.test(x.text));
     assert.equal(notePage(r), head.page, `${n} channels: the note is on page ${notePage(r)}, its block's heading on ${head.page}`);
   }
 });
@@ -529,8 +530,9 @@ const all = (m) => `${m.subject}\n${m.text}\n${m.html}`;
 test("#16 THE RECEIPT FOR SOMEONE NEW: their birth details, not yours", () => {
   const m = mail({ tier: 1, pending: true, someoneNew: true });
   assert.match(m.text, /Their birth date, time and place\. Their chart is made from them, and the time can be left out if it isn’t known\./);
-  assert.match(m.text, /Enter their birth details:/);
-  assert.doesNotMatch(m.text, /Your birth date|Enter your birth details/);
+  assert.match(m.text, /\nTheir birth details:\n/);
+  assert.match(m.html, />Their birth details \(about two minutes\) →</);
+  assert.doesNotMatch(m.text, /Your birth date|Your birth details/);
 });
 
 test("THE GIFT RECEIPT'S SUBJECT (Jeremy 10/22, call 5): the buyer's name, then a chart for someone else", () => {

@@ -45,21 +45,21 @@ test("BATCH1024-8 the case is the rig's: unknown time, six channels, two-line gl
   assert.ok(p2.some((x) => /^The Moon moves to a new gate/.test(x.text)), "the Moon note is on page 2");
   // The value column of the box: eleven lines -- five rows of two, Authority one.
   const top = p2.find((x) => x.text === "TYPE").y;
-  const end = p2.find((x) => x.text === "YOUR CHART VALUES").y;
+  const end = p2.find((x) => x.text === "THE DETAILS").y;
   const valueLines = p2.filter((x) => x.x === VALUE_X && x.y >= top - 1 && x.y < end);
   assert.equal(valueLines.length, 11, valueLines.map((x) => x.text).join(" | "));
 });
 
 test("BATCH1024-8 PAGE 2 HOLDS THE TABLE: the technical values and the onward note stay on page 2, never a near-empty page 3", async () => {
   const r = await pdf();
-  const head = find(r, /^TECHNICAL VALUES/);
+  const head = find(r, /^THE RAW NUMBERS BEHIND YOUR CHART/);
   const note = find(r, /^Every word (above|on page 2)/);
   assert.equal(head.page, 2, "the technical values went over to a page of their own");
   assert.equal(note.page, 2, "the onward note left page 2");
   assert.match(note.text, /^Every word above/, "on page 2 the note says 'above'");
   assert.ok(page(r, 2).some((x) => x.text === "PERSONALITY") && page(r, 2).some((x) => x.text === "DESIGN"), "both rows of planet numbers on page 2");
   // Page 3 is the reading's first page, and well filled -- not the table on its own.
-  assert.ok(!page(r, 3).some((x) => /^TECHNICAL VALUES|^Every word/.test(x.text)));
+  assert.ok(!page(r, 3).some((x) => /^THE RAW NUMBERS|^Every word/.test(x.text)));
   const p3 = body(r, 3);
   const fill = (Math.max(...p3.map((x) => x.y)) - TOP) / (BOTTOM - TOP);
   assert.ok(fill > 0.5, `page 3 runs only ${Math.round(fill * 100)}% down its page`);
@@ -89,9 +89,9 @@ test("BATCH1024-8 where page 2 has the room, nothing is squeezed (the same chart
   const short = READING.replace(/^(Type|Strategy|Authority|Profile|Signature|Not-self): .*$/gm, "$1: A short sentence.");
   const r = await pdf({ output: known, birth: { ...BIRTH, time: "11:45", timeKnown: true }, reading: short });
   const top = page(r, 2).find((x) => x.text === "TYPE").y;
-  const end = page(r, 2).find((x) => x.text === "YOUR CHART VALUES").y;
+  const end = page(r, 2).find((x) => x.text === "THE DETAILS").y;
   assert.equal(page(r, 2).filter((x) => x.x === VALUE_X && x.y >= top - 1 && x.y < end).length, 6, "one line a row");
-  assert.equal(find(r, /^TECHNICAL VALUES/).page, 2);
+  assert.equal(find(r, /^THE RAW NUMBERS BEHIND YOUR CHART/).page, 2);
   assert.equal(step(r), 21);
 });
 
@@ -100,7 +100,7 @@ test("BATCH1024-8 all six rows on two lines (17pt more than the rig): page 2 hol
   // the measured share, down to FIT_FLOOR (test/pdf1025.test.mjs), so the block and its note stay on page 2.
   const long = READING.replace(/^Authority: .*$/m, "Authority: The authority sentence of this placeholder reading, long enough that it runs on to a second line.");
   const r = await pdf({ reading: long });
-  const head = find(r, /^TECHNICAL VALUES/);
+  const head = find(r, /^THE RAW NUMBERS BEHIND YOUR CHART/);
   const note = find(r, /^Every word (above|on page 2)/);
   assert.equal(note.page, head.page, "the note left its block");
   assert.equal(head.page, 2, "the planet numbers went over to a page of their own");

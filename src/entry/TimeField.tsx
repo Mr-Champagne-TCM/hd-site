@@ -79,7 +79,7 @@ export default function TimeField({
               <path d="M12 7v5l3.2 1.9" />
             </svg>
             <span className={"text-[17px] " + (value ? "text-brand-paper" : "text-brand-muted")}>
-              {value ? displayTime(value, 12) : "Choose the time"}
+              {value ? displayTime(value, 12) : ENTRY.timeButton}
             </span>
             <span className="ml-auto text-[14px] text-brand-teal">
               {value ? "Change" : "Open clock"}
@@ -128,7 +128,7 @@ export default function TimeField({
             </span>
             {unknown && (
               <span className="mt-1 block text-[14px] leading-relaxed text-brand-muted">
-                {ENTRY.timeUnknownHelp}
+                {their ? ENTRY.timeUnknownHelpTheirs : ENTRY.timeUnknownHelp}
               </span>
             )}
           </span>
@@ -142,7 +142,7 @@ export default function TimeField({
       */}
       <details className="mt-4 rounded-xl border border-brand-gold/25 bg-white/[0.03] px-4 py-3">
         <summary className="cursor-pointer text-[14px] text-brand-teal">{ENTRY.whyTime}</summary>
-        <p className="mt-2 text-[14px] leading-relaxed text-brand-muted">{ENTRY.whyTimeBody}</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-brand-muted">{their ? ENTRY.whyTimeBodyTheirs : ENTRY.whyTimeBody}</p>
       </details>
     </fieldset>
   );

@@ -121,7 +121,7 @@ def fill_birth(page, birth, name, unknown=None):
 
 
 def set_time(page, hhmm):
-    opener = page.get_by_role("button", name=re.compile(r"Choose the time|Open clock|Change", re.I)).first
+    opener = page.get_by_role("button", name=re.compile(r"The time, if you know it|Choose the time|Open clock|Change", re.I)).first
     opener.click()
     page.get_by_role("button", name="24h").click()
     hh, mm = hhmm.split(":")
@@ -177,7 +177,7 @@ def submitted(page, seconds=60):
             body = page.inner_text("body")
         except Exception:  # noqa: BLE001  (navigating)
             continue
-        if "THREE THINGS, THEN" not in body and "Choose the time" not in body:
+        if "THREE THINGS, THEN" not in body and "The time, if you know it" not in body:
             settle(page, 800)
             return
         if "Working" in body or "Casting" in body or "…" in body[-200:]:
@@ -267,7 +267,8 @@ def journey(browser, j):
                 page.goto(SHOP + "/", wait_until="networkidle")
                 if i == 0 and j is COMBOS["journeys"][0]:
                     capture(page, "offer", {"kind": "offer", "tier": None})
-                page.get_by_role("button", name=BUY[st["tier"]]).click()
+                # .last: the card's button (the first screen has the chart's too since Q11, 11/16).
+                page.get_by_role("button", name=BUY[st["tier"]]).last.click()
                 stripe_pay(page, sid + "-stripe", j["buyer"], st.get("promo"), meta)
                 capture(page, sid + "-form", {**meta, "kind": "form-blank"})
                 if j is COMBOS["journeys"][0] and i == 0:
@@ -289,7 +290,7 @@ def journey(browser, j):
                 stripe_pay(page, sid + "-stripe", j["buyer"], st.get("promo"), {**meta, "upgrade": True})
                 capture(page, sid + "-confirm", {**meta, "kind": "confirm", "upgrade": True})
                 if st.get("correct"):
-                    page.get_by_role("button", name="Change a detail").click()
+                    page.get_by_role("button", name="A detail to fix?").click()
                     settle(page, 300)
                     capture(page, sid + "-correct", {**meta, "kind": "correct-form"})
                     if st["correct"].get("time"):

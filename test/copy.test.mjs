@@ -18,9 +18,8 @@ const { PRIVACY_NOTE, privacyFor } = await importTs("src", "copy.ts");
 test("one privacy sentence for every tier, word for word", () => {
   assert.equal(
     PRIVACY_NOTE,
-    "The name and birth details are kept with this chart for a year, so it can show " +
-      "whose chart it is and when and where they were born — and so going a step further later never " +
-      "means typing them again. Your email always brings you back to it.",
+    // Q4 (Jeremy 11/16, accepted): the same promise in two short sentences.
+    "These details stay with your chart for a year, so you never type them again. Your email link always brings you back.",
   );
   for (const tier of [0, 1, 2]) assert.equal(privacyFor(tier), PRIVACY_NOTE);
 });
@@ -32,7 +31,7 @@ test("NO TIER still claims its details are discarded", () => {
 });
 
 test("it says what is kept and for how long, without the 6 days (fixes 15B + 17A)", () => {
-  assert.match(PRIVACY_NOTE, /name and birth details/);
+  assert.match(PRIVACY_NOTE, /^These details stay with your chart/);
   assert.match(PRIVACY_NOTE, /for a year/);
   assert.doesNotMatch(PRIVACY_NOTE, /6 days|six days/);
 });

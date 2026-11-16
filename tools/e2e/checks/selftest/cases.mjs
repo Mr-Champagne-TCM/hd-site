@@ -173,7 +173,7 @@ function measuredPages(m) {
         ls.splice(r[1], 0, "ACTIVATED GATES", "PROVISIONAL", "2, 5, 7, 10", GATES_NOTE);
         s = ls.join("\n");
       }
-      s = s.replace(/(Technical values: your \d+ planet numbers \(for the curious\))/, "$1PROVISIONAL");
+      s = s.replace(/(The raw numbers behind your chart \(optional\))/, "$1PROVISIONAL");
       // Start here's lists and the reading's margin notes (Q4, 10/22): the spread's profile, centers and channels change.
       return s
         .replace(/^(COLORED IN \(\d+\) · .+)$/m, "$1PROVISIONAL")

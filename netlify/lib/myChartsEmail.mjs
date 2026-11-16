@@ -123,7 +123,7 @@ export function myChartsEmail({ charts = [], links, origin }) {
 
   const lead = none
     ? [
-        "Someone asked Human Design readings for the charts bought with this email. There are none under it.",
+        "Someone asked for the charts bought with this email. There are none under it.",
         "If you bought with a different email, that one can be typed on the Email me my charts page, and the links go there.",
       ]
     : [`You asked for your charts. Here is a fresh link to ${cards.length === 1 ? "the one" : "each one"} bought with this email:`];
@@ -141,9 +141,9 @@ export function myChartsEmail({ charts = [], links, origin }) {
     ...(none
       ? [`Email me my charts:`, askPage, ""]
       : cards.flatMap((c) => [`${c.title} — ${c.line}`, `${c.action}: ${c.url}`, ""]).concat([fresh, `Email me my charts: ${askPage}`, ""])),
-    "START A NEW CHART",
+    "A NEW CHART",
     startLine,
-    `Start a new chart: ${startNew}`,
+    `A chart for someone new: ${startNew}`,
     "",
     keep,
     "",
@@ -180,9 +180,9 @@ export function myChartsEmail({ charts = [], links, origin }) {
         `\n  ${row(`${esc(fresh.replace(/ or ask again on the Email me my charts page\.$/, ""))} or ask again on the <a href="${esc(askPage)}" style="color:${TEAL};text-decoration:underline"${hintAttrs("Email me my charts", HINT.myCharts)}>Email me my charts</a> page.`, "4px 0 22px", `font-size:15px;color:${MUTED}`)}`
   }
 
-  ${row("Start a new chart", "0 0 6px", small)}
+  ${row("A new chart", "0 0 6px", small)}
   ${row(esc(startLine), "0 0 10px", `font-size:16px;color:${PAPER}`)}
-  ${row(`<a href="${esc(startNew)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:underline"${hintAttrs("Start a new chart", HINT.readings)}>Start a new chart</a>`, "0 0 24px")}
+  ${row(`<a href="${esc(startNew)}" style="font-size:17px;font-weight:700;color:${TEAL};text-decoration:underline"${hintAttrs("A chart for someone new →", HINT.readings)}>A chart for someone new →</a>`, "0 0 24px")}
 
   ${row(esc(keep), "0 0 14px", `font-size:15px;color:${MUTED}`)}
   <tr><td style="padding:0 0 22px;font-size:14px;color:${MUTED}">If anything here is unclear,

@@ -15,8 +15,8 @@ import { SITE } from "../netlify/lib/siteLinks.mjs";
 const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 test("decision 25: the planet numbers' title and the coaching link in words (= the phone's ReadingCopy.kt)", () => {
-  assert.equal(techTitle(), "Technical values: your twenty-six planet numbers");
-  assert.equal(techTitle(26), "Technical values: your twenty-six planet numbers");
+  assert.equal(techTitle(), "The raw numbers behind your chart");
+  assert.equal(techTitle(26), "The raw numbers behind your chart");
   assert.equal(COACH.link, "A free thirty-minute conversation");
   assert.match(COACH.body, /thirty minutes/);
 });

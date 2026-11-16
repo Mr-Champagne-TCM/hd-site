@@ -8,10 +8,50 @@
  * FIX 6A: the planet-number grid, folded closed on the page and named and
  * explained in the PDF (a PDF cannot fold). Mock words, as approved.
  */
-/** Numbers in words, as the rest of the copy says them (decision 25, 10/23): 26 is "twenty-six". */
-const COUNT_WORDS = Object.freeze({ 26: "twenty-six" });
-export const techTitle = (n = 26) => `Technical values: your ${COUNT_WORDS[n] ?? n} planet numbers`;
-export const TECH_TITLE_NOTE = "(for the curious)";
+/**
+ * Q7c (11/16, accepted): named for what it is, and said to be optional. `n` is kept for the
+ * callers that pass the count; the title no longer prints it.
+ */
+export const techTitle = (_n = 26) => "The raw numbers behind your chart";
+export const TECH_TITLE_NOTE = "(optional)";
+
+/**
+ * Q6 + Q7b (11/16, accepted): a few plain words under each label, the same on the offer page's
+ * example, the chart page and the PDF. Keyed by the chart's own field names.
+ */
+export const MEANINGS = Object.freeze({
+  type: "how your energy works",
+  strategy: "how to meet what comes",
+  authority: "how you best decide",
+  profile: "the role you play",
+  definition: "how your parts connect",
+  signature: "how it feels when it fits",
+  notSelfTheme: "the sign it’s off course",
+  incarnationCross: "your life’s theme",
+  definedCenters: "what’s steady in you",
+  undefinedCenters: "where you take in others",
+  openCenters: "where you take in others most",
+  channels: "steady links between centers",
+  gates: "the traits lit in your chart",
+});
+
+/** Q7b: the heading over the chart's values, and its note. */
+export const DETAILS_TITLE = "The details";
+export const DETAILS_NOTE = "(each explained in the free library)";
+
+/** Q7c: the line over "Your centers" in Start here (page and PDF). */
+export const CENTERS_LINE = "Your 9 centers are the shapes on the drawing.";
+
+/**
+ * Q7a (11/16, accepted): the key under the drawing names the colors a newcomer sees.
+ * The swatches are the engine drawing's own: #F0F3F9 is the white, #7C5BFF the purple.
+ */
+export const CHART_KEY = Object.freeze([
+  ["White", "from your birth moment (what you know)", "#F0F3F9"],
+  ["Purple", "from about 3 months before birth (what your body knows)", "#7C5BFF"],
+  ["Both", "from both moments", "#F0F3F9", "#7C5BFF"],
+  ["Open", "not activated — open to others", "#1F3151"],
+]);
 export const TECH_HOW =
   "How to read them: 21.5 is gate 21, line 5. The planet beside each number is the one that lit " +
   "that gate. Personality is the moment you were born; Design is about three months earlier. " +
