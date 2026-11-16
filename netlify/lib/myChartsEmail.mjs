@@ -1,4 +1,4 @@
-import { TIERS, money } from "../../shared/pricing.mjs";
+import { ON_SALE, TIERS, money } from "../../shared/pricing.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { buyerNameFor, firstName, shownName } from "../../shared/chartName.mjs";
 import { sayDate } from "../../shared/correctionNote.mjs";
@@ -101,9 +101,10 @@ export function myChartsEmail({ charts = [], links, origin }) {
   const none = charts.length === 0;
   const askPage = `${origin}/charts/`;
   const startNew = `${origin}/#ways-in`;
-  const prices = TIERS.map((t) => money(t.cents));
+  // The two sizes (11/16).
+  const prices = ON_SALE.map((t) => money(t.cents));
   const startLine =
-    `A chart for someone new — or a new one for you — starts fresh: ${prices[0]}, ${prices[1]} or ${prices[2]}.`;
+    `A chart for someone new — or a new one for you — starts fresh: ${prices[0]} or ${prices[1]}.`;
 
   const subject = none ? "Your Human Design charts: none under this email" : "Your Human Design charts, with fresh links";
   /**

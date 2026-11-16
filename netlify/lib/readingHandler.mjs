@@ -1,9 +1,10 @@
 import { loadCurrent, loadReading, readReadingLink } from "./reading.mjs";
-import { TIERS } from "../../shared/pricing.mjs";
+import { LEVELS, SESSION, TIERS, ownedLevelOf } from "../../shared/pricing.mjs";
+import { BOOKING_URL } from "../../shared/booking.mjs";
 import { marginNotes, parseReading, structureProblem } from "./interpretation.mjs";
 import { buildReadingView, forDisplay, writtenForDisplay } from "./readingView.mjs";
 import { birthLine } from "../../shared/birthLine.mjs";
-import { sellable } from "../../shared/availability.mjs";
+import { nextOffer, sellable } from "../../shared/availability.mjs";
 import { customerError } from "./failures.mjs";
 import { forTier } from "../../shared/customerMessages.mjs";
 import { buyerNameFor, firstName, shownName } from "../../shared/chartName.mjs";
@@ -202,7 +203,8 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     });
   }
 
-  const next = reading.tier + 1;
+  // What this chart can still become (11/16, availability.mjs offersFor): an old summary skips the $0.00 chart.
+  const next = nextOffer(ownedLevelOf(reading));
   return json(200, {
     pending: false,
     tier: reading.tier,
@@ -321,10 +323,16 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
      * Answered here, from the same `sellable()` the checkout enforces, so the
      * page, the email and the PDF cannot each decide it differently.
      */
-    upgrade:
-      next < TIERS.length
-        ? { level: next, label: TIERS[next].label, available: sellable(next) }
-        : null,
+    upgrade: next !== null ? { level: next, label: LEVELS[next].label, available: sellable(next) } : null,
+    /**
+     * THE ONE-TO-ONE (11/16). `session`: this reading came with thirty minutes
+     * with Jeremy, so the page shows where to pick a time (`booking`, null until
+     * the link exists). `offerSession`: the paid one-to-one can be offered on
+     * this page (sold, and not already bought) -- it replaces the free call card.
+     */
+    session: reading.sku === SESSION.sku,
+    booking: reading.sku === SESSION.sku ? BOOKING_URL : null,
+    offerSession: reading.sku !== SESSION.sku && sellable(3),
     /** Whether a re-send has anywhere to go. The address itself never leaves. */
     canResend: Boolean(reading.buyer?.email),
   });

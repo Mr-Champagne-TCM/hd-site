@@ -1,5 +1,6 @@
-import { TIERS, money } from "../../shared/pricing.mjs";
-import { sellable } from "../../shared/availability.mjs";
+import { LEVELS, SESSION, SESSION_LEVEL, TIERS, money } from "../../shared/pricing.mjs";
+import { nextOffer } from "../../shared/availability.mjs";
+import { BOOKING_URL } from "../../shared/booking.mjs";
 import { emailFooter } from "./emailFooter.mjs";
 import { HINT, actionHint, hintAttrs } from "../../shared/linkHints.mjs";
 import { chartTitle, firstName, shownName } from "../../shared/chartName.mjs";
@@ -192,6 +193,8 @@ const READY_THEIR = Object.freeze({
  */
 export function deliveryEmail({
   tier,
+  /** A one-to-one (11/16): the reading came with thirty minutes with Jeremy, and the email says where to book. */
+  session = false,
   name,
   chartName = null,
   url,
@@ -219,7 +222,7 @@ export function deliveryEmail({
   // Guest checkout collects no name (Link would have supplied one). "Hello,"
   // on its own reads like a field that failed to fill; this reads as intended.
   const greeting = name ? `Hello ${curly(name)},` : "Hello there,";
-  const label = TIERS[tier]?.label ?? "The reading";
+  const label = session ? SESSION.label : (TIERS[tier]?.label ?? "The reading");
 
   /**
    * THE CHART'S NAME IS IN THE SUBJECT, and it is not decoration: every buyer
@@ -298,14 +301,27 @@ export function deliveryEmail({
    * Never on the receipt: somebody who has not yet seen what they bought is not
    * sold the next thing.
    */
+  // Mock v2 A11 (11/16): what comes next, in one plain line. A gift's chart is offered on its own page (N29).
+  const ownedLevel = session ? SESSION_LEVEL : tier;
+  const nextLevel = pending ? null : nextOffer(ownedLevel);
+  const paidLine = money(LEVELS[ownedLevel]?.cents ?? 0);
+  const onPage = their ? "the chart’s page" : "your page";
   const upgradeLine =
-    pending || top || !sellable(tier + 1)
-      ? null
-      : `${TIERS[tier + 1]?.label ?? "The next step"} contains ${lowerFirst(TIERS[tier + 1]?.[their ? "theirBlurb" : "blurb"])} ` +
-        // The site's one credit sentence (10/23 verbatim read, S4); a gift's chart is offered on its own
-        // page, not "your page" beside "Open their chart" (N29).
-        `It is offered on ${their ? "the chart’s page" : "your page"}, and what you have already paid comes off ` +
-        `what you pay next — nobody pays twice for the same thing.`;
+    nextLevel === 2
+      ? `${tier === 0 ? `Want ${their ? "their" : "your"} chart drawn and the written reading too?` : "Want the written reading too?"} ` +
+        `It’s on ${onPage}, and the ${paidLine} you paid comes off.`
+      : nextLevel === SESSION_LEVEL
+        ? `Want to go through it with Jeremy, one to one? Thirty minutes on a video call. It’s on ${onPage}, ` +
+          `and the ${paidLine} you paid comes off.`
+        : null;
+
+  /** A one-to-one: where to pick the time (shared/booking.mjs). Never sold without the link; the fallback is only a guard. */
+  const bookingLine = session
+    ? BOOKING_URL
+      ? `Pick a time on Jeremy’s calendar: ${BOOKING_URL} — the Google Meet link is in the invite.`
+      : `Jeremy will write to you with times for your thirty minutes.`
+    : null;
+  const bookingHead = "Your thirty minutes with Jeremy";
 
   /** "Your reading is kept for a year..." -- once there is something to come back to. */
   const keptLine =
@@ -369,8 +385,9 @@ export function deliveryEmail({
           `${action}:`,
           url,
           "",
+          ...(bookingLine ? [bookingHead.toUpperCase(), bookingLine, ""] : []),
         ]
-      : [ready.lead, "", "In it:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", keptLine, ""]),
+      : [ready.lead, "", "In it:", ...ready.ticks.map((t) => `  ✓ ${t}`), "", `${action}:`, url, "", ...(bookingLine ? [bookingHead.toUpperCase(), bookingLine, ""] : []), keptLine, ""]),
     `${resourcesHead.toUpperCase()}:`,
     ...RESOURCES.flatMap(([href, title, blurb]) => [`  ${title} — ${blurb}`, `  ${href}`, ""]),
     ...(upgradeLine ? ["IF YOU WOULD LIKE MORE", "", upgradeLine, ""] : []),
@@ -383,6 +400,16 @@ export function deliveryEmail({
   ].join("\n");
 
   const row = (html, pad = "0 0 18px", extra = "") => `<tr><td style="padding:${pad};${extra}">${html}</td></tr>`;
+  const bookingRow = () =>
+    row(
+      `<div style="font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD};padding-bottom:6px">${esc(bookingHead)}</div>
+    <div style="font-size:16px;color:${PAPER}">${
+      BOOKING_URL
+        ? `Pick a time on <a href="${esc(BOOKING_URL)}" style="color:${TEAL};text-decoration:underline">Jeremy’s calendar</a>. The Google Meet link is in the invite.`
+        : esc(bookingLine)
+    }</div>`,
+      "0 0 22px",
+    );
   const small = `font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD}`;
   const body = pending
     ? [
@@ -403,6 +430,7 @@ export function deliveryEmail({
         row(`<div style="${small};padding-bottom:6px">${esc(nextHead)}</div>
     <div style="font-size:17px;color:${PAPER}">${esc(nextLine)}</div>`, "0 0 16px"),
         row(button(url, action), "0 0 24px"),
+        ...(bookingLine ? [bookingRow()] : []),
       ]
     : [
         row(esc(ready.lead), "0 0 18px", `font-size:19px;color:${PAPER}`),
@@ -412,6 +440,7 @@ export function deliveryEmail({
           "0 0 20px",
         ),
         row(button(url, action), "0 0 22px"),
+        ...(bookingLine ? [bookingRow()] : []),
         row(esc(keptLine), "0 0 18px", `font-size:14px;color:${MUTED}`),
       ];
 

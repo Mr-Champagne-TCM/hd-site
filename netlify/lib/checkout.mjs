@@ -1,4 +1,4 @@
-import { TIERS, priceFor, CHECKOUT_NEXT_STEP, CHECKOUT_NEXT_STEP_THEIR, checkoutNextStepKept } from "../../shared/pricing.mjs";
+import { LEVELS, ownedLevelOf, priceFor, CHECKOUT_NEXT_STEP, CHECKOUT_NEXT_STEP_THEIR, checkoutNextStepKept } from "../../shared/pricing.mjs";
 
 /**
  * What we ask Stripe for, worked out here so it can be tested without a network.
@@ -16,8 +16,8 @@ import { TIERS, priceFor, CHECKOUT_NEXT_STEP, CHECKOUT_NEXT_STEP_THEIR, checkout
 
 /** Cheapest first, so the index IS the tier. */
 export function tierAt(level) {
-  if (!Number.isInteger(level) || level < 0 || level >= TIERS.length) return null;
-  return TIERS[level];
+  if (!Number.isInteger(level) || level < 0 || level >= LEVELS.length) return null;
+  return LEVELS[level];
 }
 
 /**
@@ -73,7 +73,7 @@ export function formEncode(obj, prefix = "") {
 export function upgradeCredit({ headTier = -1, level }) {
   const owned = Number.isInteger(headTier) ? headTier : -1;
   if (owned < 0 || !Number.isInteger(level) || owned >= level) return 0;
-  return TIERS[owned]?.cents ?? 0;
+  return LEVELS[owned]?.cents ?? 0;
 }
 
 /**
@@ -112,7 +112,8 @@ export async function checkoutCredit({ body, secret, level, head, readLink, now 
     h = null;
   }
   if (!h) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
-  const cents = upgradeCredit({ headTier: h.tier, level });
+  // A one-to-one's reading stands at the one-to-one's level (pricing.mjs ownedLevelOf).
+  const cents = upgradeCredit({ headTier: ownedLevelOf(h), level });
   return cents > 0
     ? // `kept`: the chart it grows keeps its birth details, so there is nothing to type (fix 4, 10/21).
       { alreadyPaidCents: cents, upgrades: h.id, fresh: false, kept: Boolean(h.birth) }
@@ -336,5 +337,5 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
 export function paidLevel(session) {
   if (!session || session.payment_status !== "paid") return null;
   const level = Number(session?.metadata?.level);
-  return Number.isInteger(level) && level >= 0 && level < TIERS.length ? level : null;
+  return Number.isInteger(level) && level >= 0 && level < LEVELS.length ? level : null;
 }

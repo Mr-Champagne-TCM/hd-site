@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { gateList } from "../shared/gateList.mjs";
-import { SUMMARY, CHART, READING } from "../shared/pricing.mjs";
+import { SUMMARY, CHART, READING, SESSION } from "../shared/pricing.mjs";
 import { crossLink } from "../shared/libraryLinks.mjs";
 import { chartFactsOnly, marginNotes } from "../netlify/lib/interpretation.mjs";
 import { printSwap } from "../netlify/lib/readingPdf.mjs";
@@ -23,20 +23,22 @@ test("the tier words: channels and gates on the summary, the drawing as the char
   assert.match(SUMMARY.blurb, /your channels and activated gates/);
   assert.match(SUMMARY.checkoutDescription, /channels and activated gates/);
   assert.doesNotMatch(CHART.blurb, /channels|gates/);
-  assert.match(READING.blurb, /twenty-six planet numbers/);
+  // Mock v2 A7 (11/16): the reading in plain words, no "planet numbers" on an offer (10/31 audit #14).
+  assert.match(READING.blurb, /^About 1,200 words written to your chart/);
   // "The same chart, a step further": each price says only what that step adds.
   assert.match(CHART.adds, /bodygraph/);
   assert.doesNotMatch(CHART.adds, /channels|gates/);
-  assert.match(READING.addsToSummary, /bodygraph.*twenty-six planet numbers.*written reading/);
+  assert.match(READING.addsToSummary, /bodygraph.*1,200 words.*four small things to try/);
   assert.equal(SUMMARY.adds, null);
 });
 
 test("PLANET NUMBERS everywhere (Jeremy's GO PDF, 10/23): the shop's cards say what the page and the PDF say", () => {
-  assert.equal(READING.blurb, "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.");
-  assert.equal(READING.theirBlurb, READING.blurb);
-  assert.equal(READING.adds, "All twenty-six planet numbers and the written reading.");
-  assert.equal(READING.addsToSummary, "Your bodygraph drawn, all twenty-six planet numbers and the written reading.");
-  for (const t of [SUMMARY, CHART, READING]) {
+  // Since 11/16 (mock v2 A7) the offers say what the reading IS; the page and PDF still name the planet numbers.
+  assert.equal(READING.blurb, "About 1,200 words written to your chart, four small things to try, and a PDF.");
+  assert.equal(READING.theirBlurb, "About 1,200 words written to their chart, four small things to try, and a PDF.");
+  assert.equal(READING.adds, READING.blurb);
+  assert.equal(READING.addsToSummary, "Your bodygraph drawn, about 1,200 words written to your chart, four small things to try, and a PDF.");
+  for (const t of [SUMMARY, CHART, READING, SESSION]) {
     for (const k of ["blurb", "theirBlurb", "adds", "addsToSummary", "checkoutDescription"]) {
       assert.doesNotMatch(String(t[k] ?? ""), /activation/i, `${t.sku}.${k}`);
     }
@@ -48,9 +50,15 @@ test("PLANET NUMBERS everywhere (Jeremy's GO PDF, 10/23): the shop's cards say w
   assert.doesNotMatch(said, /activations/i, "src/copy.ts says activations to a buyer");
 });
 
-test("the chart card is option B, word for word, with the site's curly apostrophe", () => {
-  assert.equal(CHART.blurb, "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.");
-  assert.equal(CHART.theirBlurb, "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.");
+test("the chart card is mock v2 A2 (Jeremy 11/16), word for word", () => {
+  assert.equal(
+    CHART.blurb,
+    "Your chart drawn as a picture (the bodygraph), with the key facts in plain words: how your energy works, how you decide, how you meet the world. A page to share and a PDF to keep.",
+  );
+  assert.equal(
+    CHART.theirBlurb,
+    "Their chart drawn as a picture (the bodygraph), with the key facts in plain words: how their energy works, how they decide, how they meet the world. A page to share and a PDF to keep.",
+  );
 });
 
 /* ------------------------------------------------- the engine's words (0.6.0) */

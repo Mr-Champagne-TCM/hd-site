@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { loadCurrent, loadReading, saveReading, updateRecord } from "./reading.mjs";
 import { IDENTIFYING, IDENTIFYING_SETS } from "./chartDiff.mjs";
+import { ownedLevelOf, recordTierOf } from "../../shared/pricing.mjs";
 
 /** `fn` over `items`, at most `n` at a time, results in order. */
 async function mapLimit(items, n, fn) {
@@ -155,7 +156,8 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
   let source = null;
   if (ID.test(String(meta.upgrades))) {
     const head = await chainHead(readings, meta.upgrades, now);
-    if (head && head.tier < level && head.id !== id) {
+    // A one-to-one's reading stands at the one-to-one's level (11/16, pricing.mjs ownedLevelOf).
+    if (head && ownedLevelOf(head) < level && head.id !== id) {
       source = head;
     } else if (head) {
       // The credit was given at checkout for this chart, and the chart has
@@ -167,7 +169,8 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
 
   await saveReading(readings, {
     id,
-    tier: level,
+    // A one-to-one is stored as a reading; its sku (hd_session) says it came with the call.
+    tier: recordTierOf(level),
     output: null,
     name: buyer.name ?? null,
     email: buyer.email ?? null,
@@ -203,7 +206,7 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
     try {
       await addToIndex(
         index,
-        { email: buyer.email, id, person: source ? source.person : id, tier: level, at: Math.floor((typeof session?.created === "number" ? session.created * 1000 : now) / 1000), grewFrom: source?.id ?? null },
+        { email: buyer.email, id, person: source ? source.person : id, tier: recordTierOf(level), at: Math.floor((typeof session?.created === "number" ? session.created * 1000 : now) / 1000), grewFrom: source?.id ?? null },
         secret,
       );
     } catch (e) {

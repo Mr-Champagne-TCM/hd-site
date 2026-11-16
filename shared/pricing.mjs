@@ -7,27 +7,39 @@
  *
  * Cents, not dollars. Floating-point money is how $11.11 becomes $11.109999.
  *
- * THE SPLIT (Jeremy 10/22): "gates/channels go to summary (with no
- * explanation). Keep all 26 activations in the reading tier... chart option
- * should only show the BG as upgrade."
+ * TWO SIZES, AND AN HOUR WITH JEREMY (Jeremy 11/16): "Remove 3 tier model and
+ * replace with 2 tier. 1st tier is bodygraph and full chart (like tier 2), at
+ * $1.11. Then the 2nd tier is the 3rd current tier, full reading. 44.44 should
+ * be a 1:1 meeting." Then: thirty minutes, not an hour; the one-to-one
+ * includes the full reading.
  *
- *                                   summary   chart   reading
- *   chart values, centers, cross       yes      yes     yes
- *   channels + activated gates         yes      yes     yes    (values only)
- *   the bodygraph drawing + its PDF     -       yes     yes    <- the chart's reason
- *   the 26 activations                  -        -      yes
- *   the written reading                 -        -      yes
+ *                                   chart   reading   one-to-one
+ *   chart values, centers, cross       yes     yes       yes
+ *   the bodygraph drawing + its PDF    yes     yes       yes
+ *   the 26 activations                  -      yes       yes
+ *   the written reading                 -      yes       yes
+ *   30 minutes with Jeremy (Meet)       -       -        yes
+ *
+ * STORED LEVELS DO NOT MOVE. A record's `tier` is 0 summary, 1 chart, 2
+ * reading, as it always was: every record ever sold keeps meaning what it
+ * meant. The summary is OFF SALE (availability.mjs) but its records still
+ * open. The one-to-one is checkout level 3, and its record is a reading
+ * (tier 2) whose sku says it came with the call (`recordTierOf`).
  */
 
 /**
- * The chart card's words (Jeremy 10/22, his pick of the two mocked: option B).
- * They name only the drawing and its PDF as what the chart adds, and also read
- * after "The chart contains ..." (the emails, the PDF), so they start in lower
- * case there.
+ * The chart card's words (Jeremy 11/16, mock v2 A2, accepted): the drawing and
+ * the key facts in plain words. They also read after "The chart contains ..."
+ * (the PDF), so they start in lower case there.
  */
-const CHART_CARD = "Your bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
-const CHART_CARD_THEIR = "Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep.";
+const CHART_CARD =
+  "Your chart drawn as a picture (the bodygraph), with the key facts in plain words: how your energy works, " +
+  "how you decide, how you meet the world. A page to share and a PDF to keep.";
+const CHART_CARD_THEIR =
+  "Their chart drawn as a picture (the bodygraph), with the key facts in plain words: how their energy works, " +
+  "how they decide, how they meet the world. A page to share and a PDF to keep.";
 
+/** OFF SALE since 11/16. Kept: every summary sold still opens, and its label and price are its history. */
 export const SUMMARY = {
   sku: "hd_summary",
   cents: 111,
@@ -45,40 +57,78 @@ export const SUMMARY = {
 
 export const CHART = {
   sku: "hd_chart",
-  cents: 1111,
+  cents: 111,
   label: "The chart",
   checkoutName: "Human Design chart",
-  checkoutDescription: "The bodygraph drawn, the chart’s values, and a PDF to keep.",
+  checkoutDescription: "Your chart drawn as a picture (the bodygraph), every value on it, and a PDF to keep.",
   blurb: CHART_CARD,
   theirBlurb: CHART_CARD_THEIR,
-  /** Under its price on "The same chart, a step further" (10/22): only what the chart adds. */
-  // The same punctuation as READING.addsToSummary, "Your bodygraph drawn, …" (10/23 verbatim read, N5).
+  /** What the chart adds to a summary (old summary records; the step costs nothing now and is not sold). */
   adds: "Your bodygraph drawn, and its PDF to keep.",
-  // Someone else's chart (10/26 live test, Kit O'Brien's options said "Your bodygraph").
   addsTheirs: "Their bodygraph drawn, and its PDF to keep.",
 };
 
 export const READING = {
   sku: "hd_reading",
-  cents: 4444,
+  cents: 1111,
   label: "The reading",
   checkoutName: "Human Design reading",
-  checkoutDescription: "The chart, a written reading of about 1,200 words, and a PDF to keep.",
-  // "Planet numbers", as the page and the PDF name them ("Technical values: your 26 planet numbers"):
-  // Jeremy's GO PDF call (10/23), "Good, be consistent. I like planet numbers better."
-  blurb: "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.",
-  theirBlurb: "All twenty-six planet numbers, each with the planet that lit it, and the written interpretation.",
-  /** Under its price on "The same chart, a step further": what it adds to a chart, and to a summary. */
-  adds: "All twenty-six planet numbers and the written reading.",
-  addsToSummary: "Your bodygraph drawn, all twenty-six planet numbers and the written reading.",
-  addsToSummaryTheirs: "Their bodygraph drawn, all twenty-six planet numbers and the written reading.",
+  checkoutDescription: "Your chart drawn, about 1,200 words written to it, four small things to try, and a PDF to keep.",
+  // Mock v2 A7 (11/16): the upgrade box in plain words, no "planet numbers" (10/31 audit #14).
+  blurb: "About 1,200 words written to your chart, four small things to try, and a PDF.",
+  theirBlurb: "About 1,200 words written to their chart, four small things to try, and a PDF.",
+  /** Under its price on "More for your own chart": what it adds to a chart, and to a summary. */
+  adds: "About 1,200 words written to your chart, four small things to try, and a PDF.",
+  addsTheirs: "About 1,200 words written to their chart, four small things to try, and a PDF.",
+  addsToSummary: "Your bodygraph drawn, about 1,200 words written to your chart, four small things to try, and a PDF.",
+  addsToSummaryTheirs: "Their bodygraph drawn, about 1,200 words written to their chart, four small things to try, and a PDF.",
+};
+
+/**
+ * THE ONE-TO-ONE (Jeremy 11/16): thirty minutes on a video call (Google Meet),
+ * the full written reading with it. Sold only once there is a calendar to
+ * book (availability.mjs, BOOKING_URL in shared/booking.mjs).
+ */
+export const SESSION = {
+  sku: "hd_session",
+  cents: 4444,
+  label: "The one-to-one",
+  /** The card's own title (mock v2, call 3: "Go through it"). */
+  title: "Go through it with Jeremy, one to one",
+  checkoutName: "Human Design one-to-one with Jeremy",
+  checkoutDescription: "Thirty minutes with Jeremy on a video call, your chart on screen, and your written reading.",
+  blurb: "Thirty minutes on a video call, your chart on screen. Your written reading comes with it, ready before you meet.",
+  theirBlurb: "Thirty minutes on a video call, their chart on screen. The written reading comes with it, ready before you meet.",
+  after: "After paying, you pick a time on Jeremy’s calendar. The Google Meet link is in the invite.",
+  adds: "Thirty minutes with Jeremy on a video call, and the written reading.",
+  addsTheirs: "Thirty minutes with Jeremy on a video call, and the written reading.",
+  button: "30 minutes with Jeremy",
 };
 
 /** A slot for gift purchases. Not in v1, and the schema does not change later. */
 export const GIFT = null;
 
-/** Cheapest first. The ladder, in order. */
+/** What a stored record's `tier` means. Index = the stored number; never reordered. */
 export const TIERS = [SUMMARY, CHART, READING];
+
+/** What a checkout's `level` means: the record tiers, then the one-to-one. */
+export const LEVELS = [SUMMARY, CHART, READING, SESSION];
+export const SESSION_LEVEL = 3;
+
+/** The two sizes on the offer page, cheapest first. */
+export const ON_SALE = [CHART, READING];
+
+/** The stored tier a checkout level makes: the one-to-one is a reading with a call. */
+export function recordTierOf(level) {
+  return Number.isInteger(level) ? Math.min(level, READING_LEVEL) : level;
+}
+const READING_LEVEL = 2;
+
+/** The level a stored record stands at: a one-to-one's reading counts as the one-to-one. */
+export function ownedLevelOf(record) {
+  if (!record || !Number.isInteger(record.tier)) return -1;
+  return record.sku === SESSION.sku ? SESSION_LEVEL : record.tier;
+}
 
 /**
  * Under Stripe's Pay button (fix 14B, 10/19): what comes next, so the step
@@ -95,20 +145,17 @@ export const checkoutNextStepKept = (level) =>
 /**
  * WHAT YOU HAVE ALREADY PAID COMES OFF WHAT YOU PAY NEXT.
  *
- * Jeremy's rule, and it has a property worth saying out loud: every route to the
- * reading costs exactly $44.44. Straight there, or a dollar at the door and then
- * up, or all three steps - the total is the same number every time.
+ * Jeremy's rule, unchanged by the two sizes (11/16). Every route lands on the
+ * same total:
  *
- *   summary            $1.11
- *   summary -> chart   $10.00   (=$11.11 - $1.11)
- *   chart -> reading   $33.33   (=$44.44 - $11.11)
+ *   chart                $1.11
+ *   chart -> reading     $10.00   (=$11.11 - $1.11)
+ *   chart -> one-to-one  $43.33   (=$44.44 - $1.11)
+ *   reading -> one-to-one $33.33  (=$44.44 - $11.11)
  *
- *   $1.11 + $10.00 + $33.33 = $44.44
- *
- * This replaces the spec's earlier arrangement, where the ladder came to $38
- * against $44 direct and P-3 had to apologise for the difference in copy. There
- * is now nothing to apologise for: nobody is punished for starting small and
- * nobody is punished for going straight to the end.
+ * The credit is the owned tier's price TODAY (checkout.mjs upgradeCredit). A
+ * step that would cost nothing (an old summary to the chart, both $1.11) is
+ * never sold: Stripe cannot take $0.00, and the page does not offer it.
  */
 export function priceFor(tier, alreadyPaidCents = 0) {
   const due = tier.cents - alreadyPaidCents;
@@ -116,12 +163,12 @@ export function priceFor(tier, alreadyPaidCents = 0) {
   return due;
 }
 
-/** The whole ladder, for the offer page. */
+/** The two sizes, for the offer page: each with what it costs from the one before. */
 export function ladder() {
   let paid = 0;
-  return TIERS.map((tier) => {
+  return ON_SALE.map((tier) => {
     const due = priceFor(tier, paid);
-    const row = { tier, full: tier.cents, due, credit: paid };
+    const row = { tier, level: LEVELS.indexOf(tier), full: tier.cents, due, credit: paid };
     paid = tier.cents;
     return row;
   });

@@ -45,6 +45,10 @@ export async function importTs(...segments) {
     // dates and clocks, and keeping the target neutral means the test exercises
     // the same code the browser gets.
     platform: "neutral",
+    // Relative imports come along (11/16: copy.ts reads its prices from shared/pricing.mjs, the one
+    // place prices live); packages stay outside, as before.
+    bundle: true,
+    packages: "external",
   });
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   return import(pathToFileURL(out).href);

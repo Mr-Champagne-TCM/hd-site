@@ -5,7 +5,7 @@ import { startCheckout } from "./purchase";
 import MailtoText from "./MailtoText";
 import { PageEnd } from "./FooterTheme";
 import { SomeoneElseSection } from "./Returning";
-import { TIERS } from "../shared/pricing.mjs";
+import { LEVELS } from "../shared/pricing.mjs";
 import { GIFT_CREDIT_KEEPS, giftCredit } from "../shared/giftCopy.mjs";
 import {
   AUTHORITY_NOTES,
@@ -202,7 +202,7 @@ export default function ReadingActions({
             eventually be described two ways.
           */}
           <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-paper/85">
-            {TIERS[upgrade.level]?.blurb}
+            {LEVELS[upgrade.level]?.blurb}
           </p>
           <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-brand-muted">
             {/* A gift's page is read by the person it is for, who paid nothing (decision 30). */}

@@ -1,3 +1,5 @@
+import { CHART, money } from "../shared/pricing.mjs";
+
 /**
  * Every word on the page, in one file.
  *
@@ -85,11 +87,11 @@ export const RESOURCES = {
   items: [
     {
       href: "https://thechampagnemethod.co/library/human-design/",
-      tag: "Goes with the summary",
+      tag: "Goes with the chart",
       title: "The Human Design library",
       blurb:
         "Every part of a chart, one layer at a time: a line to start, more if it pulls at you. " +
-        "It explains every word in a summary.",
+        "It explains every word in a chart.",
     },
     {
       href: "https://thechampagnemethod.co/library/bodygraph/",
@@ -237,7 +239,8 @@ export const CREDIBILITY = {
  * person" any more, because it is one.
  */
 export const EXAMPLE = {
-  title: "What the summary looks like",
+  // Two sizes (11/16): the example is every value the chart holds.
+  title: "What the chart’s values look like",
   caption:
     "An example: Jeremy Champagne’s own chart — September 17, 1983, Wichita Falls, Texas. " +
     "Yours would be your own, and would say so if the time were missing.",
@@ -257,7 +260,11 @@ export const EXAMPLE = {
  */
 export const TIERS_INTRO = {
   lead: "If you’d like to see your own",
-  title: "Three ways in",
+  /**
+   * THE LINE OVER THE TWO CARDS (Jeremy 11/16, call 2: "two sizes is closer, but feels off. Try
+   * other options out"). Still his to choose: this ONE string is the swap.
+   */
+  title: "Two sizes",
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   // The credit idea is said ONCE on this page (Jeremy's GO PDF, 10/23: "Good, be consistent"): in
   // LADDER_NOTE under the cards, beside the prices it is about. The line that sat under the invitation
@@ -271,9 +278,10 @@ export const TIERS_INTRO = {
  * a promise with a date hidden in it; this says what is missing and does not
  * pretend to know when.
  */
+// Jeremy 11/16 (call 1, "its <price> comes off..."): under the two cards. The price is pricing.mjs's.
 export const LADDER_NOTE =
-  "Straight to the reading, or a step at a time — the total is identical either way. " +
-  "What you have already paid comes off what you pay next — nobody pays twice for the same thing.";
+  "Start with the chart, or go straight to the reading. Already have the chart? " +
+  `Its ${money(CHART.cents)} comes off the reading.`;
 
 export const ENTRY = {
   /**
@@ -351,15 +359,15 @@ export function privacyFor(_tier?: number): string {
  *     paid amount comes off the next new chart")
  */
 export const RETURNING = {
-  question: "Your chart, a step further — or someone new?",
-  // Requests, not commands (10/22 verbatim read, B8).
-  questionBody: "Both are welcome. Whichever you choose, the right details and the right price come with it.",
+  // Mock v2 A8 + A10 (11/16, accepted).
+  question: "More for your own chart, or a chart for someone else?",
+  questionBody: "Either way, your price is already worked out.",
   forMe: "For me",
   sameChart: "The same chart, a step further",
   // Someone else's chart (10/25 live test: Theo's options said "For me" and "Your birth details").
   forThem: "For them",
   // His question (10/19), for their chart; the card under it keeps "The same chart, a step further".
-  questionTheirs: "Their chart, a step further — or someone new?",
+  questionTheirs: "More for their chart, or a chart for someone else?",
   someoneNewEyebrow: "Someone new",
   startNew: "Start a new chart for someone else",
   startTheirs: "Start their new chart",
@@ -444,11 +452,13 @@ export const MY_CHARTS = {
  * the cards is gone: the card notes say it.
  */
 export const CARDS = {
-  readingLead: "Your chart, plus about 1,200 words written to it:",
+  // Mock v2 A3 (11/16): "chart" is never explained on the card; the drawing is.
+  readingLead: "The drawing, plus about 1,200 words written just for you:",
   readingTicks: ["How you decide", "How you meet the world", "What you take in from others", "Four small things to try"],
   readingPdf: "A PDF to keep.",
+  // On the CHART's card since 11/16 (Jeremy: the chart must not drop "…it comes close to a full reading").
   summaryNote: ["With the free ", "Human Design library", " beside it, this comes close to a full reading."],
-  // "Comes close to a full reading" once per page, on the summary's card (10/23 verbatim read, S5).
+  // "Comes close to a full reading" once per page, on the chart's card (10/23 verbatim read, S5).
   chartNote: ["Every word on it is explained in the free ", "Human Design library", "."],
   stripHead: "From a real reading",
   // Jeremy 10/22: his pick of the test readings' lines (favorite #2), with his edits, word for word.

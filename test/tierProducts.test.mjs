@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { checkoutProduct, formEncode, sessionParams, tierProduct } from "../netlify/lib/checkout.mjs";
 import { ensureProduct } from "../netlify/lib/stripe.mjs";
-import { TIERS } from "../shared/pricing.mjs";
+import { TIERS, LEVELS } from "../shared/pricing.mjs";
 
 /**
  * EACH TIER IS ONE STRIPE PRODUCT (10/16), so a free retry code can be held to
@@ -13,9 +13,10 @@ import { TIERS } from "../shared/pricing.mjs";
 const KEY = "sk_test_" + "0".repeat(24);
 
 test("every tier has a product under its own sku, and nothing else does", () => {
-  assert.deepEqual(TIERS.map((_, i) => tierProduct(i).id), ["hd_summary", "hd_chart", "hd_reading"]);
-  for (const [i, t] of TIERS.entries()) assert.deepEqual(tierProduct(i), { id: t.sku, name: t.checkoutName, description: t.checkoutDescription });
-  for (const bad of [-1, 3, 1.5, null, "1"]) assert.equal(tierProduct(bad), null);
+  // Every checkout level (11/16: the one-to-one is level 3, its own product).
+  assert.deepEqual(LEVELS.map((_, i) => tierProduct(i).id), ["hd_summary", "hd_chart", "hd_reading", "hd_session"]);
+  for (const [i, t] of LEVELS.entries()) assert.deepEqual(tierProduct(i), { id: t.sku, name: t.checkoutName, description: t.checkoutDescription });
+  for (const bad of [-1, 4, 1.5, null, "1"]) assert.equal(tierProduct(bad), null);
 });
 
 test("the checkout prices against the tier's product; the amount is still computed per sale", () => {

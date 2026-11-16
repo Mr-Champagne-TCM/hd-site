@@ -239,6 +239,12 @@ def add_time_page(page, state, seconds=30):
     settle(page, 400)
 
 
+# Two sizes (11/16): the cards' buttons are invitations ("The chart, $1.11 →"); the summary is off sale.
+BUY = {1: re.compile(r"^The chart, \$"), 2: re.compile(r"^The reading, \$"), 3: re.compile(r"^30 minutes with Jeremy, \$")}
+# The returning buyer's options (mock v2 A9): what is added, and its price.
+ADD = {2: re.compile(r"^Add the written reading \("), 3: re.compile(r"^Add 30 minutes with Jeremy \(")}
+
+
 def journey(browser, j):
     ctx = browser.new_context(viewport={"width": 1280, "height": 900}, extra_http_headers={"x-rig-visitor": j["id"]})
     page = ctx.new_page()
@@ -261,8 +267,7 @@ def journey(browser, j):
                 page.goto(SHOP + "/", wait_until="networkidle")
                 if i == 0 and j is COMBOS["journeys"][0]:
                     capture(page, "offer", {"kind": "offer", "tier": None})
-                label = ["Buy the summary", "Buy the chart", "Buy the reading"][st["tier"]]
-                page.get_by_role("button", name=label).click()
+                page.get_by_role("button", name=BUY[st["tier"]]).click()
                 stripe_pay(page, sid + "-stripe", j["buyer"], st.get("promo"), meta)
                 capture(page, sid + "-form", {**meta, "kind": "form-blank"})
                 if j is COMBOS["journeys"][0] and i == 0:
@@ -280,8 +285,7 @@ def journey(browser, j):
                 page.goto(f"{SHOP}/u/{quote(token)}", wait_until="networkidle")
                 settle(page)
                 capture(page, sid + "-choose", {**meta, "kind": "upgrade-choice"})
-                tier_word = ["summary", "chart", "reading"][st["tier"]]
-                page.get_by_role("button", name=re.compile(rf"^Take .* to the {tier_word}$")).click()
+                page.get_by_role("button", name=ADD[st["tier"]]).click()
                 stripe_pay(page, sid + "-stripe", j["buyer"], st.get("promo"), {**meta, "upgrade": True})
                 capture(page, sid + "-confirm", {**meta, "kind": "confirm", "upgrade": True})
                 if st.get("correct"):
@@ -359,8 +363,7 @@ def journey(browser, j):
                 page.goto(f"{SHOP}/u/{quote(token)}#new", wait_until="networkidle")
                 settle(page)
                 capture(page, sid + "-tiers", {**meta, "kind": "someone-new-tiers"})
-                label = ["Buy the summary", "Buy the chart", "Buy the reading"][st["tier"]]
-                page.get_by_role("button", name=label).click()
+                page.get_by_role("button", name=BUY[st["tier"]]).click()
                 stripe_pay(page, sid + "-stripe", j["buyer"], st.get("promo"), meta)
                 capture(page, sid + "-form", {**meta, "kind": "form-blank", "birth": st["birth"]})
                 fill_birth(page, st["birth"], st.get("name"))

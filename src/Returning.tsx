@@ -29,7 +29,7 @@ export const h1 =
 export const linkCls =
   "text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal";
 
-const [SUMMARY, CHART, READING] = TIERS;
+const [, CHART, READING] = TIERS;
 
 /** "The reading" -> "reading". */
 export const tierWord = (tier: number) => (TIERS[tier]?.label ?? "The chart").replace(/^The\s+/i, "").toLowerCase();
@@ -139,10 +139,11 @@ export function SomeoneNewCard({ onStart }: { onStart: () => void }) {
       <p className="mt-5 text-[17px] leading-relaxed text-brand-paper/90">{RETURNING.someoneNewBody}</p>
       <p className="mt-5 flex flex-wrap items-baseline gap-2">
         <span className="font-sans text-[15px] text-brand-muted">from</span>
-        <span className="font-display text-[2.1rem] leading-none text-brand-gold tabular-nums">{money(SUMMARY.cents)}</span>
+        <span className="font-display text-[2.1rem] leading-none text-brand-gold tabular-nums">{money(CHART.cents)}</span>
       </p>
       <p className="mt-2 text-[15px] leading-snug text-brand-paper/85">
-        The summary, the chart or the reading: {money(SUMMARY.cents)}, {money(CHART.cents)} or {money(READING.cents)}.
+        {/* Two sizes (11/16). */}
+        The chart or the reading: {money(CHART.cents)} or {money(READING.cents)}.
       </p>
       <p className="mt-2 text-[15px] leading-snug text-brand-teal">{RETURNING.staysWithYours}</p>
     </ChoiceCard>

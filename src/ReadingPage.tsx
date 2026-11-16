@@ -12,7 +12,7 @@ const CONTACT = "hd-readings@thechampagnemethod.co";
 import EntryForm from "./entry/EntryForm";
 import ReadingActions, { Resend, pdfLabel, PDF_BUTTON } from "./ReadingActions";
 import ThreeLines from "./ThreeLines";
-import CoachCard from "./CoachCard";
+import CoachCard, { ClosingCardContext } from "./CoachCard";
 import { chartTitle } from "../shared/chartName.mjs";
 import { PageEnd } from "./FooterTheme";
 import WrittenReading, { ReadingInOrder, type Written } from "./WrittenReading";
@@ -52,6 +52,10 @@ type Reading = {
   purchasedAt: number;
   output: SummaryData & { personality?: Activation[]; design?: Activation[] };
   upgrade: { level: number; label: string; available?: boolean } | null;
+  /** The one-to-one (11/16): this reading came with it; where to book; whether to offer it. */
+  session?: boolean;
+  booking?: string | null;
+  offerSession?: boolean;
   canResend: boolean;
   written: Written | null;
   notes: Record<string, Array<[string, string]>> | null;
@@ -464,6 +468,15 @@ export default function ReadingPage({ token }: { token: string }) {
   }
 
   return (
+    <ClosingCardContext.Provider
+      value={{
+        session: reading.session === true,
+        offer: reading.offerSession === true,
+        token,
+        word: reading.tier >= 2 ? "reading" : "chart",
+        booking: reading.booking ?? null,
+      }}
+    >
     <div className={shell}>
       <h1 className="font-display text-[clamp(1.7rem,4vw,2.25rem)] font-medium leading-[1.15] tracking-tight text-brand-gold">
         {chartTitle(reading.name)}
@@ -633,5 +646,6 @@ export default function ReadingPage({ token }: { token: string }) {
         gift={reading.fresh === true}
       />
     </div>
+    </ClosingCardContext.Provider>
   );
 }

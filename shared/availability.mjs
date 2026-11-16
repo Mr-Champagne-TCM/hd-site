@@ -1,3 +1,6 @@
+import { BOOKING_URL } from "./booking.mjs";
+import { LEVELS } from "./pricing.mjs";
+
 /**
  * What can actually be sold today, which is not the same as what has a price.
  *
@@ -53,6 +56,36 @@
  */
 export const SELLABLE_MAX_LEVEL = 2;
 
-export function sellable(level) {
-  return Number.isInteger(level) && level >= 0 && level <= SELLABLE_MAX_LEVEL;
+/**
+ * TWO SIZES (Jeremy 11/16). The summary (level 0) is OFF SALE: the chart now
+ * costs what it did, and holds everything it held and the drawing. Its records
+ * still open; it is only never sold again. The one-to-one (level 3) is sold
+ * only once a booking link exists (shared/booking.mjs), so nobody pays for a
+ * call they cannot book.
+ */
+export const OFF_SALE = Object.freeze([0]);
+
+export function sellable(level, { bookingUrl = BOOKING_URL } = {}) {
+  if (!Number.isInteger(level) || OFF_SALE.includes(level)) return false;
+  if (level === 3) return typeof bookingUrl === "string" && /^https:\/\//.test(bookingUrl);
+  return level >= 1 && level <= SELLABLE_MAX_LEVEL;
+}
+
+/**
+ * WHAT A CHART CAN STILL BECOME, from the level it stands at (pricing.mjs
+ * ownedLevelOf): every level above it that is sold today and costs something
+ * after the credit. An old summary skips the chart (both cost the same: nothing due).
+ * One answer for the page, the emails and the PDF.
+ */
+export function offersFor(owned, { bookingUrl = BOOKING_URL } = {}) {
+  const from = Number.isInteger(owned) ? owned : -1;
+  const credit = from >= 0 ? (LEVELS[from]?.cents ?? 0) : 0;
+  return LEVELS.map((t, level) => level).filter(
+    (level) => level > from && sellable(level, { bookingUrl }) && LEVELS[level].cents - credit > 0,
+  );
+}
+
+/** The first of them, or null at the top. */
+export function nextOffer(owned, opts) {
+  return offersFor(owned, opts)[0] ?? null;
 }

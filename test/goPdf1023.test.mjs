@@ -37,17 +37,16 @@ test("CREDIT ONCE: the price page says the credit idea in one place, under the c
   const { TIERS_INTRO, LADDER_NOTE } = copy;
   // No line above the cards any more (Jeremy, GO v3, 10/23); the credit lives in the note under them.
   assert.equal(TIERS_INTRO.body, undefined);
+  // Two sizes (Jeremy 11/16, call 1: "its <price> comes off..."): one line, one credit, under the cards.
   assert.equal(
     LADDER_NOTE,
-    "Straight to the reading, or a step at a time — the total is identical either way. " +
-      "What you have already paid comes off what you pay next — nobody pays twice for the same thing.",
+    `Start with the chart, or go straight to the reading. Already have the chart? Its ${PRICING.money(PRICING.CHART.cents)} comes off the reading.`,
   );
   const page = `${TIERS_INTRO.lead}\n${TIERS_INTRO.title}\n${LADDER_NOTE}`;
   const count = (re) => (page.match(re) ?? []).length;
-  assert.equal(count(/the total is identical/g), 1);
   assert.equal(count(/costs the same/g), 0, "the same total, said a second way");
   assert.equal(count(/comes off|goes toward/g), 1, "what you paid counts toward the next step, said more than once");
-  assert.equal(count(/pays twice/g), 1);
+  assert.equal(count(/Three ways in/g), 0, "the old label (10/31 audit: a riddle)");
 });
 
 /* ------------------------------------------------------ curly apostrophes */

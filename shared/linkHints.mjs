@@ -38,8 +38,12 @@ export const HINT = Object.freeze({
   mail: "Opens your email app, to write to Jeremy",
   /** /api/pdf: a download, not a page */
   pdf: "Downloads the PDF, to print or keep",
-  /** /u/<token>#new: the three ways in, for a new chart for someone else */
+  /** /u/<token>#new: the two sizes, for a new chart for someone else */
   someoneNew: "Opens the prices for a new chart for someone else",
+  /** /u/<token>: this chart's own options, the one-to-one among them (11/16) */
+  oneToOne: "Opens your options, with what you paid taken off",
+  /** The one-to-one's booking page (11/16) */
+  booking: "Opens Jeremy’s calendar, to pick a time",
 });
 
 /** A Human Design term, row label or list item that opens its library entry. */

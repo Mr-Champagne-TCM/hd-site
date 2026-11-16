@@ -2,7 +2,7 @@ import { checkoutCredit, checkoutEmail, checkoutProduct, sessionParams } from ".
 import { createSession, ensureProduct } from "../lib/stripe.mjs";
 import { readReadingLink } from "../lib/reading.mjs";
 import { chainHead } from "../lib/charts.mjs";
-import { TIERS } from "../../shared/pricing.mjs";
+import { LEVELS, priceFor } from "../../shared/pricing.mjs";
 import { sellable } from "../../shared/availability.mjs";
 import { getStore } from "@netlify/blobs";
 import { alertSender, customerError, guard, noteFailure } from "../lib/failures.mjs";
@@ -50,7 +50,7 @@ export default guard("checkout", async (request) => {
   }
 
   const level = Number(body?.level);
-  if (!Number.isInteger(level) || level < 0 || level >= TIERS.length) {
+  if (!Number.isInteger(level) || level < 0 || level >= LEVELS.length) {
     return failWith("checkout-bad-request", `level ${String(body?.level).slice(0, 10)}`);
   }
 
@@ -88,6 +88,17 @@ export default guard("checkout", async (request) => {
     head: (id) => chainHead(readings, id),
     readLink: readReadingLink,
   });
+
+  /**
+   * NOTHING DUE IS NOTHING SOLD (11/16). Two sizes at the old summary's price
+   * mean an old summary taken to the chart would cost $0.00, and Stripe takes
+   * no $0.00 checkout. The page never offers that step; this is the block for
+   * anyone who posts it by hand.
+   */
+  if (priceFor(LEVELS[level], alreadyPaidCents) <= 0) {
+    console.log(`POST /api/checkout -> 409 (tier ${level}: nothing due)`);
+    return failWith("checkout-not-sellable", `tier ${level}: nothing due`);
+  }
 
   // The email the chart's receipt went to, already in Stripe's box (batch-1024 item 2). A prefill only.
   const email = await checkoutEmail({ body, secret: grantSecret, head: (id) => chainHead(readings, id), readLink: readReadingLink });

@@ -166,10 +166,11 @@ test("SOMEONE NEW is marked fresh and is its own person", async () => {
 test("someone else's options say what THEIR next step adds (10/26 live test: 'Your bodygraph drawn')", async () => {
   const { CHART, READING } = await import("../shared/pricing.mjs");
   assert.equal(CHART.addsTheirs, "Their bodygraph drawn, and its PDF to keep.");
-  assert.equal(READING.addsToSummaryTheirs, "Their bodygraph drawn, all twenty-six planet numbers and the written reading.");
+  assert.equal(READING.addsToSummaryTheirs, "Their bodygraph drawn, about 1,200 words written to their chart, four small things to try, and a PDF.");
   // The same words otherwise, so the two can never drift apart.
   assert.equal(CHART.addsTheirs.replace(/^Their/, "Your"), CHART.adds);
-  assert.equal(READING.addsToSummaryTheirs.replace(/^Their/, "Your"), READING.addsToSummary);
+  assert.equal(READING.addsToSummaryTheirs.replace(/^Their/, "Your").replace("their chart", "your chart"), READING.addsToSummary);
+  assert.equal(READING.addsTheirs.replace("their chart", "your chart"), READING.adds);
 });
 
 test("SOMEONE NEW, GROWN, IS STILL THEIRS: the upgrade keeps the mark, and its ready email says their (10/25 live test)", async () => {
@@ -444,7 +445,8 @@ test("an older summary with NO details kept still opens, and is offered a step f
   assert.equal(body.tier, 0);
   assert.equal(body.birthLine, null);
   assert.equal(body.whose, "Alex");
-  assert.equal(body.upgrade.level, 1);
+  // Two sizes (11/16): the chart would be $0.00 from a summary, so the step offered is the reading.
+  assert.equal(body.upgrade.level, 2);
   assert.equal(body.grown, null);
   assert.equal(body.correction, null);
 });

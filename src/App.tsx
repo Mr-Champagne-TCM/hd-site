@@ -15,11 +15,11 @@ import {
   RETURNING,
 } from "./copy";
 import { useEffect, useState } from "react";
-import { ladder, money, SUMMARY, CHART, READING, TIERS } from "../shared/pricing.mjs";
+import { ladder, money, LEVELS, SESSION, SESSION_LEVEL, CHART, READING } from "../shared/pricing.mjs";
 import ChartThumb from "./ChartThumb";
 import { ChoiceCard, KeptLine, SomeoneNewCard, btn, h1, tierWord, whoseOf } from "./Returning";
 import { startCheckout } from "./purchase";
-import { sellable } from "../shared/availability.mjs";
+import { offersFor, sellable } from "../shared/availability.mjs";
 import ExampleSummary from "./ExampleSummary";
 import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
@@ -170,8 +170,8 @@ function Example() {
         <ExampleSummary />
       </div>
       <p className="mt-4 text-[15px] leading-relaxed text-brand-muted/80">
-        That is the whole of the {money(SUMMARY.cents)} summary. Nothing is blurred out or held back
-        within it.
+        Every one of these is in the {money(CHART.cents)} chart, drawn as a picture too. Nothing is blurred
+        out or held back.
       </p>
       {/* One quiet link at the point of confusion. Someone meeting
           "Manifesting Generator" and "Sacral" for the first time wants a
@@ -197,7 +197,7 @@ function Example() {
  * centers, your incarnation cross" to a buyer starting a chart for someone else.
  */
 const THEIR = {
-  readingLead: "Their chart, plus about 1,200 words written to it:",
+  readingLead: "The drawing, plus about 1,200 words written just for them:",
   readingTicks: ["How they decide", "How they meet the world", "What they take in from others", "Four small things to try"],
 };
 
@@ -227,7 +227,8 @@ function ReadingTicks({ their = false }: { their?: boolean }) {
  * library"), on every state of those cards.
  */
 function LibraryNote({ sku }: { sku: string }) {
-  const [before, link, after] = sku === SUMMARY.sku ? CARDS.summaryNote : CARDS.chartNote;
+  // The chart's card keeps "…comes close to a full reading" (Jeremy 11/16: it must not be dropped).
+  const [before, link, after] = sku === CHART.sku ? CARDS.summaryNote : CARDS.chartNote;
   return (
     <p className="mb-2 mt-2 text-[14px] leading-snug text-brand-teal/90">
       {before}
@@ -258,7 +259,49 @@ function RealLine() {
 }
 
 /**
- * THE THREE CARDS.
+ * THE ONE-TO-ONE'S CARD (mock v2, 11/16): under the two sizes, Jeremy's photo,
+ * the price, what it is, how booking works. Full price here; a returning
+ * buyer's own link takes what they paid off (ReturningView).
+ */
+function OneToOneCard({
+  fresh,
+  busy,
+  failed,
+  onBuy,
+}: {
+  fresh: boolean;
+  busy: string | null;
+  failed: string | null;
+  onBuy: () => void;
+}) {
+  return (
+    <div
+      id="one-to-one"
+      data-card={SESSION.sku}
+      className="mt-6 flex flex-col gap-5 rounded-2xl border border-brand-teal/40 bg-brand-teal/[0.06] p-5 sm:flex-row sm:items-center sm:p-6"
+    >
+      <img src="/jeremy.jpg" alt="Jeremy Champagne" width={96} height={96} className="h-24 w-24 shrink-0 rounded-full object-cover" />
+      <div>
+        <h3 className="font-display text-[22px] font-medium text-brand-paper">{SESSION.title}</h3>
+        <p className="mt-2 font-display text-[2rem] leading-none text-brand-gold tabular-nums">{money(SESSION.cents)}</p>
+        <p className="mt-3 max-w-[56ch] text-[16px] leading-relaxed text-brand-paper/85">{fresh ? SESSION.theirBlurb : SESSION.blurb}</p>
+        <p className="mt-2 max-w-[56ch] text-[14px] leading-snug text-brand-muted">{SESSION.after}</p>
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={onBuy}
+          className="mt-4 rounded-full bg-brand-teal px-6 py-3 font-sans text-[15px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {busy === SESSION.sku ? "Opening…" : `${SESSION.button}, ${money(SESSION.cents)} →`}
+        </button>
+        {failed && <p className="mt-2 text-[14px] leading-snug text-brand-gold">{failed}</p>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * THE TWO SIZES (three cards until 11/16).
  *
  * Two states since release 2. The first visit (`fresh` false) is the offer
  * page as it was, with fix 2B and the library notes. `fresh` is "Start a new
@@ -313,8 +356,8 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
         {TIERS_INTRO.title}
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        {rows.map(({ tier, full, due, credit }, level) => (
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {rows.map(({ tier, level, full, due, credit }) => (
           <div
             key={tier.sku}
             data-card={tier.sku}
@@ -355,7 +398,8 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
                 onClick={() => buy(tier.sku, level)}
                 className="mt-auto rounded-full bg-brand-teal px-5 py-3 font-sans text-[15px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {busy === tier.sku ? "Opening…" : `Buy ${tier.label.replace(/^The /, "the ")}`}
+                {/* An invitation, not a command (mock v2 A6, 11/16): "The chart, <its price> →". */}
+                {busy === tier.sku ? "Opening…" : `${tier.label}, ${money(full)} →`}
               </button>
             )}
             {failed?.sku === tier.sku && (
@@ -368,6 +412,16 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
       <RealLine />
 
       {!fresh && <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{LADDER_NOTE}</p>}
+
+      {/* THE ONE-TO-ONE (11/16), under the two sizes: sold only once the calendar exists (availability.mjs). */}
+      {sellable(SESSION_LEVEL) && (
+        <OneToOneCard
+          fresh={fresh}
+          busy={busy}
+          failed={failed?.sku === SESSION.sku ? failed.message : null}
+          onBuy={() => buy(SESSION.sku, SESSION_LEVEL)}
+        />
+      )}
       {/*
         THE LONG ANSWER, one click away -- ONCE (release 1 showed it twice on
         the upgrade page; Jeremy 10/20 "4A", fixed here).
@@ -376,7 +430,7 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
         <a href={SITE.readings} {...hint("What each one actually is", HINT.examples)} className={linkCls}>
           What each one actually is
         </a>
-        , shown with a real example chart — the summary in full, the bodygraph drawn, and the PDF exactly as it
+        , shown with a real example chart — every value, the bodygraph drawn, and the PDF exactly as it
         downloads.
       </p>
       {/*
@@ -621,6 +675,8 @@ type Returning = {
   birthLine?: string | null;
   kept?: { birthLine?: string | null } | null;
   output?: { definedCenters?: string[] } | null;
+  fresh?: boolean;
+  session?: boolean;
 };
 
 function ReturningView({ token }: { token: string }) {
@@ -672,6 +728,8 @@ function ReturningView({ token }: { token: string }) {
   const whose = data?.whose ?? null;
   // Someone else's chart (bought from "Start a new chart for someone else", or grown from one).
   const theirs = data?.fresh === true;
+  // A one-to-one's reading stands at the one-to-one (11/16): nothing more to offer it.
+  const ownedLevel = data ? (data.session === true ? SESSION_LEVEL : data.tier) : -1;
   const back = data?.pending ? `/r/${encodeURIComponent(token)}` : `/u/${encodeURIComponent(token)}`;
 
   let body: React.ReactNode;
@@ -721,8 +779,8 @@ function ReturningView({ token }: { token: string }) {
           </a>
           <h1 className={h1 + " mt-4"}>{RETURNING.startNew}</h1>
           <p className="mt-4 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">
-            A chart for someone new starts fresh: {money(SUMMARY.cents)}, {money(CHART.cents)} or{" "}
-            {money(READING.cents)}.
+            A chart for someone new starts fresh: {money(CHART.cents)} or {money(READING.cents)}
+            {sellable(SESSION_LEVEL) ? `, or ${money(SESSION.cents)} with thirty minutes with Jeremy` : ""}.
           </p>
           <p className="mt-2 max-w-[60ch] text-[19px] leading-relaxed text-brand-paper">{RETURNING.staysWithYours}</p>
           <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">{RETURNING.theirDetailsLater}</p>
@@ -730,7 +788,7 @@ function ReturningView({ token }: { token: string }) {
         <Tiers fresh from={token} />
       </>
     );
-  } else if (data!.tier >= TIERS.length - 1) {
+  } else if (offersFor(ownedLevel).length === 0) {
     // THE TOP TIER, ALREADY OWNED: nothing to take further, so no question.
     body = (
       <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
@@ -763,9 +821,10 @@ function ReturningView({ token }: { token: string }) {
     );
   } else {
     // THE QUESTION (wording A's heading over wording B's two cards, warmer).
+    // What this chart can still become (11/16, availability.mjs): an old summary skips the $0.00 chart.
     const owned = data!.tier;
-    const paid = TIERS[owned].cents;
-    const ahead = TIERS.map((t, level) => ({ t, level })).filter(({ level }) => level > owned);
+    const paid = LEVELS[ownedLevel].cents;
+    const ahead = offersFor(ownedLevel).map((level) => ({ t: LEVELS[level], level }));
     body = (
       <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
         <h1 className={h1}>{theirs ? RETURNING.questionTheirs : RETURNING.question}</h1>
@@ -787,7 +846,11 @@ function ReturningView({ token }: { token: string }) {
                       onClick={() => upgrade(level)}
                       className={btn}
                     >
-                      {busy === level ? "Opening…" : `Take ${whoseOf(whose)} ${tierWord(owned)} to the ${tierWord(level)}`}
+                      {busy === level
+                        ? "Opening…"
+                        : level === SESSION_LEVEL
+                          ? `Add 30 minutes with Jeremy (${money(t.cents - paid)}) →`
+                          : `Add the written reading (${money(t.cents - paid)}) →`}
                     </button>
                   ) : null,
                 )}
@@ -796,9 +859,9 @@ function ReturningView({ token }: { token: string }) {
             }
           >
             <p className="mt-5 text-[17px] leading-relaxed text-brand-paper/90">
-              {ahead.length > 1
-                ? `The chart and the written reading, from the ${tierWord(owned)} you already have.`
-                : `The written ${tierWord(ahead[0]?.level ?? 2)}, from the ${tierWord(owned)} you already have.`}{" "}
+              {ahead[0]?.level === SESSION_LEVEL
+                ? `Thirty minutes with Jeremy, from the ${tierWord(owned)} you already have.`
+                : `The written reading${ahead.length > 1 ? ", or thirty minutes with Jeremy with it," : ","} from the ${tierWord(owned)} you already have.`}{" "}
               {data!.birthLine ? `${theirs ? "Their" : "Your"} birth details are kept, so there is nothing to type.` : ""}
             </p>
             {data!.birthLine ? (
@@ -821,7 +884,7 @@ function ReturningView({ token }: { token: string }) {
                 <span className="font-display text-[1.25rem] leading-none text-brand-muted line-through tabular-nums">
                   {money(t.cents)}
                 </span>
-                <span className="text-[15px] text-brand-muted">the {tierWord(level)}</span>
+                <span className="text-[15px] text-brand-muted">{level === SESSION_LEVEL ? "thirty minutes with Jeremy" : `the ${tierWord(level)}`}</span>
                 {/* What this step adds, and only that (10/22: the drawing is the chart's reason). */}
                 <span className="basis-full text-[15px] leading-snug text-brand-paper/85">
                   {level === 2 && owned === 0

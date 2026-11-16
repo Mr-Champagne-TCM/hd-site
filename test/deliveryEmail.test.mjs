@@ -145,9 +145,11 @@ test("the upgrade NAMES the tier and what is in it, never 'the rest of it'", () 
   // "The reading" too, and it passed while the offer page said in plain words
   // that the reading is not ready and the checkout function refused to sell it.
   // A test can assert a promise the product cannot keep; this one did.
+  // Two sizes (11/16): an old summary is offered the reading (the chart is $0.00 from it, never sold), named plainly.
   const { text } = build(0, "J");
-  assert.ok(text.includes("The chart"), "the summary email does not name the chart");
+  assert.ok(text.includes("Want your chart drawn and the written reading too?"), "the summary email does not name what it would get");
   assert.doesNotMatch(text, /the rest of it/i, 'the summary email still says "the rest of it"');
+  assert.ok(build(1, "J").text.includes("Want the written reading too?"), "the chart email does not name the reading");
 });
 
 test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
@@ -158,17 +160,17 @@ test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
   // for sale. What is asserted is the rule rather than today's ceiling: an
   // upgrade line appears exactly when the next tier is sellable, and the top
   // tier never has one because there is nothing above it.
-  const { sellable } = await import("../shared/availability.mjs");
+  // Since 11/16 the rule is availability.mjs nextOffer(): the first level above that is sold and costs
+  // something. The reading's next is the one-to-one, sold only once its calendar exists.
+  const { nextOffer } = await import("../shared/availability.mjs");
   for (const tier of [0, 1, 2]) {
     const { text, html } = build(tier, "J");
-    const offered = /comes off what you pay next/.test(text);
-    assert.equal(
-      offered,
-      sellable(tier + 1),
-      `tier ${tier} ${offered ? "offered" : "did not offer"} the next tier, which is ${sellable(tier + 1) ? "" : "not "}sellable`,
-    );
-    assert.equal(/comes off what you pay next/.test(html), offered, "html and text disagree");
+    const offered = /you paid comes off\./.test(text);
+    assert.equal(offered, nextOffer(tier) !== null, `tier ${tier} ${offered ? "offered" : "did not offer"} a next step`);
+    assert.equal(/you paid comes off\./.test(html), offered, "html and text disagree");
   }
+  // No calendar, no call offered: the reading's email names nothing above it today.
+  assert.doesNotMatch(build(2, "J").text, /one to one/);
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {
@@ -453,11 +455,12 @@ test("the library block is labelled as free, so it reads as free tools", () => {
   assert.match(ready.html, /Free in the library/);
 });
 
-test("the next tier CONTAINS its parts, it does not add them", () => {
-  // "adds" asks the reader to compute a delta against what they are holding.
+test("the next tier is named by what it is, and never 'adds'", () => {
+  // "adds" asks the reader to compute a delta against what they are holding. Mock v2 A11 (11/16)
+  // names the thing itself: "Want the written reading too?"
   const mail = deliveryEmail({ tier: 0, name: "Jeremy", url: "https://x/r/t", links: LINKS, pending: false });
   const all = mail.html + mail.text;
-  assert.match(all, /contains/);
+  assert.match(all, /the written reading too\?/);
   assert.ok(!/\badds\b/.test(all), "the upgrade line still says 'adds'");
 });
 

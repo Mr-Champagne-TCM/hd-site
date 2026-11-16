@@ -1,9 +1,9 @@
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
-import { TIERS } from "../../shared/pricing.mjs";
+import { LEVELS, TIERS } from "../../shared/pricing.mjs";
 import { DISCLAIMER, TAKEAWAYS, marginNotes, structureProblem, summaryRows } from "./interpretation.mjs";
-import { sellable } from "../../shared/availability.mjs";
+import { nextOffer, sellable } from "../../shared/availability.mjs";
 import { OUTFIT_400, OUTFIT_600 } from "./fonts/outfit.mjs";
 import { ROBOTO_400, ROBOTO_700 } from "./fonts/roboto.mjs";
 import {
@@ -22,7 +22,7 @@ import { chartTitle } from "../../shared/chartName.mjs";
 import { GIFT_PROOF, giftCredit } from "../../shared/giftCopy.mjs";
 import { termSpans } from "../../shared/readingTerms.mjs";
 import { JEREMY_JPG } from "./photo.mjs";
-import { COACH, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
+import { closingCard, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../../shared/readingCopy.mjs";
 import { gateList } from "../../shared/gateList.mjs";
 import { GATES_NOTE, holdsLine, marginFields, markedFields, offerLine, spreadSvg, usableSpread } from "../../shared/timeSpread.mjs";
 import {
@@ -633,7 +633,7 @@ async function holdPage2(args, first) {
   return null;
 }
 
-async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null, gift = false }, opts = {}) {
+async function buildPdf({ tier, name, output, links: _links, reading = null, birth = null, inspect = false, addTimeUrl = null, gift = false, session = false }, opts = {}) {
   const qr = (() => {
     try {
       return QRCode.create(BODYGRAPH_GUIDE, { errorCorrectionLevel: "M" });
@@ -670,6 +670,12 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     const d = new Doc(pdf);
     // A chart bought for someone else: its page 3 credit lines are true for the person it is for (decision 30).
     d.gift = gift === true;
+    /**
+     * THE LAST CARD (11/16): the free call is off the HD PDFs. A one-to-one's
+     * reading says where to pick the time; any other chart or reading offers
+     * the paid one-to-one once it is sold; otherwise there is no card.
+     */
+    d.card = closingCard({ session: session === true, offer: sellable(3), word: tier >= 2 ? "reading" : "chart", url: SHOP });
     Object.assign(d, opts);
     const runs = [];
     if (inspect) hooks.onText = (r) => runs.push({ page: d.pageNo, ...r });
@@ -1147,7 +1153,9 @@ function linkOnward(d, layout, top) {
  */
 function offerLayouts(d, tier, gift = false) {
   if (tier >= 2) return null;
-  const next = sellable(tier + 1) ? TIERS[tier + 1] : null;
+  // What this chart can still become (11/16): an old summary skips the $0.00 chart.
+  const level = nextOffer(tier);
+  const next = level !== null && level < 3 ? LEVELS[level] : null;
   if (!next) return null;
   const label = (TIERS[tier]?.label ?? "").replace(/^The\s+/i, "").toUpperCase();
   const head = `IF YOU WOULD LIKE MORE THAN THIS ${label}`.trim();
@@ -1509,23 +1517,30 @@ function readingPages(d, c, v) {
  * disclaimer under it; the PDF may grow a page for it.
  */
 function coachLayouts(d) {
+  const card = d.card;
+  if (!card) return null;
   const textW = CONTENT_W - 100;
   return {
-    head: d.L(COACH.head, paint(12, INK, true), textW),
-    body: d.L(COACH.body, paint(10, INK), textW),
-    link: d.L(`${COACH.link} → ${COACH.shown}`, paint(10, LIB_TEAL, true), textW),
+    head: d.L(card.head, paint(12, INK, true), textW),
+    body: d.L(card.body, paint(10, INK), textW),
+    link: card.link ? d.L(`${card.link} → ${card.shown}`, paint(10, LIB_TEAL, true), textW) : null,
+    url: card.url,
   };
 }
 
 /** The room the coaching card and the disclaimer under it take. */
-function coachNeed(d, { head, body, link }) {
-  const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
+function coachNeed(d, panel) {
+  if (!panel) return disclaimerLayout(d).height + 2;
+  const { head, body, link } = panel;
+  const h = Math.max(70, 12 + head.height + 3 + body.height + (link ? 6 + link.height : 0) + 12);
   return 16 + h + 20 + disclaimerLayout(d).height + 2;
 }
 
-function coachPanel(d, { head, body, link }) {
+function coachPanel(d, panel) {
+  if (!panel) return;
+  const { head, body, link, url } = panel;
   const pdf = d.pdf;
-  const h = Math.max(70, 12 + head.height + 3 + body.height + 6 + link.height + 12);
+  const h = Math.max(70, 12 + head.height + 3 + body.height + (link ? 6 + link.height : 0) + 12);
   d.need(16 + h + 20 + disclaimerLayout(d).height + 2);
   d.closing("card");
   d.gap(16);
@@ -1549,9 +1564,11 @@ function coachPanel(d, { head, body, link }) {
   drawLayout(pdf, head, x, y);
   y += head.height + 3;
   drawLayout(pdf, body, x, y);
-  y += body.height + 6;
-  drawLayout(pdf, link, x, y);
-  d.linkLayout(link, x, y, COACH.url);
+  if (link) {
+    y += body.height + 6;
+    drawLayout(pdf, link, x, y);
+    d.linkLayout(link, x, y, url);
+  }
   d.y = top + h;
 }
 

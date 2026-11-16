@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { SELLABLE_MAX_LEVEL, sellable } from "../shared/availability.mjs";
+import { SELLABLE_MAX_LEVEL, OFF_SALE, sellable } from "../shared/availability.mjs";
 import { TIERS } from "../shared/pricing.mjs";
 import { sessionParams } from "../netlify/lib/checkout.mjs";
 
@@ -13,7 +13,8 @@ import { sessionParams } from "../netlify/lib/checkout.mjs";
  */
 
 test("every tier that is for sale exists", () => {
-  assert.equal(sellable(0), true);
+  // OFF SALE since 11/16 (two sizes): the chart costs what the summary did and holds all of it.
+  assert.equal(sellable(0), false, "the summary is never sold again");
   // Raised 2026-08-28. The chart tier promises "a page you can share and a PDF
   // you keep" and both now exist: /r/<token> renders the drawing, /api/pdf
   // builds it from the same SVG with the font embedded.
@@ -22,8 +23,12 @@ test("every tier that is for sale exists", () => {
   // and the whole path exists: prompt, validator, generator, write-once
   // storage, the page and the seven-page PDF.
   assert.equal(sellable(2), true);
-  // And nothing above the ladder is ever sellable, whatever the ceiling says.
-  assert.equal(sellable(TIERS.length), false, "a tier that does not exist is for sale");
+  // The one-to-one (level 3, 11/16) only once there is a calendar to book: nobody pays for a call they cannot book.
+  assert.equal(sellable(3, { bookingUrl: null }), false, "a call with no calendar is for sale");
+  assert.equal(sellable(3, { bookingUrl: "https://calendly.com/example/30min" }), true);
+  assert.equal(sellable(3, { bookingUrl: "http://insecure.example" }), false, "only an https calendar");
+  // And nothing above that is ever sellable, whatever the ceiling says.
+  assert.equal(sellable(4, { bookingUrl: "https://calendly.com/example/30min" }), false, "a level that does not exist is for sale");
   assert.equal(sellable(-1), false);
 });
 
@@ -87,7 +92,9 @@ test("the ceiling is a number that can be raised, not a special case", () => {
   // this became 2 -- and it did, which is how the change got made deliberately
   // rather than the ceiling being quietly bypassed somewhere else.
   assert.equal(SELLABLE_MAX_LEVEL, 2);
+  // Below the ceiling, everything but what is taken off sale (the summary, 11/16).
   for (let level = 0; level < TIERS.length; level += 1) {
-    assert.equal(sellable(level), level <= SELLABLE_MAX_LEVEL);
+    assert.equal(sellable(level), level <= SELLABLE_MAX_LEVEL && !OFF_SALE.includes(level));
   }
+  assert.deepEqual([...OFF_SALE], [0]);
 });

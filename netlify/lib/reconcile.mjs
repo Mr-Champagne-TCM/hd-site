@@ -1,6 +1,7 @@
 import { mintReadingLink, nameCase, readingIdForSession } from "./reading.mjs";
 import { recordPurchase } from "./charts.mjs";
 import { paidLevel } from "./checkout.mjs";
+import { recordTierOf, SESSION_LEVEL } from "../../shared/pricing.mjs";
 
 /**
  * WHO PAID AND GOT NOTHING.
@@ -145,7 +146,7 @@ export async function reconcile({
           session: sessionId,
           reading: id,
           payment: typeof session?.payment_intent === "string" ? session.payment_intent : undefined,
-          ...(typeof deliver === "function" ? { tier: level } : {}),
+          ...(typeof deliver === "function" ? { tier: recordTierOf(level) } : {}),
         },
       }).catch(() => {});
     }
@@ -169,12 +170,13 @@ export async function reconcile({
         },
       });
 
-      const url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
+      const url = `${origin}/r/${mintReadingLink({ id, tier: recordTierOf(level) }, grantSecret)}`;
       await deliver({
         to: buyer.email ?? null,
         name: nameCase(buyer.name),
         url,
-        tier: level,
+        tier: recordTierOf(level),
+        session: level === SESSION_LEVEL,
         kept: Boolean(recorded?.kept),
         // The receipt says the chart's own title (10/23, option 1): an upgrade's chart keeps its name.
         chartName: recorded?.chartName ?? null,

@@ -152,11 +152,15 @@ test("9A: the PDF's page count is sent once there is a PDF, never while the word
 // --- the upgrade, per D-11 --------------------------------------------------
 
 test("an upgrade is offered below the top tier", async () => {
-  for (const [tier, expected] of [[0, "The chart"], [1, "The reading"]]) {
+  // Two sizes (11/16): an old summary skips the chart (same price: nothing due, never sold) to the reading.
+  for (const [tier, level, expected] of [[0, 2, "The reading"], [1, 2, "The reading"]]) {
     const { store, token } = await seed(tier);
     const body = parse(await open(store, token));
-    assert.equal(body.upgrade.level, tier + 1);
+    assert.equal(body.upgrade.level, level);
     assert.equal(body.upgrade.label, expected);
+    // No calendar yet: the one-to-one is neither offered nor shown as bought.
+    assert.equal(body.offerSession, false);
+    assert.equal(body.session, false);
   }
 });
 

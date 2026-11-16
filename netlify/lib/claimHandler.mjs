@@ -1,4 +1,5 @@
 import { paidLevel } from "./checkout.mjs";
+import { recordTierOf, SESSION_LEVEL } from "../../shared/pricing.mjs";
 import { mintGrant } from "./grant.mjs";
 import { loadReading, mintReadingLink, nameCase, readingIdForSession } from "./reading.mjs";
 import { recordPurchase } from "./charts.mjs";
@@ -90,7 +91,9 @@ export async function handleClaim({
 
   // Short-lived on purpose. A grant is spent within minutes of buying; the
   // artefact it unlocks is kept far longer (D-7).
-  const grant = mintGrant({ tier: level, sku: session?.metadata?.sku, ttlSeconds: 3600 }, grantSecret);
+  // The stored tier (11/16): a one-to-one is a reading with a call (pricing.mjs recordTierOf).
+  const tier = recordTierOf(level);
+  const grant = mintGrant({ tier, sku: session?.metadata?.sku, ttlSeconds: 3600 }, grantSecret);
 
   /**
    * THE PURCHASE IS RECORDED BEFORE THERE IS ANYTHING TO SHOW (Jeremy's
@@ -136,12 +139,12 @@ export async function handleClaim({
           session,
           secret: grantSecret,
           now,
-          note: (kind, detail) => note(kind, { detail, ref: { ...ref, tier: level } }),
+          note: (kind, detail) => note(kind, { detail, ref: { ...ref, tier } }),
         });
         kept = Boolean(recorded?.kept);
         chartName = recorded?.chartName ?? null;
       }
-      url = `${origin}/r/${mintReadingLink({ id, tier: level }, grantSecret)}`;
+      url = `${origin}/r/${mintReadingLink({ id, tier }, grantSecret)}`;
     } catch (e) {
       lastError = e;
     }
@@ -165,7 +168,8 @@ export async function handleClaim({
    */
   if (url && !alreadyThere && buyer.email && typeof send === "function") {
     const { subject, html, text } = deliveryEmail({
-      tier: level,
+      tier,
+      session: level === SESSION_LEVEL,
       // THE CAPITALISED NAME, the same one the store keeps.
       name: nameCase(buyer.name),
       url,
@@ -190,11 +194,11 @@ export async function handleClaim({
     // Logged either way, and never with the address in it.
     console.log(`POST /api/claim: delivery email ${sent?.ok ? "sent" : `failed (${sent?.reason})`}`);
     if (!sent?.ok) {
-      await note("claim-email", { detail: `${sent?.reason ?? "unknown"} (tier ${level})`, paid: true, ref: { ...ref, tier: level } });
+      await note("claim-email", { detail: `${sent?.reason ?? "unknown"} (tier ${level})`, paid: true, ref: { ...ref, tier } });
     }
   } else if (url && !alreadyThere && !buyer.email) {
     console.log("POST /api/claim: no email on the purchase, nothing sent");
-    await note("claim-no-address", { detail: `tier ${level}`, paid: true, ref: { ...ref, tier: level } });
+    await note("claim-no-address", { detail: `tier ${level}`, paid: true, ref: { ...ref, tier } });
   }
 
   console.log(`POST /api/claim -> 200 (tier ${level}${url ? ", link minted" : ", NO LINK"})`);

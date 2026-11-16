@@ -7,7 +7,7 @@ import { deliveryEmail } from "../netlify/lib/deliveryEmail.mjs";
 import { ONWARD_NOTE, ONWARD_LINKS } from "../netlify/lib/readingPdf.mjs";
 import { ADD_TIME } from "../shared/timeSpread.mjs";
 import { MESSAGES } from "../shared/customerMessages.mjs";
-import { CHART, READING } from "../shared/pricing.mjs";
+import { CHART, READING, money } from "../shared/pricing.mjs";
 import { CENTER_UNDEFINED } from "../shared/libraryGlance.mjs";
 import { SITE } from "../netlify/lib/siteLinks.mjs";
 
@@ -71,10 +71,12 @@ test("S2: the add-time form says what is kept, as retimeReading keeps it", () =>
 /* ------------------------------------------------------------------ S4 */
 
 test("S4: one credit sentence on the offer page, the chart and summary pages, the emails and the PDF", async () => {
-  assert.ok(copy.LADDER_NOTE.endsWith(` ${CREDIT}`), copy.LADDER_NOTE);
+  // Two sizes (Jeremy 11/16, call 1): the offer page names the one credit there is, in its own words.
+  assert.equal(copy.LADDER_NOTE, `Start with the chart, or go straight to the reading. Already have the chart? Its ${money(CHART.cents)} comes off the reading.`);
   assert.ok(flat(src("src/ReadingActions.tsx")).includes(CREDIT), "the chart and summary pages");
   const ready = deliveryEmail({ tier: 1, name: "J", url: "https://x.test/r/a.b", links: SITE });
-  assert.ok(ready.text.includes(`It is offered on your page, and ${CREDIT.charAt(0).toLowerCase()}${CREDIT.slice(1)}`), ready.text);
+  // Mock v2 A11 (11/16, accepted): the chart email's line, word for word.
+  assert.ok(ready.text.includes(`Want the written reading too? It’s on your page, and the ${money(CHART.cents)} you paid comes off.`), ready.text);
   // The PDF's page 3 (rendered and read in brandDecisions.test.mjs); here its source, joined.
   const pdf = flat(src("netlify/lib/readingPdf.mjs")).replace(/[`"] \+ [`"]/g, "");
   assert.ok(pdf.includes(`${CREDIT} The link in your email is what proves it,`), "the PDF's page 3");
@@ -140,8 +142,8 @@ test("N19: the three-lines box keeps the dot behind the label, never opening a l
 test("N29: a gift's ready email offers the next step on the chart's page, not 'your page'", () => {
   const gift = deliveryEmail({ tier: 1, name: "Sage Testwell", chartName: null, url: "https://x.test/r/a.b", links: SITE, someoneNew: true });
   assert.match(gift.text, /Open their chart:/);
-  assert.match(gift.text, /It is offered on the chart’s page, and what you have already paid comes off what you pay next/);
-  assert.doesNotMatch(gift.text + gift.html, /offered on your page/);
+  assert.ok(gift.text.includes(`It’s on the chart’s page, and the ${money(CHART.cents)} you paid comes off.`), gift.text);
+  assert.doesNotMatch(gift.text + gift.html, /on your page/);
   const own = deliveryEmail({ tier: 1, name: "J", url: "https://x.test/r/a.b", links: SITE });
-  assert.match(own.text, /It is offered on your page,/);
+  assert.match(own.text, /It’s on your page,/);
 });

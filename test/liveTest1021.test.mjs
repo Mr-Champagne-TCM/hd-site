@@ -232,12 +232,12 @@ test("W1 a value with its sentence keeps the period that ends it", () => {
 
 const app = await loadComponents("src", "App.tsx");
 
-test("W8 THE SOMEONE-NEW CARDS DESCRIBE THEIR CHART, on all three", () => {
+test("W8 THE SOMEONE-NEW CARDS DESCRIBE THEIR CHART, on both sizes", () => {
   const page = text(app.render("Tiers", { fresh: true }));
-  // The 10/22 split: their channels and gates on the summary, the drawing as the chart's reason.
-  assert.match(page, /Definition, their centers, their channels and activated gates, their incarnation cross\./);
-  assert.match(page, /Their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\./);
-  assert.match(page, /Their chart, plus about 1,200 words written to it: ✓ How they decide ✓ How they meet the world/);
+  // Two sizes (11/16): the chart card in plain words (mock v2 A2), the reading card's lead (A3).
+  assert.match(page, /Their chart drawn as a picture \(the bodygraph\), with the key facts in plain words: how their energy works, how they decide, how they meet the world\./);
+  assert.match(page, /The drawing, plus about 1,200 words written just for them: ✓ How they decide ✓ How they meet the world/);
+  assert.doesNotMatch(page, /The summary/, "the summary is off sale");
   assert.doesNotMatch(page, /your centers|your incarnation cross|How you decide/);
 });
 
@@ -365,10 +365,13 @@ test("#6 THE NOTE NEVER SITS UNDER A STRAY ROW of planet numbers on an almost em
   }
 });
 
-test("#6 THE COACHING CARD NEVER ENDS THE PDF ON A PAGE OF ITS OWN", async () => {
+test("#6 THE CLOSING CARD NEVER ENDS THE PDF ON A PAGE OF ITS OWN", async () => {
+  // 11/16: the free call is off the HD PDFs (coaching funnel only). The card a PDF can still end on is
+  // a one-to-one's "Your thirty minutes with Jeremy"; nothing else prints the free call.
+  assert.equal((await pdf({ reading: longer(0) })).runs.find((x) => x.text === COACH.head), undefined, "the free call is still in the PDF");
   for (const k of [0, 6]) {
-    const r = await pdf({ reading: longer(k) });
-    const card = r.runs.find((x) => x.text === COACH.head);
+    const r = await pdf({ reading: longer(k), session: true });
+    const card = r.runs.find((x) => x.text === "Your thirty minutes with Jeremy");
     const before = r.runs.filter((x) => x.page === card.page && x.y < card.y && x.y > 100);
     assert.ok(before.length > 0, `k=${k}: page ${card.page} holds only the coaching card`);
   }
@@ -558,8 +561,9 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
 
 test("#16 WHAT ELSE THERE IS, for someone new: their bodygraph, their channels", () => {
   const m = mail({ tier: 0, chartName: "Quinn", someoneNew: true });
-  assert.match(m.text, /The chart contains their bodygraph, drawn — the summary’s values as a picture, on a page you can share and a PDF you keep\./);
-  assert.match(mail({ tier: 0 }).text, /The chart contains your bodygraph, drawn — the summary’s values as a picture/);
+  // Two sizes (11/16): an old summary is offered the reading (its chart would be $0.00, never sold).
+  assert.match(m.text, /Want their chart drawn and the written reading too\? It’s on the chart’s page, and the \$1\.11 you paid comes off\./);
+  assert.match(mail({ tier: 0 }).text, /Want your chart drawn and the written reading too\? It’s on your page,/);
   assert.equal(TIERS[0].theirBlurb, "Type, Strategy, Authority, Profile, Definition, their centers, their channels and activated gates, their incarnation cross.");
 });
 
