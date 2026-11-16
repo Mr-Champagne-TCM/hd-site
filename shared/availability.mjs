@@ -1,4 +1,4 @@
-import { BOOKING_URL } from "./booking.mjs";
+import { BOOKING_URL, IN_BROWSER, ONE_TO_ONE_ON_SALE } from "./booking.mjs";
 import { LEVELS } from "./pricing.mjs";
 
 /**
@@ -62,12 +62,20 @@ export const SELLABLE_MAX_LEVEL = 2;
  * still open; it is only never sold again. The one-to-one (level 3) is sold
  * only once a booking link exists (shared/booking.mjs), so nobody pays for a
  * call they cannot book.
+ *
+ * THE LINK IS THE SERVER'S (booking.mjs says why it is not in the page's code).
+ * So the two sides ask differently: a function, a test or a build sells the
+ * one-to-one when it HOLDS an https link; the page, which never holds it, goes
+ * by the public switch (`onSale`). The checkout is a function, so a switch left
+ * on with no link set still sells nothing: it answers "not sellable".
  */
 export const OFF_SALE = Object.freeze([0]);
 
-export function sellable(level, { bookingUrl = BOOKING_URL } = {}) {
+const PAGE_SELLS_ONE_TO_ONE = IN_BROWSER && ONE_TO_ONE_ON_SALE;
+
+export function sellable(level, { bookingUrl = BOOKING_URL, onSale = PAGE_SELLS_ONE_TO_ONE } = {}) {
   if (!Number.isInteger(level) || OFF_SALE.includes(level)) return false;
-  if (level === 3) return typeof bookingUrl === "string" && /^https:\/\//.test(bookingUrl);
+  if (level === 3) return onSale === true || (typeof bookingUrl === "string" && /^https:\/\//.test(bookingUrl));
   return level >= 1 && level <= SELLABLE_MAX_LEVEL;
 }
 
@@ -77,11 +85,11 @@ export function sellable(level, { bookingUrl = BOOKING_URL } = {}) {
  * after the credit. An old summary skips the chart (both cost the same: nothing due).
  * One answer for the page, the emails and the PDF.
  */
-export function offersFor(owned, { bookingUrl = BOOKING_URL } = {}) {
+export function offersFor(owned, { bookingUrl = BOOKING_URL, onSale = PAGE_SELLS_ONE_TO_ONE } = {}) {
   const from = Number.isInteger(owned) ? owned : -1;
   const credit = from >= 0 ? (LEVELS[from]?.cents ?? 0) : 0;
   return LEVELS.map((t, level) => level).filter(
-    (level) => level > from && sellable(level, { bookingUrl }) && LEVELS[level].cents - credit > 0,
+    (level) => level > from && sellable(level, { bookingUrl, onSale }) && LEVELS[level].cents - credit > 0,
   );
 }
 

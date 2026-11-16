@@ -18,7 +18,7 @@ import {
   recordTierOf,
 } from "../shared/pricing.mjs";
 import { nextOffer, offersFor, sellable } from "../shared/availability.mjs";
-import { BOOKING_URL } from "../shared/booking.mjs";
+import { BOOKING_URL, ONE_TO_ONE_ON_SALE, bookingUrlFrom } from "../shared/booking.mjs";
 import { closingCard } from "../shared/readingCopy.mjs";
 import { checkoutCredit, paidLevel, sessionParams, upgradeCredit } from "../netlify/lib/checkout.mjs";
 import { chainHead, recordPurchase } from "../netlify/lib/charts.mjs";
@@ -96,9 +96,27 @@ test("the summary is off sale; the one-to-one only with a calendar", () => {
   assert.equal(sellable(0), false);
   assert.equal(sellable(1), true);
   assert.equal(sellable(2), true);
-  assert.equal(BOOKING_URL, null, "TODO(Jeremy): no booking link yet");
+  // No link in this process (the tests set none): a function with no calendar sells no call.
+  assert.equal(BOOKING_URL, null);
   assert.equal(sellable(3), false, "a call with no calendar is sold");
   assert.equal(sellable(3, { bookingUrl: CAL }), true);
+});
+
+test("the booking link is the server's: a public switch for the page, the link from the site's settings (11/16)", () => {
+  // Jeremy 11/16: "google!" -- a Google Calendar booking page. This repository is public and shared/ is
+  // bundled into the page, so the link is never written here; it is read from HD_BOOKING_URL.
+  assert.equal(ONE_TO_ONE_ON_SALE, true);
+  assert.equal(bookingUrlFrom({ HD_BOOKING_URL: ` ${CAL} ` }), CAL);
+  assert.equal(bookingUrlFrom({ HD_BOOKING_URL: "http://insecure.example/x" }), null, "only https");
+  assert.equal(bookingUrlFrom({ HD_BOOKING_URL: "https://two words" }), null);
+  assert.equal(bookingUrlFrom({}), null);
+  assert.equal(bookingUrlFrom(null), null);
+  // The page never holds the link: it goes by the switch. A function goes by the link it holds.
+  assert.equal(sellable(3, { bookingUrl: null, onSale: true }), true);
+  assert.equal(sellable(3, { bookingUrl: null, onSale: false }), false);
+  assert.deepEqual(offersFor(2, { bookingUrl: null, onSale: true }), [3]);
+  const src = readFileSync(new URL("../shared/booking.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /https:\/\/(calendar\.app\.google|calendar\.google\.com|calendly\.com)\/\w/, "a booking link in the public repo");
 });
 
 test("what each chart can still become: never a $0.00 step, never what it has", () => {
