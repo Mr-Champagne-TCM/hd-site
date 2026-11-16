@@ -255,3 +255,8 @@ test("the offer page: two cards, invitations for buttons, the one-to-one only wh
   assert.match(app, /Add the written reading \(\$\{money\(t\.cents - paid\)\}\) →/);
   assert.match(app, /Add 30 minutes with Jeremy \(\$\{money\(t\.cents - paid\)\}\) →/);
 });
+
+test("a reading's page offers the one-to-one once: the step-further box, not the closing card too (11/16 rig)", () => {
+  const page = src("src/ReadingPage.tsx");
+  assert.match(page, /offer: reading\.offerSession === true && reading\.upgrade\?\.level !== 3,/);
+});

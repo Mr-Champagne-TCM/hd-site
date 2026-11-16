@@ -471,7 +471,10 @@ export default function ReadingPage({ token }: { token: string }) {
     <ClosingCardContext.Provider
       value={{
         session: reading.session === true,
-        offer: reading.offerSession === true,
+        // SAID ONCE (11/16, the rig's doubled-text check): on a reading's page the step-further box below
+        // already offers the one-to-one, in the same words. The closing card offers it only where that box
+        // offers something else (a chart's page, whose next step is the reading).
+        offer: reading.offerSession === true && reading.upgrade?.level !== 3,
         token,
         word: reading.tier >= 2 ? "reading" : "chart",
         booking: reading.booking ?? null,
