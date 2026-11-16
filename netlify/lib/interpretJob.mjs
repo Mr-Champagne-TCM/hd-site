@@ -1,4 +1,5 @@
 import { fillInterpretation, loadReading, mintReadingLink, redoneWithTime } from "./reading.mjs";
+import { chartDifferences } from "./chartDiff.mjs";
 import { generateReading } from "./gemini.mjs";
 import { promptShape } from "./interpretation.mjs";
 import { geminiKind, noteFailure } from "./failures.mjs";
@@ -123,6 +124,34 @@ export async function interpretOne(args) {
   }
 }
 
+/**
+ * THE READING THEY ALREADY HAVE (Jeremy 11/16: "Go on all fixes"). Someone who owns the written reading and
+ * then books the one-to-one gets a new record (charts.mjs recordPurchase) -- and the writer used to write the
+ * words a second time, differently, for a chart that had not changed. A reading somebody has read, quoted and
+ * brought to the call is the one the call is about. So: when the record this one grew from is a written
+ * reading of the SAME chart (the same kept birth details, and no identifying value differs), its words are
+ * carried over as they are, and nothing is asked of the writer.
+ *
+ * Anything else is written fresh, as before: details corrected on the way (the chart may have moved), a chart
+ * or a summary it grew from (no words to carry), or a source that cannot be read.
+ */
+const BIRTH_KEYS = ["date", "time", "timeKnown", "zone", "place"];
+export async function wordsToCarry({ store, reading, now = Date.now() }) {
+  if (!reading?.grewFrom) return null;
+  let source = null;
+  try {
+    source = await loadReading(store, reading.grewFrom, now);
+  } catch {
+    return null;
+  }
+  if (!source || source.tier < 2 || source.pending) return null;
+  if (typeof source.reading !== "string" || !source.reading.trim()) return null;
+  if (!source.birth || !reading.birth) return null;
+  for (const k of BIRTH_KEYS) if (String(source.birth[k] ?? "") !== String(reading.birth[k] ?? "")) return null;
+  if (chartDifferences(source.output, reading.output).length) return null;
+  return source.reading;
+}
+
 async function writeOne({
   id,
   store,
@@ -144,16 +173,19 @@ async function writeOne({
   if (reading.pending) return { ok: false, reason: "no_chart_yet" };
   if (reading.reading) return { ok: false, reason: "already_written" };
 
+  // The reading they already have, when this one grew from it unchanged (wordsToCarry): nothing is asked.
+  const carried = await wordsToCarry({ store, reading, now });
+
   // The stored prompt decides the shape: form mode or letter mode.
   const shape = promptShape(prompt);
   const stop = Math.min(clock() + READING_BUDGET_MS, deadline);
   const fits = (limit) => clock() + worstAsk(limit) <= stop;
   // Too little of the caller's time left to finish even one ask: leave it for the next run.
-  if (!fits(ASK_MS)) return { ok: false, reason: "out_of_time" };
+  if (!carried && !fits(ASK_MS)) return { ok: false, reason: "out_of_time" };
   let lastAskAt = clock();
-  let made = await generate(reading.output, { apiKey, prompt, shape });
+  let made = carried ? { ok: true, text: carried } : await generate(reading.output, { apiKey, prompt, shape });
   let reaskedTimeout = false;
-  let drafts = 1;
+  let drafts = carried ? 0 : 1;
   let partAsks = 0;
   let noted = 0;
   // How often each slot of the current draft has been asked for again.
@@ -263,6 +295,8 @@ async function writeOne({
         someoneNew: reading.fresh === true,
         // Written again for a birth time found later (10/22): the email says it was redone.
         redone: redoneWithTime(reading),
+        // A one-to-one's reading (11/16): the email carries the booking link (deliveryEmail `session`).
+        session: reading.sku === "hd_session",
       });
     } catch (e) {
       // The reading is on the page; the email is the copy. Ours to follow up.
@@ -270,5 +304,5 @@ async function writeOne({
     }
   }
 
-  return { ok: true, words: made.text.split(/\s+/).length, asks, partAsks };
+  return { ok: true, words: made.text.split(/\s+/).length, asks, partAsks, ...(carried ? { carried: true } : {}) };
 }

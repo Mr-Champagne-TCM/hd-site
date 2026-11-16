@@ -24,6 +24,7 @@ import ExampleSummary from "./ExampleSummary";
 import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
+import { countVisit } from "./count";
 import { customerText } from "../shared/customerMessages.mjs";
 import { HINT, hint, ownPageHint } from "../shared/linkHints.mjs";
 
@@ -920,6 +921,12 @@ function ReturningView({ token }: { token: string }) {
   );
 }
 
+/** One visit to the offer page, counted once when it opens (src/count.ts; 10/26). */
+function VisitCount() {
+  useEffect(() => countVisit(), []);
+  return null;
+}
+
 export default function App({ upgradeToken = null }: { upgradeToken?: string | null }) {
   /**
    * Detected from the `?paid=` parameter Stripe returns to, read before
@@ -956,6 +963,7 @@ export default function App({ upgradeToken = null }: { upgradeToken?: string | n
    */
   return (
     <div className="font-sans text-brand-paper">
+      <VisitCount />
       <Nav />
       <main>
         <Hero />

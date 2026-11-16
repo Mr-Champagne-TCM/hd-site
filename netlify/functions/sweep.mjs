@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { TRIGGER_HEADER, triggerToken } from "../lib/trigger.mjs";
 import { checkFailureRate, sweepIncidents } from "../lib/health.mjs";
 import { sweepCounters } from "../lib/ratelimit.mjs";
+import { COUNTS_STORE, KEEP_DAYS, sweepCounts } from "../lib/counts.mjs";
 import { alertSender } from "../lib/failures.mjs";
 import { noteDeployContext } from "../lib/deployContext.mjs";
 import { SITE } from "../lib/siteLinks.mjs";
@@ -80,6 +81,15 @@ export default async (request, context) => {
       if (gone.deleted || gone.failed) console.log(`sweep: ${name} counters past 7 days: ${gone.deleted} deleted, ${gone.failed} failed`);
     } catch (e) {
       console.log(`sweep: could not clear old ${name} counters (${e.message})`);
+    }
+  }
+  // The visit and Buy counts past their ninety days (lib/counts.mjs; the privacy page says so). Once a day.
+  if (new Date().getUTCHours() === 8 && new Date().getUTCMinutes() < 15) {
+    try {
+      const gone = await sweepCounts(getStore({ name: COUNTS_STORE, consistency: "strong" }));
+      if (gone.deleted || gone.failed) console.log(`sweep: counts past ${KEEP_DAYS} days: ${gone.deleted} deleted, ${gone.failed} failed`);
+    } catch (e) {
+      console.log(`sweep: could not clear old counts (${e.message})`);
     }
   }
   return new Response(null, { status: 204 });
