@@ -24,20 +24,20 @@ test("the tier words: channels and gates on the summary, the drawing as the char
   assert.match(SUMMARY.checkoutDescription, /channels and activated gates/);
   assert.doesNotMatch(CHART.blurb, /channels|gates/);
   // Mock v2 A7 (11/16): the reading in plain words, no "planet numbers" on an offer (10/31 audit #14).
-  assert.match(READING.blurb, /^About 1,200 words written to your chart/);
+  assert.match(READING.blurb, /^About 1,700 words written to your chart/);
   // "The same chart, a step further": each price says only what that step adds.
   assert.match(CHART.adds, /bodygraph/);
   assert.doesNotMatch(CHART.adds, /channels|gates/);
-  assert.match(READING.addsToSummary, /bodygraph.*1,200 words.*four small things to try/);
+  assert.match(READING.addsToSummary, /bodygraph.*1,700 words.*four small things to try/);
   assert.equal(SUMMARY.adds, null);
 });
 
 test("PLANET NUMBERS everywhere (Jeremy's GO PDF, 10/23): the shop's cards say what the page and the PDF say", () => {
   // Since 11/16 (mock v2 A7) the offers say what the reading IS; the page and PDF still name the planet numbers.
-  assert.equal(READING.blurb, "About 1,200 words written to your chart, four small things to try, and a PDF.");
-  assert.equal(READING.theirBlurb, "About 1,200 words written to their chart, four small things to try, and a PDF.");
+  assert.equal(READING.blurb, "About 1,700 words written to your chart, four small things to try, and a PDF.");
+  assert.equal(READING.theirBlurb, "About 1,700 words written to their chart, four small things to try, and a PDF.");
   assert.equal(READING.adds, READING.blurb);
-  assert.equal(READING.addsToSummary, "Your bodygraph drawn, about 1,200 words written to your chart, four small things to try, and a PDF.");
+  assert.equal(READING.addsToSummary, "Your bodygraph drawn, about 1,700 words written to your chart, four small things to try, and a PDF.");
   for (const t of [SUMMARY, CHART, READING, SESSION]) {
     for (const k of ["blurb", "theirBlurb", "adds", "addsToSummary", "checkoutDescription"]) {
       assert.doesNotMatch(String(t[k] ?? ""), /activation/i, `${t.sku}.${k}`);

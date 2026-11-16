@@ -166,7 +166,7 @@ test("SOMEONE NEW is marked fresh and is its own person", async () => {
 test("someone else's options say what THEIR next step adds (10/26 live test: 'Your bodygraph drawn')", async () => {
   const { CHART, READING } = await import("../shared/pricing.mjs");
   assert.equal(CHART.addsTheirs, "Their bodygraph drawn, and its PDF to keep.");
-  assert.equal(READING.addsToSummaryTheirs, "Their bodygraph drawn, about 1,200 words written to their chart, four small things to try, and a PDF.");
+  assert.equal(READING.addsToSummaryTheirs, "Their bodygraph drawn, about 1,700 words written to their chart, four small things to try, and a PDF.");
   // The same words otherwise, so the two can never drift apart.
   assert.equal(CHART.addsTheirs.replace(/^Their/, "Your"), CHART.adds);
   assert.equal(READING.addsToSummaryTheirs.replace(/^Their/, "Your").replace("their chart", "your chart"), READING.addsToSummary);

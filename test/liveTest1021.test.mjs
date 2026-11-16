@@ -236,7 +236,7 @@ test("W8 THE SOMEONE-NEW CARDS DESCRIBE THEIR CHART, on both sizes", () => {
   const page = text(app.render("Tiers", { fresh: true }));
   // Two sizes (11/16): the chart card in plain words (mock v2 A2), the reading card's lead (A3).
   assert.match(page, /Their chart drawn as a picture \(the bodygraph\), with the key facts in plain words: how their energy works, how they decide, how they meet the world\./);
-  assert.match(page, /The drawing, plus about 1,200 words written just for them: ✓ How they decide ✓ How they meet the world/);
+  assert.match(page, /The drawing, plus about 1,700 words written just for them: ✓ How they decide ✓ How they meet the world/);
   assert.doesNotMatch(page, /The summary/, "the summary is off sale");
   assert.doesNotMatch(page, /your centers|your incarnation cross|How you decide/);
 });
@@ -557,7 +557,7 @@ test("#16 THE READY EMAIL FOR SOMEONE NEW: 'Quinn’s summary is ready', their c
   assert.doesNotMatch(m.text, /Your summary|your centers|your incarnation cross|Open your/);
   const r = mail({ tier: 2, chartName: "Morgan", someoneNew: true });
   assert.match(r.text, /Morgan’s chart and written reading are ready\./);
-  assert.match(r.text, /About 1,200 words written to their chart/);
+  assert.match(r.text, /About 1,700 words written to their chart/);
   assert.match(r.text, /Open Morgan’s reading:/);
 });
 

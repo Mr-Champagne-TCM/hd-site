@@ -97,7 +97,7 @@ test("A REAL RECEIPT: what, the amount, the date, and the next step (fix 4A)", a
 test("ONE READY EMAIL on the reading tier, listing what is on the page", () => {
   const r = deliveryEmail({ tier: 2, name: "Alex", url: URL_, links: LINKS, pending: false });
   assert.match(r.text, /Your chart and your written reading are ready\./);
-  for (const t of ["Your bodygraph, drawn", "About 1,200 words written to your chart", "Four small things to try", "A PDF to keep"]) {
+  for (const t of ["Your bodygraph, drawn", "About 1,700 words written to your chart", "Four small things to try", "A PDF to keep"]) {
     assert.ok(r.text.includes(`✓ ${t}`), t);
   }
 });

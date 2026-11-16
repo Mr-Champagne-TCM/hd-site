@@ -108,7 +108,7 @@ test("under Pay: what comes next (fix 14B), on every tier", () => {
 test("the checkout names the product plainly (fix 14B)", async () => {
   const { tierProduct } = await import("../netlify/lib/checkout.mjs");
   assert.equal(tierProduct(2).name, "Human Design reading");
-  assert.equal(tierProduct(2).description, "Your chart drawn, about 1,200 words written to it, four small things to try, and a PDF to keep.");
+  assert.equal(tierProduct(2).description, "Your chart drawn, about 1,700 words written to it, four small things to try, and a PDF to keep.");
   assert.equal(tierProduct(3).name, "Human Design one-to-one with Jeremy");
   assert.match(tierProduct(3).description, /^Thirty minutes with Jeremy on a video call/);
   assert.equal(tierProduct(1).name, "Human Design chart");

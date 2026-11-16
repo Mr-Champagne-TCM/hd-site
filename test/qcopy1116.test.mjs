@@ -103,6 +103,8 @@ test("Q9: no riddles", () => {
 test("Q11 (3)(4)(5): the ad's question on the first screen with a Buy button; the example under the cards; a shorter Who makes this on phones", () => {
   assert.equal(copy.HERO.title, "How are you built to make decisions?");
   assert.equal(copy.HERO.line, "Your chart names it.");
+  // 11/16: the header says "Human Design" now, so the hero has no second "HUMAN DESIGN" line.
+  assert.equal(copy.HERO.eyebrow, undefined);
   const app = src("src/App.tsx");
   const hero = app.slice(app.indexOf("function Hero()"), app.indexOf("/** Q11 (4)"));
   assert.match(hero, /startCheckout\(level, \{\}\)/);

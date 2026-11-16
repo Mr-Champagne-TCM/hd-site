@@ -168,9 +168,8 @@ function Hero() {
   };
   return (
     <header className="mx-auto max-w-5xl px-6 pb-4 pt-10 sm:px-8 sm:pt-20">
-      <span className="mb-4 block font-sans text-[14px] font-semibold uppercase tracking-[0.22em] text-brand-teal">
-        {HERO.eyebrow}
-      </span>
+      {/* No "HUMAN DESIGN" line over the headline any more (11/16): the header's big name is "Human Design"
+          now, and the two sat one above the other saying the same thing. */}
       <h1 className="max-w-[18ch] font-display text-[clamp(2.25rem,6vw,3.4rem)] font-medium leading-[1.08] tracking-tight">
         {HERO.title}
       </h1>
@@ -244,7 +243,7 @@ function Example() {
  * centers, your incarnation cross" to a buyer starting a chart for someone else.
  */
 const THEIR = {
-  readingLead: "The drawing, plus about 1,200 words written just for them:",
+  readingLead: "The drawing, plus about 1,700 words written just for them:",
   readingTicks: ["How they decide", "How they meet the world", "What they take in from others", "Four small things to try"],
 };
 

@@ -73,15 +73,15 @@ export const READING = {
   cents: 1111,
   label: "The reading",
   checkoutName: "Human Design reading",
-  checkoutDescription: "Your chart drawn, about 1,200 words written to it, four small things to try, and a PDF to keep.",
+  checkoutDescription: "Your chart drawn, about 1,700 words written to it, four small things to try, and a PDF to keep.",
   // Mock v2 A7 (11/16): the upgrade box in plain words, no "planet numbers" (10/31 audit #14).
-  blurb: "About 1,200 words written to your chart, four small things to try, and a PDF.",
-  theirBlurb: "About 1,200 words written to their chart, four small things to try, and a PDF.",
+  blurb: "About 1,700 words written to your chart, four small things to try, and a PDF.",
+  theirBlurb: "About 1,700 words written to their chart, four small things to try, and a PDF.",
   /** Under its price on "More for your own chart": what it adds to a chart, and to a summary. */
-  adds: "About 1,200 words written to your chart, four small things to try, and a PDF.",
-  addsTheirs: "About 1,200 words written to their chart, four small things to try, and a PDF.",
-  addsToSummary: "Your bodygraph drawn, about 1,200 words written to your chart, four small things to try, and a PDF.",
-  addsToSummaryTheirs: "Their bodygraph drawn, about 1,200 words written to their chart, four small things to try, and a PDF.",
+  adds: "About 1,700 words written to your chart, four small things to try, and a PDF.",
+  addsTheirs: "About 1,700 words written to their chart, four small things to try, and a PDF.",
+  addsToSummary: "Your bodygraph drawn, about 1,700 words written to your chart, four small things to try, and a PDF.",
+  addsToSummaryTheirs: "Their bodygraph drawn, about 1,700 words written to their chart, four small things to try, and a PDF.",
 };
 
 /**

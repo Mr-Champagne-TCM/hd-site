@@ -15,7 +15,7 @@ import { worstWriterAsk } from "./writer.mjs";
  * on the site, because the thing being tested is what a buyer is handed for
  * forty-four dollars.
  *
- * WHY THIS IS NOT DONE ON THE REQUEST. A reading is around 1,200 words and
+ * WHY THIS IS NOT DONE ON THE REQUEST. A reading is around 1,700 words and
  * takes the model tens of seconds. A synchronous Netlify function on the free
  * plan is cut off at ten. Generating inline would not be slow, it would be
  * BROKEN -- and broken in the worst way: the buyer's form submit would time out

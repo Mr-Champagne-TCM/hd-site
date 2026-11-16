@@ -134,7 +134,7 @@ const READY = Object.freeze({
   },
   2: {
     lead: "Your chart and your written reading are ready.",
-    ticks: ["Your bodygraph, drawn", "About 1,200 words written to your chart", "Four small things to try", "A PDF to keep"],
+    ticks: ["Your bodygraph, drawn", "About 1,700 words written to your chart", "Four small things to try", "A PDF to keep"],
   },
 });
 
@@ -156,7 +156,7 @@ const REDONE = Object.freeze({
 const READY_THEIR = Object.freeze({
   0: ["Type, Strategy, Authority and Profile", "Their definition and their centers", "Their channels and activated gates", "Their incarnation cross"],
   1: ["Their bodygraph, drawn", "Every detail of their chart, with their channels and activated gates", "A PDF to keep"],
-  2: ["Their bodygraph, drawn", "About 1,200 words written to their chart", "Four small things to try", "A PDF to keep"],
+  2: ["Their bodygraph, drawn", "About 1,700 words written to their chart", "Four small things to try", "A PDF to keep"],
 });
 
 /**

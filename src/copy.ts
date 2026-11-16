@@ -104,7 +104,6 @@ export const RESOURCES = {
 };
 
 export const HERO = {
-  eyebrow: "Human Design",
   // Q11 (3), 11/16: the first screen says what the ad says, with its price and a Buy button.
   title: "How are you built to make decisions?",
   line: "Your chart names it.",
@@ -462,7 +461,7 @@ export const MY_CHARTS = {
  */
 export const CARDS = {
   // Mock v2 A3 (11/16): "chart" is never explained on the card; the drawing is.
-  readingLead: "The drawing, plus about 1,200 words written just for you:",
+  readingLead: "The drawing, plus about 1,700 words written just for you:",
   readingTicks: ["How you decide", "How you meet the world", "What you take in from others", "Four small things to try"],
   readingPdf: "A PDF to keep.",
   // On the CHART's card since 11/16 (Jeremy: the chart must not drop "…it comes close to a full reading").
