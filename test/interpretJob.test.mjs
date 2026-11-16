@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { interpretOne } from "../netlify/lib/interpretJob.mjs";
 import { generateReading } from "../netlify/lib/gemini.mjs";
 import {
@@ -400,6 +401,68 @@ test("THE PROMPT COMES FROM THE BLOB, because it does not fit anywhere else", as
   };
   assert.equal(await loadPrompt({ store: angry }), null);
   assert.equal(await loadPrompt({}), null);
+});
+
+test("11/16: A STORE THAT DOES NOT ANSWER ONCE IS ASKED AGAIN, and is never called a missing prompt", async () => {
+  const { readPrompt, PROMPT_KEY, PROMPT_STORE_SILENT } = await import("../netlify/lib/gemini.mjs");
+  const waits = [];
+  const wait = async (ms) => void waits.push(ms);
+  /** A store that gives the given answers in turn: an Error is thrown, anything else returned. */
+  const flaky = (...answers) => {
+    let n = 0;
+    return {
+      calls: () => n,
+      async get(key) {
+        assert.equal(key, PROMPT_KEY);
+        const a = answers[Math.min(n++, answers.length - 1)];
+        if (a instanceof Error) throw a;
+        return a;
+      },
+    };
+  };
+
+  // The 11/16 case: one failed read, then the prompt. No alert -- the second ask finds it.
+  let s = flaky(new Error("blobs blip"), "  the prompt  ");
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: "the prompt", unreachable: false });
+  assert.equal(s.calls(), 2);
+  assert.deepEqual(waits, [2000], "one wait, two seconds, between the two asks");
+
+  // A blip that came back empty is asked again too.
+  s = flaky(null, "the prompt");
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: "the prompt", unreachable: false });
+
+  // Silent both times: said as a store that did not answer, NOT as a missing prompt.
+  s = flaky(new Error("down"), new Error("still down"));
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: null, unreachable: true });
+  assert.equal(s.calls(), 2, "asked twice, not more");
+  assert.match(PROMPT_STORE_SILENT, /did not answer/);
+  assert.doesNotMatch(PROMPT_STORE_SILENT, /No reading prompt is configured/);
+
+  // Answered both times, empty both times: the prompt really is missing.
+  s = flaky(null, "");
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: null, unreachable: false });
+
+  // Silent, then answered empty: the last answer decides -- missing, not unreachable.
+  s = flaky(new Error("down"), null);
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: null, unreachable: false });
+
+  // The first ask finds it: no second ask and no wait.
+  waits.length = 0;
+  s = flaky("found");
+  assert.deepEqual(await readPrompt({ store: s, wait }), { text: "found", unreachable: false });
+  assert.equal(s.calls(), 1);
+  assert.deepEqual(waits, []);
+});
+
+test("11/16: the store-silent alert has its own kind, brief and fix, and they say the prompt is not missing", async () => {
+  const { KINDS } = await import("../netlify/lib/failures.mjs");
+  const { PLAYBOOK } = await import("../netlify/lib/playbook.mjs");
+  assert.equal(KINDS["reading-prompt-store"].severity, KINDS["reading-prompt"].severity);
+  assert.match(PLAYBOOK["reading-prompt-store"].brief, /did not answer/);
+  assert.match(PLAYBOOK["reading-prompt-store"].brief, /not missing/);
+  assert.match(PLAYBOOK["reading-prompt-store"].fix, /one-off/);
+  const src = readFileSync(new URL("../netlify/functions/interpret.mjs", import.meta.url), "utf8");
+  assert.match(src, /unreachable \? "reading-prompt-store" : "reading-prompt"/);
 });
 
 /* ------------------------------------------- form mode follows the stored prompt (10/5) */

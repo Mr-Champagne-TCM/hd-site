@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { interpretOne } from "../lib/interpretJob.mjs";
 import { promptProblem } from "../lib/interpretation.mjs";
-import { PROMPT_STORE, generateReading, loadPrompt } from "../lib/gemini.mjs";
+import { PROMPT_STORE, PROMPT_STORE_SILENT, generateReading, readPrompt } from "../lib/gemini.mjs";
 import { claudeWriter } from "../lib/writer.mjs";
 import { alertSender, noteFailure } from "../lib/failures.mjs";
 import { loadCurrent, loadReading } from "../lib/reading.mjs";
@@ -144,13 +144,14 @@ export default async (request, context) => {
    * alert naming what is missing instead of a trickle of "malformed" that looks
    * like the model having a bad week.
    */
-  const prompt = await loadPrompt({
+  // 11/16: asked twice, and a store that never answered is said as that, not as "no prompt".
+  const { text: prompt, unreachable } = await readPrompt({
     store: getStore({ name: PROMPT_STORE, consistency: "strong" }),
   });
-  const wrong = promptProblem(prompt);
+  const wrong = unreachable ? PROMPT_STORE_SILENT : promptProblem(prompt);
   if (wrong) {
     console.log(`interpret: ${wrong}`);
-    await noteFailure(health, "reading-prompt", {
+    await noteFailure(health, unreachable ? "reading-prompt-store" : "reading-prompt", {
       detail: wrong,
       send: alertSender(mailKey),
       site: origin,

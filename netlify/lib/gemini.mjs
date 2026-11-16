@@ -62,6 +62,9 @@ const ENDPOINT = (model) =>
  */
 export const PROMPT_STORE = "config";
 export const PROMPT_KEY = "reading-prompt";
+/** The alert's Reason line when the store never answered (11/16): the prompt was not found missing. */
+export const PROMPT_STORE_SILENT =
+  "The prompt store did not answer (asked twice, two seconds apart). The prompt itself was not found missing.";
 
 /**
  * The prompt, from wherever it actually is. An explicit one wins (tests), then
@@ -69,17 +72,45 @@ export const PROMPT_KEY = "reading-prompt";
  * still fit there, and a fallback that costs one line is worth having.
  */
 export async function loadPrompt({ store, explicit } = {}) {
-  if (typeof explicit === "string" && explicit.trim()) return explicit.trim();
+  return (await readPrompt({ store, explicit, tries: 1 })).text;
+}
+
+/**
+ * THE SAME, ASKED TWICE, AND HONEST ABOUT WHICH FAILURE IT WAS (Jeremy 11/16).
+ *
+ * 11/16 7:16 AM: one read of the prompt blob failed, the alert said "No reading
+ * prompt is configured", and the prompt was sitting there byte for byte. A store
+ * that does not answer once is not a missing prompt. So the writer asks again
+ * after a short wait, and if the store still does not answer it says THAT --
+ * `unreachable: true` -- instead of reporting a prompt that is not missing.
+ *
+ * An empty answer is asked again too (a blip can come back empty); if the last
+ * try answered and was empty, the prompt really is missing.
+ */
+export async function readPrompt({
+  store,
+  explicit,
+  tries = 2,
+  waitMs = 2000,
+  wait = (ms) => new Promise((r) => setTimeout(r, ms)),
+} = {}) {
+  if (typeof explicit === "string" && explicit.trim()) return { text: explicit.trim(), unreachable: false };
+  let unreachable = false;
   if (store) {
-    try {
-      const text = await store.get(PROMPT_KEY, { type: "text" });
-      if (typeof text === "string" && text.trim()) return text.trim();
-    } catch {
-      /* an unreachable store is a missing prompt, and that is reported */
+    for (let i = 0; i < tries; i++) {
+      if (i > 0) await wait(waitMs);
+      try {
+        const text = await store.get(PROMPT_KEY, { type: "text" });
+        unreachable = false;
+        if (typeof text === "string" && text.trim()) return { text: text.trim(), unreachable: false };
+      } catch {
+        unreachable = true;
+      }
     }
   }
   const env = process.env.READING_PROMPT ?? "";
-  return typeof env === "string" && env.trim() ? env.trim() : null;
+  if (typeof env === "string" && env.trim()) return { text: env.trim(), unreachable: false };
+  return { text: null, unreachable };
 }
 
 /**

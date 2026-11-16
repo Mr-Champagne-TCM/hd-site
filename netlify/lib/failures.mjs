@@ -151,6 +151,8 @@ export const KINDS = {
   // 10/25: Claude could not write it (out of credit, busy at normal speed, refused, wrong account); nothing else writes.
   "claude-unavailable": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "reading-prompt": { severity: P, customer: "reading-writing-long", status: 200, code: null },
+  // 11/16: the prompt store did not answer twice -- not the same as a missing prompt.
+  "reading-prompt-store": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "reading-failure-rate": { severity: P, customer: "reading-writing-long", status: 200, code: null },
   "interpret-store": { severity: F, customer: null, status: 200, code: null },
   "reading-ready-email": { severity: F, customer: null, status: 200, code: null },
