@@ -39,15 +39,17 @@ test("the receipt thanks them in TEXT, and the action is a BUTTON (fix 4A)", () 
   }
 });
 
-test("THE RECEIPT'S BUTTON IS JEREMY'S OWN WORDS: 'Enter your birth details'", () => {
+// Q5b (Jeremy 11/16, accepted): "Your birth details (about two minutes) →", an offer, not an order.
+test("THE RECEIPT'S BUTTON: 'Your birth details (about two minutes) →'", () => {
   // His markup on the 4A mock, 10/19. The ready email opens what is there.
   for (const [tier, word] of [[0, "summary"], [1, "chart"], [2, "reading"]]) {
     const pendingMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: true });
     const filledMail = deliveryEmail({ tier, name: "J", url: URL_, links: LINKS, pending: false });
-    assert.ok(pendingMail.text.includes("Enter your birth details:"), `tier ${tier} receipt button wording is wrong`);
+    assert.ok(pendingMail.text.includes("\nYour birth details:\n"), `tier ${tier} receipt button wording is wrong`);
+    assert.ok(pendingMail.html.includes(">Your birth details (about two minutes) →<"), `tier ${tier} receipt button is wrong`);
     assert.ok(filledMail.text.includes(`Open your ${word}:`), `tier ${tier} ready wording is wrong`);
     assert.doesNotMatch(pendingMail.text, /Open your/, "a receipt offered to open something not made yet");
-    assert.doesNotMatch(filledMail.text, /Enter your birth details/, "a ready email asked for the details again");
+    assert.doesNotMatch(filledMail.text, /Your birth details:|Enter your birth details/, "a ready email asked for the details again");
   }
 });
 
@@ -57,12 +59,12 @@ test("the action is what the button links to, in both emails", () => {
     const btn = html.match(/<a href="([^"]+)"[^>]*border-radius:999px"( title="[^"]*" aria-label="[^"]*")?>([^<]+)</);
     assert.ok(btn, "no button found");
     assert.equal(btn[1], URL_);
-    assert.equal(btn[3], pending ? "Enter your birth details" : "Open your chart");
+    assert.equal(btn[3], pending ? "Your birth details (about two minutes) →" : "Open your chart");
     // The link label says where it goes (Jeremy's GO PDF, 10/23: "link labels (hover hints?)").
     assert.equal(
       btn[2],
       pending
-        ? ' title="Opens the page to enter your birth details" aria-label="Enter your birth details (Opens the page to enter your birth details)"'
+        ? ' title="Opens the page to enter your birth details" aria-label="Your birth details (about two minutes) → (Opens the page to enter your birth details)"'
         : ' title="Opens your chart" aria-label="Open your chart (Opens your chart)"',
     );
   }

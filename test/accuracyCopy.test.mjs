@@ -19,7 +19,9 @@ const bodyText = () => CREDIBILITY.body.map((p) => p.text).join("");
 const all = () => [CREDIBILITY.title, bodyText(), CREDIBILITY.standout, ...CREDIBILITY.checks.flat(), CREDIBILITY.closing].join(" ");
 
 test("same shape as before: title, body, four cards, closing", () => {
-  assert.equal(CREDIBILITY.title, "Measured against the sky");
+  // Q8a (Jeremy 11/16, accepted): a plain title; the four checks fold under "The details".
+  assert.equal(CREDIBILITY.title, "How accurate it is");
+  assert.equal(CREDIBILITY.detailsLabel, "The details");
   assert.equal(CREDIBILITY.checks.length, 4);
   for (const [figure, text] of CREDIBILITY.checks) {
     assert.ok(figure.length > 0 && text.length > 0);

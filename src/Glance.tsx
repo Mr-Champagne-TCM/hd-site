@@ -10,7 +10,9 @@ import {
   profileLink,
   typeLink,
 } from "../shared/libraryLinks.mjs";
-import { TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs";
+import { DETAILS_NOTE, DETAILS_TITLE, MEANINGS, TECH_HOW, TECH_TITLE_NOTE, techTitle } from "../shared/readingCopy.mjs";
+
+const MEANING = MEANINGS as Record<string, string>;
 import type { SummaryData } from "./Summary";
 import type { Activation } from "./Activations";
 import { gateList } from "../shared/gateList.mjs";
@@ -146,7 +148,8 @@ export default function Glance({ data, says = null, showActivations = false }: P
       )}
 
       <h3 className="mt-8 border-b border-brand-gold/50 pb-2 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-brand-gold">
-        Your chart values
+        {DETAILS_TITLE}{" "}
+        <span className="font-normal normal-case tracking-normal text-brand-muted">{DETAILS_NOTE}</span>
       </h3>
       <dl>
         {values.map(([label, value, href]) => (
@@ -156,6 +159,11 @@ export default function Glance({ data, says = null, showActivations = false }: P
                 {label}
               </a>
               {marked?.has(valueField[label]) && <Tag />}
+              {MEANING[valueField[label]] && (
+                <span className="block w-full text-[13px] normal-case tracking-normal text-brand-muted/90">
+                  {MEANING[valueField[label]]}
+                </span>
+              )}
             </dt>
             <dd className="whitespace-pre-line text-[16px] leading-relaxed text-brand-paper">
               {value}

@@ -369,7 +369,7 @@ export async function runChecks({ runDir, baselineDir, only = null, fixtures = F
           }
         }
         // The 26 activations (reading tier): always marked with no birth time.
-        if (/Technical values: your \d+ planet numbers/.test(t) && !/planet numbers[^\n]*PROVISIONAL/i.test(t)) c.fail(p.journey, docName(p), "the technical values (the 26 activations) are not marked PROVISIONAL", "");
+        if (/The raw numbers behind your chart/.test(t) && !/raw numbers behind your chart[^\n]*PROVISIONAL/i.test(t)) c.fail(p.journey, docName(p), "the technical values (the 26 activations) are not marked PROVISIONAL", "");
         // Start here's lists and the reading's margin notes (Jeremy's rule, 10/22: wherever a changing value prints).
         for (const f of laterTags(t.split(/\r?\n/), out, changing, "page")) c.fail(p.journey, docName(p), f.what, f.line);
         // The PDF: page 1's facts line, then the value rows (tag on the label's line, or the line under it).

@@ -3,6 +3,7 @@ import { hint, libraryHint } from "../shared/linkHints.mjs";
 import Linked, { type ChartFacts } from "./Linked";
 import { markedFields } from "../shared/timeSpread.mjs";
 import { Tag, measuredSpread } from "./TimeSpread";
+import { CENTERS_LINE } from "../shared/readingCopy.mjs";
 
 /**
  * "START HERE" -- centers, channels, profile, each a short list with the
@@ -118,6 +119,8 @@ export default function StartHere({ v, chart }: { v: ReadingView; chart: ChartFa
       </h2>
       <div className="mt-6">
         <Head n={1} title="Your centers" />
+        {/* Q7c (11/16): what a center is, in one line. */}
+        <p className="mt-3 text-[16px] leading-relaxed text-brand-paper/85">{CENTERS_LINE}</p>
         <SubLabel tag={marked.has("definedCenters")}>Colored in ({v.definedCenters.length}) · steady, yours</SubLabel>
         {v.definedCenters.length ? (
           <List items={v.definedCenters} dim={false} href={() => CENTERS} />

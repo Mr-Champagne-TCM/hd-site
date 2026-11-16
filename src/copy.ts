@@ -80,17 +80,16 @@ export const RESOURCES = {
    * reading, that sentence offers a free one. Jeremy read it exactly that way:
    * "implies they get a free human design reading". It meant reading MATTER.
    */
-  title: "Free to read, either way",
-  body:
-    "Two pieces in the library, written for exactly these two moments. Both are free and always " +
-    "will be, whether or not anything is bought here.",
+  // Q9c (11/16, accepted): the riddle lines said plainly.
+  title: "Free guides, bought or not",
+  body: "Two free guides in the library that explain every word. They stay free, whether or not anything is bought here.",
   items: [
     {
       href: "https://thechampagnemethod.co/library/human-design/",
       tag: "Goes with the chart",
       title: "The Human Design library",
       blurb:
-        "Every part of a chart, one layer at a time: a line to start, more if it pulls at you. " +
+        "Every part of a chart, one layer at a time: short to start, deeper if you want. " +
         "It explains every word in a chart.",
     },
     {
@@ -106,7 +105,10 @@ export const RESOURCES = {
 
 export const HERO = {
   eyebrow: "Human Design",
-  title: "A map of how your energy works.",
+  // Q11 (3), 11/16: the first screen says what the ad says, with its price and a Buy button.
+  title: "How are you built to make decisions?",
+  line: "Your chart names it.",
+  seeBoth: "Or see both sizes",
   standfirst:
     "Drawn from the exact moment you were born — not a personality test, and not a prediction. " +
     "What it describes is mechanics: where your energy is consistent, where it is open to " +
@@ -134,7 +136,9 @@ export const HERO = {
  * engine 0.5.0" (script validation/accuracy_v050.py). None of it is rounded up.
  */
 export const CREDIBILITY = {
-  title: "Measured against the sky",
+  // Q8a (11/16, accepted): a plain title, the plain line first, the checks folded under "The details".
+  title: "How accurate it is",
+  detailsLabel: "The details",
   // "around the time you were born", not "at the moment": the design half of a
   // chart is taken about 88 days (88 degrees of Sun) before birth. "NASA's own
   // record" = JPL Horizons; every body the engine computes was checked against
@@ -240,7 +244,8 @@ export const CREDIBILITY = {
  */
 export const EXAMPLE = {
   // Two sizes (11/16): the example is every value the chart holds.
-  title: "What the chart’s values look like",
+  // Q11 (4), 11/16: the example sits under the chart's card, with its price.
+  title: `What the ${money(CHART.cents)} chart holds`,
   caption:
     "An example: Jeremy Champagne’s own chart — September 17, 1983, Wichita Falls, Texas. " +
     "Yours would be your own, and would say so if the time were missing.",
@@ -264,7 +269,8 @@ export const TIERS_INTRO = {
    * THE LINE OVER THE TWO CARDS (Jeremy 11/16, call 2: "two sizes is closer, but feels off. Try
    * other options out"). Still his to choose: this ONE string is the swap.
    */
-  title: "Two sizes",
+  // Jeremy 11/16 ~17:20: "start small or go deeper (my pick)".
+  title: "Start small, or go deeper",
   notYet: "Not ready to buy yet — the drawing and the written reading are still being made.",
   // The credit idea is said ONCE on this page (Jeremy's GO PDF, 10/23: "Good, be consistent"): in
   // LADDER_NOTE under the cards, beside the prices it is about. The line that sat under the invitation
@@ -292,10 +298,10 @@ export const ENTRY = {
   title: "Your birth details",
   /** Release 2 (mock v2, accepted): a first purchase's form, which may be for anyone. */
   titleFirst: "The birth details for this chart",
-  body:
-    "All that’s needed is the date, the place and the time if it is known. " +
-    "An unknown time is welcome — the chart is cast at noon and says so plainly, " +
-    "and the parts that depend on a time are marked as provisional rather than quietly guessed.",
+  // Q3a (11/16, accepted): plain words for someone who just paid.
+  body: "Your birth date and place, and your time if you know it. No time? That’s fine: your chart marks the parts a time could change.",
+  /** The same, on a chart for someone else (W8: their details, never yours). */
+  bodyTheirs: "Their birth date and place, and their time if it’s known. No time? That’s fine: their chart marks the parts a time could change.",
   /**
    * Where the asking starts and where it stops.
    *
@@ -309,15 +315,15 @@ export const ENTRY = {
   /** Fix 15B (10/19): the fold-out under the time field. */
   whyTime: "Why the time matters",
   // What a time really moves (10/22 verbatim read, B11): the Profile goes with the Suns, and more can change.
-  whyTimeBody:
-    "A different hour can change the gates, the Profile and sometimes the Authority or Type: the Moon " +
-    "changes gate about every ten hours, and the Sun changes line about once a day. The time on a birth " +
-    "certificate is best if you have it. An unknown time is fine too: the chart says plainly which parts " +
-    "depend on it.",
+  // Q3c (11/16, accepted).
+  whyTimeBody: "A different hour can change some parts of your chart. The time on a birth certificate is best; no time is fine too.",
+  whyTimeBodyTheirs: "A different hour can change some parts of their chart. The time on a birth certificate is best; no time is fine too.",
   timeUnknownLabel: "I don’t know my birth time",
-  timeUnknownHelp:
-    "Most of a chart holds without one, and the parts a time could change are marked as provisional — " +
-    "so a chart without a time is genuinely useful and honestly incomplete.",
+  // Q3b (11/16, accepted).
+  timeUnknownHelp: "Most of your chart works without it. The parts a time could change are marked.",
+  timeUnknownHelpTheirs: "Most of their chart works without it. The parts a time could change are marked.",
+  /** Q5a (11/16, accepted): the clock button, an offer rather than an order. */
+  timeButton: "The time, if you know it",
 };
 
 /**
@@ -337,10 +343,12 @@ export const ENTRY = {
  * Said BEFORE the form, never after. A privacy sentence that appears once
  * somebody is already committed reads as something you hoped they would miss.
  */
+// Q4 (11/16, accepted): the same promise in two short sentences.
 export const PRIVACY_NOTE =
-  "The name and birth details are kept with this chart for a year, so it can show " +
-  "whose chart it is and when and where they were born — and so going a step further later never " +
-  "means typing them again. Your email always brings you back to it.";
+  "These details stay with your chart for a year, so you never type them again. Your email link always brings you back.";
+/** The same promise on a chart for someone else's form. */
+export const PRIVACY_NOTE_THEIRS =
+  "These details stay with their chart for a year, so they’re never typed again. Your email link always brings you back.";
 
 /** Kept for any caller that still asks by tier: every tier now keeps the same promise. */
 export function privacyFor(_tier?: number): string {
@@ -397,24 +405,25 @@ export const RETURNING = {
   // Names what was bought: "make my chart" on a chart upgrade (bug 5, 10/21: it said "reading").
   confirmYes: (what: string) => `These are right — make my ${what}`,
   confirmYesTheirs: (what: string) => `These are right — make their ${what}`,
-  changeDetail: "Change a detail",
+  // Q5c (11/16, accepted): offered, not ordered.
+  changeDetail: "A detail to fix?",
   confirmHelp:
-    "Learned a more exact birth time? “Change a detail” corrects it, and your chart is cast from the " +
+    "Learned a more exact birth time? “A detail to fix?” corrects it, and your chart is cast from the " +
     "corrected details.",
   // NEW (10/22 verbatim read, B2): the kept details have no birth time.
-  confirmHelpNoTime: "Found your birth time? “Change a detail” adds it, and your chart is cast from it.",
+  confirmHelpNoTime: "Found your birth time? “A detail to fix?” adds it, and your chart is cast from it.",
   confirmHelpTheirs:
-    "Learned a more exact birth time? “Change a detail” corrects it, and their chart is cast from the " +
+    "Learned a more exact birth time? “A detail to fix?” corrects it, and their chart is cast from the " +
     "corrected details.",
-  confirmHelpNoTimeTheirs: "Found their birth time? “Change a detail” adds it, and their chart is cast from it.",
-  correctTitle: "Change a detail",
+  confirmHelpNoTimeTheirs: "Found their birth time? “A detail to fix?” adds it, and their chart is cast from it.",
+  correctTitle: "A detail to fix?",
   correctNote:
     "Your details as they are kept now. You’re welcome to change anything that needs correcting — your " +
     "chart is then cast from the corrected details.",
   correctPrivacy:
     "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in " +
     "about them. They are never shown on your page, your PDF or in an email.",
-  correctButton: "Use the corrected details",
+  correctButton: "These are right now",
   keepAsIs: "Keep them as they are",
   typeOnceNote:
     "Your summary was made before birth details were kept, so they are asked for this once. From now " +
@@ -466,7 +475,8 @@ export const CARDS = {
     "Once or twice this week, when a sudden intuitive hunch tells you to take a different route home from the grocery store, " +
     "you might follow that silent prompt immediately. Notice whether the alternative path feels naturally light, so that " +
     "instant bodily trust is familiar when a heavier choice appears.",
-  stripCaption: "One of the four things to try, written for a defined Spleen.",
+  // Q9b (11/16, accepted).
+  stripCaption: "One of the four things to try, written for someone who trusts their gut.",
   stripMore: "More real excerpts",
 };
 
@@ -477,6 +487,8 @@ export const CARDS = {
  */
 export const WHO_MAKES = {
   label: "Who makes this",
+  // Q11 (5), 11/16: on a phone, the long part folds under this.
+  more: "More about how it’s made",
   line:
     "I’m Jeremy Champagne. I came up in engineering, then turned to working with people instead " +
     "of parts; that became The Champagne Method, my coaching practice. I read every email that comes in.",
@@ -485,8 +497,9 @@ export const WHO_MAKES = {
 };
 
 /** FIX 5B: one plain line under his accuracy words, which stay exactly as they are. */
+// Q8a (11/16): it leads the section now, so it no longer says "In plain words".
 export const PLAIN_ACCURACY =
-  "In plain words: across 1,000 test charts it was typically right to within 14 seconds of " +
+  "Across 1,000 test charts it was typically right to within 14 seconds of " +
   "birth time, closer than a birth time written to the minute.";
 
 export const FOOTER = {
@@ -516,14 +529,12 @@ export const FOOTER = {
    * Under "Start a new chart for someone else" the details are THEIRS (10/21
    * check audit, with #19 and W8): `terms("their")`.
    */
+  // Q2 (11/16, accepted): the same two exceptions in three short lines (one per line on the page).
+  // The privacy page keeps its own longer wording.
   terms: (whose: "your" | "their" = "your") =>
-    // The two exceptions as the privacy page names them, and "I would rather" once (10/22 verbatim read).
-    "All purchases are final. Each one is made and sent the moment you ask for it, so there " +
-    "is nothing to send back — and I would rather say so plainly here than leave you to find " +
-    "out later. There are two exceptions: if " +
-    `something did not arrive, or did not work, that is mine to put right; and if ${whose} ` +
-    "birth details went in wrong, write to hd-readings@thechampagnemethod.co — I read these " +
-    "myself, and I will do what I can.",
+    "All sales are final.\n" +
+    "Something didn’t arrive or didn’t work? That’s mine to put right.\n" +
+    `${whose === "their" ? "Their birth details" : "Birth details"} went in wrong? Write to hd-readings@thechampagnemethod.co`,
   attribution: "Place and time zone data from GeoNames, CC BY 4.0.",
   coaching: "thechampagnemethod.co",
 };

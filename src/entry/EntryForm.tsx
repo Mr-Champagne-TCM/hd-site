@@ -4,7 +4,7 @@ import PlaceField, { type Place } from "./PlaceField";
 import TimeField from "./TimeField";
 import Summary, { type SummaryData } from "../Summary";
 import Bodygraph from "../Bodygraph";
-import { ENTRY, PRIVACY_NOTE, RETURNING } from "../copy";
+import { ENTRY, PRIVACY_NOTE, PRIVACY_NOTE_THEIRS, RETURNING } from "../copy";
 import { humanDate } from "./birthDate";
 import { birthLine } from "../../shared/birthLine.mjs";
 import { displayTime } from "./time";
@@ -524,7 +524,7 @@ export default function EntryForm({
       )}
       {!correcting && (
         <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
-          {ENTRY.body}
+          {other ? ENTRY.bodyTheirs : ENTRY.body}
         </p>
       )}
 
@@ -555,7 +555,7 @@ export default function EntryForm({
       */}
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {/* One privacy sentence for every tier (release 2); a correction says where the old details go. */}
-        {correcting ? RETURNING.correctPrivacy : PRIVACY_NOTE}
+        {correcting ? RETURNING.correctPrivacy : other ? PRIVACY_NOTE_THEIRS : PRIVACY_NOTE}
       </p>
 
       <form onSubmit={submit} className="mt-8 max-w-[34rem]">

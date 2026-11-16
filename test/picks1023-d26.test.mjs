@@ -27,7 +27,8 @@ test("decision 26: the privacy line under every footer says 'What I keep'", () =
 });
 
 test("decision 26: the offer page's accuracy section is 'How I check'", () => {
-  assert.ok(src("src/App.tsx").includes("How I check: the four numbers"));
+  // Q8a (Jeremy 11/16, accepted): the fold is "The details" now; still never "we".
+  assert.ok(src("src/App.tsx").includes("CREDIBILITY.detailsLabel"));
   assert.ok(!src("src/App.tsx").includes("How we check"));
 });
 

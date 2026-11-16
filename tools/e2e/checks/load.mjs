@@ -8,6 +8,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import { E2E, REPO, SIBLINGS } from "../harness/paths.mjs";
+import { MEANINGS } from "../../../shared/readingCopy.mjs";
 
 const J = (f) => JSON.parse(readFileSync(f, "utf8"));
 const T = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
@@ -116,6 +117,18 @@ export function truthFor(run, output) {
 export const ROW_LABELS = ["TYPE", "STRATEGY", "AUTHORITY", "PROFILE", "WHEN IT'S ON TRACK", "WHEN IT'S OFF TRACK", "DEFINITION", "INCARNATION CROSS", "DEFINED CENTERS", "UNDEFINED CENTERS", "OPEN CENTERS", "CHANNELS", "ACTIVATED GATES"];
 /** The tag beside a label (unknown birth time, 10/22): its own line right under the label on a page. */
 const TAG_LINE = /^PROVISIONAL$/i;
+/**
+ * Q6 + Q7b (11/16): a row's plain meaning prints under its label ("how your parts connect").
+ * It is the label's, not the value: the readers below step over it, as over the tag.
+ */
+const MEANING_LINES = new Set(Object.values(MEANINGS).map((m) => m.replace(/’/g, "'")));
+const isMeaning = (l) => MEANING_LINES.has(String(l ?? "").replace(/’/g, "'"));
+/** The index of a label's value line: past its tag and its meaning, in either order. */
+function valueAt(lines, i) {
+  let j = i + 1;
+  while (j < lines.length && (TAG_LINE.test(lines[j]) || isMeaning(lines[j]))) j++;
+  return j;
+}
 
 /**
  * "LABEL\nvalue" rows in captured page text (the glance and value tables). A
@@ -127,7 +140,7 @@ export function rows(text) {
   const out = {};
   for (let i = 0; i < lines.length - 1; i++) {
     const l = lines[i].replace(/’/g, "'");
-    if (ROW_LABELS.includes(l) && !(l in out)) out[l] = TAG_LINE.test(lines[i + 1]) ? (lines[i + 2] ?? "") : lines[i + 1];
+    if (ROW_LABELS.includes(l) && !(l in out)) out[l] = lines[valueAt(lines, i)] ?? "";
   }
   return out;
 }
@@ -141,7 +154,7 @@ export function tagged(text) {
     const l = lines[i].replace(/’/g, "'");
     if (!ROW_LABELS.includes(l) || seen.has(l)) continue;
     seen.add(l);
-    if (TAG_LINE.test(lines[i + 1])) out.add(l);
+    if (TAG_LINE.test(lines[i + 1]) || (isMeaning(lines[i + 1]) && TAG_LINE.test(lines[i + 2] ?? ""))) out.add(l);
   }
   return out;
 }
@@ -153,8 +166,11 @@ export function tagged(text) {
 export function block(text, label) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   let at = lines.findIndex((l) => l.replace(/’/g, "'") === label);
-  if (at >= 0 && TAG_LINE.test(lines[at + 1] ?? "")) at++; // the tag beside the label, not the value
-  if (at < 0 || at === lines.length - 1) return null;
+  if (at < 0) return null;
+  // Past the tag beside the label and its plain meaning: neither is the value.
+  const first = valueAt(lines, at);
+  if (first >= lines.length) return null;
+  at = first - 1;
   const out = [lines[at + 1]];
   for (let i = at + 2; i < lines.length && /^(?:\d{1,2}-\d{1,2}\b|PROVISIONAL$)/i.test(lines[i]); i++) out.push(lines[i]);
   return out.join("\n");

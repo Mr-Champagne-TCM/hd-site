@@ -39,20 +39,20 @@ import { HINT, hint, ownPageHint } from "../shared/linkHints.mjs";
  */
 
 /**
- * THE HEADER WORDMARK (Jeremy's brand call 10/16, B2 = option B): the
- * wordmark unchanged, with a small "Human Design by" eyebrow above it, so the
- * header says whose Human Design readings these are. "by" stays lowercase in
- * every brand line, so it is kept out of the eyebrow's uppercase.
+ * THE HEADER WORDMARK, FLIPPED (Jeremy 11/16: "branding for HD is now HD by TCM";
+ * "HUMAN DESIGN is bigger, TCM is smaller. Accent the HD not the TCM"; "Go with
+ * proposed update"). Supersedes the 10/16 call B2 (a small "Human Design by"
+ * eyebrow over the big Champagne Method wordmark). "Human Design" is the big
+ * line, gold on "Design"; "by The Champagne Method" sits small under it, in
+ * normal case, with no gold. The ad's header was flipped the same way.
  */
 function Wordmark() {
   return (
     <a href={SITE.home} {...hint("Human Design by The Champagne Method", HINT.home)} className="group whitespace-nowrap leading-none">
-      <span className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-muted sm:text-[11px]">
-        Human Design <span className="normal-case">by</span>
-      </span>
       <span className="block font-display text-[20px] font-medium tracking-tight text-brand-paper transition-colors group-hover:text-brand-gold sm:text-[26px]">
-        The <span className="text-brand-gold">Champagne</span> Method
+        Human <span className="text-brand-gold">Design</span>
       </span>
+      <span className="mt-1 block font-sans text-[11px] text-brand-muted sm:text-[12px]">by The Champagne Method</span>
     </a>
   );
 }
@@ -97,10 +97,10 @@ export function Nav() {
  * Words: Jeremy's pick 2 (10/25); "with Google's Gemini on standby" taken out when
  * Gemini was dropped (10/25: "drop gemini. fix related wording affected").
  */
+// Q8b (11/16, accepted): the same promises, shorter.
 const AI_LINE =
-  `Your chart is calculated, not written by AI. The written part of the ${money(READING.cents)} reading is ` +
-  "drafted by AI (Anthropic’s Claude) from your chart’s values only — no name, no birth date, no place. " +
-  "Every sentence goes through my checks against your chart and Human Design’s original teaching — or it doesn’t reach you.";
+  "Your chart is calculated, not written by AI. AI (Anthropic’s Claude) drafts the written reading from your " +
+  "chart only — no name, no birth details. I check every sentence before you see it.";
 
 const linkCls =
   "text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal";
@@ -108,23 +108,33 @@ const linkCls =
 function WhoMakesThis() {
   return (
     <section className="mx-auto max-w-5xl px-6 pt-10 sm:px-8">
-      <div className="flex flex-col gap-5 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5 sm:flex-row sm:items-start sm:p-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-brand-gold/25 bg-white/[0.04] p-5 sm:flex-row sm:items-start sm:gap-5 sm:p-6">
+        {/* Q11 (5), 11/16: smaller on a phone, and the long part folds (below). */}
         <img
           src="/jeremy.jpg"
           alt="Jeremy Champagne"
           width={120}
           height={120}
-          className="h-[120px] w-[120px] shrink-0 rounded-xl object-cover"
+          className="h-16 w-16 shrink-0 rounded-xl object-cover sm:h-[120px] sm:w-[120px]"
         />
         <div>
           <p className="font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-brand-teal">
             {WHO_MAKES.label}
           </p>
           <p className="mt-2 max-w-[60ch] text-[17px] leading-relaxed text-brand-paper">{WHO_MAKES.line}</p>
-          <p className="mt-3 max-w-[60ch] text-[15.5px] leading-relaxed text-brand-paper/85">
+          <p className="mt-3 hidden max-w-[60ch] text-[15.5px] leading-relaxed text-brand-paper/85 sm:block">
             <span className="font-semibold text-brand-gold">{WHO_MAKES.howLabel}</span>
             {AI_LINE}
           </p>
+          <details className="mt-3 sm:hidden">
+            <summary className="cursor-pointer select-none font-sans text-[15px] font-semibold text-brand-teal">
+              {WHO_MAKES.more}
+            </summary>
+            <p className="mt-2 text-[15.5px] leading-relaxed text-brand-paper/85">
+              <span className="font-semibold text-brand-gold">{WHO_MAKES.howLabel}</span>
+              {AI_LINE}
+            </p>
+          </details>
           <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
             <a href={WHO_MAKES.myStory} {...hint("My story", HINT.myStory)} className={linkCls}>
               My story
@@ -139,16 +149,51 @@ function WhoMakesThis() {
   );
 }
 
+/**
+ * THE FIRST SCREEN (Q11 (3), 11/16): the ad's question, the chart's price and a Buy button, all on a
+ * phone's first screen; "Or see both sizes" goes down to the two cards.
+ */
 function Hero() {
+  const level = LEVELS.indexOf(CHART);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const buy = async () => {
+    setBusy(true);
+    setFailed(null);
+    const problem = await startCheckout(level, {});
+    if (problem) {
+      setFailed(problem);
+      setBusy(false);
+    }
+  };
   return (
-    <header className="mx-auto max-w-5xl px-6 pb-4 pt-16 sm:px-8 sm:pt-20">
+    <header className="mx-auto max-w-5xl px-6 pb-4 pt-10 sm:px-8 sm:pt-20">
       <span className="mb-4 block font-sans text-[14px] font-semibold uppercase tracking-[0.22em] text-brand-teal">
         {HERO.eyebrow}
       </span>
       <h1 className="max-w-[18ch] font-display text-[clamp(2.25rem,6vw,3.4rem)] font-medium leading-[1.08] tracking-tight">
         {HERO.title}
       </h1>
-      <p className="mt-5 max-w-[58ch] text-[clamp(1.125rem,2vw,1.3125rem)] leading-relaxed text-brand-paper/90">
+      <p className="mt-4 font-display text-[clamp(1.35rem,3vw,1.7rem)] leading-snug text-brand-gold">
+        {HERO.line} <span className="tabular-nums">{money(CHART.cents)}</span>
+      </p>
+      {sellable(level) && (
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={buy}
+            className="rounded-full bg-brand-teal px-6 py-3 font-sans text-[16px] font-semibold text-[#0d1b1a] transition-all duration-200 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? "Opening…" : `${CHART.label}, ${money(CHART.cents)} →`}
+          </button>
+          <a href="#ways-in" className={linkCls + " text-[16px]"}>
+            {HERO.seeBoth}
+          </a>
+        </div>
+      )}
+      {failed && <p className="mt-2 text-[14px] leading-snug text-brand-gold">{failed}</p>}
+      <p className="mt-8 max-w-[58ch] text-[clamp(1.125rem,2vw,1.3125rem)] leading-relaxed text-brand-paper/90">
         {HERO.standfirst}
       </p>
       <p className="mt-8 border-l-2 border-brand-gold pl-5 text-[19px] leading-relaxed text-brand-paper">
@@ -158,9 +203,10 @@ function Hero() {
   );
 }
 
+/** Q11 (4), 11/16: right under the two cards, titled with the chart's price (rendered inside Tiers). */
 function Example() {
   return (
-    <section className="mx-auto max-w-5xl px-6 pt-16 sm:px-8">
+    <div id="example" className="scroll-mt-6 pt-10">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {EXAMPLE.title}
       </h2>
@@ -189,7 +235,7 @@ function Example() {
         </a>
         , free.
       </p>
-    </section>
+    </div>
   );
 }
 
@@ -217,7 +263,8 @@ function ReadingTicks({ their = false }: { their?: boolean }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[14px] text-brand-muted">{CARDS.readingPdf}</p>
+      {/* mb-3: the same room above the button as the chart card has (11/16). */}
+      <p className="mb-3 mt-2 text-[14px] text-brand-muted">{CARDS.readingPdf}</p>
     </div>
   );
 }
@@ -382,6 +429,13 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
                   {fresh ? tier.theirBlurb : tier.blurb}
                 </p>
                 <LibraryNote sku={tier.sku} />
+                {!fresh && tier.sku === CHART.sku && (
+                  <p className="mb-3 text-[14px]">
+                    <a href="#example" className={linkCls}>
+                      See an example ↓
+                    </a>
+                  </p>
+                )}
               </>
             )}
 
@@ -410,9 +464,11 @@ export function Tiers({ fresh = false, from = null }: { fresh?: boolean; from?: 
         ))}
       </div>
 
-      <RealLine />
-
       {!fresh && <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">{LADDER_NOTE}</p>}
+
+      {!fresh && <Example />}
+
+      <RealLine />
 
       {/* THE ONE-TO-ONE (11/16), under the two sizes: sold only once the calendar exists (availability.mjs). */}
       {sellable(SESSION_LEVEL) && (
@@ -457,7 +513,9 @@ function Credibility() {
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
         {CREDIBILITY.title}
       </h2>
-      <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
+      {/* Q8a (11/16): the plain line leads. */}
+      <p className="mt-3 max-w-[62ch] text-[18px] leading-relaxed text-brand-paper">{PLAIN_ACCURACY}</p>
+      <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/85">
         {CREDIBILITY.body.map((part) =>
           part.emphasis ? (
             <strong key={part.text} className="text-[1.08em] font-semibold italic text-brand-paper">
@@ -478,10 +536,9 @@ function Credibility() {
         behind a tap. A newcomer read "14 seconds", "15 of 15" and "1 in 3,000"
         as doubts raised right before the buy.
       */}
-      <p className="mt-4 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper">{PLAIN_ACCURACY}</p>
       <details className="mt-5 rounded-2xl border border-brand-teal/25 bg-white/[0.02] px-5 py-4">
         <summary className="cursor-pointer select-none font-sans text-[16px] font-semibold text-brand-teal">
-          How I check: the four numbers
+          {CREDIBILITY.detailsLabel}
         </summary>
         <dl className="mt-7 grid gap-4 sm:grid-cols-2">
           {CREDIBILITY.checks.map(([figure, what]) => (
@@ -560,8 +617,11 @@ export function Footer({ their = false }: { their?: boolean } = {}) {
           the only placement that is either fair or useful. See the note in
           copy.ts for why the wording is what it is.
         */}
-        <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-          <MailtoText text={FOOTER.terms(their ? "their" : "your")} />
+        <p className="mt-4 max-w-[62ch] whitespace-pre-line text-[15px] leading-relaxed text-brand-muted">
+          <MailtoText
+            text={FOOTER.terms(their ? "their" : "your")}
+            className="whitespace-nowrap text-brand-teal underline decoration-brand-teal/40 underline-offset-4"
+          />
         </p>
         {/*
           THE FOOTER THEME (Jeremy 10/17): the two names the delivery email ends
@@ -972,7 +1032,6 @@ export default function App({ upgradeToken = null }: { upgradeToken?: string | n
             can buy anything unless they scroll." The library's "your chart"
             links land here, so the buy buttons have to be on the first screen. */}
         <Tiers />
-        <Example />
         <Credibility />
         <Resources />
       </main>

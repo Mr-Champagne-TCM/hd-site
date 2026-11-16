@@ -103,7 +103,8 @@ test("N3: the error lines say 'front page', as the 404 page does", () => {
 });
 
 test("N4: the privacy sentence never says 'entered here' (the upgrade's check page shows it too)", () => {
-  assert.ok(copy.PRIVACY_NOTE.startsWith("The name and birth details are kept with this chart for a year,"));
+  assert.ok(copy.PRIVACY_NOTE.startsWith("These details stay with your chart for a year,"));
+  assert.doesNotMatch(copy.PRIVACY_NOTE, /entered here/);
 });
 
 test("N5: the choice page's two lines punctuate 'Your bodygraph drawn' the same way", () => {
@@ -112,7 +113,8 @@ test("N5: the choice page's two lines punctuate 'Your bodygraph drawn' the same 
 });
 
 test("N6: 'Three things' twice on the form, not three times; one comma style", () => {
-  assert.equal(copy.ENTRY.body.split(". ")[0], "All that’s needed is the date, the place and the time if it is known");
+  // Q3a (Jeremy 11/16, accepted).
+  assert.equal(copy.ENTRY.body.split(". ")[0], "Your birth date and place, and your time if you know it");
   assert.doesNotMatch(copy.ENTRY.body, /Three things/);
   assert.equal(copy.ENTRY.startRule, "Three things, then you’re done");
 });

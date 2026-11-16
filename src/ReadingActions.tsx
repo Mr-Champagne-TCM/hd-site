@@ -153,10 +153,10 @@ export default function ReadingActions({
           Resources — free in the library
         </p>
         <h2 className="mt-2 font-display text-[20px] font-medium text-brand-paper">
-          Making sense of it
+          Free guides to your chart
         </h2>
         <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
-          Both written for exactly this moment.
+          Two free guides that explain every word.
         </p>
         {/*
           rel="noreferrer" on every outbound link. The token IS this page's

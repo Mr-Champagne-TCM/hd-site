@@ -57,7 +57,9 @@ export const ownPageHint = (whose, what) => `Opens ${whose} ${what}`;
  * "Enter your birth details" opens the page to enter them.
  */
 export const actionHint = (action) => {
-  const a = String(action).trim();
+  // Q5b (11/16): "Your birth details (about two minutes) →" opens the page to enter them.
+  const a = String(action).trim().replace(/\s*→$/, "").replace(/\s*\([^)]*\)$/, "");
+  if (/^(Your|Their) birth details$/.test(a)) return `Opens the page to enter ${a.charAt(0).toLowerCase()}${a.slice(1)}`;
   return /^Open /.test(a) ? a.replace(/^Open /, "Opens ") : `Opens the page to ${a.charAt(0).toLowerCase()}${a.slice(1)}`;
 };
 

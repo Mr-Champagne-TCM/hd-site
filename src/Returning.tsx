@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import ChartThumb from "./ChartThumb";
-import { PRIVACY_NOTE, RETURNING } from "./copy";
+import { PRIVACY_NOTE, PRIVACY_NOTE_THEIRS, RETURNING } from "./copy";
 import { TIERS, money } from "../shared/pricing.mjs";
 import { correctionNote, grownNote } from "../shared/correctionNote.mjs";
 import MailtoText from "./MailtoText";
@@ -321,8 +321,8 @@ export function ConfirmKept({
           : timeKnown ? RETURNING.confirmHelp : RETURNING.confirmHelpNoTime}
       </p>
       <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
-        {/* The one privacy sentence (copy.ts), here too. */}
-        {PRIVACY_NOTE}
+        {/* The one privacy sentence (copy.ts), here too; theirs on their chart (Q4, 11/16). */}
+        {theirs ? PRIVACY_NOTE_THEIRS : PRIVACY_NOTE}
       </p>
     </section>
   );

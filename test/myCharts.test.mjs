@@ -227,7 +227,9 @@ test("THE LIST EMAIL: a card per chart, and a link to start a new chart", () => 
   const reading = { tier: 2, pending: false, birth: KEPT("Alex"), buyer: { name: "Alex Rivera" } };
   const { subject, html, text } = myChartsEmail({ charts: [{ reading, url: `${ORIGIN}/r/abc.def` }], links: SITE, origin: ORIGIN });
   assert.equal(subject, "Your Human Design charts, with fresh links");
-  assert.match(text, /Start a new chart/);
+  // Q5d (Jeremy 11/16, accepted).
+  assert.match(text, /\nA NEW CHART\n/);
+  assert.match(text, /A chart for someone new: /);
   assert.match(text, new RegExp(`${ORIGIN}/#ways-in`));
   assert.match(html, /href="https:\/\/humandesign\.example\/#ways-in"/);
   assert.match(html, /href="https:\/\/humandesign\.example\/charts\/"/, "the list email also says where to ask again");
@@ -236,9 +238,9 @@ test("THE LIST EMAIL: a card per chart, and a link to start a new chart", () => 
 test("THE NONE EMAIL: a link BACK to Email me my charts, and to start a new chart", () => {
   const { subject, html, text } = myChartsEmail({ charts: [], links: SITE, origin: ORIGIN });
   assert.equal(subject, "Your Human Design charts: none under this email");
-  assert.match(text, /There are none under it\./);
+  assert.match(text, /Someone asked for the charts bought with this email\. There are none under it\./);
   assert.match(html, /href="https:\/\/humandesign\.example\/charts\/"[^>]*>Email me my charts</);
-  assert.match(html, /href="https:\/\/humandesign\.example\/#ways-in"[^>]*>Start a new chart</);
+  assert.match(html, /href="https:\/\/humandesign\.example\/#ways-in"[^>]*>A chart for someone new →</);
   assert.match(text, /nothing was shown to anyone/);
 });
 

@@ -247,7 +247,7 @@ test("6A: the planet numbers are named and explained on page 2", async () => {
   const r = await render();
   const p2 = r.runs.filter((x) => x.page === 2);
   // Numbers in words since decision 25 (picks-1023).
-  const head = p2.find((x) => x.text === "TECHNICAL VALUES: YOUR TWENTY-SIX PLANET NUMBERS (FOR THE CURIOUS)");
+  const head = p2.find((x) => x.text === "THE RAW NUMBERS BEHIND YOUR CHART (OPTIONAL)");
   assert.ok(head, "no heading");
   assert.ok(p2.some((x) => x.text.startsWith("How to read them: 21.5 is gate 21, line 5.")), "no how-to line");
   const firstGate = p2.find((x) => /^\d+\.\d$/.test(x.text) && x.bold && x.size === 9);

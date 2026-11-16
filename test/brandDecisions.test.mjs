@@ -51,9 +51,14 @@ test("the link preview carries a large picture: option 6, chosen 10/16, with its
   assert.ok(statSync(new URL("public/og-preview.png", root)).size < 1_000_000, "a preview picture over 1 MB is skipped by some apps");
 });
 
-test("B2: the header is option B, a 'Human Design by' eyebrow over the wordmark, 'by' lowercase", () => {
+// Flipped 11/16 (Jeremy: "HD by TCM"; "HUMAN DESIGN is bigger, TCM is smaller. Accent the HD not the TCM").
+test("B2, FLIPPED 11/16: 'Human Design' is the big line, gold on 'Design'; 'by The Champagne Method' small under it", () => {
   const app = read("src/App.tsx");
-  assert.match(app, /Human Design <span className="normal-case">by<\/span>/);
+  const mark = app.slice(app.indexOf("function Wordmark()"), app.indexOf("export function Nav()"));
+  assert.match(mark, /font-display text-\[20px\][^"]*sm:text-\[26px\]">\s*Human <span className="text-brand-gold">Design<\/span>/);
+  assert.match(mark, /text-\[11px\] text-brand-muted sm:text-\[12px\]">by The Champagne Method<\/span>/);
+  assert.doesNotMatch(mark, /uppercase|>Champagne</, "the old eyebrow or the gold Champagne came back");
+  assert.match(mark, /hint\("Human Design by The Champagne Method", HINT\.home\)/);
   assert.doesNotMatch(app, /HEADER_OPTION/, "the A/B switch is gone now that B is decided");
   assert.doesNotMatch(app, />Coaching and Consulting</, "option A's under-line came back");
 });
@@ -81,10 +86,10 @@ test("item 12, option B: the chart tier ends on a calm page 3 of its own", async
   assert.ok(r.runs.some((x) => x.page === 3 && x.text === WORDMARK), "page 3 has no running brand line");
   const p2 = r.runs.filter((x) => x.page === 2).map((x) => x.text).join(" ");
   const p3 = r.runs.filter((x) => x.page === 3).map((x) => x.text);
-  assert.doesNotMatch(p2, /comes off what you pay next|Every word above|FREE TO READ/, "page 2 still carries the end block");
+  assert.doesNotMatch(p2, /comes off what you pay next|Every word above|FREE GUIDES/, "page 2 still carries the end block");
   const at = (t) => p3.findIndex((x) => x === t);
-  assert.ok(at("FREE TO READ, EITHER WAY") > 0);
-  assert.ok(at("IF YOU WOULD LIKE MORE THAN THIS CHART") > at("FREE TO READ, EITHER WAY"), p3.join(" | "));
+  assert.ok(at("FREE GUIDES, BOUGHT OR NOT") > 0);
+  assert.ok(at("IF YOU WOULD LIKE MORE THAN THIS CHART") > at("FREE GUIDES, BOUGHT OR NOT"), p3.join(" | "));
   const text3 = p3.join(" ");
   assert.match(text3, /Every word on page 2 is explained/);
   // The site's one credit sentence (10/23 verbatim read, S4).
@@ -108,7 +113,7 @@ test("the reading tier keeps the note under its values, and no offer", async () 
   if (notePage === 2) assert.match(on, /Every word above is explained/);
   else {
     assert.match(on, /Every word on page 2 is explained/);
-    assert.match(on, /TECHNICAL VALUES/, "the note went over without the block before it");
+    assert.match(on, /THE RAW NUMBERS/, "the note went over without the block before it");
   }
   assert.equal(r.alone, null);
 });
