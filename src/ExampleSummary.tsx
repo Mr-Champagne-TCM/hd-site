@@ -20,7 +20,7 @@ import Summary, { type SummaryData } from "./Summary";
  * provisional and there is no noon note. Since 10/22 the summary carries the
  * channels and the activated gates too, as values (his record's own lists).
  */
-const EXAMPLE: SummaryData = {
+export const EXAMPLE: SummaryData = {
   type: "Manifesting Generator",
   strategy: "Wait to respond, then inform",
   authority: "Sacral",

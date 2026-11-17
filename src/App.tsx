@@ -20,7 +20,8 @@ import ChartThumb from "./ChartThumb";
 import { ChoiceCard, KeptLine, SomeoneNewCard, btn, h1, tierWord, whoseOf } from "./Returning";
 import { startCheckout } from "./purchase";
 import { offersFor, sellable } from "../shared/availability.mjs";
-import ExampleSummary from "./ExampleSummary";
+import ExampleSummary, { EXAMPLE as EXAMPLE_CHART } from "./ExampleSummary";
+import ThreeLines from "./ThreeLines";
 import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
@@ -212,12 +213,32 @@ function Example() {
       <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-brand-muted">
         {EXAMPLE.caption}
       </p>
-      <div className="mt-6 max-w-[46rem]">
-        <ExampleSummary />
+      {/* THE WHOLE CHART, NOT ONLY ITS VALUES (Jeremy 11/16: "what the chart holds: this needs update
+          right?"). The example was the old summary's list; the chart is the three plain lines, the
+          drawing and every value, so the example shows all three, in the order a buyer's page does. */}
+      <div className="max-w-[46rem]">
+        <ThreeLines chart={EXAMPLE_CHART} whose="The" />
+        {/* The drawing itself is not in this public repository (leak-scan rule rendered-chart), so the
+            example links to the readings page, which shows it. Showing it here is Jeremy's open call. */}
+        <p className="mt-5 text-[16px] leading-relaxed text-brand-muted">
+          <a
+            href={SITE.readings}
+            {...hint("What each one actually is", HINT.examples)}
+            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+          >
+            {EXAMPLE.drawing}
+          </a>
+        </p>
+        <p className="mt-8 font-sans text-[13px] font-semibold uppercase tracking-[0.18em] text-brand-muted">
+          {EXAMPLE.values}
+        </p>
+        <div className="mt-3">
+          <ExampleSummary />
+        </div>
       </div>
       <p className="mt-4 text-[15px] leading-relaxed text-brand-muted/80">
-        Every one of these is in the {money(CHART.cents)} chart, drawn as a picture too. Nothing is blurred
-        out or held back.
+        All of this is in the {money(CHART.cents)} chart, with the drawing: the three lines and every value.
+        Nothing is blurred out or held back.
       </p>
       {/* One quiet link at the point of confusion. Someone meeting
           "Manifesting Generator" and "Sacral" for the first time wants a

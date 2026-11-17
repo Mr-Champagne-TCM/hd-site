@@ -132,10 +132,10 @@ export const PROFILE_GLANCE = Object.freeze({
 /** Each authority's glance (the library's one-liner). */
 export const AUTHORITY_GLANCE = Object.freeze({
   "Emotional": "Clarity comes over time, once the emotional wave has settled.",
-  "Sacral": "A gut response in the moment: a sound before a thought.",
+  "Sacral": "A gut yes or no, on the spot. The first sound is the one to trust.",
   "Splenic": "A quiet, instant knowing that speaks once.",
   "Ego": "What you really want, heard in what you say or do.",
   "Self-Projected": "Hearing yourself talk it through, and noticing what rings true.",
   "Mental": "Clarity through talking with trusted people in the right place.",
-  "Lunar": "About a month: letting the Moon’s cycle show the answer."
+  "Lunar": "Waiting one full Moon cycle, about a month, shows the answer."
 });

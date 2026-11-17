@@ -248,6 +248,9 @@ export const EXAMPLE = {
   caption:
     "An example: Jeremy Champagne’s own chart — September 17, 1983, Wichita Falls, Texas. " +
     "Yours would be your own, and would say so if the time were missing.",
+  // 11/16: the example shows three plain lines, a link to the drawing, then every value.
+  drawing: "See this chart drawn (the bodygraph) →",
+  values: "And every value",
 };
 
 /**

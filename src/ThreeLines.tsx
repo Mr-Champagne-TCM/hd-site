@@ -34,7 +34,7 @@ const GLANCE_AUTH = AUTHORITY_GLANCE as Record<string, string>;
 const authorityGlance = (a: string) => GLANCE_AUTH[a] ?? (/^Ego\b/.test(a) ? GLANCE_AUTH.Ego : null) ?? null;
 const GLANCE_PROFILE = PROFILE_GLANCE as Record<string, string>;
 
-export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeaways?: string[] | null }) {
+export default function ThreeLines({ chart, takeaways, whose = "Your" }: { chart: Chart; takeaways?: string[] | null; whose?: string }) {
   const profile = String(chart.profile ?? "").replace(/\s/g, "");
   const rows: Array<[string, string, string | null]> = [
     ["Your energy", chart.type ?? "", GLANCE_TYPE[chart.type ?? ""] ?? null],
@@ -62,7 +62,7 @@ export default function ThreeLines({ chart, takeaways }: { chart: Chart; takeawa
       className="mt-8 rounded-2xl border border-brand-teal/50 bg-brand-teal/[0.06] px-5 py-5 sm:px-6"
     >
       <h2 id="three-lines" className="font-display text-[clamp(1.25rem,3vw,1.5rem)] font-medium text-brand-paper">
-        Your chart in {shown.length === 3 ? "three" : shown.length === 2 ? "two" : "one"} line{shown.length === 1 ? "" : "s"}
+        {whose} chart in {shown.length === 3 ? "three" : shown.length === 2 ? "two" : "one"} line{shown.length === 1 ? "" : "s"}
       </h2>
       <ol className="mt-3 space-y-3">
         {shown.map(([label, value, line], i) => (
