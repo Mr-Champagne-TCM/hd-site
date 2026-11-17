@@ -407,7 +407,7 @@ export const RETURNING = {
   // Names what was bought: "make my chart" on a chart upgrade (bug 5, 10/21: it said "reading").
   confirmYes: (what: string) => `These are right — make my ${what}`,
   confirmYesTheirs: (what: string) => `These are right — make their ${what}`,
-  // A reading's owner who took the one-to-one: the reading stays as it is, so nothing is "made" (11/16).
+  // A reading's owner who took the one-on-one: the reading stays as it is, so nothing is "made" (11/16).
   confirmYesBook: "These are right — on to picking a time",
   // Q5c (11/16, accepted): offered, not ordered.
   changeDetail: "A detail to fix?",
@@ -427,6 +427,13 @@ export const RETURNING = {
   correctPrivacy:
     "Your earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in " +
     "about them. They are never shown on your page, your PDF or in an email.",
+  // Someone else's chart (11/16 live round: the form said "your").
+  correctNoteTheirs:
+    "Their details as they are kept now. You’re welcome to change anything that needs correcting — their " +
+    "chart is then cast from the corrected details.",
+  correctPrivacyTheirs:
+    "Their earlier details stay on file with this chart, seen only by Jeremy, in case you ever write in " +
+    "about them. They are never shown on their page, their PDF or in an email.",
   correctButton: "These are right now",
   keepAsIs: "Keep them as they are",
   typeOnceNote:

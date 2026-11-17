@@ -10,10 +10,10 @@
  * TWO SIZES, AND AN HOUR WITH JEREMY (Jeremy 11/16): "Remove 3 tier model and
  * replace with 2 tier. 1st tier is bodygraph and full chart (like tier 2), at
  * $1.11. Then the 2nd tier is the 3rd current tier, full reading. 44.44 should
- * be a 1:1 meeting." Then: thirty minutes, not an hour; the one-to-one
+ * be a 1:1 meeting." Then: thirty minutes, not an hour; the one-on-one
  * includes the full reading.
  *
- *                                   chart   reading   one-to-one
+ *                                   chart   reading   one-on-one
  *   chart values, centers, cross       yes     yes       yes
  *   the bodygraph drawing + its PDF    yes     yes       yes
  *   the 26 activations                  -      yes       yes
@@ -23,7 +23,7 @@
  * STORED LEVELS DO NOT MOVE. A record's `tier` is 0 summary, 1 chart, 2
  * reading, as it always was: every record ever sold keeps meaning what it
  * meant. The summary is OFF SALE (availability.mjs) but its records still
- * open. The one-to-one is checkout level 3, and its record is a reading
+ * open. The one-on-one is checkout level 3, and its record is a reading
  * (tier 2) whose sku says it came with the call (`recordTierOf`).
  */
 
@@ -61,6 +61,8 @@ export const CHART = {
   label: "The chart",
   checkoutName: "Human Design chart",
   checkoutDescription: "Your chart drawn as a picture (the bodygraph), every value on it, and a PDF to keep.",
+  // A chart bought for someone else (11/16 live round): Stripe's page said "Your chart".
+  checkoutDescriptionTheirs: "Their chart drawn as a picture (the bodygraph), every value on it, and a PDF to keep.",
   blurb: CHART_CARD,
   theirBlurb: CHART_CARD_THEIR,
   /** What the chart adds to a summary (old summary records; the step costs nothing now and is not sold). */
@@ -74,6 +76,7 @@ export const READING = {
   label: "The reading",
   checkoutName: "Human Design reading",
   checkoutDescription: "Your chart drawn, about 1,700 words written to it, four small things to try, and a PDF to keep.",
+  checkoutDescriptionTheirs: "Their chart drawn, about 1,700 words written to it, four small things to try, and a PDF to keep.",
   // Mock v2 A7 (11/16): the upgrade box in plain words, no "planet numbers" (10/31 audit #14).
   blurb: "About 1,700 words written to your chart, four small things to try, and a PDF.",
   theirBlurb: "About 1,700 words written to their chart, four small things to try, and a PDF.",
@@ -92,11 +95,12 @@ export const READING = {
 export const SESSION = {
   sku: "hd_session",
   cents: 4444,
-  label: "The one-to-one",
+  label: "The one-on-one",
   /** The card's own title (mock v2, call 3: "Go through it"). */
-  title: "Go through it with Jeremy, one to one",
-  checkoutName: "Human Design one-to-one with Jeremy",
+  title: "Go through it with Jeremy, one on one",
+  checkoutName: "Human Design one-on-one with Jeremy",
   checkoutDescription: "Thirty minutes with Jeremy on a video call, your chart on screen, and your written reading.",
+  checkoutDescriptionTheirs: "Thirty minutes with Jeremy on a video call, their chart on screen, and the written reading.",
   blurb: "Thirty minutes on a video call, your chart on screen. Your written reading comes with it, ready before you meet.",
   theirBlurb: "Thirty minutes on a video call, their chart on screen. The written reading comes with it, ready before you meet.",
   after: "After paying, you pick a time on Jeremy’s calendar. The Google Meet link is in the invite.",
@@ -111,20 +115,20 @@ export const GIFT = null;
 /** What a stored record's `tier` means. Index = the stored number; never reordered. */
 export const TIERS = [SUMMARY, CHART, READING];
 
-/** What a checkout's `level` means: the record tiers, then the one-to-one. */
+/** What a checkout's `level` means: the record tiers, then the one-on-one. */
 export const LEVELS = [SUMMARY, CHART, READING, SESSION];
 export const SESSION_LEVEL = 3;
 
 /** The two sizes on the offer page, cheapest first. */
 export const ON_SALE = [CHART, READING];
 
-/** The stored tier a checkout level makes: the one-to-one is a reading with a call. */
+/** The stored tier a checkout level makes: the one-on-one is a reading with a call. */
 export function recordTierOf(level) {
   return Number.isInteger(level) ? Math.min(level, READING_LEVEL) : level;
 }
 const READING_LEVEL = 2;
 
-/** The level a stored record stands at: a one-to-one's reading counts as the one-to-one. */
+/** The level a stored record stands at: a one-on-one's reading counts as the one-on-one. */
 export function ownedLevelOf(record) {
   if (!record || !Number.isInteger(record.tier)) return -1;
   return record.sku === SESSION.sku ? SESSION_LEVEL : record.tier;
@@ -140,15 +144,18 @@ export const CHECKOUT_NEXT_STEP_THEIR = "Next: their birth date, time and place 
 
 /**
  * The same line on an upgrade whose chart keeps its birth details: nothing to type (fix 4, 10/21).
- * `ownedLevel`: what the buyer already has. A reading's owner taking the one-to-one keeps the reading
+ * `ownedLevel`: what the buyer already has. A reading's owner taking the one-on-one keeps the reading
  * they have (interpretJob wordsToCarry), so nothing "is written" for them: they book (11/16 local run).
  */
-export const checkoutNextStepKept = (level, ownedLevel = -1) =>
-  level >= SESSION_LEVEL
+export const checkoutNextStepKept = (level, ownedLevel = -1, theirs = false) => {
+  // A chart bought for someone else is theirs here too (11/16 live round: it said "your").
+  const w = theirs ? "their" : "your";
+  return level >= SESSION_LEVEL
     ? ownedLevel >= 2
-      ? "Next: one look at your kept birth details, then you pick a time for your thirty minutes."
-      : "Next: one look at your kept birth details, then your reading is written and you pick a time for your thirty minutes."
-    : `Next: one look at your kept birth details, then your ${level >= 2 ? "reading is written" : "chart is drawn"}.`;
+      ? `Next: one look at ${w} kept birth details, then you pick a time for your thirty minutes.`
+      : `Next: one look at ${w} kept birth details, then ${w} reading is written and you pick a time for your thirty minutes.`
+    : `Next: one look at ${w} kept birth details, then ${w} ${level >= 2 ? "reading is written" : "chart is drawn"}.`;
+};
 
 /**
  * WHAT YOU HAVE ALREADY PAID COMES OFF WHAT YOU PAY NEXT.
@@ -158,8 +165,8 @@ export const checkoutNextStepKept = (level, ownedLevel = -1) =>
  *
  *   chart                $1.11
  *   chart -> reading     $10.00   (=$11.11 - $1.11)
- *   chart -> one-to-one  $43.33   (=$44.44 - $1.11)
- *   reading -> one-to-one $33.33  (=$44.44 - $11.11)
+ *   chart -> one-on-one  $43.33   (=$44.44 - $1.11)
+ *   reading -> one-on-one $33.33  (=$44.44 - $11.11)
  *
  * The credit is the owned tier's price TODAY (checkout.mjs upgradeCredit). A
  * step that would cost nothing (an old summary to the chart, both $1.11) is

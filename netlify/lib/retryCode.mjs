@@ -198,13 +198,17 @@ export async function handleRetryCode({ method, token, store, secret, stripe, no
     // once any checkout has run with this key; this makes sure. An any-tier
     // code names no product, so there is nothing to make sure of.
     if (product) await stripe.ensureProduct(product);
+    // The tier's "for someone else" product too (11/16), so the code works whoever the chart is for.
+    const theirProduct = product ? tierProduct(bought.tier, { theirs: true }) : null;
+    const both = Boolean(product && theirProduct && theirProduct.id !== product.id);
+    if (both) await stripe.ensureProduct(theirProduct);
     const coupon = await stripe.createCoupon(
       {
         percent_off: 100,
         duration: "once",
         max_redemptions: 1,
         redeem_by: until,
-        ...(product ? { applies_to: { products: [product.id] } } : {}),
+        ...(product ? { applies_to: { products: both ? [product.id, theirProduct.id] : [product.id] } } : {}),
         name: `Free retry: ${product ? product.name : "any tier"} (one use)`,
         metadata,
       },

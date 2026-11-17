@@ -71,7 +71,7 @@ export function pdfArgs(reading, id, secret, links) {
     addTimeUrl: secret ? `${SHOP}t/${mintAddTimeKey(id, secret)}` : null,
     // Bought for someone else: page 3 speaks to the person it is for too (decision 30).
     gift: reading.fresh === true,
-    // A one-to-one (11/16): its last card says where to pick the time, not what else to buy.
+    // A one-on-one (11/16): its last card says where to pick the time, not what else to buy.
     session: reading.sku === "hd_session",
   };
 }

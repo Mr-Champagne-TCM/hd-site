@@ -158,7 +158,7 @@ test("an upgrade is offered below the top tier", async () => {
     const body = parse(await open(store, token));
     assert.equal(body.upgrade.level, level);
     assert.equal(body.upgrade.label, expected);
-    // No calendar yet: the one-to-one is neither offered nor shown as bought.
+    // No calendar yet: the one-on-one is neither offered nor shown as bought.
     assert.equal(body.offerSession, false);
     assert.equal(body.session, false);
   }

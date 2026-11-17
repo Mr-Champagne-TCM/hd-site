@@ -351,7 +351,7 @@ function OneToOneCard({
 }) {
   return (
     <div
-      id="one-to-one"
+      id="one-on-one"
       data-card={SESSION.sku}
       className="mt-6 flex flex-col gap-5 rounded-2xl border border-brand-teal/40 bg-brand-teal/[0.06] p-5 sm:flex-row sm:items-center sm:p-6"
     >
@@ -816,7 +816,7 @@ function ReturningView({ token }: { token: string }) {
   const whose = data?.whose ?? null;
   // Someone else's chart (bought from "Start a new chart for someone else", or grown from one).
   const theirs = data?.fresh === true;
-  // A one-to-one's reading stands at the one-to-one (11/16): nothing more to offer it.
+  // A one-on-one's reading stands at the one-on-one (11/16): nothing more to offer it.
   const ownedLevel = data ? (data.session === true ? SESSION_LEVEL : data.tier) : -1;
   const back = data?.pending ? `/r/${encodeURIComponent(token)}` : `/u/${encodeURIComponent(token)}`;
 

@@ -112,11 +112,12 @@ export async function checkoutCredit({ body, secret, level, head, readLink, now 
     h = null;
   }
   if (!h) return { alreadyPaidCents: 0, upgrades: null, fresh: false };
-  // A one-to-one's reading stands at the one-to-one's level (pricing.mjs ownedLevelOf).
+  // A one-on-one's reading stands at the one-on-one's level (pricing.mjs ownedLevelOf).
   const cents = upgradeCredit({ headTier: ownedLevelOf(h), level });
   return cents > 0
     ? // `kept`: the chart it grows keeps its birth details, so there is nothing to type (fix 4, 10/21).
-      { alreadyPaidCents: cents, upgrades: h.id, fresh: false, kept: Boolean(h.birth) }
+      // `theirs`: the chart it grows was bought for someone else, so Stripe's page says "their" (11/16).
+      { alreadyPaidCents: cents, upgrades: h.id, fresh: false, kept: Boolean(h.birth), theirs: h.fresh === true }
     : { alreadyPaidCents: 0, upgrades: null, fresh: false };
 }
 
@@ -164,9 +165,14 @@ export async function checkoutEmail({ body, secret, head, readLink, now = Date.n
  * against it. The AMOUNT is still computed here, per session; only the
  * product is shared.
  */
-export function tierProduct(level) {
+export function tierProduct(level, { theirs = false } = {}) {
   const tier = tierAt(level);
   if (!tier) return null;
+  // FOR SOMEONE ELSE, ITS OWN PRODUCT (11/16): a Stripe product has one description, and the shared one says
+  // "Your chart". `<sku>_their` carries the same name with "Their chart"; retry codes reach both (retryCode.mjs).
+  if (theirs && tier.checkoutDescriptionTheirs) {
+    return { id: `${tier.sku}_their`, name: tier.checkoutName ?? tier.label, description: tier.checkoutDescriptionTheirs };
+  }
   // Fix 14B (10/19): "Human Design reading" and a plain line, not "The reading"
   // and the activations jargon. ensureProduct brings an existing product's
   // name and description up to these (stripe.mjs).
@@ -180,8 +186,8 @@ export function tierProduct(level) {
  * not be had. Returns the id, or null to fall back. Never throws: a sale is
  * worth more than a retry code's reach.
  */
-export async function checkoutProduct({ level, mode, ensure, note, ready = READY }) {
-  const product = tierProduct(level);
+export async function checkoutProduct({ level, mode, ensure, note, ready = READY, theirs = false }) {
+  const product = tierProduct(level, { theirs });
   if (!product) return null;
   const mark = `${mode}:${product.id}`;
   if (ready.has(mark)) return product.id;
@@ -206,7 +212,7 @@ const READY = new Set();
  * inline product so a sale is never lost over it -- a retry code then does not
  * reach that one purchase, and the checkout says so to Jeremy.
  */
-export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false, email = null }) {
+export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false, email = null, theirs = fresh }) {
   // What the credit says is already owned: a reading's price or more is a reading (11/16).
   const ownedLevel = alreadyPaidCents >= (LEVELS[2]?.cents ?? Infinity) ? 2 : alreadyPaidCents > 0 ? 1 : -1;
   const tier = tierAt(level);
@@ -246,7 +252,7 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * whose details are kept is told so, not "about 2 minutes" of typing (fix 4,
      * 10/21: every upgrade said it).
      */
-    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level, ownedLevel) : fresh ? CHECKOUT_NEXT_STEP_THEIR : CHECKOUT_NEXT_STEP } },
+    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level, ownedLevel, theirs) : fresh ? CHECKOUT_NEXT_STEP_THEIR : CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *
@@ -308,7 +314,7 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
           unit_amount: due,
           ...(product
             ? { product }
-            : { product_data: { name: tier.checkoutName ?? tier.label, description: tier.checkoutDescription ?? tier.blurb } }),
+            : { product_data: { name: tier.checkoutName ?? tier.label, description: (theirs && tier.checkoutDescriptionTheirs) || (tier.checkoutDescription ?? tier.blurb) } }),
         },
       },
     ],

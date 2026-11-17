@@ -193,14 +193,16 @@ const READY_THEIR = Object.freeze({
  */
 export function deliveryEmail({
   tier,
-  /** A one-to-one (11/16): the reading came with thirty minutes with Jeremy, and the email says where to book. */
+  /** A one-on-one (11/16): the reading came with thirty minutes with Jeremy, and the email says where to book. */
   session = false,
   /**
-   * A one-to-one whose reading the buyer ALREADY HAD (interpretJob wordsToCarry): nothing new was written,
+   * A one-on-one whose reading the buyer ALREADY HAD (interpretJob wordsToCarry): nothing new was written,
    * so the subject is the one new thing, the time to pick. Jeremy 11/16, after the live round: the second
    * "…reading is ready" threaded under the first and hid it. His words: "<Name>'s One-on-one: Pick a time".
    */
   bookOnly = false,
+  /** The kept details are someone else's (an upgrade of a chart bought for them): "Their birth details…" (11/16). */
+  keptTheirs = false,
   name,
   chartName = null,
   url,
@@ -269,14 +271,14 @@ export function deliveryEmail({
   const receiptFor = chartName || (their ? null : firstName(name) || null);
   const receiptWhat = their
     ? `${name ? `${curly(name)}, a` : "A"} Human Design ${word} for someone else`
-    : // A one-to-one's receipt says what was bought (11/16 local run: it said "reading").
-      `${chartTitle(receiptFor)} ${session ? "one-to-one" : word}`;
+    : // A one-on-one's receipt says what was bought (11/16 local run: it said "reading").
+      `${chartTitle(receiptFor)} ${session ? "one-on-one" : word}`;
   const subject = pending
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink
       ? `A fresh link to ${whoseInline} Human Design ${word}`
       : bookOnly && session
-        ? `${WhoseLead} One-to-one: Pick a time`
+        ? `${WhoseLead} One-on-one: Pick a time`
         : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
           `${WhoseLead} Human Design ${word} is ready${redone ? `, redone with ${their ? "their" : "your"} birth time` : ""}`;
 
@@ -320,11 +322,11 @@ export function deliveryEmail({
       ? `${tier === 0 ? `Want ${their ? "their" : "your"} chart drawn and the written reading too?` : "Want the written reading too?"} ` +
         `It’s on ${onPage}, and the ${paidLine} you paid comes off.`
       : nextLevel === SESSION_LEVEL
-        ? `Want to go through it with Jeremy, one to one? Thirty minutes on a video call. It’s on ${onPage}, ` +
+        ? `Want to go through it with Jeremy, one on one? Thirty minutes on a video call. It’s on ${onPage}, ` +
           `and the ${paidLine} you paid comes off.`
         : null;
 
-  /** A one-to-one: where to pick the time (shared/booking.mjs). Never sold without the link; the fallback is only a guard. */
+  /** A one-on-one: where to pick the time (shared/booking.mjs). Never sold without the link; the fallback is only a guard. */
   const bookingLine = session
     ? BOOKING_URL
       ? `Pick a time on Jeremy’s calendar: ${BOOKING_URL} — the Google Meet link is in the invite.`
@@ -359,7 +361,7 @@ export function deliveryEmail({
   const nextHead = kept ? "Next, one look" : "Next, about two minutes";
   const nextLine = kept
     ? // Kept from a summary as often as from a chart, so neither is named (10/22 verbatim read, B9).
-      "Your birth details are already kept, so there is nothing to type — only a look, " +
+      `${keptTheirs ? "Their" : "Your"} birth details are already kept, so there is nothing to type — only a look, ` +
       "to be sure they are right."
     : their
       ? "Their birth date, time and place. Their chart is made from them, and the time can be left " +
@@ -368,7 +370,7 @@ export function deliveryEmail({
         "out if you don’t know it.";
   const action = pending
     ? kept
-      ? "Confirm your birth details"
+      ? `Confirm ${keptTheirs ? "their" : "your"} birth details`
       : their
         ? "Their birth details (about two minutes) →"
         : "Your birth details (about two minutes) →"

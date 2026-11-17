@@ -30,7 +30,7 @@ export function countKey(body, now, rand = Math.random) {
   let tier = "-";
   let kind = "-";
   if (body.e === "buy") {
-    if (![0, 1, 2, 3].includes(body.tier)) return null; // 0 summary (off sale 11/16), 1 chart, 2 reading, 3 one-to-one
+    if (![0, 1, 2, 3].includes(body.tier)) return null; // 0 summary (off sale 11/16), 1 chart, 2 reading, 3 one-on-one
     tier = String(body.tier);
     kind = KINDS.has(body.kind) ? body.kind : "new";
   }

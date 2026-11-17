@@ -368,7 +368,7 @@ test("#6 THE NOTE NEVER SITS UNDER A STRAY ROW of planet numbers on an almost em
 
 test("#6 THE CLOSING CARD NEVER ENDS THE PDF ON A PAGE OF ITS OWN", async () => {
   // 11/16: the free call is off the HD PDFs (coaching funnel only). The card a PDF can still end on is
-  // a one-to-one's "Your thirty minutes with Jeremy"; nothing else prints the free call.
+  // a one-on-one's "Your thirty minutes with Jeremy"; nothing else prints the free call.
   assert.equal((await pdf({ reading: longer(0) })).runs.find((x) => x.text === COACH.head), undefined, "the free call is still in the PDF");
   for (const k of [0, 6]) {
     const r = await pdf({ reading: longer(k), session: true });

@@ -158,7 +158,7 @@ test("item 2: the function and the page are wired to it", () => {
   const src = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8");
   const fn = src("../netlify/functions/checkout.mjs");
   assert.match(fn, /const email = await checkoutEmail\(\{ body, secret: grantSecret, head: \(id\) => chainHead\(readings, id\), readLink: readReadingLink \}\)/);
-  assert.match(fn, /sessionParams\(\{ level, alreadyPaidCents, origin, product, upgrades, fresh, kept, email \}\)/);
+  assert.match(fn, /sessionParams\(\{ level, alreadyPaidCents, origin, product, upgrades, fresh, kept, email, theirs \}\)/);
   assert.doesNotMatch(fn, /console\.log\([^)]*\$\{email\}/, "the address is logged");
   // The page: the upgrade sends its link (as before); someone new from an owned chart sends it too.
   const purchase = src("../src/purchase.ts");

@@ -7,8 +7,8 @@ import { HINT, hint } from "../shared/linkHints.mjs";
  * call (fix 10B, 10/19); Jeremy 11/16: "keep the 30 min free call for coaching
  * funnel only". Now, from the same closingCard() the PDF prints:
  *
- *   a one-to-one's reading   where to pick the thirty minutes
- *   anything else            the paid one-to-one, when it is sold, through
+ *   a one-on-one's reading   where to pick the thirty minutes
+ *   anything else            the paid one-on-one, when it is sold, through
  *                            this chart's own upgrade link (what was paid comes off)
  *   otherwise                nothing
  *
@@ -31,7 +31,7 @@ export default function CoachCard() {
   if (!card) return null;
   return (
     <div
-      data-card={info.session ? "booking" : "one-to-one"}
+      data-card={info.session ? "booking" : "one-on-one"}
       className="flex flex-col gap-5 rounded-2xl border border-brand-teal/40 bg-brand-teal/[0.06] p-5 sm:flex-row sm:items-center sm:p-6"
     >
       <img

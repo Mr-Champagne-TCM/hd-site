@@ -7,7 +7,7 @@ import { TEXT } from "./support/tier2Fixture.mjs";
 /**
  * THE READING THEY ALREADY HAVE (Jeremy 11/16: "Go on all fixes").
  *
- * Someone who owns the written reading and books the one-to-one gets a new record. Its words are the ones they
+ * Someone who owns the written reading and books the one-on-one gets a new record. Its words are the ones they
  * already have -- the writer is not asked again -- when the chart is the same. Anything else is written fresh.
  */
 
@@ -64,7 +64,7 @@ const job = (store, id, extra = {}) => ({
   ...extra,
 });
 
-test("a one-to-one bought by a reading's owner carries the reading they have: the writer is not asked", async () => {
+test("a one-on-one bought by a reading's owner carries the reading they have: the writer is not asked", async () => {
   const store = fakeStore();
   const first = await record(store, { words: TEXT });
   const session = await record(store, { sku: "hd_session", grewFrom: first });
@@ -74,14 +74,14 @@ test("a one-to-one bought by a reading's owner carries the reading they have: th
   assert.equal(r.carried, true);
   assert.equal(r.asks, 0);
   assert.equal((await loadReading(store, session)).reading, (await loadReading(store, first)).reading, "word for word");
-  // They are still told, and the email knows it is a one-to-one (the booking link rides on `session`).
+  // They are still told, and the email knows it is a one-on-one (the booking link rides on `session`).
   assert.equal(emails.length, 1);
   assert.equal(emails[0].session, true);
   // And that the reading was already theirs, so the subject can be the time to pick (11/16).
   assert.equal(emails[0].carried, true);
 });
 
-test("a plain reading's ready email is not a one-to-one's", async () => {
+test("a plain reading's ready email is not a one-on-one's", async () => {
   const store = fakeStore();
   const id = await record(store, {});
   const emails = [];

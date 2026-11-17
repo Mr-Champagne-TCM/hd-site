@@ -221,7 +221,7 @@ export function ConfirmKept({
   theirs = false,
   session = false,
 }: {
-  /** The one-to-one (11/16): the heading names it, and a reading's owner is not told a reading is "made". */
+  /** The one-on-one (11/16): the heading names it, and a reading's owner is not told a reading is "made". */
   session?: boolean;
   /** Someone else's chart ("Start a new chart for someone else"), grown: their details, their chart. */
   theirs?: boolean;
@@ -263,9 +263,9 @@ export function ConfirmKept({
   }
 
   const from = fromTier === null ? "chart" : tierWord(fromTier);
-  // A reading's owner taking the one-to-one keeps that reading; a chart's owner has one written.
+  // A reading's owner taking the one-on-one keeps that reading; a chart's owner has one written.
   const keepsReading = session && fromTier === 2;
-  const what = session ? (keepsReading ? "one-to-one" : "reading and one-to-one") : tierWord(tier);
+  const what = session ? (keepsReading ? "one-on-one" : "reading and one-on-one") : tierWord(tier);
   return (
     <section id="yours" className="page-bottom mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">

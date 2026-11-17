@@ -126,7 +126,7 @@ export async function interpretOne(args) {
 
 /**
  * THE READING THEY ALREADY HAVE (Jeremy 11/16: "Go on all fixes"). Someone who owns the written reading and
- * then books the one-to-one gets a new record (charts.mjs recordPurchase) -- and the writer used to write the
+ * then books the one-on-one gets a new record (charts.mjs recordPurchase) -- and the writer used to write the
  * words a second time, differently, for a chart that had not changed. A reading somebody has read, quoted and
  * brought to the call is the one the call is about. So: when the record this one grew from is a written
  * reading of the SAME chart (the same kept birth details, and no identifying value differs), its words are
@@ -295,7 +295,7 @@ async function writeOne({
         someoneNew: reading.fresh === true,
         // Written again for a birth time found later (10/22): the email says it was redone.
         redone: redoneWithTime(reading),
-        // A one-to-one's reading (11/16): the email carries the booking link (deliveryEmail `session`).
+        // A one-on-one's reading (11/16): the email carries the booking link (deliveryEmail `session`).
         session: reading.sku === "hd_session",
         // The reading was already theirs (wordsToCarry): what is new is the time to pick (Jeremy 11/16).
         carried: Boolean(carried),

@@ -23,7 +23,7 @@ test("every tier that is for sale exists", () => {
   // and the whole path exists: prompt, validator, generator, write-once
   // storage, the page and the seven-page PDF.
   assert.equal(sellable(2), true);
-  // The one-to-one (level 3, 11/16) only once there is a calendar to book: nobody pays for a call they cannot book.
+  // The one-on-one (level 3, 11/16) only once there is a calendar to book: nobody pays for a call they cannot book.
   assert.equal(sellable(3, { bookingUrl: null }), false, "a call with no calendar is for sale");
   assert.equal(sellable(3, { bookingUrl: "https://calendly.com/example/30min" }), true);
   assert.equal(sellable(3, { bookingUrl: "http://insecure.example" }), false, "only an https calendar");

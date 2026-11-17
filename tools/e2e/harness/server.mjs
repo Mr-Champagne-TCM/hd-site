@@ -184,8 +184,8 @@ export async function startRig({ runDir, fixturesDir, engineMode = "local", log 
     // The writer is Claude (writer.mjs); the stand-in answers for RIG_ORG, the account guard's org.
     HD_ANTHROPIC_KEY: "rig-local-claude",
     HD_ANTHROPIC_ORG: RIG_ORG,
-    // The one-to-one's booking link is a site setting, never in the repo (shared/booking.mjs). A made-up one here.
-    HD_BOOKING_URL: "https://booking.rig.test/hd-one-to-one",
+    // The one-on-one's booking link is a site setting, never in the repo (shared/booking.mjs). A made-up one here.
+    HD_BOOKING_URL: "https://booking.rig.test/hd-one-on-one",
     ENGINE_URL: `${origin}/__engine`,
     ENGINE_KEY: engineKey,
     PAYWALL: "1",

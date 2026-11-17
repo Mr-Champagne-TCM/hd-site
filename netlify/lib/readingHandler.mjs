@@ -196,7 +196,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
       typeOnce: Boolean(reading.grewFrom && !reading.birth),
       /** Bought from "Start a new chart for someone else". */
       fresh: reading.fresh,
-      /** The one-to-one, so the confirm step names it (11/16). */
+      /** The one-on-one, so the confirm step names it (11/16). */
       session: reading.sku === SESSION.sku,
       purchasedAt: reading.purchasedAt,
       output: null,
@@ -329,7 +329,7 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
     /**
      * THE ONE-TO-ONE (11/16). `session`: this reading came with thirty minutes
      * with Jeremy, so the page shows where to pick a time (`booking`, null until
-     * the link exists). `offerSession`: the paid one-to-one can be offered on
+     * the link exists). `offerSession`: the paid one-on-one can be offered on
      * this page (sold, and not already bought) -- it replaces the free call card.
      */
     session: reading.sku === SESSION.sku,

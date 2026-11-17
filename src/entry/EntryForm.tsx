@@ -103,6 +103,8 @@ export type EntryProps = {
    *   correct     "Change a detail": the kept details, prefilled, corrected
    */
   mode?: "first" | "typeOnce" | "someoneNew" | "correct";
+  /** A correction on a chart bought for someone else: "their details", "their birth time" (11/16). */
+  theirs?: boolean;
   /** The kept details a correction starts from. */
   initial?: { date: string; time: string | null; timeKnown: boolean; place: string | null; zone: string; name?: string } | null;
   /** "Keep them as they are": back to the confirm screen. */
@@ -139,6 +141,7 @@ export default function EntryForm({
   upgrade = null,
   canResend = false,
   mode = "first",
+  theirs = false,
   initial = null,
   onCancel,
 }: EntryProps = {}) {
@@ -152,6 +155,7 @@ export default function EntryForm({
   const askName = Boolean(readingToken);
   const other = mode === "someoneNew";
   const correcting = mode === "correct" && initial !== null;
+  const fixTheirs = correcting && theirs;
   const [who, setWho] = useState(() =>
     correcting ? (initial?.name ?? "") : other ? (chartName ?? "") : (chartName ?? firstName(name) ?? ""),
   );
@@ -514,7 +518,9 @@ export default function EntryForm({
       {(correcting || other || mode === "typeOnce") && (
         <div className="mt-4 max-w-[62ch] rounded-xl border border-brand-teal/30 bg-brand-teal/[0.06] px-4 py-3 text-[16px] leading-relaxed text-brand-paper">
           {correcting
-            ? RETURNING.correctNote
+            ? fixTheirs
+              ? RETURNING.correctNoteTheirs
+              : RETURNING.correctNote
             : other
               ? `Payment received, thank you. This chart starts fresh and stays separate from yours${
                   firstName(name) ? `, ${firstName(name)}` : ""
@@ -555,7 +561,7 @@ export default function EntryForm({
       */}
       <p className="mt-5 max-w-[62ch] text-[15px] leading-relaxed text-brand-muted">
         {/* One privacy sentence for every tier (release 2); a correction says where the old details go. */}
-        {correcting ? RETURNING.correctPrivacy : other ? PRIVACY_NOTE_THEIRS : PRIVACY_NOTE}
+        {correcting ? (fixTheirs ? RETURNING.correctPrivacyTheirs : RETURNING.correctPrivacy) : other ? PRIVACY_NOTE_THEIRS : PRIVACY_NOTE}
       </p>
 
       <form onSubmit={submit} className="mt-8 max-w-[34rem]">
@@ -615,7 +621,7 @@ export default function EntryForm({
               value={time}
               onChange={setTime}
               unknown={timeKnown === false}
-              their={other}
+              their={other || fixTheirs}
               onUnknownChange={(u) => {
                 setTimeKnown(u ? false : null);
                 if (u) setTime("");

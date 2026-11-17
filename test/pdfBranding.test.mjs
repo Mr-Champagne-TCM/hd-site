@@ -264,12 +264,12 @@ test("7: the reading's Human Design words link to the library, underlined in tea
   }
 });
 
-test("11/16: the free call is off the HD PDF; a one-to-one's card ends the reading, before the disclaimer", async () => {
+test("11/16: the free call is off the HD PDF; a one-on-one's card ends the reading, before the disclaimer", async () => {
   // Jeremy 11/16: "keep the 30 min free call for coaching funnel only".
   const plain = await render();
   assert.equal(plain.runs.find((x) => x.text === COACH.head), undefined, "the free call's card is still printed");
   assert.equal(plain.links.find((l) => l.uri === COACH.url), undefined, "the free call's link is still printed");
-  // A one-to-one's reading ends with where to pick the time (10B's place and photo, new words).
+  // A one-on-one's reading ends with where to pick the time (10B's place and photo, new words).
   const r = await render({ session: true });
   const last = pagesOf(r);
   const head = r.runs.find((x) => x.text === "Your thirty minutes with Jeremy");

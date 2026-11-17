@@ -81,7 +81,7 @@ export default guard("checkout", async (request) => {
    * purchase. "Start a new chart for someone else" is full price.
    */
   const readings = getStore({ name: "readings", consistency: "strong" });
-  const { alreadyPaidCents, upgrades, fresh, kept } = await checkoutCredit({
+  const { alreadyPaidCents, upgrades, fresh, kept, theirs: grownTheirs } = await checkoutCredit({
     body,
     secret: grantSecret,
     level,
@@ -107,15 +107,18 @@ export default guard("checkout", async (request) => {
 
   // The tier's own Stripe product, so a free retry code can be held to it
   // (lib/retryCode.mjs). Without it the sale still goes ahead, inline as before.
+  // Bought for someone else, or growing a chart that was: Stripe's page says "their" (11/16).
+  const theirs = fresh === true || grownTheirs === true;
   const product = await checkoutProduct({
     level,
+    theirs,
     mode: /^[sr]k_live_/.test(key.trim()) ? "live" : "test",
     ensure: (p) => ensureProduct(key, p),
     note: (detail) => noteFailure(health(), "checkout-product-missing", { detail }),
   });
 
   try {
-    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh, kept, email }));
+    const session = await createSession(key, sessionParams({ level, alreadyPaidCents, origin, product, upgrades, fresh, kept, email, theirs }));
     console.log(
       `POST /api/checkout -> 200 (tier ${level}, credit ${alreadyPaidCents}${upgrades ? ", upgrade" : ""}${fresh ? ", someone new" : ""}${email ? ", email kept" : ""}${product ? "" : ", inline product"})`,
     );

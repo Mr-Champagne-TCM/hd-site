@@ -81,8 +81,8 @@ export const COACH = Object.freeze({
 /**
  * THE CARD THAT ENDS A CHART OR A READING (page and PDF), since 11/16:
  *
- *   a one-to-one's reading   where to pick the thirty minutes (BOOKING_URL)
- *   anything else            the paid one-to-one, when it is sold (`offer`)
+ *   a one-on-one's reading   where to pick the thirty minutes (BOOKING_URL)
+ *   anything else            the paid one-on-one, when it is sold (`offer`)
  *   otherwise                no card at all
  *
  * `url`: where the offer's link goes -- the page passes its own upgrade link,

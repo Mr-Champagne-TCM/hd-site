@@ -218,7 +218,7 @@ test("RECEIPT SUBJECT: both paths that send a receipt pass the chart's name from
   assert.match(read("netlify/lib/charts.mjs"), /chartName: source\?\.birth\?\.name \?\? null/);
   const claim = read("netlify/lib/claimHandler.mjs");
   assert.match(claim, /chartName = recorded\?\.chartName \?\? null;/);
-  assert.match(claim, /pending: true,\s*kept,\s*\/\/[^\n]*\n\s*chartName,/);
+  assert.match(claim, /pending: true,\s*kept,\s*keptTheirs: kept && keptTheirs,\s*\/\/[^\n]*\n\s*chartName,/);
   assert.match(read("netlify/lib/reconcile.mjs"), /chartName: recorded\?\.chartName \?\? null,/);
   assert.match(read("netlify/functions/reconcile.mjs"), /deliveryEmail\(\{ tier, name, chartName, url,/);
   // The re-sent receipt already passed it (resendHandler: reading.birth?.name).

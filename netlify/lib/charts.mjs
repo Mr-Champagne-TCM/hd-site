@@ -156,7 +156,7 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
   let source = null;
   if (ID.test(String(meta.upgrades))) {
     const head = await chainHead(readings, meta.upgrades, now);
-    // A one-to-one's reading stands at the one-to-one's level (11/16, pricing.mjs ownedLevelOf).
+    // A one-on-one's reading stands at the one-on-one's level (11/16, pricing.mjs ownedLevelOf).
     if (head && ownedLevelOf(head) < level && head.id !== id) {
       source = head;
     } else if (head) {
@@ -169,7 +169,7 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
 
   await saveReading(readings, {
     id,
-    // A one-to-one is stored as a reading; its sku (hd_session) says it came with the call.
+    // A one-on-one is stored as a reading; its sku (hd_session) says it came with the call.
     tier: recordTierOf(level),
     output: null,
     name: buyer.name ?? null,
@@ -214,7 +214,7 @@ export async function recordPurchase({ readings, index = null, id, level, sessio
     }
   }
   // `chartName`: the name the grown chart is titled with, for the receipt's subject (10/23, option 1).
-  return { grewFrom: source?.id ?? null, kept: Boolean(source?.birth), chartName: source?.birth?.name ?? null };
+  return { grewFrom: source?.id ?? null, kept: Boolean(source?.birth), chartName: source?.birth?.name ?? null, theirs: source?.fresh === true };
 }
 
 /** The values that say "this is the same chart", for grouping older records. */

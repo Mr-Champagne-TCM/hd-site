@@ -13,7 +13,7 @@ import { TIERS, LEVELS } from "../shared/pricing.mjs";
 const KEY = "sk_test_" + "0".repeat(24);
 
 test("every tier has a product under its own sku, and nothing else does", () => {
-  // Every checkout level (11/16: the one-to-one is level 3, its own product).
+  // Every checkout level (11/16: the one-on-one is level 3, its own product).
   assert.deepEqual(LEVELS.map((_, i) => tierProduct(i).id), ["hd_summary", "hd_chart", "hd_reading", "hd_session"]);
   for (const [i, t] of LEVELS.entries()) assert.deepEqual(tierProduct(i), { id: t.sku, name: t.checkoutName, description: t.checkoutDescription });
   for (const bad of [-1, 4, 1.5, null, "1"]) assert.equal(tierProduct(bad), null);

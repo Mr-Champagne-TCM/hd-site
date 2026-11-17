@@ -336,7 +336,8 @@ test("RETRY CODE: opening the link makes nothing; the button makes one code, onc
   assert.equal(coupon.duration, "once");
   assert.equal(coupon.max_redemptions, 1);
   // Held to the tier they bought (tier 1, the chart) -- and only that one.
-  assert.deepEqual(coupon.applies_to, { products: ["hd_chart"] });
+  // The tier's own product and its "for someone else" twin (11/16), so the code works whoever the chart is for.
+  assert.deepEqual(coupon.applies_to, { products: ["hd_chart", "hd_chart_their"] });
   assert.equal(promo.max_redemptions, 1);
   assert.equal(promo.code, code);
   assert.equal(copts.idempotencyKey, `retry-coupon-${INCIDENT.id}`);
@@ -379,14 +380,16 @@ test("RETRY CODE: the coupon names the tier's product, which is made sure of fir
     const r = await handleRetryCode({ method: "POST", token: t, store: store(), secret: SECRET, stripe, now: NOW });
     assert.equal(r.status, 200, `tier ${tier}`);
     const order = stripe.calls.map(([what]) => what);
-    assert.deepEqual(order, ["product", "coupon", "promo"], "the product is made sure of before the coupon names it");
+    // The summary has one product; the chart and the reading have a "for someone else" twin too (11/16).
+    const twin = tier === 0 ? [] : [`${product}_their`];
+    assert.deepEqual(order, [...["product", ...twin].map(() => "product"), "coupon", "promo"], "the products are made sure of before the coupon names them");
     assert.equal(stripe.calls[0][1].id, product);
-    const coupon = stripe.calls[1][1];
-    assert.deepEqual(coupon.applies_to.products, [product]);
+    const coupon = stripe.calls.find(([what]) => what === "coupon")[1];
+    assert.deepEqual(coupon.applies_to.products, [product, ...twin]);
     assert.equal(coupon.percent_off, 100);
     assert.equal(coupon.max_redemptions, 1);
-    assert.equal(stripe.calls[2][1].max_redemptions, 1);
-    assert.equal(stripe.calls[2][1].coupon, "coupon_x");
+    assert.equal(stripe.calls.find(([what]) => what === "promo")[1].max_redemptions, 1);
+    assert.equal(stripe.calls.find(([what]) => what === "promo")[1].coupon, "coupon_x");
   }
 });
 
@@ -402,7 +405,7 @@ test("RETRY CODE: an older link without a tier finds it on the incident on file,
   const st1 = fakeStripe();
   const r1 = await handleRetryCode({ method: "POST", token: t, store: s1, secret: SECRET, stripe: st1, now: NOW });
   assert.equal(r1.status, 200);
-  assert.deepEqual(minted(st1)[0][1].applies_to, { products: ["hd_reading"] });
+  assert.deepEqual(minted(st1)[0][1].applies_to, { products: ["hd_reading", "hd_reading_their"] });
   assert.ok(!st1.calls.some(([w]) => w === "session"), "Stripe was asked when the incident already said");
 
   // 2. Only the session: Stripe's paid checkout says which tier.
@@ -465,7 +468,7 @@ test("RETRY CODE: a KNOWN tier is still held to that tier, never widened to any"
   const r = await handleRetryCode({ method: "POST", token: t, store: store(), secret: SECRET, stripe, now: NOW });
   assert.equal(r.status, 200);
   assert.doesNotMatch(r.html, /any tier/);
-  assert.deepEqual(minted(stripe)[0][1].applies_to, { products: ["hd_chart"] });
+  assert.deepEqual(minted(stripe)[0][1].applies_to, { products: ["hd_chart", "hd_chart_their"] });
   assert.equal(minted(stripe)[0][1].metadata.tier, "1");
 });
 

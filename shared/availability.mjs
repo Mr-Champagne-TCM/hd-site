@@ -59,13 +59,13 @@ export const SELLABLE_MAX_LEVEL = 2;
 /**
  * TWO SIZES (Jeremy 11/16). The summary (level 0) is OFF SALE: the chart now
  * costs what it did, and holds everything it held and the drawing. Its records
- * still open; it is only never sold again. The one-to-one (level 3) is sold
+ * still open; it is only never sold again. The one-on-one (level 3) is sold
  * only once a booking link exists (shared/booking.mjs), so nobody pays for a
  * call they cannot book.
  *
  * THE LINK IS THE SERVER'S (booking.mjs says why it is not in the page's code).
  * So the two sides ask differently: a function, a test or a build sells the
- * one-to-one when it HOLDS an https link; the page, which never holds it, goes
+ * one-on-one when it HOLDS an https link; the page, which never holds it, goes
  * by the public switch (`onSale`). The checkout is a function, so a switch left
  * on with no link set still sells nothing: it answers "not sellable".
  */

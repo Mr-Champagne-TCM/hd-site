@@ -40,9 +40,9 @@ export const HINT = Object.freeze({
   pdf: "Downloads the PDF, to print or keep",
   /** /u/<token>#new: the two sizes, for a new chart for someone else */
   someoneNew: "Opens the prices for a new chart for someone else",
-  /** /u/<token>: this chart's own options, the one-to-one among them (11/16) */
+  /** /u/<token>: this chart's own options, the one-on-one among them (11/16) */
   oneToOne: "Opens your options, with what you paid taken off",
-  /** The one-to-one's booking page (11/16) */
+  /** The one-on-one's booking page (11/16) */
   booking: "Opens Jeremy’s calendar, to pick a time",
 });
 

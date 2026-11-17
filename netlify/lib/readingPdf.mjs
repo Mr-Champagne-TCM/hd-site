@@ -673,9 +673,9 @@ async function buildPdf({ tier, name, output, links: _links, reading = null, bir
     // A chart bought for someone else: its page 3 credit lines are true for the person it is for (decision 30).
     d.gift = gift === true;
     /**
-     * THE LAST CARD (11/16): the free call is off the HD PDFs. A one-to-one's
+     * THE LAST CARD (11/16): the free call is off the HD PDFs. A one-on-one's
      * reading says where to pick the time; any other chart or reading offers
-     * the paid one-to-one once it is sold; otherwise there is no card.
+     * the paid one-on-one once it is sold; otherwise there is no card.
      */
     d.card = closingCard({ session: session === true, offer: sellable(3), word: tier >= 2 ? "reading" : "chart", url: SHOP });
     Object.assign(d, opts);

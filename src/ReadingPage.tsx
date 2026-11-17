@@ -52,7 +52,7 @@ type Reading = {
   purchasedAt: number;
   output: SummaryData & { personality?: Activation[]; design?: Activation[] };
   upgrade: { level: number; label: string; available?: boolean } | null;
-  /** The one-to-one (11/16): this reading came with it; where to book; whether to offer it. */
+  /** The one-on-one (11/16): this reading came with it; where to book; whether to offer it. */
   session?: boolean;
   booking?: string | null;
   offerSession?: boolean;
@@ -461,6 +461,7 @@ export default function ReadingPage({ token }: { token: string }) {
           upgrade={reading.upgrade}
           canResend={reading.canResend}
           mode={reading.kept ? "correct" : reading.fresh ? "someoneNew" : reading.typeOnce ? "typeOnce" : "first"}
+          theirs={reading.fresh === true}
           initial={reading.kept ?? null}
           onCancel={() => setCorrecting(false)}
         />
@@ -473,7 +474,7 @@ export default function ReadingPage({ token }: { token: string }) {
       value={{
         session: reading.session === true,
         // SAID ONCE (11/16, the rig's doubled-text check): on a reading's page the step-further box below
-        // already offers the one-to-one, in the same words. The closing card offers it only where that box
+        // already offers the one-on-one, in the same words. The closing card offers it only where that box
         // offers something else (a chart's page, whose next step is the reading).
         offer: reading.offerSession === true && reading.upgrade?.level !== 3,
         token,

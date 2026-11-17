@@ -44,7 +44,7 @@ test("a count's key is the whole record: New York day, event, source, tier, kind
   assert.match(countKey({ e: "visit", src: "direct" }, NOW), /^2026-10-26\/visit\/direct\/-\/-\/\d+-[a-z0-9]{4}$/);
   assert.match(countKey({ e: "visit", src: "Bad Source!" }, NOW), /\/visit\/other\//, "an odd source is 'other'");
   assert.equal(countKey({ e: "buy", src: "x", tier: 7 }, NOW), null, "no such tier");
-  assert.match(countKey({ e: "buy", src: "ig", tier: 3, kind: "upgrade" }, NOW, () => 0), /\/buy\/ig\/3\/upgrade\//,"the one-to-one (11/16) is level 3");
+  assert.match(countKey({ e: "buy", src: "ig", tier: 3, kind: "upgrade" }, NOW, () => 0), /\/buy\/ig\/3\/upgrade\//,"the one-on-one (11/16) is level 3");
   assert.equal(countKey({ e: "pageview" }, NOW), null, "only the two events");
   assert.equal(countKey(null, NOW), null);
   // A field sent along that is not one of these never reaches the key.

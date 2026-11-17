@@ -62,7 +62,7 @@ async function bought(store, tier, sku = TIERS[tier].sku) {
 
 /* ------------------------------------------------------------------ prices */
 
-test("the prices: the chart, the reading, the one-to-one; the summary keeps its price as history", () => {
+test("the prices: the chart, the reading, the one-on-one; the summary keeps its price as history", () => {
   assert.deepEqual([CHART, READING, SESSION].map((t) => t.cents), [111, 1111, 4444]);
   assert.equal(money(SESSION.cents).length, 6);
   assert.equal(SUMMARY.cents, 111);
@@ -82,7 +82,7 @@ test("the offer page's ladder is the two sizes, with the chart's price coming of
   );
 });
 
-test("credit: chart -> reading 1000, chart -> one-to-one 4333, reading -> one-to-one 3333 (cents)", () => {
+test("credit: chart -> reading 1000, chart -> one-on-one 4333, reading -> one-on-one 3333 (cents)", () => {
   const due = (owned, level) => priceFor(LEVELS[level], upgradeCredit({ headTier: owned, level }));
   assert.equal(due(1, 2), 1000);
   assert.equal(due(1, 3), 4333);
@@ -92,7 +92,7 @@ test("credit: chart -> reading 1000, chart -> one-to-one 4333, reading -> one-to
 
 /* -------------------------------------------------------------- what is sold */
 
-test("the summary is off sale; the one-to-one only with a calendar", () => {
+test("the summary is off sale; the one-on-one only with a calendar", () => {
   assert.equal(sellable(0), false);
   assert.equal(sellable(1), true);
   assert.equal(sellable(2), true);
@@ -126,7 +126,7 @@ test("what each chart can still become: never a $0.00 step, never what it has", 
   assert.deepEqual(offersFor(2), []);
   assert.deepEqual(offersFor(1, { bookingUrl: CAL }), [2, 3]);
   assert.deepEqual(offersFor(2, { bookingUrl: CAL }), [3]);
-  assert.deepEqual(offersFor(3, { bookingUrl: CAL }), [], "a one-to-one is the top");
+  assert.deepEqual(offersFor(3, { bookingUrl: CAL }), [], "a one-on-one is the top");
   assert.equal(nextOffer(0), 2);
   assert.equal(nextOffer(2), null);
 });
@@ -139,9 +139,9 @@ test("NOTHING DUE IS NOTHING SOLD: the checkout function refuses a $0.00 checkou
   assert.match(fn, /level >= LEVELS\.length/, "level 3 is a level; 4 is not");
 });
 
-/* ------------------------------------------------- the one-to-one, end to end */
+/* ------------------------------------------------- the one-on-one, end to end */
 
-test("a one-to-one is checkout level 3, stored as a reading whose sku says it came with the call", async () => {
+test("a one-on-one is checkout level 3, stored as a reading whose sku says it came with the call", async () => {
   assert.equal(recordTierOf(3), 2);
   assert.equal(recordTierOf(1), 1);
   const p = sessionParams({ level: 3, origin: "https://x" });
@@ -166,7 +166,7 @@ test("a one-to-one is checkout level 3, stored as a reading whose sku says it ca
   assert.equal(ownedLevelOf(rec), 3);
 });
 
-test("a reading's owner who books the one-to-one: credited the reading's price, and the new record grows from the reading", async () => {
+test("a reading's owner who books the one-on-one: credited the reading's price, and the new record grows from the reading", async () => {
   const readings = memoryStore();
   const reading = await bought(readings, 2);
   const credit = await checkoutCredit({
@@ -194,7 +194,7 @@ test("a reading's owner who books the one-to-one: credited the reading's price, 
   assert.equal((await loadReading(readings, reading, NOW)).grewTo, id);
 });
 
-test("the claim and the watcher store and link the one-to-one as a reading, and say it was one", () => {
+test("the claim and the watcher store and link the one-on-one as a reading, and say it was one", () => {
   const claim = src("netlify/lib/claimHandler.mjs");
   assert.match(claim, /const tier = recordTierOf\(level\);/);
   assert.match(claim, /mintReadingLink\(\{ id, tier \}, grantSecret\)/);
@@ -205,7 +205,7 @@ test("the claim and the watcher store and link the one-to-one as a reading, and 
   assert.match(src("netlify/lib/charts.mjs"), /tier: recordTierOf\(level\),/);
 });
 
-test("a one-to-one's page says so, offers nothing more, and carries the booking link", async () => {
+test("a one-on-one's page says so, offers nothing more, and carries the booking link", async () => {
   const readings = memoryStore();
   const id = await bought(readings, 2, "hd_session");
   readings.m.set(id, { ...readings.m.get(id), reading: "x", writtenAt: Math.floor(NOW / 1000) });
@@ -217,10 +217,10 @@ test("a one-to-one's page says so, offers nothing more, and carries the booking 
   assert.equal(body.upgrade, null);
 });
 
-test("a one-to-one's emails say where to pick the time; nobody else's do", () => {
+test("a one-on-one's emails say where to pick the time; nobody else's do", () => {
   const receipt = deliveryEmail({ tier: 2, session: true, name: "Alex", url: "https://x.test/r/a.b", links: SITE, pending: true, amountCents: 4444 });
   assert.match(receipt.text, /YOUR THIRTY MINUTES WITH JEREMY/);
-  assert.match(receipt.text, /What: Human Design: the one-to-one/);
+  assert.match(receipt.text, /What: Human Design: the one-on-one/);
   const ready = deliveryEmail({ tier: 2, session: true, name: "Alex", url: "https://x.test/r/a.b", links: SITE });
   assert.match(ready.text, /YOUR THIRTY MINUTES WITH JEREMY/);
   assert.doesNotMatch(deliveryEmail({ tier: 2, name: "Alex", url: "https://x.test/r/a.b", links: SITE }).text, /THIRTY MINUTES WITH JEREMY/);
@@ -228,11 +228,11 @@ test("a one-to-one's emails say where to pick the time; nobody else's do", () =>
 
 /* -------------------------------------------------------- the closing card */
 
-test("the closing card: the free call never; the one-to-one when sold; the booking for a one-to-one", () => {
+test("the closing card: the free call never; the one-on-one when sold; the booking for a one-on-one", () => {
   assert.equal(closingCard({}), null);
   assert.equal(closingCard({ offer: false, url: "/u/t" }), null);
   const offer = closingCard({ offer: true, url: "/u/t", word: "chart" });
-  assert.equal(offer.head, "Go through it with Jeremy, one to one");
+  assert.equal(offer.head, "Go through it with Jeremy, one on one");
   assert.match(offer.body, /^Thirty minutes on a video call, your chart on screen\. Your written reading comes with it, ready before you meet\. \$44\.44, and what you paid for this chart comes off\.$/);
   assert.equal(offer.url, "/u/t");
   const booking = closingCard({ session: true, bookingUrl: CAL });
@@ -245,7 +245,7 @@ test("the closing card: the free call never; the one-to-one when sold; the booki
 
 /* ------------------------------------------------------------- the offer page */
 
-test("the offer page: two cards, invitations for buttons, the one-to-one only when sold", () => {
+test("the offer page: two cards, invitations for buttons, the one-on-one only when sold", () => {
   const app = src("src/App.tsx");
   assert.match(app, /grid gap-4 sm:grid-cols-2/);
   assert.match(app, /`\$\{tier\.label\}, \$\{money\(full\)\} →`/);
@@ -256,7 +256,7 @@ test("the offer page: two cards, invitations for buttons, the one-to-one only wh
   assert.match(app, /Add 30 minutes with Jeremy \(\$\{money\(t\.cents - paid\)\}\) →/);
 });
 
-test("a reading's page offers the one-to-one once: the step-further box, not the closing card too (11/16 rig)", () => {
+test("a reading's page offers the one-on-one once: the step-further box, not the closing card too (11/16 rig)", () => {
   const page = src("src/ReadingPage.tsx");
   assert.match(page, /offer: reading\.offerSession === true && reading\.upgrade\?\.level !== 3,/);
 });

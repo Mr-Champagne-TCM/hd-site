@@ -163,7 +163,7 @@ test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
   // upgrade line appears exactly when the next tier is sellable, and the top
   // tier never has one because there is nothing above it.
   // Since 11/16 the rule is availability.mjs nextOffer(): the first level above that is sold and costs
-  // something. The reading's next is the one-to-one, sold only once its calendar exists.
+  // something. The reading's next is the one-on-one, sold only once its calendar exists.
   const { nextOffer } = await import("../shared/availability.mjs");
   for (const tier of [0, 1, 2]) {
     const { text, html } = build(tier, "J");
@@ -172,7 +172,7 @@ test("AN UNSELLABLE TIER IS NEVER OFFERED IN AN EMAIL", async () => {
     assert.equal(/you paid comes off\./.test(html), offered, "html and text disagree");
   }
   // No calendar, no call offered: the reading's email names nothing above it today.
-  assert.doesNotMatch(build(2, "J").text, /one to one/);
+  assert.doesNotMatch(build(2, "J").text, /one on one/);
 });
 
 test("no upgrade at the top tier, because there is nothing above it", () => {

@@ -22,7 +22,7 @@ for (const key of keys) {
 }
 
 const out = [...rows.values()].sort((a, b) => (a.day === b.day ? b.visit - a.visit : a.day < b.day ? 1 : -1));
-console.log("day         source      visits  buy:chart reading one-to-one   (new / step further / someone new)");
+console.log("day         source      visits  buy:chart reading one-on-one   (new / step further / someone new)");
 for (const r of out) {
   const k = `${r.kinds.new ?? 0} / ${r.kinds.upgrade ?? 0} / ${r.kinds.someone ?? 0}`;
   console.log(`${r.day}  ${r.src.padEnd(10)}  ${String(r.visit).padStart(6)}  ${String(r.buy[1]).padStart(9)} ${String(r.buy[2]).padStart(7)} ${String(r.buy[3]).padStart(10)}   ${k}`);

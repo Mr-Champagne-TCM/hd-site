@@ -91,7 +91,7 @@ export async function handleClaim({
 
   // Short-lived on purpose. A grant is spent within minutes of buying; the
   // artefact it unlocks is kept far longer (D-7).
-  // The stored tier (11/16): a one-to-one is a reading with a call (pricing.mjs recordTierOf).
+  // The stored tier (11/16): a one-on-one is a reading with a call (pricing.mjs recordTierOf).
   const tier = recordTierOf(level);
   const grant = mintGrant({ tier, sku: session?.metadata?.sku, ttlSeconds: 3600 }, grantSecret);
 
@@ -110,6 +110,8 @@ export async function handleClaim({
   let kept = false;
   /** The name the chart is titled with, when it grew from one that has it: the receipt's subject (10/23). */
   let chartName = null;
+  /** The chart it grows was bought for someone else: the receipt says "their birth details" (11/16). */
+  let keptTheirs = false;
   let lastError = null;
   const id = readingIdForSession(id0, grantSecret);
   // WHICH purchase, for an alert: ids only (10/16). No tier until a reading
@@ -143,6 +145,7 @@ export async function handleClaim({
         });
         kept = Boolean(recorded?.kept);
         chartName = recorded?.chartName ?? null;
+        keptTheirs = recorded?.theirs === true;
       }
       url = `${origin}/r/${mintReadingLink({ id, tier }, grantSecret)}`;
     } catch (e) {
@@ -178,6 +181,7 @@ export async function handleClaim({
       // RECEIPT (fix 4A, 10/19): what was paid and when, from Stripe itself.
       pending: true,
       kept,
+      keptTheirs: kept && keptTheirs,
       // The receipt says the chart's own title (Jeremy 10/23, option 1): "Receipt: Robin’s Human Design reading, …".
       chartName,
       amountCents: Number.isInteger(session?.amount_total) ? session.amount_total : null,

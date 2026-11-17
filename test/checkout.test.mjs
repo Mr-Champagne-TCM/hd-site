@@ -10,7 +10,7 @@ import { SUMMARY, CHART, READING } from "../shared/pricing.mjs";
 
 test("the amount charged matches the ladder, at every tier", () => {
   assert.equal(sessionParams({ level: 0, origin: "https://x" }).line_items[0].price_data.unit_amount, 111);
-  // Two sizes and the one-to-one (Jeremy 11/16).
+  // Two sizes and the one-on-one (Jeremy 11/16).
   assert.equal(sessionParams({ level: 1, origin: "https://x" }).line_items[0].price_data.unit_amount, 111);
   assert.equal(sessionParams({ level: 2, origin: "https://x" }).line_items[0].price_data.unit_amount, 1111);
   assert.equal(sessionParams({ level: 3, origin: "https://x" }).line_items[0].price_data.unit_amount, 4444);
@@ -109,7 +109,7 @@ test("the checkout names the product plainly (fix 14B)", async () => {
   const { tierProduct } = await import("../netlify/lib/checkout.mjs");
   assert.equal(tierProduct(2).name, "Human Design reading");
   assert.equal(tierProduct(2).description, "Your chart drawn, about 1,700 words written to it, four small things to try, and a PDF to keep.");
-  assert.equal(tierProduct(3).name, "Human Design one-to-one with Jeremy");
+  assert.equal(tierProduct(3).name, "Human Design one-on-one with Jeremy");
   assert.match(tierProduct(3).description, /^Thirty minutes with Jeremy on a video call/);
   assert.equal(tierProduct(1).name, "Human Design chart");
   assert.equal(tierProduct(0).name, "Human Design summary");
