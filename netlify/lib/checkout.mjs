@@ -207,6 +207,8 @@ const READY = new Set();
  * reach that one purchase, and the checkout says so to Jeremy.
  */
 export function sessionParams({ level, alreadyPaidCents = 0, origin, product = null, upgrades = null, fresh = false, kept = false, email = null }) {
+  // What the credit says is already owned: a reading's price or more is a reading (11/16).
+  const ownedLevel = alreadyPaidCents >= (LEVELS[2]?.cents ?? Infinity) ? 2 : alreadyPaidCents > 0 ? 1 : -1;
   const tier = tierAt(level);
   if (!tier) throw new Error(`sessionParams: no tier ${level}`);
   const due = priceFor(tier, alreadyPaidCents);
@@ -244,7 +246,7 @@ export function sessionParams({ level, alreadyPaidCents = 0, origin, product = n
      * whose details are kept is told so, not "about 2 minutes" of typing (fix 4,
      * 10/21: every upgrade said it).
      */
-    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level) : fresh ? CHECKOUT_NEXT_STEP_THEIR : CHECKOUT_NEXT_STEP } },
+    custom_text: { submit: { message: upgrades && kept ? checkoutNextStepKept(level, ownedLevel) : fresh ? CHECKOUT_NEXT_STEP_THEIR : CHECKOUT_NEXT_STEP } },
     /**
      * CONSENT COLLECTION IS OFF UNTIL JEREMY AGREES TO STRIPE'S EXTRA TERMS.
      *

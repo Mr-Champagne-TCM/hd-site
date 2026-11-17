@@ -263,7 +263,8 @@ export function deliveryEmail({
   const receiptFor = chartName || (their ? null : firstName(name) || null);
   const receiptWhat = their
     ? `${name ? `${curly(name)}, a` : "A"} Human Design ${word} for someone else`
-    : `${chartTitle(receiptFor)} ${word}`;
+    : // A one-to-one's receipt says what was bought (11/16 local run: it said "reading").
+      `${chartTitle(receiptFor)} ${session ? "one-to-one" : word}`;
   const subject = pending
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink

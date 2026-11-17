@@ -407,6 +407,8 @@ export const RETURNING = {
   // Names what was bought: "make my chart" on a chart upgrade (bug 5, 10/21: it said "reading").
   confirmYes: (what: string) => `These are right — make my ${what}`,
   confirmYesTheirs: (what: string) => `These are right — make their ${what}`,
+  // A reading's owner who took the one-to-one: the reading stays as it is, so nothing is "made" (11/16).
+  confirmYesBook: "These are right — on to picking a time",
   // Q5c (11/16, accepted): offered, not ordered.
   changeDetail: "A detail to fix?",
   confirmHelp:

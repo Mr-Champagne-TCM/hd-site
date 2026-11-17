@@ -196,6 +196,8 @@ export async function handleReading({ body, store, secret, now = Date.now(), not
       typeOnce: Boolean(reading.grewFrom && !reading.birth),
       /** Bought from "Start a new chart for someone else". */
       fresh: reading.fresh,
+      /** The one-to-one, so the confirm step names it (11/16). */
+      session: reading.sku === SESSION.sku,
       purchasedAt: reading.purchasedAt,
       output: null,
       upgrade: null,

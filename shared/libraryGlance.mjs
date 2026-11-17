@@ -131,7 +131,7 @@ export const PROFILE_GLANCE = Object.freeze({
 
 /** Each authority's glance (the library's one-liner). */
 export const AUTHORITY_GLANCE = Object.freeze({
-  "Emotional": "Clarity comes over time, once the emotional wave has settled.",
+  "Emotional": "Clarity comes after your emotional wave settles. Wait for it, then decide.",
   "Sacral": "A gut yes or no, on the spot. The first sound is the one to trust.",
   "Splenic": "A quiet, instant knowing that speaks once.",
   "Ego": "What you really want, heard in what you say or do.",

@@ -219,7 +219,10 @@ export function ConfirmKept({
   definedCenters,
   onChange,
   theirs = false,
+  session = false,
 }: {
+  /** The one-to-one (11/16): the heading names it, and a reading's owner is not told a reading is "made". */
+  session?: boolean;
   /** Someone else's chart ("Start a new chart for someone else"), grown: their details, their chart. */
   theirs?: boolean;
   token: string;
@@ -259,12 +262,14 @@ export function ConfirmKept({
     }
   }
 
-  const what = tierWord(tier);
   const from = fromTier === null ? "chart" : tierWord(fromTier);
+  // A reading's owner taking the one-to-one keeps that reading; a chart's owner has one written.
+  const keepsReading = session && fromTier === 2;
+  const what = session ? (keepsReading ? "one-to-one" : "reading and one-to-one") : tierWord(tier);
   return (
     <section id="yours" className="page-bottom mx-auto max-w-5xl px-6 pt-20 sm:px-8">
       <h2 className="font-display text-[clamp(1.6rem,3.6vw,2rem)] font-medium leading-[1.18] tracking-tight text-brand-gold">
-        {whoseOf(whose, true)} {what}, from the {from} you already have
+        {whoseOf(whose, true)} {what}, {keepsReading ? "with" : "from"} the {from} you already have
       </h2>
       <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed text-brand-paper/90">{theirs ? RETURNING.confirmBodyTheirs : RETURNING.confirmBody}</p>
       <div
@@ -300,7 +305,7 @@ export function ConfirmKept({
       </div>
       <div className="mt-7 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap">
         <button type="button" onClick={confirm} disabled={state.at === "working"} className={btn}>
-          {state.at === "working" ? "Working…" : theirs ? RETURNING.confirmYesTheirs(what) : RETURNING.confirmYes(what)}
+          {state.at === "working" ? "Working…" : keepsReading ? RETURNING.confirmYesBook : theirs ? RETURNING.confirmYesTheirs(tierWord(tier)) : RETURNING.confirmYes(tierWord(tier))}
         </button>
         <button type="button" onClick={onChange} className={btnQuiet}>
           {RETURNING.changeDetail}

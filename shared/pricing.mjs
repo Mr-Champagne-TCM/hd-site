@@ -138,9 +138,17 @@ export const CHECKOUT_NEXT_STEP = "Next: your birth date, time and place (about 
 /** The same line for a chart bought for someone else (10/22 verbatim read): their details come next. */
 export const CHECKOUT_NEXT_STEP_THEIR = "Next: their birth date, time and place (about two minutes).";
 
-/** The same line on an upgrade whose chart keeps its birth details: nothing to type (fix 4, 10/21). */
-export const checkoutNextStepKept = (level) =>
-  `Next: one look at your kept birth details, then your ${level >= 2 ? "reading is written" : "chart is drawn"}.`;
+/**
+ * The same line on an upgrade whose chart keeps its birth details: nothing to type (fix 4, 10/21).
+ * `ownedLevel`: what the buyer already has. A reading's owner taking the one-to-one keeps the reading
+ * they have (interpretJob wordsToCarry), so nothing "is written" for them: they book (11/16 local run).
+ */
+export const checkoutNextStepKept = (level, ownedLevel = -1) =>
+  level >= SESSION_LEVEL
+    ? ownedLevel >= 2
+      ? "Next: one look at your kept birth details, then you pick a time for your thirty minutes."
+      : "Next: one look at your kept birth details, then your reading is written and you pick a time for your thirty minutes."
+    : `Next: one look at your kept birth details, then your ${level >= 2 ? "reading is written" : "chart is drawn"}.`;
 
 /**
  * WHAT YOU HAVE ALREADY PAID COMES OFF WHAT YOU PAY NEXT.
