@@ -195,6 +195,12 @@ export function deliveryEmail({
   tier,
   /** A one-to-one (11/16): the reading came with thirty minutes with Jeremy, and the email says where to book. */
   session = false,
+  /**
+   * A one-to-one whose reading the buyer ALREADY HAD (interpretJob wordsToCarry): nothing new was written,
+   * so the subject is the one new thing, the time to pick. Jeremy 11/16, after the live round: the second
+   * "…reading is ready" threaded under the first and hid it. His words: "<Name>'s One-on-one: Pick a time".
+   */
+  bookOnly = false,
   name,
   chartName = null,
   url,
@@ -269,8 +275,10 @@ export function deliveryEmail({
     ? `Receipt: ${receiptWhat}${amount ? `, ${amount}` : ""}`
     : freshLink
       ? `A fresh link to ${whoseInline} Human Design ${word}`
-      : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
-        `${WhoseLead} Human Design ${word} is ready${redone ? `, redone with ${their ? "their" : "your"} birth time` : ""}`;
+      : bookOnly && session
+        ? `${WhoseLead} One-to-one: Pick a time`
+        : // A chart for someone else with no name is "Their", never the buyer's "Your" (10/21 rig).
+          `${WhoseLead} Human Design ${word} is ready${redone ? `, redone with ${their ? "their" : "your"} birth time` : ""}`;
 
   /**
    * AND AN INVITATION TO SAY IF IT DOES NOT MAKE SENSE. His note, and it costs

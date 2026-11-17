@@ -297,6 +297,8 @@ async function writeOne({
         redone: redoneWithTime(reading),
         // A one-to-one's reading (11/16): the email carries the booking link (deliveryEmail `session`).
         session: reading.sku === "hd_session",
+        // The reading was already theirs (wordsToCarry): what is new is the time to pick (Jeremy 11/16).
+        carried: Boolean(carried),
       });
     } catch (e) {
       // The reading is on the page; the email is the copy. Ours to follow up.

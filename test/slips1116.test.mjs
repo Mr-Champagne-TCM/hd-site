@@ -56,3 +56,14 @@ test("THE CONFIRM STEP: a reading's owner is not asked to 'make my reading'", ()
   assert.match(plain, /Avery’s reading, from the chart you already have/);
   assert.match(plain, /These are right — make my reading/);
 });
+
+test("A READING'S OWNER WHO TAKES THE ONE-TO-ONE gets a subject about the time to pick, not a second 'reading is ready'", () => {
+  const ready = (more) => deliveryEmail({ tier: 2, name: "Rowan Testwell", chartName: "Rowan", url: "https://x.test/r/a.b", links: SITE, ...more });
+  assert.equal(ready({ session: true, bookOnly: true }).subject, "Rowan’s One-to-one: Pick a time");
+  assert.equal(deliveryEmail({ tier: 2, name: null, url: "https://x.test/r/a.b", links: SITE, session: true, bookOnly: true }).subject, "Your One-to-one: Pick a time");
+  // A one-to-one whose reading is NEW still says the reading is ready, and a plain reading is untouched.
+  assert.equal(ready({ session: true }).subject, "Rowan’s Human Design reading is ready");
+  assert.equal(ready({ bookOnly: true }).subject, "Rowan’s Human Design reading is ready");
+  // The body still carries the booking line.
+  assert.match(ready({ session: true, bookOnly: true }).text, /THIRTY MINUTES WITH JEREMY/i);
+});

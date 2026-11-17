@@ -77,6 +77,8 @@ test("a one-to-one bought by a reading's owner carries the reading they have: th
   // They are still told, and the email knows it is a one-to-one (the booking link rides on `session`).
   assert.equal(emails.length, 1);
   assert.equal(emails[0].session, true);
+  // And that the reading was already theirs, so the subject can be the time to pick (11/16).
+  assert.equal(emails[0].carried, true);
 });
 
 test("a plain reading's ready email is not a one-to-one's", async () => {
@@ -85,6 +87,7 @@ test("a plain reading's ready email is not a one-to-one's", async () => {
   const emails = [];
   await interpretOne(job(store, id, { generate: async () => ({ ok: true, text: TEXT }), deliver: { email: async (m) => emails.push(m) } }));
   assert.equal(emails[0].session, false);
+  assert.equal(emails[0].carried, false);
 });
 
 test("details corrected on the way: the chart may have moved, so it is written fresh", async () => {
