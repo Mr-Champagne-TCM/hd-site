@@ -92,7 +92,9 @@ export default function ThreeLines({ chart, takeaways, whose = "Your" }: { chart
           </li>
         ))}
       </ol>
-      {/* "Start here" exists only with a written reading; the chart tier's page has none to point at. */}
+      {/* "Start here" exists only with a written reading; the chart tier's page has none to point at.
+          The offer page's example (whose="The") has no "below" of its own, so it gets no pointer line. */}
+      {whose === "Your" && (
       <p className="mt-4 text-[15px] leading-relaxed text-brand-muted">
         {takeaways && takeaways.length ? (
           <>
@@ -110,6 +112,7 @@ export default function ThreeLines({ chart, takeaways, whose = "Your" }: { chart
           "Below: your chart and its tables."
         )}
       </p>
+      )}
     </section>
   );
 }
