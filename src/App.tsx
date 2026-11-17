@@ -22,6 +22,7 @@ import { startCheckout } from "./purchase";
 import { offersFor, sellable } from "../shared/availability.mjs";
 import ExampleSummary, { EXAMPLE as EXAMPLE_CHART } from "./ExampleSummary";
 import ThreeLines from "./ThreeLines";
+import ExampleDrawing from "./ExampleDrawing";
 import MailtoText from "./MailtoText";
 import FooterTheme from "./FooterTheme";
 import { claimIfReturning } from "./purchase";
@@ -218,17 +219,23 @@ function Example() {
           drawing and every value, so the example shows all three, in the order a buyer's page does. */}
       <div className="max-w-[46rem]">
         <ThreeLines chart={EXAMPLE_CHART} whose="The" />
-        {/* The drawing itself is not in this public repository (leak-scan rule rendered-chart), so the
-            example links to the readings page, which shows it. Showing it here is Jeremy's open call. */}
-        <p className="mt-5 text-[16px] leading-relaxed text-brand-muted">
-          <a
-            href={SITE.readings}
-            {...hint("What each one actually is", HINT.examples)}
-            className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
-          >
-            {EXAMPLE.drawing}
-          </a>
-        </p>
+        {/* The drawing itself is not in this public repository (leak-scan rule rendered-chart). Jeremy's
+            call 1 (11/16): show it, loaded from the main site, which already publishes it. The link to
+            the readings page is what stands there until it arrives, and if it never does. */}
+        <ExampleDrawing
+          alt="An example bodygraph: Jeremy Champagne’s chart"
+          fallback={
+            <p className="mt-5 text-[16px] leading-relaxed text-brand-muted">
+              <a
+                href={SITE.readings}
+                {...hint("What each one actually is", HINT.examples)}
+                className="text-brand-teal underline decoration-brand-teal/40 underline-offset-4 transition-colors hover:decoration-brand-teal"
+              >
+                {EXAMPLE.drawing}
+              </a>
+            </p>
+          }
+        />
         <p className="mt-8 font-sans text-[13px] font-semibold uppercase tracking-[0.18em] text-brand-muted">
           {EXAMPLE.values}
         </p>
@@ -237,7 +244,7 @@ function Example() {
         </div>
       </div>
       <p className="mt-4 text-[15px] leading-relaxed text-brand-muted/80">
-        All of this is in the {money(CHART.cents)} chart, with the drawing: the three lines and every value.
+        All of this is in the {money(CHART.cents)} chart: the three lines, the drawing and every value.
         Nothing is blurred out or held back.
       </p>
       {/* One quiet link at the point of confusion. Someone meeting
